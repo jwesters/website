@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Soccer Stats Higher or Lower</title>
+<style>
+  body { font-family: Arial, sans-serif; background:#f4f6f8; text-align:center; padding:30px; }
+  .card { background:white; padding:25px; max-width:520px; margin:auto; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1); }
+  button { padding:12px 25px; margin:10px; font-size:16px; cursor:pointer; }
+  .hidden { display:none; }
+  .score { font-weight:bold; margin-top:15px; }
+</style>
+</head>
+<body>
+
+<div class="card" id="game">
+  <h2>⚽ Soccer Stats Higher or Lower</h2>
+
+  <p><strong id="playerA"></strong></p>
+  <p id="statA"></p>
+
+  <hr>
+
+  <p id="question"></p>
+  <button onclick="guess('higher')">⬆️ More</button>
+  <button onclick="guess('lower')">⬇️ Fewer</button>
+
+  <p class="score">Streak: <span id="score">0</span></p>
+</div>
+
+<div class="card hidden" id="endScreen">
+  <h2>Game Over</h2>
+  <p><strong>Final Streak:</strong> <span id="finalScore"></span></p>
+  <p id="reveal"></p>
+</div>
+
+<!-- Load your player dataset -->
+<script src="players100_soccer.js"></script>
+
+<script>
+const statOptions = [
+  { key: "goals", label: "Goals" },
+  { key: "assists", label: "Assists" },
+  { key: "apps", label: "Games Played/Appearances" },
+];
+
+let score = 0;
+let playerA, playerB, currentStat;
+
+const elPlayerA = document.getElementById("playerA");
+const elStatA = document.getElementById("statA");
+const elQuestion = document.getElementById("question");
+const elScore = document.getElementById("score");
+
+const elGame = document.getElementById("game");
+const elEnd = document.getElementById("endScreen");
+const elFinal = document.getElementById("finalScore");
+const elReveal = document.getElementById("reveal");
+
+function randomPlayer(exclude) {
+  let p;
+  do {
+    p = players[Math.floor(Math.random() * players.length)];
+  } while (p === exclude);
+  return p;
+}
+
+// Carry-forward winner: if correct, playerB becomes next playerA
+function newRound(carryPlayer = null) {
+  playerA = carryPlayer || randomPlayer();
+  playerB = randomPlayer(playerA);
+  currentStat = statOptions[Math.floor(Math.random() * statOptions.length)];
+
+  elPlayerA.textContent = playerA.name;
+  elStatA.textContent = `${currentStat.label}: ${playerA[currentStat.key]}`;
+
+  elQuestion.innerHTML =
+    `Does <strong>${playerB.name}</strong> have more or fewer <strong>${currentStat.label}</strong>?`;
+}
+
+function guess(choice) {
+  const a = playerA[currentStat.key];
+  const b = playerB[currentStat.key];
+
+  const correct =
+    (choice === "higher" && b > a) ||
+    (choice === "lower" && b < a);
+
+  if (correct) {
+    score++;
+    elScore.textContent = score;
+    newRound(playerB); // carry forward
+  } else {
+    endGame();
+  }
+}
+
+function endGame() {
+  elGame.classList.add("hidden");
+  elEnd.classList.remove("hidden");
+  elFinal.textContent = score;
+
+  elReveal.innerHTML =
+    `${playerB.name} had <strong>${playerB[currentStat.key]}</strong> ${currentStat.label}.`;
+}
+
+newRound();
+</script>
+</body>
+</html>
