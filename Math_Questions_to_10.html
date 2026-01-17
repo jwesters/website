@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Grouped Math Worksheets (Web)</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; }
+    .topbar { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .spacer { flex: 1; }
+    .name { text-align: right; min-width: 320px; margin-top: 8px; }
+    .card { border: 1px solid #ddd; border-radius: 10px; padding: 16px; margin-top: 16px; }
+    h1 { margin: 8px 0 0; font-size: 24px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 48px; margin-top: 18px; }
+    .q { font-size: 20px; line-height: 1.6; }
+    label { font-weight: 600; }
+    select, button { padding: 8px 10px; font-size: 14px; }
+    button { cursor: pointer; }
+    .muted { color: #666; font-size: 13px; margin-top: 6px; }
+
+    @media print {
+      .topbar, .muted { display: none !important; }
+      body { margin: 0.5in; }
+      .card { border: none; padding: 0; }
+      .q { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <label for="mode">Mode:</label>
+  <select id="mode">
+    <option value="add">Addition</option>
+    <option value="sub">Subtraction</option>
+  </select>
+
+  <label for="group">Group:</label>
+  <select id="group"></select>
+
+  <button id="generate">Generate</button>
+  <button onclick="window.print()">Print</button>
+
+  <div class="spacer"></div>
+</div>
+
+<div class="name"><strong>Name:</strong> _______________________________</div>
+
+<div class="card">
+  <h1 id="title"></h1>
+  <div class="muted" id="rules"></div>
+  <div class="grid" id="questions"></div>
+</div>
+
+<script>
+  // ================= CONFIG =================
+  const LETTERS = "abcdefghij".split("");
+  const OTHER_MIN = 0;
+  const OTHER_MAX = 10;
+
+  const MINUEND_MAX_NORMAL = 10;
+  const MINUEND_MAX_HIGH = 15;
+  const HIGH_SUB_THRESHOLD = 7;
+
+  const GROUPS = [
+    { label: "0–2", values: [0,1,2] },
+    { label: "3–4", values: [3,4] },
+    { label: "5–6", values: [5,6] },
+    { label: "7–8", values: [7,8] },
+    { label: "9–10", values: [9,10] },
+    { label: "All (0–10)", values: [0,1,2,3,4,5,6,7,8,9,10] }
+  ];
+
+  // ================= UI =================
+  const modeEl = document.getElementById("mode");
+  const groupEl = document.getElementById("group");
+  const titleEl = document.getElementById("title");
+  const rulesEl = document.getElementById("rules");
+  const qEl = document.getElementById("questions");
+
+  function fillGroups() {
+    groupEl.innerHTML = "";
+    GROUPS.forEach((g, i) => {
+      const opt = document.createElement("option");
+      opt.value = i;
+      opt.textContent = g.label;
+      groupEl.appendChild(opt);
+    });
+  }
+
+  // ================= HELPERS =================
+  const randInt = (min, max) =>
+    Math.floor(Math.random() * (max - min + 1)) + min;
+
+  const canonicalAdd = (a, b) => (a <= b ? `${a},${b}` : `${b},${a}`);
+
+  // ================= GENERATION =================
+  function generateQuestions(mode, values) {
+    const seen = new Set();
+    const out = [];
+    let attempts = 0;
+
+    while (out.length < 10) {
+      attempts++;
+      if (attempts > 5000) {
+        throw new Error("Unable to generate enough unique questions.");
+      }
+
+      if (mode === "add") {
+        const addend = values[randInt(0, values.length - 1)];
+        const other = randInt(OTHER_MIN, OTHER_MAX);
+        const flip = Math.random() < 0.5;
+        const a = flip ? other : addend;
+        const b = flip ? addend : other;
+
+        const key = canonicalAdd(a, b);
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        out.push(`${a} + ${b} =`);
+      } else {
+        const sub = values[randInt(0, values.length - 1)];
+        const maxMinuend = sub >= HIGH_SUB_THRESHOLD
+          ? MINUEND_MAX_HIGH
+          : MINUEND_MAX_NORMAL;
+        const minuend = randInt(sub, maxMinuend);
+
+        const key = `${minuend},${sub}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        out.push(`${minuend} - ${sub} =`);
+      }
+    }
+    return out;
+  }
+
+  function render() {
+    const mode = modeEl.value;
+    const group = GROUPS[groupEl.value];
+
+    titleEl.textContent =
+      mode === "add"
+        ? `Adding ${group.label}`
+        : `Subtracting ${group.label}`;
+
+    rulesEl.textContent =
+      mode === "add"
+        ? "10 questions (a–j). Numbers 0–10. No duplicate questions on a page."
+        : "10 questions (a–j). No negatives. If subtracting by 7 or higher, the number being subtracted from may go up to 15.";
+
+    const qs = generateQuestions(mode, group.values);
+    qEl.innerHTML = "";
+
+    qs.forEach((q, i) => {
+      const div = document.createElement("div");
+      div.className = "q";
+      div.textContent = `${LETTERS[i]}. ${q}`;
+      qEl.appendChild(div);
+    });
+  }
+
+  // ================= INIT =================
+  fillGroups();
+  groupEl.value = "0";
+  render();
+
+  document.getElementById("generate").onclick = render;
+  modeEl.onchange = render;
+  groupEl.onchange = render;
+</script>
+</body>
+</html>
