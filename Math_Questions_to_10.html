@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Grouped Math Worksheets (Web)</title>
+  <title>Math Practice Generator (0–10)</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 24px; }
     .topbar { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
@@ -29,10 +29,10 @@
 <body>
 
 <div class="topbar">
-  <label for="mode">Mode:</label>
+  <label for="mode">Operation:</label>
   <select id="mode">
-    <option value="add">Addition</option>
-    <option value="sub">Subtraction</option>
+    <option value="add">Addition (+)</option>
+    <option value="sub">Subtraction (−)</option>
   </select>
 
   <label for="group">Group:</label>
@@ -58,9 +58,10 @@
   const OTHER_MIN = 0;
   const OTHER_MAX = 10;
 
+  // Subtraction rule: if subtracting by 7+, minuend can go up to 15
   const MINUEND_MAX_NORMAL = 10;
   const MINUEND_MAX_HIGH = 15;
-  const HIGH_SUB_THRESHOLD = 7;
+  const HIGH_THRESHOLD = 7;
 
   const GROUPS = [
     { label: "0–2", values: [0,1,2] },
@@ -92,66 +93,111 @@
   const randInt = (min, max) =>
     Math.floor(Math.random() * (max - min + 1)) + min;
 
-  const canonicalAdd = (a, b) => (a <= b ? `${a},${b}` : `${b},${a}`);
+  // For commutative ops: treat a⊕b and b⊕a as the same question
+  const canonicalPair = (a, b) => (a <= b ? `${a},${b}` : `${b},${a}`);
 
-  // ================= GENERATION =================
-  function generateQuestions(mode, values) {
+  function groupLabel(values) {
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    return (min === 0 && max === 10 && values.length === 11) ? "All (0–10)" : `${min}–${max}`;
+  }
+
+  // ================= QUESTION GENERATION =================
+  function makeAddQuestion(groupVals) {
+    const addend = groupVals[randInt(0, groupVals.length - 1)];
+    const other = randInt(OTHER_MIN, OTHER_MAX);
+    const flip = Math.random() < 0.5;
+    const a = flip ? other : addend;
+    const b = flip ? addend : other;
+    return { a, b, text: `${a} + ${b} =`, key: canonicalPair(a, b) };
+  }
+
+  function makeMulQuestion(groupVals) {
+    const factor = groupVals[randInt(0, groupVals.length - 1)];
+    const other = randInt(OTHER_MIN, OTHER_MAX);
+    const flip = Math.random() < 0.5;
+    const a = flip ? other : factor;
+    const b = flip ? factor : other;
+    // Use × symbol in display (still plain text)
+    return { a, b, text: `${a} × ${b} =`, key: canonicalPair(a, b) };
+  }
+
+  function makeSubQuestion(groupVals) {
+    const sub = groupVals[randInt(0, groupVals.length - 1)];
+    const maxMinuend = (sub >= HIGH_THRESHOLD) ? MINUEND_MAX_HIGH : MINUEND_MAX_NORMAL;
+    const minuend = randInt(sub, maxMinuend); // ensures no negatives
+    return { a: minuend, b: sub, text: `${minuend} − ${sub} =`, key: `${minuend},${sub}` };
+  }
+
+  function makeDivQuestion(groupVals) {
+    // divisor comes from group, but cannot be 0
+    let divisor = groupVals[randInt(0, groupVals.length - 1)];
+    if (divisor === 0) return null;
+
+    // pick an integer quotient so dividend divides evenly
+    // keep quotient in 0..10 for consistency; if divisor is large (7+), allow dividend to be larger
+    const quotient = randInt(0, 10);
+
+    // dividend = divisor * quotient (always remainder-free)
+    // For divisor 7+, dividend can go up to 15*divisor by allowing quotient up to 15 sometimes
+    const qMax = (divisor >= HIGH_THRESHOLD) ? 15 : 10;
+    const q = randInt(0, qMax);
+    const dividend = divisor * q;
+
+    return { a: dividend, b: divisor, text: `${dividend} ÷ ${divisor} =`, key: `${dividend},${divisor}` };
+  }
+
+  function generateQuestions(mode, groupVals) {
     const seen = new Set();
     const out = [];
     let attempts = 0;
 
     while (out.length < 10) {
       attempts++;
-      if (attempts > 5000) {
-        throw new Error("Unable to generate enough unique questions.");
-      }
+      if (attempts > 10000) throw new Error("Unable to generate enough unique questions.");
 
-      if (mode === "add") {
-        const addend = values[randInt(0, values.length - 1)];
-        const other = randInt(OTHER_MIN, OTHER_MAX);
-        const flip = Math.random() < 0.5;
-        const a = flip ? other : addend;
-        const b = flip ? addend : other;
+      let q = null;
+      if (mode === "add") q = makeAddQuestion(groupVals);
+      if (mode === "sub") q = makeSubQuestion(groupVals);
+      if (mode === "mul") q = makeMulQuestion(groupVals);
+      if (mode === "div") q = makeDivQuestion(groupVals);
 
-        const key = canonicalAdd(a, b);
-        if (seen.has(key)) continue;
-        seen.add(key);
+      if (!q) continue; // e.g., division by 0 skip
 
-        out.push(`${a} + ${b} =`);
-      } else {
-        const sub = values[randInt(0, values.length - 1)];
-        const maxMinuend = sub >= HIGH_SUB_THRESHOLD
-          ? MINUEND_MAX_HIGH
-          : MINUEND_MAX_NORMAL;
-        const minuend = randInt(sub, maxMinuend);
-
-        const key = `${minuend},${sub}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-
-        out.push(`${minuend} - ${sub} =`);
-      }
+      if (seen.has(q.key)) continue;
+      seen.add(q.key);
+      out.push(q.text);
     }
     return out;
   }
 
+  // ================= RENDER =================
   function render() {
     const mode = modeEl.value;
-    const group = GROUPS[groupEl.value];
+    const group = GROUPS[parseInt(groupEl.value, 10)];
 
-    titleEl.textContent =
-      mode === "add"
-        ? `Adding ${group.label}`
-        : `Subtracting ${group.label}`;
+    const opName = {
+      add: "Adding",
+      sub: "Subtracting",
+      mul: "Multiplying",
+      div: "Dividing"
+    }[mode];
 
-    rulesEl.textContent =
-      mode === "add"
-        ? "10 questions (a–j). Numbers 0–10. No duplicate questions on a page."
-        : "10 questions (a–j). No negatives. If subtracting by 7 or higher, the number being subtracted from may go up to 15.";
+    titleEl.textContent = `${opName} ${group.label}`;
+
+    if (mode === "add") {
+      rulesEl.textContent = "10 questions (a–j). Numbers 0–10. No duplicates (3+7 and 7+3 count as duplicates).";
+    } else if (mode === "mul") {
+      rulesEl.textContent = "10 questions (a–j). Numbers 0–10. No duplicates (3×7 and 7×3 count as duplicates).";
+    } else if (mode === "sub") {
+      rulesEl.textContent = "10 questions (a–j). No negatives. If subtracting by 7 or higher, the minuend may go up to 15.";
+    } else {
+      rulesEl.textContent = "10 questions (a–j). No remainders. Division by 0 is excluded automatically.";
+    }
 
     const qs = generateQuestions(mode, group.values);
-    qEl.innerHTML = "";
 
+    qEl.innerHTML = "";
     qs.forEach((q, i) => {
       const div = document.createElement("div");
       div.className = "q";
@@ -165,9 +211,10 @@
   groupEl.value = "0";
   render();
 
-  document.getElementById("generate").onclick = render;
-  modeEl.onchange = render;
-  groupEl.onchange = render;
+  document.getElementById("generate").addEventListener("click", render);
+  modeEl.addEventListener("change", render);
+  groupEl.addEventListener("change", render);
 </script>
+
 </body>
 </html>
