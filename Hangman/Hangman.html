@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Letter Survival</title>
+<title>Pick 10 Safe Letters</title>
 
 <style>
 :root { --bg:#0f172a; --text:#e5e7eb; }
@@ -19,10 +19,7 @@ body{
   flex-direction:column;
 }
 
-header{
-  text-align:center;
-  padding:14px;
-}
+header{ text-align:center; padding:14px; }
 
 .wrap{
   width:min(900px,92vw);
@@ -60,6 +57,22 @@ header{
   font-weight:700;
 }
 
+.stats{
+  display:flex;
+  justify-content:center;
+  gap:14px;
+  flex-wrap:wrap;
+  margin:0 0 10px;
+  opacity:.9;
+  font-weight:800;
+}
+
+.badge{
+  padding:6px 10px;
+  border-radius:999px;
+  background:rgba(255,255,255,.08);
+}
+
 .picked{
   display:flex;
   flex-wrap:wrap;
@@ -75,10 +88,7 @@ header{
 .pill.safe{ background:#16a34a; }
 .pill.hit{ background:#dc2626; }
 
-.keyboardWrap{
-  padding:12px;
-  background:#020617;
-}
+.keyboardWrap{ padding:12px; background:#020617; }
 
 .keyboard{
   width:min(900px,92vw);
@@ -134,16 +144,14 @@ button{
   min-width:320px;
 }
 
-.overlayBox h2{
-  margin:0 0 10px;
-  font-size:32px;
-}
+.overlayBox h2{ margin:0 0 10px; font-size:32px; }
 
 .overlayBox p{
   margin:0 0 20px;
   opacity:.9;
   font-weight:700;
   line-height:1.4;
+  white-space:pre-line;
 }
 
 .overlayButtons{
@@ -156,8 +164,11 @@ button{
 
 <body>
 <header>
-  <h1>Letter Survival</h1>
-  <p>Pick letters that are <b>NOT</b> in the word. Hits lose lives but reveal letters.</p>
+  <h1>Pick 10 Safe Letters</h1>
+  <p>
+    Win: pick <b>10</b> letters <b>NOT</b> in the word.<br>
+    Lose instantly if you either <b>spell the whole word</b> (reveal it) or pick <b>5 hit letters</b>.
+  </p>
 </header>
 
 <main class="wrap">
@@ -176,13 +187,19 @@ button{
 
   <section class="panel">
     <div class="status">
-      <div id="lives"></div>
       <div id="progress"></div>
       <button class="primary" id="newGame">New Game</button>
     </div>
 
     <div class="word" id="wordDisplay"></div>
-    <div class="sub">Revealed letters mean danger!</div>
+
+    <div class="stats">
+      <span class="badge" id="safeStat"></span>
+      <span class="badge" id="hitStat"></span>
+      <span class="badge" id="revealStat"></span>
+    </div>
+
+    <div class="sub">Revealed letters are from hit picks.</div>
 
     <div class="picked" id="picked"></div>
   </section>
@@ -195,24 +212,27 @@ button{
 <script>
 /* ================= CONFIG ================= */
 const WORD_FILE = "./dictionary_least_common_10000.txt";
-const MAX_LIVES = 10;
 const SAFE_TO_WIN = 10;
+const HIT_LOSE_LIMIT = 5;
 
 /* ================= STATE ================= */
 let words = [];
 let answer = "";
-let lives = MAX_LIVES;
 let safePicks = 0;
+let hitCount = 0;
 let guessed = new Set();
 let revealed = new Set();
+let uniqueLettersInWord = new Set();
 let gameOver = false;
 
 /* ================= ELEMENTS ================= */
 const wordDisplay = document.getElementById("wordDisplay");
 const pickedEl = document.getElementById("picked");
 const keyboardEl = document.getElementById("keyboard");
-const livesEl = document.getElementById("lives");
 const progressEl = document.getElementById("progress");
+const safeStat = document.getElementById("safeStat");
+const hitStat = document.getElementById("hitStat");
+const revealStat = document.getElementById("revealStat");
 
 const overlay = document.getElementById("overlay");
 const overlayTitle = document.getElementById("overlayTitle");
@@ -221,20 +241,28 @@ const statusBtn = document.getElementById("statusBtn");
 
 /* ================= LOAD WORDS ================= */
 const WORD_URL = new URL(WORD_FILE, location.href).href;
+console.log("Trying to load word list from:", WORD_URL);
 
 fetch(WORD_URL + "?v=" + Date.now(), { cache: "no-store" })
-  .then(r => {
-    if (!r.ok) throw new Error("Failed to load word list");
-    return r.text();
+  .then(async (res) => {
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText} for ${WORD_URL}`);
+    return res.text();
   })
   .then(text => {
     words = text
       .split(/\r?\n/)
       .map(w => w.trim().toUpperCase())
       .filter(w => /^[A-Z]{3,12}$/.test(w));
+
+    if (!words.length) throw new Error("Loaded file, but no valid words found.");
+    console.log("Words loaded:", words.length);
+
     newGame();
   })
-  .catch(err => alert(err.message));
+  .catch(err => {
+    console.error(err);
+    alert("Could not load word list:\n" + err.message);
+  });
 
 /* ================= GAME ================= */
 function pickWord(){
@@ -242,24 +270,33 @@ function pickWord(){
 }
 
 function newGame(){
+  if (!words.length) return;
+
   answer = pickWord();
-  lives = MAX_LIVES;
+  uniqueLettersInWord = new Set(answer.split("")); // unique letters in secret word
+
   safePicks = 0;
+  hitCount = 0;
   guessed.clear();
   revealed.clear();
   gameOver = false;
+
   overlay.classList.remove("show");
   render();
 }
 
 function render(){
-  livesEl.textContent = `Lives: ${lives}`;
-  progressEl.textContent = `Safe picks: ${safePicks}/${SAFE_TO_WIN}`;
+  progressEl.textContent = `Goal: ${SAFE_TO_WIN} safe letters`;
 
+  // Show blanks; reveal letters that were hit-picked
   wordDisplay.textContent = answer
     .split("")
     .map(l => revealed.has(l) ? l : "_")
     .join(" ");
+
+  safeStat.textContent = `Safe: ${safePicks}/${SAFE_TO_WIN}`;
+  hitStat.textContent = `Hits: ${hitCount}/${HIT_LOSE_LIMIT}`;
+  revealStat.textContent = `Revealed: ${revealed.size}/${uniqueLettersInWord.size}`;
 
   pickedEl.innerHTML = guessed.size
     ? [...guessed].sort().map(l => {
@@ -285,36 +322,63 @@ function render(){
   }
 }
 
-function showOverlay(win){
+function showOverlay(win, reason = ""){
   gameOver = true;
   overlay.classList.add("show");
 
   if (win){
     overlayTitle.textContent = "You Win!";
-    overlayText.textContent = `You survived!\nThe word was: ${answer}`;
+    overlayText.textContent = `You picked ${SAFE_TO_WIN} safe letters.\nThe word was: ${answer}`;
     statusBtn.textContent = "YOU WIN";
     statusBtn.className = "success";
   } else {
     overlayTitle.textContent = "You Lost";
-    overlayText.textContent = `Too many hits.\nThe word was: ${answer}`;
+    overlayText.textContent = `${reason}\nThe word was: ${answer}`;
     statusBtn.textContent = "YOU LOST";
     statusBtn.className = "danger";
   }
+
   render();
 }
 
+function loseIfSpelledWord(){
+  // If you've revealed all unique letters in the word, the word is fully spelled/revealed
+  if (revealed.size >= uniqueLettersInWord.size) {
+    showOverlay(false, "You revealed the whole word!");
+    return true;
+  }
+  return false;
+}
+
+function loseIfTooManyHits(){
+  if (hitCount >= HIT_LOSE_LIMIT) {
+    showOverlay(false, `You picked ${HIT_LOSE_LIMIT} letters that were in the word!`);
+    return true;
+  }
+  return false;
+}
+
 function guess(letter){
-  if (gameOver || guessed.has(letter)) return;
+  if (gameOver || guessed.has(letter) || !answer) return;
+
   guessed.add(letter);
 
   if (answer.includes(letter)){
-    revealed.add(letter);
-    lives--;
-    if (lives <= 0) showOverlay(false);
+    hitCount++;
+    revealed.add(letter); // reveal that letter in the word
+
+    // Loss conditions
+    if (loseIfTooManyHits()) return;
+    if (loseIfSpelledWord()) return;
+
   } else {
     safePicks++;
-    if (safePicks >= SAFE_TO_WIN) showOverlay(true);
+    if (safePicks >= SAFE_TO_WIN) {
+      showOverlay(true);
+      return;
+    }
   }
+
   render();
 }
 
