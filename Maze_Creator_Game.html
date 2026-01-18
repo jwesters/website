@@ -1,0 +1,850 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Interactive Maze Generator (Resume Path + Solved Overlay)</title>
+  <style>
+    :root{
+      --bg:#0b0f19;
+      --panel:rgba(255,255,255,.08);
+      --border:rgba(255,255,255,.14);
+      --text:rgba(255,255,255,.92);
+      --muted:rgba(255,255,255,.7);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      padding:16px;
+    }
+    .app{
+      max-width:1100px;
+      margin:0 auto;
+      display:grid;
+      grid-template-columns:1fr 360px;
+      gap:12px;
+    }
+    @media (max-width:980px){.app{grid-template-columns:1fr}}
+    .card{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:16px;
+      overflow:hidden;
+    }
+    .mazeWrap{
+      padding:14px;
+      display:grid;
+      grid-template-rows:auto 1fr auto;
+      gap:10px;
+    }
+    h1{font-size:18px;margin:0}
+    p{margin:6px 0 0 0;color:var(--muted);font-size:13px;line-height:1.35}
+    .canvasShell{
+      background:rgba(0,0,0,.25);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:10px;
+      min-height:420px;
+      display:grid;
+      place-items:center;
+      position:relative;
+
+      touch-action:none;
+      -ms-touch-action:none;
+      user-select:none;
+      -webkit-user-select:none;
+      -webkit-tap-highlight-color:transparent;
+      -webkit-touch-callout:none;
+    }
+    canvas{
+      width:100%;
+      height:auto;
+      background:#fff;
+      border-radius:10px;
+      display:block;
+      outline:1px solid rgba(0,0,0,.25);
+
+      touch-action:none;
+      -ms-touch-action:none;
+      user-select:none;
+      -webkit-user-select:none;
+      -webkit-tap-highlight-color:transparent;
+      -webkit-touch-callout:none;
+    }
+    .footer{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      color:var(--muted);
+      font-size:12px;
+    }
+    .pill{
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      padding:7px 10px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background:rgba(0,0,0,.22);
+      white-space:nowrap;
+    }
+    .controls{padding:14px;display:flex;flex-direction:column;gap:12px}
+    .group{
+      background:rgba(255,255,255,.10);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px;
+      display:grid;
+      gap:10px;
+    }
+    label{font-size:12px;color:var(--muted)}
+    select,button{
+      width:100%;
+      padding:11px 12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:rgba(0,0,0,.25);
+      color:var(--text);
+      font-size:14px;
+      outline:none;
+    }
+    button{cursor:pointer;background:rgba(255,255,255,.10)}
+    button:hover{background:rgba(255,255,255,.14)}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .toggle{display:flex;align-items:center;gap:10px;color:var(--text);font-size:13px;user-select:none}
+    .small{margin:0;color:var(--muted);font-size:12px;line-height:1.35}
+    #err{
+      display:none;
+      white-space:pre-wrap;
+      color:#ffd3d3;
+      background:rgba(255,0,0,.12);
+      border:1px solid rgba(255,0,0,.35);
+      border-radius:12px;
+      padding:10px;
+      font-size:12px
+    }
+    #status{font-weight:600}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="card mazeWrap">
+      <header>
+        <h1>Interactive Maze Generator</h1>
+        <p>
+          Drag from the <b style="color:#43d17a">green</b> start dot to the <b style="color:#ff5d5d">red</b> end dot.
+          You can <b>pause</b> and <b>resume</b> by clicking near your last path point.
+        </p>
+      </header>
+
+      <div class="canvasShell" id="canvasShell">
+        <canvas id="maze" aria-label="Maze canvas"></canvas>
+      </div>
+
+      <div class="footer">
+        <span class="pill" id="mazeInfo">—</span>
+        <span class="pill" id="seedInfo">Seed: —</span>
+        <span class="pill">Status: <span id="status">Ready</span></span>
+      </div>
+    </section>
+
+    <aside class="card controls">
+      <div id="err"></div>
+
+      <div class="group">
+        <label>Difficulty</label>
+        <select id="difficulty">
+          <option value="0">1 — Very Easy</option>
+          <option value="1">2 — Easy</option>
+          <option value="2" selected>3 — Medium</option>
+          <option value="3">4 — Hard</option>
+          <option value="4">5 — Extreme</option>
+        </select>
+
+        <div class="row">
+          <div>
+            <label>Start</label>
+            <select id="startPos">
+              <option value="tl">Top-left</option>
+              <option value="tr">Top-right</option>
+              <option value="bl">Bottom-left</option>
+              <option value="br" selected>Bottom-right</option>
+            </select>
+          </div>
+          <div>
+            <label>End</label>
+            <select id="endPos">
+              <option value="br">Bottom-right</option>
+              <option value="bl">Bottom-left</option>
+              <option value="tr" selected>Top-right</option>
+              <option value="tl">Top-left</option>
+            </select>
+          </div>
+        </div>
+
+        <label class="toggle"><input id="showSolution" type="checkbox" /> Show solution overlay</label>
+        <label class="toggle"><input id="braidLoops" type="checkbox" checked /> Add a few loops</label>
+        <label class="toggle"><input id="showMyPath" type="checkbox" checked /> Show my path</label>
+
+        <div class="row">
+          <button id="newMaze">New maze</button>
+          <button id="clearPath">Clear path</button>
+        </div>
+
+        <button id="exportPdf">Export to PDF</button>
+
+        <p class="small">
+          PDF export: maze page + optional solution page (if solution overlay is on).
+        </p>
+      </div>
+    </aside>
+  </div>
+
+<script>
+(() => {
+  // ---------- Error handling ----------
+  const errBox = document.getElementById("err");
+  const statusEl = document.getElementById("status");
+  function setStatus(t){ statusEl.textContent = t; }
+  function showErr(e){
+    errBox.style.display = "block";
+    errBox.textContent = "Error:\n" + (e && e.stack ? e.stack : String(e));
+  }
+  window.addEventListener("error", (e) => showErr(e.error || e.message));
+
+  // ---------- DOM ----------
+  const shellEl = document.getElementById("canvasShell");
+  const canvas = document.getElementById("maze");
+  const ctx = canvas.getContext("2d");
+
+  // Prevent Ctrl+wheel zoom while over maze (trackpad pinch often becomes ctrl+wheel)
+  document.addEventListener("wheel", (e) => {
+    if (shellEl.contains(e.target) && e.ctrlKey) e.preventDefault();
+  }, { passive:false, capture:true });
+
+  // ---------- RNG ----------
+  function makeSeed() {
+    try {
+      if (window.crypto && crypto.getRandomValues) {
+        const a = new Uint32Array(1);
+        crypto.getRandomValues(a);
+        return (a[0] ^ (Date.now() >>> 0)) >>> 0;
+      }
+    } catch {}
+    return ((Math.random() * 0xFFFFFFFF) ^ (Date.now() >>> 0)) >>> 0;
+  }
+  function mulberry32(seed) {
+    let t = seed >>> 0;
+    return function() {
+      t += 0x6D2B79F5;
+      let x = Math.imul(t ^ (t >>> 15), 1 | t);
+      x ^= x + Math.imul(x ^ (x >>> 7), 61 | x);
+      return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // ---------- Maze basics ----------
+  const DIRS = [
+    { name:"N", dx:0,  dy:-1, opp:"S" },
+    { name:"E", dx:1,  dy:0,  opp:"W" },
+    { name:"S", dx:0,  dy:1,  opp:"N" },
+    { name:"W", dx:-1, dy:0,  opp:"E" },
+  ];
+  const DIFFICULTIES = [
+    { label:"Very Easy", size:15, braidChance:0.05, wall:6, margin:40 },
+    { label:"Easy",      size:21, braidChance:0.06, wall:5, margin:36 },
+    { label:"Medium",    size:31, braidChance:0.07, wall:4, margin:32 },
+    { label:"Hard",      size:41, braidChance:0.08, wall:3, margin:28 },
+    { label:"Extreme",   size:61, braidChance:0.09, wall:2, margin:24 },
+  ];
+
+  function inBounds(x,y,w,h){ return x>=0 && y>=0 && x<w && y<h; }
+  function shuffle(a, rand){
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(rand()*(i+1));
+      [a[i],a[j]] = [a[j],a[i]];
+    }
+    return a;
+  }
+  function createGrid(w,h){
+    const g=[];
+    for(let y=0;y<h;y++){
+      const row=[];
+      for(let x=0;x<w;x++){
+        row.push({x,y, visited:false, walls:{N:true,E:true,S:true,W:true}});
+      }
+      g.push(row);
+    }
+    return g;
+  }
+  function generateMaze(w,h,rand){
+    const g=createGrid(w,h);
+    const stack=[g[0][0]];
+    g[0][0].visited=true;
+
+    while(stack.length){
+      const cur=stack[stack.length-1];
+      const dirs=shuffle(DIRS.slice(), rand);
+      let carved=false;
+
+      for(const d of dirs){
+        const nx=cur.x+d.dx, ny=cur.y+d.dy;
+        if(!inBounds(nx,ny,w,h)) continue;
+        const nxt=g[ny][nx];
+        if(nxt.visited) continue;
+
+        cur.walls[d.name]=false;
+        nxt.walls[d.opp]=false;
+        nxt.visited=true;
+        stack.push(nxt);
+        carved=true;
+        break;
+      }
+      if(!carved) stack.pop();
+    }
+
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++)g[y][x].visited=false;
+    return g;
+  }
+  function isDeadEnd(cell){
+    let open=0;
+    for(const d of DIRS) if(!cell.walls[d.name]) open++;
+    return open===1;
+  }
+  function braidMaze(grid, rand, chance){
+    const h=grid.length, w=grid[0].length;
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
+        const c=grid[y][x];
+        if(!isDeadEnd(c) || rand()>chance) continue;
+
+        const cand=[], prefer=[];
+        for(const d of DIRS){
+          const nx=x+d.dx, ny=y+d.dy;
+          if(!inBounds(nx,ny,w,h)) continue;
+          if(c.walls[d.name]===false) continue;
+          const n=grid[ny][nx];
+          cand.push({d,n});
+          if(!isDeadEnd(n)) prefer.push({d,n});
+        }
+        const pickFrom = prefer.length ? prefer : cand;
+        if(!pickFrom.length) continue;
+
+        const ch = pickFrom[Math.floor(rand()*pickFrom.length)];
+        c.walls[ch.d.name]=false;
+        ch.n.walls[ch.d.opp]=false;
+      }
+    }
+  }
+  function posToCoord(pos,w,h){
+    if(pos==="tl") return {x:0,y:0};
+    if(pos==="tr") return {x:w-1,y:0};
+    if(pos==="bl") return {x:0,y:h-1};
+    return {x:w-1,y:h-1};
+  }
+  function solveMaze(grid, start, end){
+    const h=grid.length, w=grid[0].length;
+    const q=[start];
+    const prev=Array.from({length:h},()=>Array(w).fill(null));
+    const seen=Array.from({length:h},()=>Array(w).fill(false));
+    seen[start.y][start.x]=true;
+
+    while(q.length){
+      const cur=q.shift();
+      if(cur.x===end.x && cur.y===end.y) break;
+
+      const cell=grid[cur.y][cur.x];
+      for(const d of DIRS){
+        if(cell.walls[d.name]) continue;
+        const nx=cur.x+d.dx, ny=cur.y+d.dy;
+        if(!inBounds(nx,ny,w,h) || seen[ny][nx]) continue;
+        seen[ny][nx]=true;
+        prev[ny][nx]=cur;
+        q.push({x:nx,y:ny});
+      }
+    }
+    if(!seen[end.y][end.x]) return [];
+    const path=[];
+    let cur=end;
+    while(cur){
+      path.push(cur);
+      if(cur.x===start.x && cur.y===start.y) break;
+      cur = prev[cur.y][cur.x];
+    }
+    path.reverse();
+    return path;
+  }
+
+  // ---------- Movement rules ----------
+  function areAdjacent(a,b){ return Math.abs(a.x-b.x)+Math.abs(a.y-b.y)===1; }
+  function canMove(grid, a, b){
+    if(!areAdjacent(a,b)) return false;
+    const dx=b.x-a.x, dy=b.y-a.y;
+    const cell=grid[a.y][a.x];
+    if(dx===1)  return !cell.walls.E;
+    if(dx===-1) return !cell.walls.W;
+    if(dy===1)  return !cell.walls.S;
+    if(dy===-1) return !cell.walls.N;
+    return false;
+  }
+
+  // ---------- Canvas sizing (no “slow zoom”: never resize inside draw) ----------
+  let geom = null; // {size, dpr, cell, ox, oy, w, h}
+  let solvedBannerUntil = 0; // timestamp ms (to show banner for a bit)
+
+  function resizeCanvasForCurrentState(){
+    if(!state) return;
+    const rect = shellEl.getBoundingClientRect();
+    const size = Math.max(320, Math.floor(rect.width - 20));
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+
+    canvas.width  = Math.floor(size * dpr);
+    canvas.height = Math.floor(size * dpr);
+    canvas.style.width  = size + "px";
+    canvas.style.height = size + "px";
+
+    // Draw in CSS pixels
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+
+    const margin = state.diff.margin;
+    const usable = size - margin*2;
+    const cell = usable / Math.max(state.w, state.h);
+    const ox = (size - cell*state.w)/2;
+    const oy = (size - cell*state.h)/2;
+    geom = { size, dpr, cell, ox, oy, w: state.w, h: state.h };
+  }
+
+  function cellCenter(p){
+    return { cx: geom.ox + (p.x+0.5)*geom.cell, cy: geom.oy + (p.y+0.5)*geom.cell };
+  }
+
+  function draw(opts){
+    const {grid,w,h,start,end,solutionPath,myPath} = state;
+    const size = geom.size;
+
+    ctx.clearRect(0,0,size,size);
+    ctx.fillStyle="#fff";
+    ctx.fillRect(0,0,size,size);
+
+    // walls
+    ctx.strokeStyle="#000";
+    ctx.lineWidth=opts.wallPx;
+    ctx.beginPath();
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
+        const c=grid[y][x];
+        const x1=geom.ox+x*geom.cell, y1=geom.oy+y*geom.cell;
+        const x2=x1+geom.cell, y2=y1+geom.cell;
+        if(c.walls.N){ctx.moveTo(x1,y1);ctx.lineTo(x2,y1);}
+        if(c.walls.E){ctx.moveTo(x2,y1);ctx.lineTo(x2,y2);}
+        if(c.walls.S){ctx.moveTo(x1,y2);ctx.lineTo(x2,y2);}
+        if(c.walls.W){ctx.moveTo(x1,y1);ctx.lineTo(x1,y2);}
+      }
+    }
+    ctx.stroke();
+
+    const s = cellCenter(start), e = cellCenter(end);
+    const r = Math.max(7, geom.cell*0.18);
+
+    // player path
+    if(opts.showMyPath && myPath && myPath.length){
+      ctx.strokeStyle="rgba(10,10,10,.65)";
+      ctx.lineWidth=Math.max(3, geom.cell*0.18);
+      ctx.lineJoin="round"; ctx.lineCap="round";
+      ctx.beginPath();
+      for(let i=0;i<myPath.length;i++){
+        const p = cellCenter(myPath[i]);
+        if(i===0) ctx.moveTo(p.cx,p.cy);
+        else ctx.lineTo(p.cx,p.cy);
+      }
+      ctx.stroke();
+    }
+
+    // solution overlay
+    if(opts.showSolution && solutionPath && solutionPath.length){
+      ctx.strokeStyle="rgba(30,120,220,.85)";
+      ctx.lineWidth=Math.max(4, geom.cell*0.22);
+      ctx.lineJoin="round"; ctx.lineCap="round";
+      ctx.beginPath();
+      for(let i=0;i<solutionPath.length;i++){
+        const p = cellCenter(solutionPath[i]);
+        if(i===0) ctx.moveTo(p.cx,p.cy);
+        else ctx.lineTo(p.cx,p.cy);
+      }
+      ctx.stroke();
+    }
+
+    // start/end dots
+    ctx.fillStyle="rgba(20,160,80,.90)";
+    ctx.beginPath(); ctx.arc(s.cx,s.cy,r,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="rgba(200,40,40,.90)";
+    ctx.beginPath(); ctx.arc(e.cx,e.cy,r,0,Math.PI*2); ctx.fill();
+
+    // ✅ NEW: show “Solved!” directly on the maze when completed
+    const now = Date.now();
+    if (state.solved || now < solvedBannerUntil) {
+      const title = "Solved! \u{1F389}";
+      ctx.save();
+      ctx.globalAlpha = 0.92;
+      ctx.fillStyle = "rgba(0,0,0,0.65)";
+      const padY = Math.max(10, geom.cell * 0.35);
+      const boxH = Math.max(44, geom.cell * 1.0);
+      ctx.fillRect(0, padY, size, boxH);
+
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = "white";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = `700 ${Math.max(18, Math.floor(size * 0.045))}px system-ui, Segoe UI, Arial`;
+      ctx.fillText(title, size/2, padY + boxH/2);
+      ctx.restore();
+    }
+
+    // Helpful hint if paused with a path
+    if (!state.solving && !state.solved && state.myPath.length > 1) {
+      ctx.save();
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = "rgba(0,0,0,0.45)";
+      ctx.fillRect(0, size - 34, size, 34);
+      ctx.fillStyle = "white";
+      ctx.font = "600 14px system-ui, Segoe UI, Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("Paused — click near your last point to resume", size/2, size - 17);
+      ctx.restore();
+    }
+  }
+
+  function pointToCell(px, py){
+    const x = Math.floor((px - geom.ox) / geom.cell);
+    const y = Math.floor((py - geom.oy) / geom.cell);
+    if(x<0 || y<0 || x>=geom.w || y>=geom.h) return null;
+    return {x,y};
+  }
+  function dist(ax,ay,bx,by){ return Math.hypot(ax-bx, ay-by); }
+
+  // ---------- Controls ----------
+  const difficultyEl=document.getElementById("difficulty");
+  const startPosEl=document.getElementById("startPos");
+  const endPosEl=document.getElementById("endPos");
+  const showSolutionEl=document.getElementById("showSolution");
+  const braidLoopsEl=document.getElementById("braidLoops");
+  const showMyPathEl=document.getElementById("showMyPath");
+  const newMazeBtn=document.getElementById("newMaze");
+  const clearPathBtn=document.getElementById("clearPath");
+  const exportPdfBtn=document.getElementById("exportPdf");
+  const mazeInfoEl=document.getElementById("mazeInfo");
+  const seedInfoEl=document.getElementById("seedInfo");
+
+  let state=null;
+
+  function redraw(){
+    if(!state) return;
+    if(!geom) resizeCanvasForCurrentState();
+    draw({
+      wallPx: state.diff.wall,
+      showSolution: showSolutionEl.checked,
+      showMyPath: showMyPathEl.checked
+    });
+  }
+
+  function regenerate(){
+    try{
+      errBox.style.display="none";
+      setStatus("Ready");
+
+      const diff = DIFFICULTIES[Number(difficultyEl.value)] || DIFFICULTIES[2];
+      const seed = makeSeed();
+      const rand = mulberry32(seed);
+
+      const w=diff.size, h=diff.size;
+      let grid = generateMaze(w,h,rand);
+      if(braidLoopsEl.checked) braidMaze(grid,rand,diff.braidChance);
+
+      const start = posToCoord(startPosEl.value,w,h);
+      const end = posToCoord(endPosEl.value,w,h);
+      const solutionPath = solveMaze(grid,start,end);
+
+      state = {
+        seed, diff, grid, w, h,
+        start, end,
+        solutionPath,
+        myPath:[start],
+        solving:false,
+        solved:false
+      };
+
+      solvedBannerUntil = 0;
+      mazeInfoEl.textContent = `${diff.label} • ${w}×${h} cells`;
+      seedInfoEl.textContent = `Seed: ${seed}`;
+
+      resizeCanvasForCurrentState();
+      redraw();
+    } catch(e){ showErr(e); }
+  }
+
+  function clearPath(){
+    if(!state) return;
+    state.myPath=[state.start];
+    state.solving=false;
+    state.solved=false;
+    solvedBannerUntil = 0;
+    setStatus("Ready");
+    redraw();
+  }
+
+  // ---------- Pointer interaction ----------
+  // ✅ NEW behavior:
+  // - You can resume from where you left off.
+  // - On pointer up, we simply pause (keep the path), not reset.
+  const evtOpts = { passive:false };
+
+  function getCanvasPoint(evt){
+    const rect = canvas.getBoundingClientRect();
+    return { x: (evt.clientX - rect.left), y: (evt.clientY - rect.top) };
+  }
+
+  function canStartOrResumeFromClick(pt){
+    if (!geom) return false;
+
+    const clickCell = pointToCell(pt.x, pt.y);
+    if (!clickCell) return false;
+
+    const startCenter = cellCenter(state.start);
+    const lastCell = state.myPath[state.myPath.length - 1];
+    const lastCenter = cellCenter(lastCell);
+
+    const hitR = Math.max(12, geom.cell * 0.28);
+
+    // If you click near the START dot: restart path from start
+    if (dist(pt.x, pt.y, startCenter.cx, startCenter.cy) <= hitR) {
+      state.solving = true;
+      state.solved = false;
+      state.myPath = [state.start];
+      setStatus("Solving…");
+      return true;
+    }
+
+    // ✅ Resume: click near your last path position OR click the last cell itself
+    const nearLast = dist(pt.x, pt.y, lastCenter.cx, lastCenter.cy) <= hitR;
+    const onLastCell = (clickCell.x === lastCell.x && clickCell.y === lastCell.y);
+
+    if (!state.solved && state.myPath.length >= 1 && (nearLast || onLastCell)) {
+      state.solving = true;
+      setStatus("Solving…");
+      return true;
+    }
+
+    return false;
+  }
+
+  function extendPathToCell(target){
+    if(!target) return;
+    const path = state.myPath;
+    const last = path[path.length - 1];
+
+    // undo
+    if(path.length >= 2){
+      const prev = path[path.length - 2];
+      if(target.x === prev.x && target.y === prev.y){
+        path.pop();
+        return;
+      }
+    }
+
+    if(!areAdjacent(last, target)) return;
+    if(!canMove(state.grid, last, target)) return;
+
+    // avoid revisits (except undo)
+    for(let i=0;i<path.length-1;i++){
+      if(path[i].x===target.x && path[i].y===target.y) return;
+    }
+
+    path.push(target);
+
+    if(target.x === state.end.x && target.y === state.end.y){
+      state.solved=true;
+      state.solving=false;
+      setStatus("Solved! 🎉");
+      solvedBannerUntil = Date.now() + 2500; // show banner for a bit even if they move cursor away
+    }
+  }
+
+  canvas.addEventListener("pointerdown", (e) => {
+    try{
+      e.preventDefault();
+      if(!state) return;
+
+      canvas.setPointerCapture(e.pointerId);
+      const pt = getCanvasPoint(e);
+
+      // ✅ Start or resume without forcing restart
+      if (!state.solving) {
+        canStartOrResumeFromClick(pt);
+      }
+
+      redraw();
+    } catch(err){ showErr(err); }
+  }, evtOpts);
+
+  canvas.addEventListener("pointermove", (e) => {
+    try{
+      e.preventDefault();
+      if(!state || !state.solving) return;
+
+      const pt = getCanvasPoint(e);
+      const cell = pointToCell(pt.x, pt.y);
+      extendPathToCell(cell);
+      redraw();
+    } catch(err){ showErr(err); }
+  }, evtOpts);
+
+  function endPointer(e){
+    try{
+      if(e) e.preventDefault();
+      if(!state) return;
+
+      // ✅ NEW: pause, don’t reset, so user can resume from last point
+      if (!state.solved) {
+        if (state.solving) setStatus("Paused (click near your last point to resume)");
+      }
+      state.solving=false;
+      redraw();
+    } catch(err){ showErr(err); }
+  }
+  canvas.addEventListener("pointerup", endPointer, evtOpts);
+  canvas.addEventListener("pointercancel", endPointer, evtOpts);
+  canvas.addEventListener("pointerleave", endPointer, evtOpts);
+
+  // ---------- Export to PDF ----------
+  function loadJsPDF(){
+    return new Promise((resolve,reject)=>{
+      if(window.jspdf && window.jspdf.jsPDF) return resolve(window.jspdf.jsPDF);
+      const s=document.createElement("script");
+      s.src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js";
+      s.onload=()=> (window.jspdf && window.jspdf.jsPDF) ? resolve(window.jspdf.jsPDF) : reject(new Error("jsPDF loaded but not found"));
+      s.onerror=()=> reject(new Error("Failed to load jsPDF (network blocked?)"));
+      document.head.appendChild(s);
+    });
+  }
+
+  function renderToImage(showSolution){
+    const off = document.createElement("canvas");
+    const octx = off.getContext("2d");
+
+    const px = 1100;
+    off.width = px;
+    off.height = px;
+
+    const margin = state.diff.margin;
+    const usable = px - margin*2;
+    const cell = usable / Math.max(state.w, state.h);
+    const ox = (px - cell*state.w)/2;
+    const oy = (px - cell*state.h)/2;
+
+    octx.fillStyle="#fff";
+    octx.fillRect(0,0,px,px);
+
+    octx.strokeStyle="#000";
+    octx.lineWidth=state.diff.wall;
+    octx.beginPath();
+    for(let y=0;y<state.h;y++){
+      for(let x=0;x<state.w;x++){
+        const c=state.grid[y][x];
+        const x1=ox+x*cell, y1=oy+y*cell;
+        const x2=x1+cell, y2=y1+cell;
+        if(c.walls.N){octx.moveTo(x1,y1);octx.lineTo(x2,y1);}
+        if(c.walls.E){octx.moveTo(x2,y1);octx.lineTo(x2,y2);}
+        if(c.walls.S){octx.moveTo(x1,y2);octx.lineTo(x2,y2);}
+        if(c.walls.W){octx.moveTo(x1,y1);octx.lineTo(x1,y2);}
+      }
+    }
+    octx.stroke();
+
+    function center(p){ return {cx: ox+(p.x+0.5)*cell, cy: oy+(p.y+0.5)*cell}; }
+    const s=center(state.start), e=center(state.end);
+    const r=Math.max(7, cell*0.18);
+
+    if(showSolution && state.solutionPath && state.solutionPath.length){
+      octx.strokeStyle="rgba(30,120,220,.85)";
+      octx.lineWidth=Math.max(4, cell*0.22);
+      octx.lineJoin="round"; octx.lineCap="round";
+      octx.beginPath();
+      for(let i=0;i<state.solutionPath.length;i++){
+        const p=center(state.solutionPath[i]);
+        if(i===0) octx.moveTo(p.cx,p.cy);
+        else octx.lineTo(p.cx,p.cy);
+      }
+      octx.stroke();
+    }
+
+    octx.fillStyle="rgba(20,160,80,.90)";
+    octx.beginPath(); octx.arc(s.cx,s.cy,r,0,Math.PI*2); octx.fill();
+    octx.fillStyle="rgba(200,40,40,.90)";
+    octx.beginPath(); octx.arc(e.cx,e.cy,r,0,Math.PI*2); octx.fill();
+
+    return off.toDataURL("image/png", 1.0);
+  }
+
+  exportPdfBtn.addEventListener("click", async () => {
+    try{
+      if(!state) return;
+      const jsPDF = await loadJsPDF();
+      const pdf = new jsPDF({orientation:"portrait", unit:"pt", format:"letter"});
+
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+
+      const imgMaze = renderToImage(false);
+      const imgSol  = showSolutionEl.checked ? renderToImage(true) : null;
+
+      const margin=36, top=52;
+      const usableW = pageW - margin*2;
+      const usableH = pageH - top - margin;
+      const side = Math.min(usableW, usableH);
+      const x = (pageW - side)/2;
+      const y = top + (usableH - side)/2;
+
+      function header(title){
+        pdf.setFont("helvetica","bold"); pdf.setFontSize(14);
+        pdf.text(title, pageW/2, 28, {align:"center"});
+        pdf.setFont("helvetica","normal"); pdf.setFontSize(10);
+        pdf.text(`${state.diff.label} • ${state.w}×${state.h} • Seed ${state.seed}`, pageW/2, 44, {align:"center"});
+      }
+
+      header("Maze");
+      pdf.addImage(imgMaze, "PNG", x, y, side, side);
+
+      if(imgSol){
+        pdf.addPage();
+        header("Maze (Solution)");
+        pdf.addImage(imgSol, "PNG", x, y, side, side);
+      }
+
+      pdf.save(`maze-${state.w}x${state.h}-seed-${state.seed}.pdf`);
+    } catch(e){ showErr(e); }
+  });
+
+  // ---------- Wiring ----------
+  newMazeBtn.addEventListener("click", regenerate);
+  clearPathBtn.addEventListener("click", clearPath);
+  [difficultyEl,startPosEl,endPosEl,braidLoopsEl].forEach(el => el.addEventListener("change", regenerate));
+  showSolutionEl.addEventListener("change", redraw);
+  showMyPathEl.addEventListener("change", redraw);
+
+  window.addEventListener("resize", () => {
+    if(!state) return;
+    resizeCanvasForCurrentState();
+    redraw();
+  });
+
+  regenerate();
+})();
+</script>
+</body>
+</html>

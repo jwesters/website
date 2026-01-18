@@ -1,0 +1,770 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mixed Bag Tetris + Component Gravity (Counter Resets to 5)</title>
+  <style>
+    :root { --bg:#0f1220; --panel:#151a2e; --text:#e9ecff; --muted:#aab1d6; }
+    *{ box-sizing:border-box; font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    body{
+      margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+      background: radial-gradient(1200px 600px at 50% 30%, #1a2150 0%, var(--bg) 55%, #0a0c15 100%);
+      color:var(--text);
+    }
+    .wrap{ display:flex; gap:18px; align-items:flex-start; padding:18px; }
+    .card{
+      background: color-mix(in srgb, var(--panel) 86%, black);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:14px;
+      padding:14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    canvas{
+      display:block;
+      background: #0b0e1a;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.08);
+      image-rendering: pixelated;
+    }
+    h1{ font-size:16px; margin:0 0 10px; color:var(--text); }
+    .stats{ display:grid; gap:10px; min-width:290px; }
+    .row{ display:flex; justify-content:space-between; gap:10px; color:var(--muted); font-size:13px; }
+    .row b{ color:var(--text); font-weight:800; }
+    .btns{ display:flex; gap:10px; margin-top:10px; }
+    button{
+      background:#27307a; color:white; border:0; padding:10px 12px; border-radius:10px;
+      cursor:pointer; font-weight:800;
+    }
+    button:active{ transform: translateY(1px); }
+    .hint{ margin-top:10px; font-size:12px; color:var(--muted); line-height:1.35; }
+    .mini canvas{ width:120px; height:120px; }
+    .stack{ position:relative; }
+    .overlay{
+      position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+      backdrop-filter: blur(4px);
+    }
+    .overlay .box{
+      background: rgba(10,12,21,.86);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:14px;
+      padding:16px 18px;
+      text-align:center;
+      max-width:300px;
+    }
+    .overlay h2{ margin:0 0 8px; font-size:18px; }
+    .overlay p{ margin:0 0 12px; color:var(--muted); font-size:13px; }
+    .pill{
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding:8px 10px; border-radius:999px;
+      background: rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.10);
+      color:var(--muted);
+      font-size:12px;
+    }
+    .pill b{ color:var(--text); font-weight:900; font-size:14px; }
+    .tag{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:6px 10px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.05);
+      font-size:12px; color:var(--muted);
+      width:fit-content;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card stack">
+      <h1>Mixed Bag Tetris</h1>
+      <canvas id="game" width="300" height="600"></canvas>
+      <div class="overlay" id="overlay">
+        <div class="box">
+          <h2>Game Over</h2>
+          <p>Press <b>R</b> or click Restart.</p>
+          <button id="restart2">Restart</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card stats">
+      <div class="row"><span>Score</span><b id="score">0</b></div>
+      <div class="row"><span>Lines</span><b id="lines">0</b></div>
+      <div class="row"><span>Level</span><b id="level">1</b></div>
+      <div class="row"><span>Piece ID</span><b id="pid">—</b></div>
+
+      <div class="pill">
+        <span>Gravity Countdown</span>
+        <b id="gravityCount">5</b>
+      </div>
+
+      <div class="tag">Bag: 24 (14 classic + 10 random)</div>
+
+      <div class="card mini" style="padding:12px;">
+        <div class="row" style="margin-bottom:8px;"><span>Next</span><b id="nextType"> </b></div>
+        <canvas id="next" width="120" height="120"></canvas>
+      </div>
+
+      <div class="btns">
+        <button id="restart">Restart</button>
+        <button id="pause">Pause</button>
+      </div>
+
+      <div class="hint">
+        Controls: ← → move · ↓ soft drop · ↑ rotate · Space hard drop · P pause · R restart<br/>
+        When the counter reaches <b>0</b>, the piece you lock triggers GRAVITY, then the counter immediately resets to <b>5</b>.
+        “GRAVITY” disappears after you lock the next piece (or when gravity finishes).
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ----------------- Config -----------------
+  const COLS = 10, ROWS = 20, BLOCK = 30;
+  const GRAVITY_PERIOD = 5;
+  const GRAVITY_ANIM_MS = 70;
+
+  const BAG_RANDOM_COUNT = 10;
+  const MAX_NO_I = 12;
+
+  // ----------------- Canvas + UI -----------------
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+
+  const nextCanvas = document.getElementById("next");
+  const nctx = nextCanvas.getContext("2d");
+
+  const scoreEl = document.getElementById("score");
+  const linesEl = document.getElementById("lines");
+  const levelEl = document.getElementById("level");
+  const pidEl = document.getElementById("pid");
+  const gravityCountEl = document.getElementById("gravityCount");
+  const nextTypeEl = document.getElementById("nextType");
+  const overlay = document.getElementById("overlay");
+
+  const CLASSIC_COLORS = {
+    I: "#4dd8ff",
+    O: "#ffd54a",
+    T: "#c27bff",
+    S: "#5dff7a",
+    Z: "#ff5d6c",
+    J: "#5aa8ff",
+    L: "#ff9a4a",
+  };
+
+  const RANDOM_PALETTE = ["#62f0ff","#ff7ad9","#a7ff5d","#ffb86b","#9aa7ff","#7affc8","#ff7a7a","#ffd36b"];
+
+  const SHAPES = {
+    I: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+    O: [[0,1,1,0],[0,1,1,0],[0,0,0,0],[0,0,0,0]],
+    T: [[0,1,0,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]],
+    S: [[0,1,1,0],[1,1,0,0],[0,0,0,0],[0,0,0,0]],
+    Z: [[1,1,0,0],[0,1,1,0],[0,0,0,0],[0,0,0,0]],
+    J: [[1,0,0,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]],
+    L: [[0,0,1,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]],
+  };
+  const CLASSIC_TYPES = Object.keys(SHAPES);
+
+  // ----------------- State -----------------
+  let board, current, nextPiece;
+  let score = 0, lines = 0, level = 1;
+  let dropCounter = 0, lastTime = 0;
+  let dropInterval = 700;
+
+  let paused = false;
+  let gameOver = false;
+
+  // countdown shown to user
+  let gravityCountdown = GRAVITY_PERIOD;
+
+  // Bag + fairness tracking
+  let bag = [];
+  let pieceIdCounter = 1;
+  let sinceLastI = 0;
+
+  // Gravity (component falling) runs asynchronously but should only be triggered by the lock at 0
+  let gravityRunning = false;
+  let gravityTimer = 0;
+
+  // Banner should go away after the NEXT piece is locked (or when gravity finishes)
+  let gravityBanner = false;
+
+  // ----------------- Helpers -----------------
+  function emptyBoard() {
+    return Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = (Math.random() * (i + 1)) | 0;
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function cloneMatrix(mat) { return mat.map(r => r.slice()); }
+
+  function rotateMatrixCW(mat) {
+    const N = 4;
+    const res = Array.from({ length: N }, () => Array(N).fill(0));
+    for (let y = 0; y < N; y++)
+      for (let x = 0; x < N; x++)
+        res[x][N - 1 - y] = mat[y][x];
+    return res;
+  }
+
+  function normalizeMatrix(mat) {
+    while (mat.every(row => row[0] === 0)) {
+      for (let y=0; y<4; y++) { mat[y].shift(); mat[y].push(0); }
+    }
+    while (mat[0].every(v => v === 0)) {
+      mat.shift();
+      mat.push([0,0,0,0]);
+    }
+    return mat;
+  }
+
+  // ----------------- Random generator (min 1 adjacent pair) -----------------
+  function genRandomShapeMinAdjacentPair() {
+    const size = 4;
+    const hasAdjacentPair = (cellsSet) => {
+      for (const idx of cellsSet) {
+        const x = idx % size, y = (idx / size) | 0;
+        if (x < size - 1 && cellsSet.has(idx + 1)) return true;
+        if (x > 0 && cellsSet.has(idx - 1)) return true;
+        if (y < size - 1 && cellsSet.has(idx + size)) return true;
+        if (y > 0 && cellsSet.has(idx - size)) return true;
+      }
+      return false;
+    };
+
+    for (let tries = 0; tries < 5000; tries++) {
+      const cells = new Set();
+      while (cells.size < 4) cells.add((Math.random() * 16) | 0);
+      if (!hasAdjacentPair(cells)) continue;
+
+      let mat = Array.from({ length: 4 }, () => [0,0,0,0]);
+      for (const idx of cells) mat[(idx/4)|0][idx%4] = 1;
+      return normalizeMatrix(mat);
+    }
+
+    const cells = new Set([0,1,5,10]);
+    let mat = Array.from({ length: 4 }, () => [0,0,0,0]);
+    for (const idx of cells) mat[(idx/4)|0][idx%4] = 1;
+    return normalizeMatrix(mat);
+  }
+
+  // ----------------- Bag system: 24 = 14 classic (two 7-bags) + 10 random -----------------
+  function makeClassic14() {
+    const twoBags = [];
+    for (let k = 0; k < 2; k++) {
+      const b = CLASSIC_TYPES.slice();
+      shuffle(b);
+      twoBags.push(...b);
+    }
+    return twoBags; // 14
+  }
+
+  function makeRandom10() {
+    const out = [];
+    for (let i = 0; i < BAG_RANDOM_COUNT; i++) {
+      out.push({
+        kind: "random",
+        type: "R",
+        matrix: genRandomShapeMinAdjacentPair(),
+        color: RANDOM_PALETTE[(Math.random() * RANDOM_PALETTE.length) | 0]
+      });
+    }
+    return out;
+  }
+
+  function buildBag24WithFairI() {
+    const classicTypes14 = makeClassic14();
+    const randomPieces10 = makeRandom10();
+
+    const maxTries = 3000;
+    for (let t = 0; t < maxTries; t++) {
+      const pieces = [];
+      for (const type of classicTypes14) pieces.push({ kind:"classic", type, matrix: cloneMatrix(SHAPES[type]), color: CLASSIC_COLORS[type] });
+      for (const rp of randomPieces10) pieces.push({ kind:"random", type:"R", matrix: cloneMatrix(rp.matrix), color: rp.color });
+
+      shuffle(pieces);
+
+      const iPos = [];
+      for (let i = 0; i < pieces.length; i++) if (pieces[i].kind === "classic" && pieces[i].type === "I") iPos.push(i);
+      if (iPos.length < 1) continue;
+
+      const firstI = iPos[0];
+      if (sinceLastI + firstI > MAX_NO_I) continue;
+
+      let ok = true;
+      for (let k = 1; k < iPos.length; k++) {
+        const gap = iPos[k] - iPos[k-1] - 1;
+        if (gap > MAX_NO_I) { ok = false; break; }
+      }
+      if (!ok) continue;
+
+      return pieces;
+    }
+
+    const fallback = [];
+    for (const type of classicTypes14) fallback.push({ kind:"classic", type, matrix: cloneMatrix(SHAPES[type]), color: CLASSIC_COLORS[type] });
+    for (const rp of randomPieces10) fallback.push({ kind:"random", type:"R", matrix: cloneMatrix(rp.matrix), color: rp.color });
+    return shuffle(fallback);
+  }
+
+  function nextFromBag() {
+    if (bag.length === 0) bag = buildBag24WithFairI();
+    const base = bag.shift();
+    return {
+      id: pieceIdCounter++,
+      kind: base.kind,
+      type: base.kind === "classic" ? base.type : "R",
+      matrix: cloneMatrix(base.matrix),
+      color: base.color,
+      x: 3,
+      y: -1
+    };
+  }
+
+  function notePieceDealt(piece) {
+    if (piece.kind === "classic" && piece.type === "I") sinceLastI = 0;
+    else sinceLastI += 1;
+  }
+
+  // ----------------- Drawing -----------------
+  function drawGridBackground() {
+    ctx.fillStyle = "#0b0e1a";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.strokeStyle = "rgba(255,255,255,0.05)";
+    for (let x=0;x<=COLS;x++){
+      ctx.beginPath(); ctx.moveTo(x*BLOCK+0.5,0); ctx.lineTo(x*BLOCK+0.5,ROWS*BLOCK); ctx.stroke();
+    }
+    for (let y=0;y<=ROWS;y++){
+      ctx.beginPath(); ctx.moveTo(0,y*BLOCK+0.5); ctx.lineTo(COLS*BLOCK,y*BLOCK+0.5); ctx.stroke();
+    }
+  }
+
+  function drawCell(context, x, y, color, size=BLOCK) {
+    context.fillStyle = color;
+    context.fillRect(x*size, y*size, size, size);
+    context.strokeStyle = "rgba(255,255,255,0.10)";
+    context.strokeRect(x*size+0.5, y*size+0.5, size-1, size-1);
+  }
+
+  function drawBoard() {
+    for (let y=0;y<ROWS;y++){
+      for (let x=0;x<COLS;x++){
+        const cell = board[y][x];
+        if (cell) drawCell(ctx, x, y, cell);
+      }
+    }
+  }
+
+  function drawPiece(piece, ghost=false) {
+    const { matrix, x:px, y:py, color } = piece;
+    for (let y=0;y<4;y++){
+      for (let x=0;x<4;x++){
+        if (!matrix[y][x]) continue;
+        const bx = px + x;
+        const by = py + y;
+        if (by < 0) continue;
+
+        if (ghost) {
+          ctx.fillStyle = "rgba(255,255,255,0.10)";
+          ctx.fillRect(bx*BLOCK, by*BLOCK, BLOCK, BLOCK);
+          ctx.strokeStyle = "rgba(255,255,255,0.15)";
+          ctx.strokeRect(bx*BLOCK+0.5, by*BLOCK+0.5, BLOCK-1, BLOCK-1);
+        } else {
+          drawCell(ctx, bx, by, color);
+        }
+      }
+    }
+  }
+
+  function drawNext() {
+    nctx.clearRect(0,0,nextCanvas.width,nextCanvas.height);
+    nctx.fillStyle = "#0b0e1a";
+    nctx.fillRect(0,0,nextCanvas.width,nextCanvas.height);
+
+    const size = 24;
+    const offX = 1, offY = 1;
+
+    for (let y=0;y<4;y++){
+      for (let x=0;x<4;x++){
+        if (!nextPiece.matrix[y][x]) continue;
+        nctx.fillStyle = nextPiece.color;
+        nctx.fillRect((x+offX)*size, (y+offY)*size, size, size);
+        nctx.strokeStyle = "rgba(255,255,255,0.12)";
+        nctx.strokeRect((x+offX)*size+0.5, (y+offY)*size+0.5, size-1, size-1);
+      }
+    }
+    nextTypeEl.textContent = nextPiece.kind === "classic" ? nextPiece.type : "Random";
+  }
+
+  function draw() {
+    drawGridBackground();
+    drawBoard();
+
+    const ghost = { ...current, matrix: cloneMatrix(current.matrix) };
+    while (!collides({ ...ghost, y: ghost.y + 1 })) ghost.y++;
+    drawPiece(ghost, true);
+
+    drawPiece(current);
+    drawNext();
+
+    if (paused && !gameOver) {
+      ctx.fillStyle="rgba(0,0,0,0.45)";
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle="rgba(255,255,255,0.9)";
+      ctx.font="bold 28px system-ui";
+      ctx.textAlign="center";
+      ctx.fillText("PAUSED", canvas.width/2, canvas.height/2);
+    }
+
+    if (gravityBanner && !gameOver && !paused) {
+      ctx.fillStyle="rgba(0,0,0,0.18)";
+      ctx.fillRect(0,0,canvas.width,64);
+      ctx.fillStyle="rgba(255,255,255,0.95)";
+      ctx.font="bold 18px system-ui";
+      ctx.textAlign="center";
+      ctx.fillText("GRAVITY", canvas.width/2, 40);
+    }
+  }
+
+  // ----------------- Collision / merge -----------------
+  function collides(piece) {
+    const { matrix, x:px, y:py } = piece;
+    for (let y=0;y<4;y++){
+      for (let x=0;x<4;x++){
+        if (!matrix[y][x]) continue;
+        const bx = px + x;
+        const by = py + y;
+        if (bx < 0 || bx >= COLS || by >= ROWS) return true;
+        if (by >= 0 && board[by][bx]) return true;
+      }
+    }
+    return false;
+  }
+
+  function merge(piece) {
+    const { matrix, x:px, y:py, color } = piece;
+    for (let y=0;y<4;y++){
+      for (let x=0;x<4;x++){
+        if (!matrix[y][x]) continue;
+        const bx = px + x;
+        const by = py + y;
+        if (by >= 0) board[by][bx] = color;
+      }
+    }
+  }
+
+  function clearLines() {
+    let cleared = 0;
+    outer: for (let y=ROWS-1; y>=0; y--){
+      for (let x=0;x<COLS;x++){
+        if (!board[y][x]) continue outer;
+      }
+      board.splice(y,1);
+      board.unshift(Array(COLS).fill(null));
+      cleared++;
+      y++;
+    }
+
+    if (cleared > 0) {
+      const points = [0, 120, 360, 600, 900][cleared] || (cleared * 300);
+      score += points * level;
+      lines += cleared;
+
+      const newLevel = 1 + Math.floor(lines / 10);
+      if (newLevel !== level) {
+        level = newLevel;
+        dropInterval = Math.max(90, 700 - (level - 1) * 55);
+      }
+    }
+  }
+
+  function tryRotate() {
+    const rotated = rotateMatrixCW(current.matrix);
+    const test = { ...current, matrix: rotated };
+    const kicks = [0, -1, 1, -2, 2];
+    for (const k of kicks) {
+      const cand = { ...test, x: test.x + k };
+      if (!collides(cand)) { current = cand; updateHUD(); return; }
+    }
+  }
+
+  // ----------------- Component Gravity (same-color connected groups) -----------------
+  function inBounds(x,y){ return x>=0 && x<COLS && y>=0 && y<ROWS; }
+
+  function getComponentsByColor() {
+    const visited = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+    const comps = [];
+
+    for (let y=0;y<ROWS;y++){
+      for (let x=0;x<COLS;x++){
+        const c = board[y][x];
+        if (!c || visited[y][x]) continue;
+
+        const cells = [];
+        const stack = [{x,y}];
+        visited[y][x] = true;
+
+        while (stack.length) {
+          const p = stack.pop();
+          cells.push(p);
+
+          const nbs = [
+            {x:p.x+1,y:p.y},{x:p.x-1,y:p.y},
+            {x:p.x,y:p.y+1},{x:p.x,y:p.y-1},
+          ];
+
+          for (const nb of nbs) {
+            if (!inBounds(nb.x, nb.y)) continue;
+            if (visited[nb.y][nb.x]) continue;
+            if (board[nb.y][nb.x] !== c) continue;
+            visited[nb.y][nb.x] = true;
+            stack.push(nb);
+          }
+        }
+
+        comps.push({ color: c, cells });
+      }
+    }
+    return comps;
+  }
+
+  function componentCanFallOne(comp, cellSet) {
+    for (const {x,y} of comp.cells) {
+      if (y === ROWS - 1) return false;
+      const belowKey = (y+1) * COLS + x;
+      if (cellSet.has(belowKey)) continue;      // supported by itself
+      if (board[y+1][x] !== null) return false; // blocked by other blocks
+    }
+    return true;
+  }
+
+  function applyComponentGravityStep() {
+    const comps = getComponentsByColor();
+    if (comps.length === 0) return false;
+
+    const compSets = comps.map(comp => {
+      const s = new Set();
+      for (const {x,y} of comp.cells) s.add(y * COLS + x);
+      return s;
+    });
+
+    const fallers = [];
+    for (let i=0;i<comps.length;i++){
+      if (componentCanFallOne(comps[i], compSets[i])) fallers.push(i);
+    }
+    if (fallers.length === 0) return false;
+
+    // clear then place down (atomic-ish)
+    for (const idx of fallers) for (const {x,y} of comps[idx].cells) board[y][x] = null;
+    for (const idx of fallers) {
+      const color = comps[idx].color;
+      for (const {x,y} of comps[idx].cells) board[y+1][x] = color;
+    }
+
+    return true;
+  }
+
+  function resolveCurrentOverlap() {
+    // If gravity moved blocks into the current piece, nudge current up.
+    let safety = 12;
+    while (safety-- > 0 && collides(current)) current.y -= 1;
+    if (collides(current)) endGame();
+  }
+
+  function startGravity() {
+    gravityRunning = true;
+    gravityTimer = 0;
+    gravityBanner = true;
+  }
+
+  function stopGravity() {
+    gravityRunning = false;
+    gravityTimer = 0;
+    gravityBanner = false; // if it finishes naturally, remove banner
+  }
+
+  // ----------------- Turn / lock flow (FIXED COUNTER RESET) -----------------
+  function onPieceLocked() {
+    // If banner was showing, it must leave after a block is played (locked)
+    // (Requirement: gravity text leave after a block is played.)
+    if (gravityBanner) gravityBanner = false;
+
+    // Decrement countdown
+    gravityCountdown -= 1;
+
+    // If it hits 0 NOW, this lock triggers gravity,
+    // AND the countdown immediately resets to 5.
+    if (gravityCountdown <= 0) {
+      startGravity();              // trigger gravity from this lock
+      gravityCountdown = GRAVITY_PERIOD; // <-- FIX: reset immediately to 5
+      updateHUD();
+      return;
+    }
+
+    updateHUD();
+  }
+
+  function lockPiece() {
+    merge(current);
+    clearLines();
+    score += 5;
+
+    onPieceLocked();
+
+    // spawn next
+    current = nextPiece;
+    current.x = 3;
+    current.y = -1;
+
+    notePieceDealt(current);
+    nextPiece = nextFromBag();
+
+    if (collides(current)) endGame();
+    updateHUD();
+  }
+
+  function softDrop() {
+    if (gameOver || paused) return;
+    if (!collides({ ...current, y: current.y + 1 })) {
+      current.y++;
+      score += 1;
+      updateHUD();
+    } else {
+      lockPiece();
+    }
+  }
+
+  function hardDrop() {
+    if (gameOver || paused) return;
+    while (!collides({ ...current, y: current.y + 1 })) {
+      current.y++;
+      score += 2;
+    }
+    lockPiece();
+  }
+
+  function endGame() {
+    gameOver = true;
+    overlay.style.display = "flex";
+  }
+
+  // ----------------- HUD -----------------
+  function updateHUD() {
+    scoreEl.textContent = score;
+    linesEl.textContent = lines;
+    levelEl.textContent = level;
+    pidEl.textContent = current ? `${current.id}` : "—";
+    gravityCountEl.textContent = gravityCountdown;
+    if (nextPiece) nextTypeEl.textContent = nextPiece.kind === "classic" ? nextPiece.type : "Random";
+  }
+
+  // ----------------- Main loop -----------------
+  function step(time=0) {
+    const delta = time - lastTime;
+    lastTime = time;
+
+    if (!paused && !gameOver) {
+      // Normal falling for current piece always
+      dropCounter += delta;
+      if (dropCounter > dropInterval) {
+        dropCounter = 0;
+        if (!collides({ ...current, y: current.y + 1 })) current.y++;
+        else lockPiece();
+      }
+
+      // Gravity runs while you play (no freeze)
+      if (gravityRunning) {
+        gravityTimer += delta;
+        while (gravityTimer >= GRAVITY_ANIM_MS) {
+          gravityTimer -= GRAVITY_ANIM_MS;
+
+          const moved = applyComponentGravityStep();
+          resolveCurrentOverlap();
+          clearLines();
+
+          if (!moved) {
+            stopGravity();
+            break;
+          }
+        }
+      }
+    }
+
+    draw();
+    requestAnimationFrame(step);
+  }
+
+  // ----------------- Controls -----------------
+  window.addEventListener("keydown", (e) => {
+    if (e.code === "KeyP") { togglePause(); return; }
+    if (e.code === "KeyR") { resetGame(); return; }
+    if (paused || gameOver) return;
+
+    if (e.code === "ArrowLeft") {
+      const t = { ...current, x: current.x - 1 };
+      if (!collides(t)) current = t;
+    } else if (e.code === "ArrowRight") {
+      const t = { ...current, x: current.x + 1 };
+      if (!collides(t)) current = t;
+    } else if (e.code === "ArrowDown") {
+      softDrop(); dropCounter = 0;
+    } else if (e.code === "ArrowUp") {
+      tryRotate();
+    } else if (e.code === "Space") {
+      e.preventDefault();
+      hardDrop(); dropCounter = 0;
+    }
+  });
+
+  document.getElementById("restart").addEventListener("click", resetGame);
+  document.getElementById("restart2").addEventListener("click", resetGame);
+  document.getElementById("pause").addEventListener("click", togglePause);
+
+  function togglePause() {
+    if (gameOver) return;
+    paused = !paused;
+    document.getElementById("pause").textContent = paused ? "Resume" : "Pause";
+  }
+
+  // ----------------- Reset / Start -----------------
+  function resetGame() {
+    board = emptyBoard();
+    score = 0; lines = 0; level = 1;
+    dropInterval = 700;
+    dropCounter = 0; lastTime = 0;
+
+    paused = false;
+    gameOver = false;
+    overlay.style.display = "none";
+
+    gravityCountdown = GRAVITY_PERIOD;
+    gravityRunning = false;
+    gravityTimer = 0;
+    gravityBanner = false;
+
+    bag = [];
+    pieceIdCounter = 1;
+    sinceLastI = 0;
+
+    current = nextFromBag();
+    notePieceDealt(current);
+    nextPiece = nextFromBag();
+
+    if (collides(current)) endGame();
+    updateHUD();
+    draw();
+  }
+
+  resetGame();
+  requestAnimationFrame(step);
+})();
+</script>
+</body>
+</html>

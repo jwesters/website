@@ -1,0 +1,126 @@
+<script>
+const WORD_FILE = "dictionary_least_common_10000.txt";
+
+const MAX_LIVES = 10;
+const SAFE_TO_WIN = 10;
+
+let words = [];
+let answer = "";
+let lives = MAX_LIVES;
+let safePicks = 0;
+let guessed = new Set();
+let gameOver = false;
+
+// Elements
+const pickedEl = document.getElementById("picked");
+const keyboardEl = document.getElementById("keyboard");
+const livesEl = document.getElementById("lives");
+const progressEl = document.getElementById("progress");
+const overlay = document.getElementById("overlay");
+const overlayTitle = document.getElementById("overlayTitle");
+const overlayText = document.getElementById("overlayText");
+const statusBtn = document.getElementById("statusBtn");
+
+// Load word list
+fetch(WORD_FILE)
+  .then(async (res) => {
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status} ${res.statusText} for ${WORD_FILE}`);
+    }
+    return res.text();
+  })
+  .then(text => {
+    words = text
+      .split(/\r?\n/)
+      .map(w => w.trim().toUpperCase())
+      .filter(w => /^[A-Z]{3,12}$/.test(w));
+
+    if (words.length === 0) throw new Error("Word list loaded, but no valid words found.");
+    newGame();
+  })
+  .catch((err) => {
+    console.error(err);
+    alert("Could not load word list: " + err.message);
+  });
+
+function pickWord() {
+  return words[Math.floor(Math.random() * words.length)];
+}
+
+function newGame() {
+  answer = pickWord();
+  lives = MAX_LIVES;
+  safePicks = 0;
+  guessed.clear();
+  gameOver = false;
+  overlay.classList.remove("show");
+  render();
+}
+
+function render() {
+  livesEl.textContent = `Lives: ${lives}`;
+  progressEl.textContent = `Safe picks: ${safePicks}/${SAFE_TO_WIN}`;
+
+  pickedEl.innerHTML = guessed.size
+    ? [...guessed].sort().map(l => {
+        const hit = answer.includes(l);
+        return `<span class="pill ${hit ? "hit" : "safe"}">${l}</span>`;
+      }).join("")
+    : "<div style='opacity:.7;font-weight:700'>Pick letters below</div>";
+
+  keyboardEl.innerHTML = "";
+  for (let i = 65; i <= 90; i++) {
+    const l = String.fromCharCode(i);
+    const b = document.createElement("button");
+    b.textContent = l;
+    b.className = "key";
+    b.disabled = guessed.has(l) || gameOver;
+
+    if (guessed.has(l)) {
+      b.classList.add(answer.includes(l) ? "hit" : "safe");
+    }
+
+    b.onclick = () => guess(l);
+    keyboardEl.appendChild(b);
+  }
+}
+
+function showOverlay(win) {
+  gameOver = true;
+  overlay.classList.add("show");
+
+  if (win) {
+    overlayTitle.textContent = "You Win!";
+    overlayText.textContent = `You avoided the word: ${answer}`;
+    statusBtn.textContent = "YOU WIN";
+    statusBtn.className = "success";
+  } else {
+    overlayTitle.textContent = "You Lost";
+    overlayText.textContent = `The word was: ${answer}`;
+    statusBtn.textContent = "YOU LOST";
+    statusBtn.className = "danger";
+  }
+}
+
+function guess(letter) {
+  if (gameOver || guessed.has(letter)) return;
+  guessed.add(letter);
+
+  if (answer.includes(letter)) {
+    lives--;
+    if (lives <= 0) showOverlay(false);
+  } else {
+    safePicks++;
+    if (safePicks >= SAFE_TO_WIN) showOverlay(true);
+  }
+  render();
+}
+
+document.getElementById("newGame").onclick = newGame;
+document.getElementById("playAgainBtn").onclick = newGame;
+
+window.addEventListener("keydown", e => {
+  const k = e.key.toUpperCase();
+  if (/^[A-Z]$/.test(k)) guess(k);
+});
+</script>
