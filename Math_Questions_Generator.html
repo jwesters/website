@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Math Practice Generator (0–10)</title>
+  <title>Math Practice Generator (Export PDFs)</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 24px; }
     .topbar { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
     .spacer { flex: 1; }
-    .name { text-align: right; min-width: 320px; margin-top: 8px; }
+    .name { text-align: right; min-width: 360px; margin-top: 8px; }
     .card { border: 1px solid #ddd; border-radius: 10px; padding: 16px; margin-top: 16px; }
     h1 { margin: 8px 0 0; font-size: 24px; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 48px; margin-top: 18px; }
@@ -17,14 +17,18 @@
     select, button { padding: 8px 10px; font-size: 14px; }
     button { cursor: pointer; }
     .muted { color: #666; font-size: 13px; margin-top: 6px; }
+    .err { color: #b00; font-size: 13px; margin-top: 8px; }
 
     @media print {
-      .topbar, .muted { display: none !important; }
+      .topbar, .muted, .err { display: none !important; }
       body { margin: 0.5in; }
       .card { border: none; padding: 0; }
       .q { font-size: 18px; }
     }
   </style>
+
+  <!-- jsPDF -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -40,7 +44,16 @@
   <label for="group">Group:</label>
   <select id="group"></select>
 
+  <label for="count">Questions:</label>
+  <select id="count">
+    <option value="10">10</option>
+    <option value="15">15</option>
+    <option value="20">20</option>
+  </select>
+
   <button id="generate">Generate</button>
+  <button id="exportPdf">Export THIS page PDF</button>
+  <button id="exportAllPdf">Export ALL 5 group pages PDF</button>
   <button onclick="window.print()">Print</button>
 
   <div class="spacer"></div>
@@ -52,11 +65,11 @@
   <h1 id="title"></h1>
   <div class="muted" id="rules"></div>
   <div class="grid" id="questions"></div>
+  <div class="err" id="err"></div>
 </div>
 
 <script>
   // ================= CONFIG =================
-  const LETTERS = "abcdefghij".split("");
   const OTHER_MIN = 0;
   const OTHER_MAX = 10;
 
@@ -64,6 +77,11 @@
   const MINUEND_MAX_NORMAL = 10;
   const MINUEND_MAX_HIGH = 15;
   const HIGH_THRESHOLD = 7;
+
+  // Division: ensure no remainder; exclude divisor 0
+  // For divisor 7+, allow quotient up to 15 for more variety
+  const DIV_QUOT_MAX_NORMAL = 10;
+  const DIV_QUOT_MAX_HIGH = 15;
 
   const GROUPS = [
     { label: "0–2", values: [0,1,2] },
@@ -74,12 +92,24 @@
     { label: "All (0–10)", values: [0,1,2,3,4,5,6,7,8,9,10] }
   ];
 
+  // For "Export ALL 5 group pages", we only want the 5 grouped pages (not "All")
+  const FIVE_GROUP_INDICES = [0,1,2,3,4];
+
   // ================= UI =================
   const modeEl = document.getElementById("mode");
   const groupEl = document.getElementById("group");
+  const countEl = document.getElementById("count");
   const titleEl = document.getElementById("title");
   const rulesEl = document.getElementById("rules");
   const qEl = document.getElementById("questions");
+  const errEl = document.getElementById("err");
+
+  let lastRendered = {
+    mode: "add",
+    groupLabel: "0–2",
+    questions: [],
+    count: 10
+  };
 
   function fillGroups() {
     groupEl.innerHTML = "";
@@ -92,17 +122,19 @@
   }
 
   // ================= HELPERS =================
-  const randInt = (min, max) =>
-    Math.floor(Math.random() * (max - min + 1)) + min;
+  const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
-  // For commutative ops: treat a⊕b and b⊕a as the same question
-  const canonicalPair = (a, b) => (a <= b ? `${a},${b}` : `${b},${a}`);
-
-  function groupLabel(values) {
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    return (min === 0 && max === 10 && values.length === 11) ? "All (0–10)" : `${min}–${max}`;
+  function labelsFor(n) {
+    // a..t for up to 20
+    const letters = [];
+    for (let i = 0; i < n; i++) letters.push(String.fromCharCode(97 + i));
+    return letters;
   }
+
+  // IMPORTANT CHANGE:
+  // Key is ORDERED now, so 3+5 and 5+3 are treated as DIFFERENT and both allowed.
+  // Still prevents exact duplicates in the same order.
+  const orderedKey = (a, b) => `${a},${b}`;
 
   // ================= QUESTION GENERATION =================
   function makeAddQuestion(groupVals) {
@@ -111,7 +143,7 @@
     const flip = Math.random() < 0.5;
     const a = flip ? other : addend;
     const b = flip ? addend : other;
-    return { a, b, text: `${a} + ${b} =`, key: canonicalPair(a, b) };
+    return { text: `${a} + ${b} =`, key: orderedKey(a, b) };
   }
 
   function makeMulQuestion(groupVals) {
@@ -120,53 +152,45 @@
     const flip = Math.random() < 0.5;
     const a = flip ? other : factor;
     const b = flip ? factor : other;
-    // Use × symbol in display (still plain text)
-    return { a, b, text: `${a} × ${b} =`, key: canonicalPair(a, b) };
+    return { text: `${a} × ${b} =`, key: orderedKey(a, b) };
   }
 
   function makeSubQuestion(groupVals) {
     const sub = groupVals[randInt(0, groupVals.length - 1)];
     const maxMinuend = (sub >= HIGH_THRESHOLD) ? MINUEND_MAX_HIGH : MINUEND_MAX_NORMAL;
     const minuend = randInt(sub, maxMinuend); // ensures no negatives
-    return { a: minuend, b: sub, text: `${minuend} − ${sub} =`, key: `${minuend},${sub}` };
+    return { text: `${minuend} − ${sub} =`, key: orderedKey(minuend, sub) };
   }
 
   function makeDivQuestion(groupVals) {
-    // divisor comes from group, but cannot be 0
-    let divisor = groupVals[randInt(0, groupVals.length - 1)];
-    if (divisor === 0) return null;
+    const divisor = groupVals[randInt(0, groupVals.length - 1)];
+    if (divisor === 0) return null; // never allow divide by 0
 
-    // pick an integer quotient so dividend divides evenly
-    // keep quotient in 0..10 for consistency; if divisor is large (7+), allow dividend to be larger
-    const quotient = randInt(0, 10);
+    const qMax = (divisor >= HIGH_THRESHOLD) ? DIV_QUOT_MAX_HIGH : DIV_QUOT_MAX_NORMAL;
+    const quotient = randInt(0, qMax);
+    const dividend = divisor * quotient; // always remainder-free
 
-    // dividend = divisor * quotient (always remainder-free)
-    // For divisor 7+, dividend can go up to 15*divisor by allowing quotient up to 15 sometimes
-    const qMax = (divisor >= HIGH_THRESHOLD) ? 15 : 10;
-    const q = randInt(0, qMax);
-    const dividend = divisor * q;
-
-    return { a: dividend, b: divisor, text: `${dividend} ÷ ${divisor} =`, key: `${dividend},${divisor}` };
+    return { text: `${dividend} ÷ ${divisor} =`, key: orderedKey(dividend, divisor) };
   }
 
-  function generateQuestions(mode, groupVals) {
+  function generateQuestions(mode, groupVals, count) {
     const seen = new Set();
     const out = [];
     let attempts = 0;
 
-    while (out.length < 10) {
+    while (out.length < count) {
       attempts++;
-      if (attempts > 10000) throw new Error("Unable to generate enough unique questions.");
+      if (attempts > 30000) throw new Error("Unable to generate enough unique questions for these settings.");
 
       let q = null;
       if (mode === "add") q = makeAddQuestion(groupVals);
-      if (mode === "sub") q = makeSubQuestion(groupVals);
-      if (mode === "mul") q = makeMulQuestion(groupVals);
-      if (mode === "div") q = makeDivQuestion(groupVals);
+      else if (mode === "sub") q = makeSubQuestion(groupVals);
+      else if (mode === "mul") q = makeMulQuestion(groupVals);
+      else if (mode === "div") q = makeDivQuestion(groupVals);
 
-      if (!q) continue; // e.g., division by 0 skip
+      if (!q) continue;
 
-      if (seen.has(q.key)) continue;
+      if (seen.has(q.key)) continue; // prevents exact duplicates only (same order)
       seen.add(q.key);
       out.push(q.text);
     }
@@ -174,38 +198,140 @@
   }
 
   // ================= RENDER =================
+  function getOpName(mode) {
+    return { add: "Adding", sub: "Subtracting", mul: "Multiplying", div: "Dividing" }[mode] || "Math";
+  }
+
+  function setRules(mode) {
+    if (mode === "add") {
+      rulesEl.textContent = "Duplicates ARE allowed if the order is different (3+5 and 5+3 can both appear). Numbers 0–10.";
+    } else if (mode === "mul") {
+      rulesEl.textContent = "Duplicates ARE allowed if the order is different (3×5 and 5×3 can both appear). Numbers 0–10.";
+    } else if (mode === "sub") {
+      rulesEl.textContent = "No negatives. If subtracting by 7 or higher, the minuend may go up to 15.";
+    } else {
+      rulesEl.textContent = "No remainders. Division by 0 is excluded automatically.";
+    }
+  }
+
   function render() {
+    errEl.textContent = "";
+
     const mode = modeEl.value;
     const group = GROUPS[parseInt(groupEl.value, 10)];
+    const count = parseInt(countEl.value, 10);
 
-    const opName = {
-      add: "Adding",
-      sub: "Subtracting",
-      mul: "Multiplying",
-      div: "Dividing"
-    }[mode];
+    titleEl.textContent = `${getOpName(mode)} ${group.label}`;
+    setRules(mode);
 
-    titleEl.textContent = `${opName} ${group.label}`;
-
-    if (mode === "add") {
-      rulesEl.textContent = "10 questions (a–j). Numbers 0–10. No duplicates (3+7 and 7+3 count as duplicates).";
-    } else if (mode === "mul") {
-      rulesEl.textContent = "10 questions (a–j). Numbers 0–10. No duplicates (3×7 and 7×3 count as duplicates).";
-    } else if (mode === "sub") {
-      rulesEl.textContent = "10 questions (a–j). No negatives. If subtracting by 7 or higher, the minuend may go up to 15.";
-    } else {
-      rulesEl.textContent = "10 questions (a–j). No remainders. Division by 0 is excluded automatically.";
+    let qs;
+    try {
+      qs = generateQuestions(mode, group.values, count);
+    } catch (e) {
+      errEl.textContent = e.message;
+      return;
     }
 
-    const qs = generateQuestions(mode, group.values);
+    lastRendered = { mode, groupLabel: group.label, questions: qs, count };
 
     qEl.innerHTML = "";
+    const labels = labelsFor(count);
+
     qs.forEach((q, i) => {
       const div = document.createElement("div");
       div.className = "q";
-      div.textContent = `${LETTERS[i]}. ${q}`;
+      div.textContent = `${labels[i]}. ${q}`;
       qEl.appendChild(div);
     });
+  }
+
+  // ================= PDF EXPORT (jsPDF) =================
+  function pdfDrawPage(doc, { mode, groupLabel, questions, count }, isFirstPage=false) {
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 54; // ~0.75"
+    const colGap = 32;
+    const colW = (pageW - margin * 2 - colGap) / 2;
+
+    // Header line (Name)
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(12);
+    doc.text("Name: _______________________________", pageW - margin, margin - 10, { align: "right" });
+
+    // Title
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.text(`${getOpName(mode)} ${groupLabel}`, margin, margin + 22);
+
+    // Questions (two columns)
+    doc.setFont("helvetica", "normal");
+    let fontSize = 14;
+    let lineH = 22;
+    if (count === 20) { fontSize = 13; lineH = 20; }
+    doc.setFontSize(fontSize);
+
+    const labels = labelsFor(count);
+    const lines = questions.map((q, i) => `${labels[i]}. ${q}`);
+
+    const leftCount = Math.ceil(lines.length / 2);
+    const left = lines.slice(0, leftCount);
+    const right = lines.slice(leftCount);
+
+    const xLeft = margin;
+    const xRight = margin + colW + colGap;
+    const yStart = margin + 60;
+
+    function drawColumn(colLines, x) {
+      let y = yStart;
+      for (const line of colLines) {
+        if (y > pageH - margin) break;
+        doc.text(line, x, y, { maxWidth: colW });
+        y += lineH;
+      }
+    }
+
+    drawColumn(left, xLeft);
+    drawColumn(right, xRight);
+  }
+
+  function exportThisPagePdf() {
+    errEl.textContent = "";
+    const { jsPDF } = window.jspdf || {};
+    if (!jsPDF) {
+      errEl.textContent = "PDF library failed to load. Try Print → Save as PDF instead.";
+      return;
+    }
+
+    const doc = new jsPDF({ unit: "pt", format: "letter" });
+    pdfDrawPage(doc, lastRendered, true);
+
+    const safeTitle = `${getOpName(lastRendered.mode)}_${lastRendered.groupLabel}`.replace(/[^\w\-]+/g, "_");
+    doc.save(`${safeTitle}_${lastRendered.count}q.pdf`);
+  }
+
+  function exportAllFiveGroupsPdf() {
+    errEl.textContent = "";
+    const { jsPDF } = window.jspdf || {};
+    if (!jsPDF) {
+      errEl.textContent = "PDF library failed to load. Try Print → Save as PDF instead.";
+      return;
+    }
+
+    const mode = modeEl.value;
+    const count = parseInt(countEl.value, 10);
+
+    const doc = new jsPDF({ unit: "pt", format: "letter" });
+
+    FIVE_GROUP_INDICES.forEach((idx, i) => {
+      const group = GROUPS[idx];
+      const questions = generateQuestions(mode, group.values, count);
+
+      if (i > 0) doc.addPage();
+      pdfDrawPage(doc, { mode, groupLabel: group.label, questions, count }, i === 0);
+    });
+
+    const safeTitle = `${getOpName(mode)}_ALL_5_GROUPS`.replace(/[^\w\-]+/g, "_");
+    doc.save(`${safeTitle}_${count}q.pdf`);
   }
 
   // ================= INIT =================
@@ -214,8 +340,12 @@
   render();
 
   document.getElementById("generate").addEventListener("click", render);
+  document.getElementById("exportPdf").addEventListener("click", exportThisPagePdf);
+  document.getElementById("exportAllPdf").addEventListener("click", exportAllFiveGroupsPdf);
+
   modeEl.addEventListener("change", render);
   groupEl.addEventListener("change", render);
+  countEl.addEventListener("change", render);
 </script>
 
 </body>
