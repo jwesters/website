@@ -1,126 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Letter Survival (10 Lives)</title>
+
+<style>
+  :root { --bg:#0f172a; --text:#e5e7eb; }
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    font-family: system-ui, sans-serif;
+    background:#0f172a;
+    color:var(--text);
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
+
+  header{
+    text-align:center;
+    padding:14px;
+  }
+
+  .wrap{
+    width:min(900px,92vw);
+    margin:0 auto;
+    flex:1;
+    position:relative;
+  }
+
+  .panel{
+    background:rgba(255,255,255,.05);
+    border-radius:14px;
+    padding:16px;
+  }
+
+  .status{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  .word{
+    text-align:center;
+    font-size:28px;
+    letter-spacing:2px;
+    margin:18px 0 8px;
+    font-weight:900;
+  }
+
+  .sub{
+    text-align:center;
+    opacity:.85;
+    margin:0 0 18px;
+    font-weight:700;
+  }
+
+  .picked{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+
+  .pill{
+    padding:6px 10px;
+    border-radius:999px;
+    font-weight:800;
+    background:#334155;
+  }
+  .pill.safe{ background:#16a34a; }
+  .pill.hit{ background:#dc2626; }
+
+  .keyboardWrap{
+    padding:12px;
+    background:#020617;
+  }
+
+  .keyboard{
+    width:min(900px,92vw);
+    margin:0 auto;
+    display:grid;
+    grid-template-columns:repeat(13,1fr);
+    gap:6px;
+  }
+
+  .key{
+    padding:10px 0;
+    border-radius:10px;
+    background:#334155;
+    color:white;
+    border:none;
+    font-weight:800;
+    cursor:pointer;
+  }
+  .key.safe{ background:#16a34a; }
+  .key.hit{ background:#dc2626; }
+  .key:disabled{ opacity:.55; cursor:not-allowed; }
+
+  button{
+    padding:10px 16px;
+    border-radius:12px;
+    font-weight:900;
+    border:none;
+    cursor:pointer;
+  }
+
+  .primary{ background:#6366f1; color:white; }
+  .success{ background:#16a34a; color:white; }
+  .danger{ background:#dc2626; color:white; }
+  .secondary{ background:#475569; color:white; }
+
+  /* OVERLAY */
+  .overlay{
+    position:absolute;
+    inset:0;
+    background:rgba(2,6,23,.9);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:10;
+  }
+  .overlay.show{ display:flex; }
+
+  .overlayBox{
+    background:#020617;
+    padding:30px;
+    border-radius:18px;
+    text-align:center;
+    min-width:320px;
+  }
+
+  .overlayBox h2{
+    margin:0 0 10px;
+    font-size:32px;
+  }
+
+  .overlayBox p{
+    margin:0 0 20px;
+    opacity:.9;
+    font-weight:700;
+    line-height:1.4;
+  }
+
+  .overlayButtons{
+    display:flex;
+    gap:12px;
+    justify-content:center;
+  }
+</style>
+</head>
+
+<body>
+<header>
+  <h1>Letter Survival</h1>
+  <p>Pick letters that are <b>NOT</b> in the secret word. You have <b>10 lives</b>.</p>
+</header>
+
+<main class="wrap">
+  <!-- GAME OVER OVERLAY -->
+  <div class="overlay" id="overlay">
+    <div class="overlayBox">
+      <h2 id="overlayTitle"></h2>
+      <p id="overlayText"></p>
+      <div class="overlayButtons">
+        <button id="statusBtn" disabled></button>
+        <button class="secondary" id="playAgainBtn">NEW GAME</button>
+      </div>
+    </div>
+  </div>
+
+  <section class="panel">
+    <div class="status">
+      <div id="lives"></div>
+      <div id="progress"></div>
+      <button class="primary" id="newGame">New Game</button>
+    </div>
+
+    <div class="word" id="bigText">Avoid the secret word!</div>
+    <div class="sub" id="subText">Get 10 safe picks to win.</div>
+
+    <div class="picked" id="picked"></div>
+  </section>
+</main>
+
+<div class="keyboardWrap">
+  <div class="keyboard" id="keyboard"></div>
+</div>
+
 <script>
-const WORD_FILE = "dictionary_least_common_10000.txt";
+  // Word list (served from the same folder as this HTML on GitHub Pages)
+  const WORD_FILE = "./dictionary_least_common_10000.txt";
 
-const MAX_LIVES = 10;
-const SAFE_TO_WIN = 10;
+  const MAX_LIVES = 10;
+  const SAFE_TO_WIN = 10;
 
-let words = [];
-let answer = "";
-let lives = MAX_LIVES;
-let safePicks = 0;
-let guessed = new Set();
-let gameOver = false;
+  let words = [];
+  let answer = "";
+  let lives = MAX_LIVES;
+  let safePicks = 0;
+  let guessed = new Set();
+  let gameOver = false;
 
-// Elements
-const pickedEl = document.getElementById("picked");
-const keyboardEl = document.getElementById("keyboard");
-const livesEl = document.getElementById("lives");
-const progressEl = document.getElementById("progress");
-const overlay = document.getElementById("overlay");
-const overlayTitle = document.getElementById("overlayTitle");
-const overlayText = document.getElementById("overlayText");
-const statusBtn = document.getElementById("statusBtn");
+  const pickedEl = document.getElementById("picked");
+  const keyboardEl = document.getElementById("keyboard");
+  const livesEl = document.getElementById("lives");
+  const progressEl = document.getElementById("progress");
 
-// Load word list
-fetch(WORD_FILE)
-  .then(async (res) => {
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status} ${res.statusText} for ${WORD_FILE}`);
-    }
-    return res.text();
-  })
-  .then(text => {
-    words = text
-      .split(/\r?\n/)
-      .map(w => w.trim().toUpperCase())
-      .filter(w => /^[A-Z]{3,12}$/.test(w));
+  const overlay = document.getElementById("overlay");
+  const overlayTitle = document.getElementById("overlayTitle");
+  const overlayText = document.getElementById("overlayText");
+  const statusBtn = document.getElementById("statusBtn");
 
-    if (words.length === 0) throw new Error("Word list loaded, but no valid words found.");
-    newGame();
-  })
-  .catch((err) => {
-    console.error(err);
-    alert("Could not load word list: " + err.message);
-  });
+  // --- Robust fetch (absolute URL + cache busting + helpful errors) ---
+  const WORD_URL = new URL(WORD_FILE, location.href).href;
+  console.log("Trying to load word list from:", WORD_URL);
 
-function pickWord() {
-  return words[Math.floor(Math.random() * words.length)];
-}
+  fetch(WORD_URL + "?v=" + Date.now(), { cache: "no-store" })
+    .then(async (res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText} for ${WORD_URL}`);
+      return res.text();
+    })
+    .then(text => {
+      words = text
+        .split(/\r?\n/)
+        .map(w => w.trim().toUpperCase())
+        .filter(w => /^[A-Z]{3,12}$/.test(w)); // letters only, 3-12 chars
 
-function newGame() {
-  answer = pickWord();
-  lives = MAX_LIVES;
-  safePicks = 0;
-  guessed.clear();
-  gameOver = false;
-  overlay.classList.remove("show");
-  render();
-}
+      if (!words.length) throw new Error("Loaded file, but no valid words found.");
+      console.log("Words loaded:", words.length);
 
-function render() {
-  livesEl.textContent = `Lives: ${lives}`;
-  progressEl.textContent = `Safe picks: ${safePicks}/${SAFE_TO_WIN}`;
+      newGame();
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Could not load word list:\n" + err.message);
+    });
 
-  pickedEl.innerHTML = guessed.size
-    ? [...guessed].sort().map(l => {
+  function pickWord(){
+    return words[Math.floor(Math.random() * words.length)];
+  }
+
+  function newGame(){
+    if (!words.length) return; // safety if fetch failed
+    answer = pickWord();
+    lives = MAX_LIVES;
+    safePicks = 0;
+    guessed.clear();
+    gameOver = false;
+    overlay.classList.remove("show");
+    render();
+  }
+
+  function render(){
+    livesEl.textContent = `Lives: ${lives}`;
+    progressEl.textContent = `Safe picks: ${safePicks}/${SAFE_TO_WIN}`;
+
+    pickedEl.innerHTML = "";
+    if (guessed.size === 0) {
+      const t = document.createElement("div");
+      t.style.opacity = ".75";
+      t.style.fontWeight = "700";
+      t.textContent = "Picked letters will show here.";
+      pickedEl.appendChild(t);
+    } else {
+      [...guessed].sort().forEach(l => {
+        const p = document.createElement("span");
         const hit = answer.includes(l);
-        return `<span class="pill ${hit ? "hit" : "safe"}">${l}</span>`;
-      }).join("")
-    : "<div style='opacity:.7;font-weight:700'>Pick letters below</div>";
-
-  keyboardEl.innerHTML = "";
-  for (let i = 65; i <= 90; i++) {
-    const l = String.fromCharCode(i);
-    const b = document.createElement("button");
-    b.textContent = l;
-    b.className = "key";
-    b.disabled = guessed.has(l) || gameOver;
-
-    if (guessed.has(l)) {
-      b.classList.add(answer.includes(l) ? "hit" : "safe");
+        p.className = "pill " + (hit ? "hit" : "safe");
+        p.textContent = l;
+        pickedEl.appendChild(p);
+      });
     }
 
-    b.onclick = () => guess(l);
-    keyboardEl.appendChild(b);
+    keyboardEl.innerHTML = "";
+    for (let i = 65; i <= 90; i++) {
+      const l = String.fromCharCode(i);
+      const b = document.createElement("button");
+      b.textContent = l;
+      b.className = "key";
+      b.disabled = gameOver || guessed.has(l);
+
+      if (guessed.has(l)) {
+        b.classList.add(answer.includes(l) ? "hit" : "safe");
+      }
+
+      b.onclick = () => guess(l);
+      keyboardEl.appendChild(b);
+    }
   }
-}
 
-function showOverlay(win) {
-  gameOver = true;
-  overlay.classList.add("show");
+  function showOverlay(win){
+    gameOver = true;
+    overlay.classList.add("show");
 
-  if (win) {
-    overlayTitle.textContent = "You Win!";
-    overlayText.textContent = `You avoided the word: ${answer}`;
-    statusBtn.textContent = "YOU WIN";
-    statusBtn.className = "success";
-  } else {
-    overlayTitle.textContent = "You Lost";
-    overlayText.textContent = `The word was: ${answer}`;
-    statusBtn.textContent = "YOU LOST";
-    statusBtn.className = "danger";
+    if (win) {
+      overlayTitle.textContent = "You Win!";
+      overlayText.textContent = `You avoided the word.\nThe secret word was: ${answer}`;
+      statusBtn.textContent = "YOU WIN";
+      statusBtn.className = "success";
+    } else {
+      overlayTitle.textContent = "You Lost";
+      overlayText.textContent = `The secret word was: ${answer}`;
+      statusBtn.textContent = "YOU LOST";
+      statusBtn.className = "danger";
+    }
+    render();
   }
-}
 
-function guess(letter) {
-  if (gameOver || guessed.has(letter)) return;
-  guessed.add(letter);
+  function guess(letter){
+    if (gameOver || guessed.has(letter) || !answer) return;
 
-  if (answer.includes(letter)) {
-    lives--;
-    if (lives <= 0) showOverlay(false);
-  } else {
-    safePicks++;
-    if (safePicks >= SAFE_TO_WIN) showOverlay(true);
+    guessed.add(letter);
+
+    if (answer.includes(letter)) {
+      lives--;
+      if (lives <= 0) showOverlay(false);
+    } else {
+      safePicks++;
+      if (safePicks >= SAFE_TO_WIN) showOverlay(true);
+    }
+
+    render();
   }
-  render();
-}
 
-document.getElementById("newGame").onclick = newGame;
-document.getElementById("playAgainBtn").onclick = newGame;
+  document.getElementById("newGame").onclick = newGame;
+  document.getElementById("playAgainBtn").onclick = newGame;
 
-window.addEventListener("keydown", e => {
-  const k = e.key.toUpperCase();
-  if (/^[A-Z]$/.test(k)) guess(k);
-});
+  window.addEventListener("keydown", e => {
+    const k = e.key.toUpperCase();
+    if (/^[A-Z]$/.test(k)) guess(k);
+  });
 </script>
+</body>
+</html>
