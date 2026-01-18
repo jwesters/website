@@ -53,7 +53,7 @@ header{ text-align:center; padding:14px; }
 .sub{
   text-align:center;
   opacity:.85;
-  margin:0 0 16px;
+  margin:0 0 12px;
   font-weight:700;
 }
 
@@ -62,13 +62,12 @@ header{ text-align:center; padding:14px; }
   justify-content:center;
   gap:14px;
   flex-wrap:wrap;
-  margin:0 0 10px;
-  opacity:.9;
+  margin-bottom:10px;
   font-weight:800;
 }
 
 .badge{
-  padding:6px 10px;
+  padding:6px 12px;
   border-radius:999px;
   background:rgba(255,255,255,.08);
 }
@@ -167,7 +166,7 @@ button{
   <h1>Pick 10 Safe Letters</h1>
   <p>
     Win: pick <b>10</b> letters <b>NOT</b> in the word.<br>
-    Lose instantly if you either <b>spell the whole word</b> (reveal it) or pick <b>5 hit letters</b>.
+    Lose: reveal the whole word or lose all <b>5 lives</b>.
   </p>
 </header>
 
@@ -187,6 +186,7 @@ button{
 
   <section class="panel">
     <div class="status">
+      <div id="lives"></div>
       <div id="progress"></div>
       <button class="primary" id="newGame">New Game</button>
     </div>
@@ -195,11 +195,11 @@ button{
 
     <div class="stats">
       <span class="badge" id="safeStat"></span>
-      <span class="badge" id="hitStat"></span>
+      <span class="badge" id="lifeStat"></span>
       <span class="badge" id="revealStat"></span>
     </div>
 
-    <div class="sub">Revealed letters are from hit picks.</div>
+    <div class="sub">Revealed letters are from incorrect (hit) guesses.</div>
 
     <div class="picked" id="picked"></div>
   </section>
@@ -213,13 +213,13 @@ button{
 /* ================= CONFIG ================= */
 const WORD_FILE = "./dictionary_least_common_10000.txt";
 const SAFE_TO_WIN = 10;
-const HIT_LOSE_LIMIT = 5;
+const MAX_LIVES = 5;
 
 /* ================= STATE ================= */
 let words = [];
 let answer = "";
 let safePicks = 0;
-let hitCount = 0;
+let lives = MAX_LIVES;
 let guessed = new Set();
 let revealed = new Set();
 let uniqueLettersInWord = new Set();
@@ -230,8 +230,9 @@ const wordDisplay = document.getElementById("wordDisplay");
 const pickedEl = document.getElementById("picked");
 const keyboardEl = document.getElementById("keyboard");
 const progressEl = document.getElementById("progress");
+const livesEl = document.getElementById("lives");
 const safeStat = document.getElementById("safeStat");
-const hitStat = document.getElementById("hitStat");
+const lifeStat = document.getElementById("lifeStat");
 const revealStat = document.getElementById("revealStat");
 
 const overlay = document.getElementById("overlay");
@@ -241,28 +242,20 @@ const statusBtn = document.getElementById("statusBtn");
 
 /* ================= LOAD WORDS ================= */
 const WORD_URL = new URL(WORD_FILE, location.href).href;
-console.log("Trying to load word list from:", WORD_URL);
 
 fetch(WORD_URL + "?v=" + Date.now(), { cache: "no-store" })
-  .then(async (res) => {
-    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText} for ${WORD_URL}`);
-    return res.text();
+  .then(r => {
+    if (!r.ok) throw new Error("Failed to load word list");
+    return r.text();
   })
   .then(text => {
     words = text
       .split(/\r?\n/)
       .map(w => w.trim().toUpperCase())
       .filter(w => /^[A-Z]{3,12}$/.test(w));
-
-    if (!words.length) throw new Error("Loaded file, but no valid words found.");
-    console.log("Words loaded:", words.length);
-
     newGame();
   })
-  .catch(err => {
-    console.error(err);
-    alert("Could not load word list:\n" + err.message);
-  });
+  .catch(err => alert(err.message));
 
 /* ================= GAME ================= */
 function pickWord(){
@@ -273,10 +266,10 @@ function newGame(){
   if (!words.length) return;
 
   answer = pickWord();
-  uniqueLettersInWord = new Set(answer.split("")); // unique letters in secret word
+  uniqueLettersInWord = new Set(answer.split(""));
 
   safePicks = 0;
-  hitCount = 0;
+  lives = MAX_LIVES;
   guessed.clear();
   revealed.clear();
   gameOver = false;
@@ -286,16 +279,16 @@ function newGame(){
 }
 
 function render(){
-  progressEl.textContent = `Goal: ${SAFE_TO_WIN} safe letters`;
+  livesEl.textContent = `Lives: ${lives}/${MAX_LIVES}`;
+  progressEl.textContent = `Safe goal: ${SAFE_TO_WIN}`;
 
-  // Show blanks; reveal letters that were hit-picked
   wordDisplay.textContent = answer
     .split("")
     .map(l => revealed.has(l) ? l : "_")
     .join(" ");
 
   safeStat.textContent = `Safe: ${safePicks}/${SAFE_TO_WIN}`;
-  hitStat.textContent = `Hits: ${hitCount}/${HIT_LOSE_LIMIT}`;
+  lifeStat.textContent = `Lives left: ${lives}`;
   revealStat.textContent = `Revealed: ${revealed.size}/${uniqueLettersInWord.size}`;
 
   pickedEl.innerHTML = guessed.size
@@ -341,39 +334,28 @@ function showOverlay(win, reason = ""){
   render();
 }
 
-function loseIfSpelledWord(){
-  // If you've revealed all unique letters in the word, the word is fully spelled/revealed
-  if (revealed.size >= uniqueLettersInWord.size) {
-    showOverlay(false, "You revealed the whole word!");
-    return true;
-  }
-  return false;
-}
-
-function loseIfTooManyHits(){
-  if (hitCount >= HIT_LOSE_LIMIT) {
-    showOverlay(false, `You picked ${HIT_LOSE_LIMIT} letters that were in the word!`);
-    return true;
-  }
-  return false;
-}
-
 function guess(letter){
   if (gameOver || guessed.has(letter) || !answer) return;
 
   guessed.add(letter);
 
   if (answer.includes(letter)){
-    hitCount++;
-    revealed.add(letter); // reveal that letter in the word
+    revealed.add(letter);
+    lives--;
 
-    // Loss conditions
-    if (loseIfTooManyHits()) return;
-    if (loseIfSpelledWord()) return;
+    if (lives <= 0){
+      showOverlay(false, "You lost all 5 lives.");
+      return;
+    }
+
+    if (revealed.size >= uniqueLettersInWord.size){
+      showOverlay(false, "You revealed the entire word.");
+      return;
+    }
 
   } else {
     safePicks++;
-    if (safePicks >= SAFE_TO_WIN) {
+    if (safePicks >= SAFE_TO_WIN){
       showOverlay(true);
       return;
     }
