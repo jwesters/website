@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Death Metal Band Name Generator</title>
+  <style>
+    :root{
+      --bg:#0b0b0f; --card:#14141c; --ink:#f2f2f4; --muted:#a7a7b3; --line:#2a2a36;
+      --btn:#1f1f2c; --btn2:#2a2a3a; --accent:#c8c8ff;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:radial-gradient(1200px 700px at 20% 0%, #141424 0%, var(--bg) 55%);
+      color:var(--ink);
+      min-height:100vh; display:flex; align-items:center; justify-content:center;
+      padding:24px;
+    }
+    .wrap{width:min(980px,100%);}
+    .card{
+      background:linear-gradient(180deg, var(--card), #101018);
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:22px;
+      box-shadow:0 18px 60px rgba(0,0,0,.45);
+    }
+    h1{margin:0 0 6px 0; font-size:22px; letter-spacing:.2px}
+    .sub{margin:0 0 18px 0; color:var(--muted); font-size:13px; line-height:1.35}
+    .row{display:flex; gap:14px; flex-wrap:wrap}
+    .name{
+      flex:1 1 420px;
+      border:1px dashed var(--line);
+      border-radius:16px;
+      padding:18px;
+      background:rgba(255,255,255,.03);
+      min-height:94px;
+      display:flex; flex-direction:column; justify-content:center;
+    }
+    .bandname{
+      font-size:34px;
+      font-weight:800;
+      letter-spacing:.4px;
+      line-height:1.1;
+      word-break:break-word;
+    }
+    .meta{margin-top:10px; color:var(--muted); font-size:12px}
+    .controls{
+      flex:1 1 420px;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      align-content:start;
+    }
+    button, select, input[type="text"]{
+      width:100%;
+      padding:11px 12px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:var(--btn);
+      color:var(--ink);
+      font-size:14px;
+      outline:none;
+    }
+    button{cursor:pointer; font-weight:700}
+    button:hover{background:var(--btn2)}
+    .full{grid-column:1 / -1}
+    label{
+      display:flex; gap:10px; align-items:center;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.02);
+      color:var(--muted);
+      font-size:13px;
+      user-select:none;
+    }
+    input[type="checkbox"]{transform:scale(1.1)}
+    .history{
+      margin-top:16px;
+      border-top:1px solid var(--line);
+      padding-top:14px;
+    }
+    .history h2{margin:0 0 8px 0; font-size:14px; color:var(--muted); font-weight:700}
+    .list{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:8px;
+    }
+    .chip{
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.02);
+      border-radius:12px;
+      padding:10px 12px;
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px;
+    }
+    .chip span{font-weight:700}
+    .chip button{
+      width:auto;
+      padding:6px 10px;
+      border-radius:10px;
+      font-size:12px;
+      background:transparent;
+    }
+    .chip button:hover{background:rgba(255,255,255,.06)}
+    .tiny{font-size:12px; color:var(--muted); margin-top:8px}
+    @media (max-width:740px){
+      .controls{grid-template-columns:1fr}
+      .list{grid-template-columns:1fr}
+      .bandname{font-size:30px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Band Name Generator</h1>
+      <p class="sub">Randomly combines <b>two words</b> from your death-metal word pool (single words split from band names + song titles) to generate band names.</p>
+
+      <div class="row">
+        <div class="name">
+          <div id="bandname" class="bandname">—</div>
+          <div id="meta" class="meta">Words loaded: —</div>
+        </div>
+
+        <div class="controls">
+          <button id="gen">Generate</button>
+          <button id="gen10">Generate 10</button>
+
+          <button id="copy">Copy name</button>
+          <button id="clearHistory">Clear history</button>
+
+          <select id="separator" class="full" title="Separator">
+            <option value="space">Separator: Space (e.g., Cannibal Corpse)</option>
+            <option value="hyphen">Separator: Hyphen (e.g., Cannibal-Corpse)</option>
+            <option value="none">Separator: None (e.g., CannibalCorpse)</option>
+          </select>
+
+          <label class="full">
+            <input id="titleCase" type="checkbox" checked />
+            Title Case (Capitalize Words)
+          </label>
+
+          <label class="full">
+            <input id="avoidRepeats" type="checkbox" checked />
+            Avoid repeating the same combo in this session
+          </label>
+
+          <label class="full">
+            <input id="noSameWord" type="checkbox" checked />
+            Don’t allow the same word twice (e.g., “Death Death”)
+          </label>
+        </div>
+      </div>
+
+      <div class="history">
+        <h2>History</h2>
+        <div id="history" class="list"></div>
+        <div class="tiny">Tip: click “Copy” on any item in the history.</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/*
+  Word pool = your previously generated lists.
+  - We store them as a big whitespace-separated block, then split to words.
+  - We de-duplicate at runtime.
+*/
+const WORDS_TEXT = `
+cannibal corpse death morbid angel deicide obituary autopsy entombed carcass napalm exhumed
+immolation suffocation cryptopsy necrophagist incantation malevolent creation bolt thrower
+dismember pestilence asphyx sinister vader behemoth aborted gorguts decapitated kataklysm
+brutality origin monstrosity devourment defeated sanity grave unleashed vomitory hypocrisy
+insomnium amorphis belphegor vomit fetus regurgitation cattle crypt skinless analepsy
+benighted incision ulcerate revocation immortal sanguisugabogg blood incantations disgorge
+mortician atrocity massacre extermination brujeria exodus possessed atheist sadus resurrection
+destruction hellhammer gojira demolition incinerate torture desecration putridity septic
+fleshgod apocalypse horrendous surgical annihilator vulvodynia severed genocide necrotic
+anatomy visceral cadaver malignancy torsofuck cryptic hatred enslaved rotting purulence
+abhorrent resection infernal spawn extreme cerebral rotted fetid consumed infant devoured
+putrid mass butcher eaten spawned infected grotesque slain drowned impaled buried decayed
+severed carved torn shredded disemboweled flayed stripped skinned eviscerated exsanguinated
+gutted hacked mutilated cleaved split smashed crushed obliterated incised amputated extracted
+dissected autopsied vivisected hemorrhaged bleeding choked asphyxiated immolated burned
+scorched charred melted dissolved corroded eroded rotted liquefied putrefied infected plagued
+contaminated diseased mutated twisted warped corrupted defiled violated desecrated profaned
+condemned damned forsaken banished exiled cursed hexed possessed summoned awakened resurrected
+reborn transformed consumed devoured swallowed digested regurgitated vomited spewed expelled
+purged cleansed emptied hollowed extracted harvested collected gathered assembled constructed
+forged shaped molded formed created spawned birthed hatched emerged crawled slithered stalked
+hunted captured ensnared trapped restrained chained bound imprisoned confined tortured tormented
+agonized screamed howled shrieked cried wailed moaned groaned silenced executed slaughtered
+murdered killed terminated ended finished destroyed annihilated erased extinguished obliterated
+consumed voided emptied nullified ended
+
+/* +300 additional nouns (new batch) */
+abomination abyss anatomist anguish antichrist apathy apostasy apparition ashes assault atavism
+barbarity beast blight blister bog bonepile brimstone butchery cadence calamity carnivore
+catastrophe cauterization ceremony chasm clergy coagulation collapse conquest contagion
+convulsion cosmos cremation crimson crucible cryptkeeper cyclone damnation darkness depravity
+desolation detonation disaster disfigurement disorder disruption dominion doctrine dogma dread
+dystopia edict effigy emptiness enigma entropy eruption essence eternity executioner exile
+extremity faction fallout fang fatality ferocity fissure flame flood fracture frenzy fungus
+furnace gallows genesis gloom gluttony graveworm grinder harbinger hatchet heresy horizon
+hostility hunger iconoclast idol impurity infestation inquisition insurrection interment
+isolation juggernaut judgment larvae legion levitation liberation lividity lordship madness
+malformation manifestation martyrdom mechanism meltdown misery monolith mortuary mutation myth
+necropolis necromancer necromancy nightmare nihilist nocturne noise nuke oblivion offering omen
+oppression oracle orgy ossuary outbreak pain pall pallor parasite penance perdition
+perforation persecution plague portal possession prophet psalm punishment purgatory putrefaction
+pyre rancor rapture retribution ritual rupture sacrament sacrilege sanctuary sarcophagus
+scalpel schism scourge scripture seance serpent severance shadow silence slaughterhouse
+sorrows spawnpit spectacle specter spell spiral spirit stasis stigma storm supplication
+tabernacle talon testament theocracy threshold tormentor tragedy tribunal trophy tsunami
+tyranny ulcer undertaker uprising vault vengeance vermin vestige victim vigil voidwalker
+warlock wasteland weapon widow woe wormwood wrath wretch zealot zombie
+
+abattoir adder altar anvil archive arsenic atrocity aura banishment bastion battery bayonet
+belial bile blasphemy boiler bonecraft bonehouse bonesaw brazier brood butcherbird cadaverine
+canker cannery censer cinder citadel cipher clade coffinmaker colossus communion contagionary
+coroner covenant crater crucifix cryptlord cultist curfew daggerfall deadfall deathmask
+demagogue demonology detritus dirge discipline discord disembodiment dismay dominator
+doomscape dreadnought driftwood earthworks ectoplasm endtime enforcer epitaph eradicator
+essayer ether exilement exorcist extremis famine fangtooth festerfield fingerbone firestorm
+fissureland flense flint floodgate forgemaster fractureline gallowsman gatehouse ghostlight
+gravebinder gravedigger gravemind graveyard gutterblood handmaiden handprint headstone
+heartwood hellgate hemlock heretic horde hospice host hostler hungerstone idolater
+imprecation incisionary inferno infirmary inkblot inkwell interloper ironclad jailer keystone
+killhouse knell labyrinth larval ledger leech legionnaire lich lifeblood lifeline longknife
+maw mausoleum meatlocker midden mire misanthrope mortice mortis muzzle nightfall nightshade
+noxious nursery oath obelisk oubliette overgrowth pallbearer pariah parish parasiteking
+penumbra phantasm pinion plaguebearer plaguestone poisoner poltergeist portcullis
+postmortem priesthood prophecy purge pyromania pyromancer quarry quiver rabble rafter rampart
+razorwire reliquary revenant riverblood rot rotguard rotwood rust rutter sacristy
+salamander sanctum scabbard scabland scholiast scythe sear sepsislord sepulcher shard
+shiver shrine sickroom sigil silencekeeper sin sinstone slab slaughterer slough
+smokehouse snare soilbone soul soulchain soulforge soulpit spire spleen spool stonemarrow
+stormfront stricture subjugator sulfur summoner supplicant sutures talisman tankard
+tanglethorn temple testamentary toxin trench tribunalist trophyroom undertomb vaultkeeper
+venom vermicide vermiculture vicar vigilante viper visage voidborn voidgate voidstone
+warbanner warbeast warbringer ward warden warrens wastemarch watchtower weaponry
+widowmaker willbreaker windstorm witch witchhouse wraith wretchling zeal zealotry
+`.trim();
+
+function buildWordPool() {
+  // Split on any whitespace, keep only alphabetic (plus a few), and dedupe.
+  const raw = WORDS_TEXT
+    .split(/\s+/g)
+    .map(w => w.trim())
+    .filter(Boolean);
+
+  const cleaned = raw
+    .map(w => w.replace(/[^a-zA-Z0-9'-]/g, ""))
+    .filter(w => w.length >= 3); // keep names readable
+
+  // Deduplicate (case-insensitive)
+  const seen = new Set();
+  const pool = [];
+  for (const w of cleaned) {
+    const key = w.toLowerCase();
+    if (!seen.has(key)) { seen.add(key); pool.push(w); }
+  }
+  return pool;
+}
+
+const WORD_POOL = buildWordPool();
+const usedCombos = new Set(); // session-only
+
+const elName = document.getElementById("bandname");
+const elMeta = document.getElementById("meta");
+const elHistory = document.getElementById("history");
+
+const elSep = document.getElementById("separator");
+const elTitle = document.getElementById("titleCase");
+const elAvoid = document.getElementById("avoidRepeats");
+const elNoSame = document.getElementById("noSameWord");
+
+function randInt(n){ return Math.floor(Math.random()*n); }
+
+function titleCaseWord(w){
+  if (!w) return w;
+  return w[0].toUpperCase() + w.slice(1).toLowerCase();
+}
+
+function formatName(a, b){
+  const sepMode = elSep.value;
+  const doTitle = elTitle.checked;
+
+  const A = doTitle ? titleCaseWord(a) : a;
+  const B = doTitle ? titleCaseWord(b) : b;
+
+  if (sepMode === "hyphen") return `${A}-${B}`;
+  if (sepMode === "none") return `${A}${B}`;
+  return `${A} ${B}`;
+}
+
+function pickTwoWords(){
+  if (WORD_POOL.length < 2) return ["—","—"];
+
+  let a, b, tries = 0;
+
+  while (tries++ < 5000) {
+    a = WORD_POOL[randInt(WORD_POOL.length)];
+    b = WORD_POOL[randInt(WORD_POOL.length)];
+
+    if (elNoSame.checked && a.toLowerCase() === b.toLowerCase()) continue;
+
+    const comboKey = `${a.toLowerCase()}|${b.toLowerCase()}`;
+    if (elAvoid.checked && usedCombos.has(comboKey)) continue;
+
+    usedCombos.add(comboKey);
+    return [a, b];
+  }
+
+  // Fallback: just pick anything
+  a = WORD_POOL[randInt(WORD_POOL.length)];
+  do { b = WORD_POOL[randInt(WORD_POOL.length)]; } while (elNoSame.checked && a.toLowerCase() === b.toLowerCase());
+  return [a, b];
+}
+
+function renderMeta(){
+  elMeta.textContent = `Words loaded: ${WORD_POOL.length.toLocaleString()} • Combos used: ${usedCombos.size.toLocaleString()}`;
+}
+
+function addToHistory(name){
+  const item = document.createElement("div");
+  item.className = "chip";
+
+  const left = document.createElement("span");
+  left.textContent = name;
+
+  const btn = document.createElement("button");
+  btn.textContent = "Copy";
+  btn.addEventListener("click", async () => {
+    await navigator.clipboard.writeText(name);
+    btn.textContent = "Copied!";
+    setTimeout(()=> btn.textContent="Copy", 900);
+  });
+
+  item.appendChild(left);
+  item.appendChild(btn);
+
+  elHistory.prepend(item);
+
+  // Keep last 20
+  while (elHistory.children.length > 20) {
+    elHistory.removeChild(elHistory.lastChild);
+  }
+}
+
+function generateOne(pushHistory=true){
+  const [a, b] = pickTwoWords();
+  const name = formatName(a, b);
+  elName.textContent = name;
+  if (pushHistory) addToHistory(name);
+  renderMeta();
+}
+
+document.getElementById("gen").addEventListener("click", () => generateOne(true));
+
+document.getElementById("gen10").addEventListener("click", () => {
+  for (let i=0;i<10;i++) generateOne(true);
+});
+
+document.getElementById("copy").addEventListener("click", async () => {
+  const text = elName.textContent.trim();
+  if (!text || text === "—") return;
+  await navigator.clipboard.writeText(text);
+});
+
+document.getElementById("clearHistory").addEventListener("click", () => {
+  elHistory.innerHTML = "";
+  usedCombos.clear();
+  renderMeta();
+});
+
+[elSep, elTitle].forEach(el => el.addEventListener("change", () => {
+  // reformat current visible name (without changing words)
+  // easiest: just generate a fresh one
+  generateOne(true);
+}));
+
+[elAvoid, elNoSame].forEach(el => el.addEventListener("change", renderMeta));
+
+// Initial
+renderMeta();
+generateOne(true);
+</script>
+</body>
+</html>
