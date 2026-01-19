@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Rorschach Inkblot Generator</title>
+  <style>
+    :root { color-scheme: dark; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background:#0b0c10;
+      color:#eaeaea;
+      display:flex;
+      min-height:100vh;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+    }
+    .wrap{ width:min(980px, 100%); display:grid; gap:14px; }
+    .card{
+      background:#11131a;
+      border:1px solid #222635;
+      border-radius:16px;
+      padding:14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    .top{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    h1{ margin:0; font-size:18px; font-weight:700; }
+    button{
+      background:#1a1f2e;
+      color:#eaeaea;
+      border:1px solid #2a3147;
+      border-radius:12px;
+      padding:10px 12px;
+      font-weight:600;
+      cursor:pointer;
+    }
+    button:hover{ border-color:#3a4670; }
+    .canvasWrap{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:8px;
+      border-radius:16px;
+      background: radial-gradient(1200px 600px at 50% 20%, rgba(255,255,255,.06), transparent 60%);
+    }
+    canvas{
+      width:min(820px, 100%);
+      height:auto;
+      aspect-ratio: 4 / 5;
+      background:#f7f7f7;
+      border-radius:14px;
+      border:1px solid #2a3147;
+      display:block;
+    }
+    .hint{ font-size:12px; opacity:.75; }
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      padding:2px 6px;
+      border:1px solid #2a3147;
+      border-radius:8px;
+      background:#0f1320;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card top">
+      <h1>Rorschach Inkblot Generator</h1>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button id="newBtn">New Inkblot</button>
+        <button id="saveBtn">Save PNG</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="canvasWrap">
+        <canvas id="c" width="820" height="1025"></canvas>
+      </div>
+      <div class="hint" style="margin-top:10px;">
+        Press <span class="kbd">Space</span> for a new inkblot.
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d', { alpha: false });
+  const newBtn = document.getElementById('newBtn');
+  const saveBtn = document.getElementById('saveBtn');
+
+  const W = canvas.width, H = canvas.height;
+  const halfW = Math.floor(W/2);
+
+  // Crisp sim resolution (raise to 420 if you want even sharper, more CPU)
+  const simW = 360;
+  const simH = Math.round(simW * (H / halfW));
+
+  const sim = document.createElement('canvas');
+  sim.width = simW;
+  sim.height = simH;
+  const sctx = sim.getContext('2d');
+
+  let imgA = sctx.createImageData(simW, simH);
+  let imgB = sctx.createImageData(simW, simH);
+
+  function mulberry32(seed) {
+    let t = seed >>> 0;
+    return function() {
+      t += 0x6D2B79F5;
+      let r = Math.imul(t ^ (t >>> 15), 1 | t);
+      r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+      return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  function biasTowardOne(u, k){ return 1 - Math.pow(1 - u, k); }
+
+  function paintPaper() {
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.filter = 'none';
+
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = '#f7f7f7';
+    ctx.fillRect(0,0,W,H);
+
+    const g = ctx.createRadialGradient(W/2, H/2, W*0.15, W/2, H/2, W*0.85);
+    g.addColorStop(0, 'rgba(0,0,0,0.00)');
+    g.addColorStop(1, 'rgba(0,0,0,0.08)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+
+    ctx.globalAlpha = 0.035;
+    for (let i=0;i<900;i++){
+      const x = Math.random()*W;
+      const y = Math.random()*H;
+      const r = Math.random()*1.1;
+      ctx.fillStyle = (Math.random()<0.5) ? '#000' : '#333';
+      ctx.beginPath();
+      ctx.arc(x,y,r,0,Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function clearSim() {
+    sctx.setTransform(1,0,0,1,0,0);
+    sctx.globalAlpha = 1;
+    sctx.globalCompositeOperation = 'source-over';
+    sctx.filter = 'none';
+    sctx.clearRect(0,0,simW,simH);
+  }
+
+  function stampCircle(x, y, r, a) {
+    sctx.globalAlpha = a;
+    sctx.fillStyle = '#000';
+    sctx.beginPath();
+    sctx.arc(x,y,r,0,Math.PI*2);
+    sctx.fill();
+  }
+
+  function stampEllipse(x, y, rx, ry, rot, a) {
+    sctx.globalAlpha = a;
+    sctx.fillStyle = '#000';
+    sctx.beginPath();
+    sctx.ellipse(x,y,rx,ry,rot,0,Math.PI*2);
+    sctx.fill();
+  }
+
+  function randomWalkBleed(rng, startX, startY, steps, stepSize, rBase, alphaBase) {
+    let x = startX, y = startY;
+    let ang = (rng()-0.5) * 0.8 - Math.PI/2;
+
+    for (let i=0;i<steps;i++){
+      ang += (rng()-0.5) * 0.55;
+      const ss = stepSize * (0.6 + rng()*0.8);
+
+      x += Math.cos(ang) * ss + (rng()-0.5) * 0.6;
+      y += Math.sin(ang) * ss + (rng()-0.5) * 0.6;
+
+      x = clamp(x, 2, simW-2);
+      y = clamp(y, 2, simH-2);
+
+      const t = i / (steps-1);
+      const r = rBase * (0.70 + rng()*0.70) * (1 - 0.35*t);
+      const a = alphaBase * (0.80 + rng()*0.45) * (1 - 0.45*t);
+
+      stampCircle(x, y, r, a);
+
+      if (rng() < 0.075) {
+        stampCircle(
+          x + (rng()-0.5)*2.2,
+          y + (rng()-0.5)*2.2,
+          r*(1.1+rng()*0.9),
+          a*(0.7+rng()*0.5)
+        );
+      }
+    }
+  }
+
+  function blurAlphaSeparable(src, dst, w, h, radius) {
+    const s = src.data;
+    const d = dst.data;
+
+    for (let y=0; y<h; y++) {
+      let sum = 0;
+      const row = y*w;
+      const win = radius*2 + 1;
+
+      for (let k=-radius; k<=radius; k++){
+        const x = clamp(k, 0, w-1);
+        sum += s[(row + x)*4 + 3];
+      }
+
+      for (let x=0; x<w; x++){
+        d[(row + x)*4 + 3] = (sum / win) | 0;
+        const xOut = clamp(x - radius, 0, w-1);
+        const xIn  = clamp(x + radius + 1, 0, w-1);
+        sum += s[(row + xIn)*4 + 3] - s[(row + xOut)*4 + 3];
+      }
+    }
+
+    for (let x=0; x<w; x++){
+      let sum = 0;
+      const win = radius*2 + 1;
+
+      for (let k=-radius; k<=radius; k++){
+        const y = clamp(k, 0, h-1);
+        sum += d[(y*w + x)*4 + 3];
+      }
+
+      for (let y=0; y<h; y++){
+        s[(y*w + x)*4 + 3] = (sum / win) | 0;
+        const yOut = clamp(y - radius, 0, h-1);
+        const yIn  = clamp(y + radius + 1, 0, h-1);
+        sum += d[(yIn*w + x)*4 + 3] - d[(yOut*w + x)*4 + 3];
+      }
+    }
+  }
+
+  function shapeInkAlpha(img, rng) {
+    const data = img.data;
+    const threshold = 56 + Math.floor(rng()*10); // a hair lower => more ink survives
+    const gain = 3.9 + rng()*0.9;
+    const gamma = 0.95 + rng()*0.10;
+
+    for (let i=0; i<data.length; i+=4){
+      let a = data[i+3];
+      if (a <= threshold) {
+        data[i+3] = 0;
+        data[i] = data[i+1] = data[i+2] = 0;
+        continue;
+      }
+      let n = (a - threshold) / (255 - threshold);
+      n = Math.pow(n, gamma);
+      n = clamp(n * gain, 0, 1);
+
+      const outA = (n * 255) | 0;
+      data[i] = data[i+1] = data[i+2] = 0;
+      data[i+3] = outA;
+    }
+  }
+
+  function generateLeftHalf(seed) {
+    const rng = mulberry32(seed);
+    clearSim();
+
+    const spineX = simW * (0.80 + rng()*0.14);
+    const midY = simH * (0.50 + (rng()-0.5)*0.10);
+
+    // ✅ MORE POOLS (more big circles)
+    const pools = 5 + ((rng()*4)|0); // was 3..5 -> now 5..8
+    for (let i=0;i<pools;i++){
+      const x = spineX + (rng()-0.5)*26;
+      const y = midY + (rng()-0.5)*simH*0.52;
+      const r = 18 + rng()*38;
+      const a = 0.20 + rng()*0.25;
+      stampCircle(x, y, r, a);
+
+      // more ovals too (still mostly round overall)
+      if (rng() < 0.60) {
+        stampEllipse(
+          x + (rng()-0.5)*8, y + (rng()-0.5)*8,
+          r*(0.7+rng()*0.6), r*(0.7+rng()*0.6),
+          (rng()-0.5)*0.9,
+          a*0.80
+        );
+      }
+    }
+
+    // ✅ MORE BLEEDS (more little circles along tendrils)
+    const bleeds = 13 + ((rng()*7)|0); // was 9..14 -> now 13..19
+    for (let i=0;i<bleeds;i++){
+      const xNorm = 0.18 + 0.82 * biasTowardOne(rng(), 2.1);
+      const x = simW * xNorm;
+      const y = simH * (0.08 + 0.84 * rng());
+
+      const steps = 120 + ((rng()*190)|0); // more steps => more circles
+      const stepSize = 1.7 + rng()*2.5;
+      const rBase = 3.1 + rng()*5.6;
+      const alphaBase = 0.07 + rng()*0.10;
+
+      randomWalkBleed(rng, x, y, steps, stepSize, rBase, alphaBase);
+    }
+
+    // ✅ MORE CLUSTERS + MORE DOTS
+    const clusters = 15 + ((rng()*8)|0); // was 10..16 -> now 15..23
+    for (let c=0;c<clusters;c++){
+      const cxNorm = 0.20 + 0.80 * biasTowardOne(rng(), 1.9);
+      const cx = simW * cxNorm;
+      const cy = simH * (0.06 + 0.88 * rng());
+      const spreadX = simW * (0.03 + 0.08 * rng());
+      const spreadY = simH * (0.02 + 0.07 * rng());
+      const dots = 26 + ((rng()*34)|0); // was 18..46 -> now 26..60
+
+      for (let i=0;i<dots;i++){
+        const x = cx + (rng()-0.5)*spreadX;
+        const y = cy + (rng()-0.5)*spreadY;
+        const r = 0.9 + (rng()*rng()) * 7.2;
+        const a = 0.05 + rng()*0.18;
+
+        if (rng() < 0.85) {
+          stampCircle(x, y, r, a);
+        } else {
+          stampEllipse(x, y, r*(0.75+rng()*0.7), r*(0.75+rng()*0.7), (rng()-0.5)*1.0, a);
+        }
+      }
+    }
+
+    // Pixel processing
+    const raw = sctx.getImageData(0,0,simW,simH);
+    imgA.data.set(raw.data);
+
+    // Light blur for organic edges (still crisp)
+    blurAlphaSeparable(imgA, imgB, simW, simH, 1);
+
+    // Shape edges; slightly lower threshold keeps more “small dots”
+    shapeInkAlpha(imgA, rng);
+
+    sctx.putImageData(imgA, 0, 0);
+  }
+
+  function renderToMain(seed) {
+    paintPaper();
+    generateLeftHalf(seed);
+
+    const marginX = Math.floor(W * 0.03);
+    const marginY = Math.floor(H * 0.025);
+    const drawW = halfW - marginX;
+    const drawH = H - marginY * 2;
+
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.filter = 'none';
+
+    ctx.globalAlpha = 0.99;
+    ctx.drawImage(sim, 0, 0, simW, simH, marginX, marginY, drawW, drawH);
+
+    ctx.save();
+    ctx.translate(W, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(sim, 0, 0, simW, simH, marginX, marginY, drawW, drawH);
+    ctx.restore();
+
+    ctx.globalAlpha = 0.05;
+    ctx.fillStyle = '#000';
+    ctx.fillRect((W/2)|0, marginY, 1, H - marginY*2);
+
+    ctx.globalAlpha = 1;
+  }
+
+  let currentSeed = (crypto?.getRandomValues
+    ? crypto.getRandomValues(new Uint32Array(1))[0]
+    : (Date.now() >>> 0));
+
+  function regen() {
+    currentSeed = (crypto?.getRandomValues
+      ? crypto.getRandomValues(new Uint32Array(1))[0]
+      : ((Date.now() + Math.random()*1e9) >>> 0));
+    renderToMain(currentSeed);
+  }
+
+  function savePNG() {
+    const a = document.createElement('a');
+    a.download = `rorschach-${currentSeed}.png`;
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  }
+
+  newBtn.addEventListener('click', regen);
+  saveBtn.addEventListener('click', savePNG);
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') { e.preventDefault(); regen(); }
+  });
+
+  renderToMain(currentSeed);
+})();
+</script>
+</body>
+</html>

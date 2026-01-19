@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Numdle (Daily + Random • 4/5 digits • Difficulty)</title>
+  <style>
+    :root{
+      --bg:#0f1115; --panel:#151923; --text:#e9eef7; --muted:#aab3c4;
+      --tile:#1c2230; --tileBorder:#2a3347;
+      --good:#2ecc71; --mid:#f1c40f; --bad:#3a4156;
+      --key:#20283a; --keyBorder:#2a3347;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 14px;
+      --gap: 10px;
+      --tileSize: 54px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background: radial-gradient(1200px 600px at 20% 0%, #1a2240 0%, var(--bg) 45%) fixed;
+      color:var(--text);
+      display:flex; justify-content:center; padding:24px;
+    }
+    .wrap{
+      width:min(720px, 100%);
+      background: rgba(21,25,35,.85);
+      border:1px solid rgba(255,255,255,.06);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+      padding: 18px 18px 16px;
+      backdrop-filter: blur(10px);
+    }
+    header{
+      display:flex; align-items:flex-start; justify-content:space-between;
+      gap:12px; margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    h1{
+      font-size: 18px; margin:0; letter-spacing:.4px;
+      display:flex; align-items:center; gap:10px;
+      flex-wrap: wrap;
+    }
+    .badge{
+      font-size:12px; padding:4px 10px; border-radius:999px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.10);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .topBtns{
+      display:flex; gap:8px; align-items:center; flex-wrap: wrap;
+    }
+    button, select{
+      cursor:pointer; border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 13px;
+      outline: none;
+    }
+    select{
+      font-weight: 800;
+      padding-right: 30px;
+    }
+    button:hover, select:hover{ background: rgba(255,255,255,.10); }
+    button:active{ transform: translateY(1px); }
+    .danger{ background: rgba(255,75,75,.12); border-color: rgba(255,75,75,.35); }
+
+    .controls{
+      display:flex; gap:10px; align-items:center; flex-wrap: wrap;
+      margin: 8px 0 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.06);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .controls .label{ color: rgba(233,238,247,.85); font-weight: 800; }
+    .pill{
+      padding: 5px 10px; border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      color: rgba(233,238,247,.85);
+      font-weight: 800;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .hint{
+      margin: 6px 0 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .board{
+      display:grid;
+      gap: var(--gap);
+      padding: 10px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: 14px;
+      overflow-x: auto;
+    }
+    .row{
+      display:grid;
+      gap: var(--gap);
+      justify-content:center;
+    }
+    .tile{
+      width: var(--tileSize);
+      height: var(--tileSize);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      border-radius: 12px;
+      background: var(--tile);
+      border: 1px solid var(--tileBorder);
+      user-select:none;
+      position:relative;
+      transition: transform .12s ease, background .25s ease, border-color .25s ease;
+    }
+    .tile.filled{
+      border-color: rgba(255,255,255,.22);
+      transform: translateY(-1px);
+    }
+    .tile.reveal{
+      animation: flip .42s ease forwards;
+      transform-style: preserve-3d;
+    }
+    @keyframes flip{
+      0%{ transform: rotateX(0deg); }
+      49%{ transform: rotateX(90deg); }
+      51%{ transform: rotateX(90deg); }
+      100%{ transform: rotateX(0deg); }
+    }
+    .tile.good{ background: rgba(46,204,113,.18); border-color: rgba(46,204,113,.55); }
+    .tile.mid{  background: rgba(241,196,15,.18); border-color: rgba(241,196,15,.55); }
+    .tile.bad{  background: rgba(58,65,86,.40); border-color: rgba(58,65,86,.90); }
+
+    .status{
+      margin: 12px 0 8px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.06);
+      font-size: 14px;
+      color: var(--muted);
+      min-height: 44px;
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      flex-wrap: wrap;
+    }
+    .status strong{ color: var(--text); }
+    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+    .tiny{
+      font-size: 12px; color: rgba(233,238,247,.75);
+      padding: 5px 8px;
+      border-radius: 10px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.08);
+      white-space: nowrap;
+    }
+
+    .keys{
+      margin-top: 10px;
+      display:grid;
+      gap: 8px;
+      justify-content:center;
+      user-select:none;
+    }
+    .keyRow{
+      display:flex; gap:8px; justify-content:center; flex-wrap:nowrap;
+    }
+    .key{
+      min-width: 44px;
+      height: 46px;
+      padding: 0 10px;
+      border-radius: 12px;
+      background: var(--key);
+      border: 1px solid var(--keyBorder);
+      display:flex; align-items:center; justify-content:center;
+      font-weight: 900;
+      font-size: 16px;
+      color: var(--text);
+      transition: background .15s ease, transform .05s ease, border-color .15s ease;
+    }
+    .key:hover{ background: rgba(255,255,255,.10); }
+    .key:active{ transform: translateY(1px); }
+    .key.wide{ min-width: 92px; font-size: 14px; }
+    .key.good{ background: rgba(46,204,113,.22); border-color: rgba(46,204,113,.55); }
+    .key.mid{  background: rgba(241,196,15,.20); border-color: rgba(241,196,15,.55); }
+    .key.bad{  background: rgba(58,65,86,.55); border-color: rgba(58,65,86,.95); }
+
+    .modal{
+      position: fixed; inset: 0;
+      display:none; align-items:center; justify-content:center;
+      background: rgba(0,0,0,.55);
+      padding: 20px;
+    }
+    .modal.show{ display:flex; }
+    .card{
+      width:min(560px, 100%);
+      background: rgba(21,25,35,.96);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+    .card h2{ margin:0 0 8px; font-size:18px; }
+    .card p{ margin: 8px 0; color: var(--muted); line-height:1.35; }
+    .card .rowBtns{ display:flex; gap:10px; justify-content:flex-end; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>
+        Numdle
+        <span class="badge">Daily + Random • 4/5 digits • Easy/Medium/Hard</span>
+      </h1>
+      <div class="topBtns">
+        <button id="howBtn" title="How to play">How</button>
+        <button id="dailyBtn" title="Play today's daily number">Daily</button>
+        <button id="randomBtn" title="Start a fresh random number">Random</button>
+        <button id="resetBtn" class="danger" title="Reset current puzzle">Reset</button>
+      </div>
+    </header>
+
+    <div class="controls">
+      <span class="label">Digits:</span>
+      <select id="digitsSelect" aria-label="digits">
+        <option value="4">4 digits</option>
+        <option value="5" selected>5 digits</option>
+      </select>
+
+      <span class="label">Difficulty:</span>
+      <select id="difficultySelect" aria-label="difficulty">
+        <option value="easy">Easy (9 guesses)</option>
+        <option value="medium" selected>Medium (7 guesses)</option>
+        <option value="hard">Hard (5 guesses)</option>
+      </select>
+
+      <span class="pill" id="summaryPill"></span>
+    </div>
+
+    <div class="hint" id="hintText">
+      Guess the number (leading zeros allowed). Green = right digit & spot, Yellow = right digit wrong spot, Gray = not in the number.
+    </div>
+
+    <div id="board" class="board" aria-label="game board"></div>
+
+    <div class="status">
+      <div id="statusText">Type digits or tap the keypad. Press <strong>Enter</strong> to submit.</div>
+      <div class="tiny">
+        Mode: <span id="modeLabel" class="mono"></span> • ID: <span id="puzzleId" class="mono"></span>
+      </div>
+    </div>
+
+    <div class="keys" aria-label="keypad">
+      <div class="keyRow">
+        <div class="key" data-key="1">1</div>
+        <div class="key" data-key="2">2</div>
+        <div class="key" data-key="3">3</div>
+        <div class="key" data-key="4">4</div>
+        <div class="key" data-key="5">5</div>
+      </div>
+      <div class="keyRow">
+        <div class="key" data-key="6">6</div>
+        <div class="key" data-key="7">7</div>
+        <div class="key" data-key="8">8</div>
+        <div class="key" data-key="9">9</div>
+        <div class="key" data-key="0">0</div>
+      </div>
+      <div class="keyRow">
+        <div class="key wide" data-key="Backspace">⌫ Back</div>
+        <div class="key wide" data-key="Enter">Enter</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="card">
+      <h2>How to play</h2>
+      <p>
+        You have a limited number of guesses (based on difficulty) to find a <strong>4-digit</strong> or <strong>5-digit</strong> number.
+        Leading zeros are allowed (ex: <span class="mono">0037</span> or <span class="mono">00042</span>).
+      </p>
+      <p>
+        After each guess:
+        <br/>• <strong style="color:#bff7d1">Green</strong> = correct digit in the correct position.
+        <br/>• <strong style="color:#fff1b8">Yellow</strong> = digit exists but in a different position.
+        <br/>• <strong style="color:#c7cedd">Gray</strong> = digit not in the number (or all copies already used).
+      </p>
+      <p>
+        <strong>Daily</strong> changes once per day (based on your device’s local date).<br/>
+        <strong>Random</strong> makes a fresh new puzzle each time you click Random.<br/>
+        Your progress is saved per mode + settings.
+      </p>
+      <div class="rowBtns">
+        <button id="closeModalBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== Utilities: Date + Deterministic RNG =====
+    function getLocalDateId(d = new Date()) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
+
+    function xmur3(str) {
+      let h = 1779033703 ^ str.length;
+      for (let i = 0; i < str.length; i++) {
+        h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+        h = (h << 13) | (h >>> 19);
+      }
+      return function() {
+        h = Math.imul(h ^ (h >>> 16), 2246822507);
+        h = Math.imul(h ^ (h >>> 13), 3266489909);
+        h ^= (h >>> 16);
+        return h >>> 0;
+      };
+    }
+
+    function mulberry32(a) {
+      return function() {
+        let t = a += 0x6D2B79F5;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    // ===== Config + Settings =====
+    const SALT = "Numdle-v2-jwesters";
+    const dateId = getLocalDateId();
+
+    const DIFFICULTY_TO_GUESSES = { easy: 9, medium: 7, hard: 5 };
+
+    // Persistent settings
+    let mode = localStorage.getItem(`numdle:${SALT}:mode`) || "daily"; // daily | random
+    let digits = Number(localStorage.getItem(`numdle:${SALT}:digits`) || "5"); // 4 | 5
+    let difficulty = localStorage.getItem(`numdle:${SALT}:difficulty`) || "medium"; // easy|medium|hard
+
+    // Random seed persists so refresh keeps same random puzzle unless user clicks Random again
+    let randomSeed = localStorage.getItem(`numdle:${SALT}:randomSeed`);
+    randomSeed = randomSeed ? Number(randomSeed) : null;
+
+    function wordLen() { return digits; }
+    function maxGuesses() { return DIFFICULTY_TO_GUESSES[difficulty] ?? 7; }
+
+    // ===== DOM =====
+    const boardEl = document.getElementById("board");
+    const statusText = document.getElementById("statusText");
+    const puzzleIdEl = document.getElementById("puzzleId");
+    const modeLabelEl = document.getElementById("modeLabel");
+    const digitsSelect = document.getElementById("digitsSelect");
+    const difficultySelect = document.getElementById("difficultySelect");
+    const summaryPill = document.getElementById("summaryPill");
+    const hintText = document.getElementById("hintText");
+
+    // Init selects
+    digitsSelect.value = String(digits);
+    difficultySelect.value = difficulty;
+
+    // ===== Target generation depends on mode + date + settings =====
+    function dailyTargetFor(dateIdStr, digitsLen, diffKey) {
+      const seedFn = xmur3(`${SALT}:daily:${dateIdStr}:d${digitsLen}:${diffKey}`);
+      const rand = mulberry32(seedFn());
+      const max = Math.pow(10, digitsLen);
+      return String(Math.floor(rand() * max)).padStart(digitsLen, "0");
+    }
+
+    function generateNewRandomTarget() {
+      randomSeed = Math.floor(Math.random() * 1e9);
+      localStorage.setItem(`numdle:${SALT}:randomSeed`, String(randomSeed));
+      return randomTargetFromSeed(randomSeed, digits, difficulty);
+    }
+
+    function randomTargetFromSeed(seed, digitsLen, diffKey) {
+      const r = mulberry32(seed >>> 0);
+      const max = Math.pow(10, digitsLen);
+      // mix in digits/difficulty so changing settings changes the random target even with same seed
+      const mix = xmur3(`${seed}:d${digitsLen}:${diffKey}`)();
+      const rr = mulberry32(mix);
+      const n = Math.floor(((r() + rr()) / 2) * max) % max;
+      return String(n).padStart(digitsLen, "0");
+    }
+
+    function getPuzzleId() {
+      return mode === "daily" ? dateId : `R-${randomSeed ?? "new"}`;
+    }
+
+    function getStorageKey() {
+      // Settings are part of the key so changing digits/difficulty gives a fresh board/state.
+      return mode === "daily"
+        ? `numdle:${SALT}:daily:${dateId}:d${digits}:${difficulty}`
+        : `numdle:${SALT}:random:${randomSeed}:d${digits}:${difficulty}`;
+    }
+
+    let targetStr = "";
+    function computeTarget() {
+      if (mode === "daily") {
+        targetStr = dailyTargetFor(dateId, digits, difficulty);
+      } else {
+        if (randomSeed == null) {
+          targetStr = generateNewRandomTarget();
+        } else {
+          targetStr = randomTargetFromSeed(randomSeed, digits, difficulty);
+        }
+      }
+    }
+
+    // ===== State =====
+    let state = null;
+
+    function freshState() {
+      state = {
+        guesses: Array(maxGuesses()).fill(""),
+        results: Array(maxGuesses()).fill(null),
+        row: 0,
+        col: 0,
+        done: false,
+        won: false,
+        keyboardMarks: {}
+      };
+    }
+
+    function setStatus(msg) { statusText.innerHTML = msg; }
+
+    function priorityRank(mark) {
+      if (mark === "good") return 3;
+      if (mark === "mid") return 2;
+      if (mark === "bad") return 1;
+      return 0;
+    }
+
+    function updateKeyboardMarks(guess, marks) {
+      for (let i = 0; i < guess.length; i++) {
+        const d = guess[i];
+        const m = marks[i];
+        const prev = state.keyboardMarks[d];
+        if (priorityRank(m) > priorityRank(prev)) state.keyboardMarks[d] = m;
+      }
+    }
+
+    function renderKeyboard() {
+      document.querySelectorAll(".key").forEach(k => {
+        const key = k.getAttribute("data-key");
+        if (!/^\d$/.test(key)) return;
+        k.classList.remove("good","mid","bad");
+        const m = state.keyboardMarks[key];
+        if (m) k.classList.add(m);
+      });
+    }
+
+    // ===== Board Rendering =====
+    function makeBoard() {
+      boardEl.innerHTML = "";
+      for (let r = 0; r < maxGuesses(); r++) {
+        const rowEl = document.createElement("div");
+        rowEl.className = "row";
+        rowEl.dataset.row = r;
+        rowEl.style.gridTemplateColumns = `repeat(${wordLen()}, var(--tileSize))`;
+        for (let c = 0; c < wordLen(); c++) {
+          const t = document.createElement("div");
+          t.className = "tile";
+          t.dataset.row = r;
+          t.dataset.col = c;
+          rowEl.appendChild(t);
+        }
+        boardEl.appendChild(rowEl);
+      }
+    }
+
+    function renderRow(r) {
+      const guess = state.guesses[r] || "";
+      const res = state.results[r];
+      for (let c = 0; c < wordLen(); c++) {
+        const tile = boardEl.querySelector(`.tile[data-row="${r}"][data-col="${c}"]`);
+        const ch = guess[c] ?? "";
+        tile.textContent = ch;
+        tile.classList.toggle("filled", ch !== "");
+        tile.classList.remove("good","mid","bad","reveal");
+        if (res && res[c]) {
+          tile.classList.add(res[c], "reveal");
+          tile.style.animationDelay = (c * 60) + "ms";
+        } else {
+          tile.style.animationDelay = "0ms";
+        }
+      }
+    }
+
+    function renderAll() {
+      for (let r = 0; r < maxGuesses(); r++) renderRow(r);
+      renderKeyboard();
+      modeLabelEl.textContent = mode.toUpperCase();
+      puzzleIdEl.textContent = getPuzzleId();
+      summaryPill.textContent = `${digits}-digit • ${difficulty.toUpperCase()} • ${maxGuesses()} guesses`;
+      hintText.innerHTML = `Guess the <strong>${digits}-digit</strong> number (leading zeros allowed). Green = right digit & spot, Yellow = right digit wrong spot, Gray = not in the number.`;
+    }
+
+    // ===== Persistence =====
+    function loadState() {
+      freshState();
+      try {
+        const raw = localStorage.getItem(getStorageKey());
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.guesses) || !Array.isArray(parsed.results)) return;
+
+        // If saved arrays mismatch new settings, ignore.
+        if (parsed.guesses.length !== maxGuesses() || parsed.results.length !== maxGuesses()) return;
+
+        state = { ...state, ...parsed };
+      } catch (e) {}
+    }
+
+    function saveState() {
+      try { localStorage.setItem(getStorageKey(), JSON.stringify(state)); } catch (e) {}
+    }
+
+    function resetCurrentPuzzle() {
+      localStorage.removeItem(getStorageKey());
+      loadState();
+      makeBoard();
+      renderAll();
+      setStatus(`${mode === "daily" ? "Daily" : "Random"} progress reset.`);
+      saveState();
+    }
+
+    // ===== Scoring (handles duplicates) =====
+    function scoreGuess(guess, target) {
+      const L = wordLen();
+      const marks = Array(L).fill("bad");
+      const t = target.split("");
+      const g = guess.split("");
+
+      const remaining = {};
+      for (let i = 0; i < L; i++) {
+        if (g[i] === t[i]) {
+          marks[i] = "good";
+        } else {
+          remaining[t[i]] = (remaining[t[i]] || 0) + 1;
+        }
+      }
+
+      for (let i = 0; i < L; i++) {
+        if (marks[i] === "good") continue;
+        const d = g[i];
+        if (remaining[d] > 0) {
+          marks[i] = "mid";
+          remaining[d]--;
+        }
+      }
+      return marks;
+    }
+
+    // ===== Input =====
+    function isDigitKey(k) { return k.length === 1 && k >= "0" && k <= "9"; }
+
+    function addDigit(d) {
+      if (state.done) return;
+      if (state.col >= wordLen()) return;
+      const curr = state.guesses[state.row] || "";
+      state.guesses[state.row] = (curr + d).slice(0, wordLen());
+      state.col = state.guesses[state.row].length;
+      renderRow(state.row);
+      saveState();
+    }
+
+    function backspace() {
+      if (state.done) return;
+      const curr = state.guesses[state.row] || "";
+      if (!curr.length) return;
+      state.guesses[state.row] = curr.slice(0, -1);
+      state.col = state.guesses[state.row].length;
+      renderRow(state.row);
+      saveState();
+    }
+
+    function submit() {
+      if (state.done) return;
+
+      const guess = state.guesses[state.row] || "";
+      if (guess.length !== wordLen()) {
+        setStatus(`Need <strong>${wordLen()} digits</strong> before submitting.`);
+        return;
+      }
+
+      const marks = scoreGuess(guess, targetStr);
+      state.results[state.row] = marks;
+      updateKeyboardMarks(guess, marks);
+
+      renderRow(state.row);
+      renderKeyboard();
+
+      if (guess === targetStr) {
+        state.done = true;
+        state.won = true;
+        setStatus(`✅ You got it! The number was <strong class="mono">${targetStr}</strong>.`);
+        saveState();
+        return;
+      }
+
+      state.row++;
+      state.col = 0;
+
+      if (state.row >= maxGuesses()) {
+        state.done = true;
+        state.won = false;
+        setStatus(`❌ Out of guesses. The number was <strong class="mono">${targetStr}</strong>.`);
+        saveState();
+        return;
+      }
+
+      setStatus(`Guess <strong>${state.row + 1}</strong> of <strong>${maxGuesses()}</strong>.`);
+      saveState();
+    }
+
+    function handleKey(key) {
+      if (key === "Enter") return submit();
+      if (key === "Backspace") return backspace();
+      if (isDigitKey(key)) return addDigit(key);
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Backspace") e.preventDefault();
+      handleKey(e.key);
+    });
+
+    document.querySelectorAll(".key").forEach(k => {
+      k.addEventListener("click", () => handleKey(k.getAttribute("data-key")));
+    });
+
+    // ===== Modal =====
+    const modal = document.getElementById("modal");
+    document.getElementById("howBtn").addEventListener("click", () => {
+      modal.classList.add("show");
+      modal.setAttribute("aria-hidden","false");
+    });
+    document.getElementById("closeModalBtn").addEventListener("click", () => {
+      modal.classList.remove("show");
+      modal.setAttribute("aria-hidden","true");
+    });
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        modal.classList.remove("show");
+        modal.setAttribute("aria-hidden","true");
+      }
+    });
+
+    // ===== Buttons =====
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      if (confirm(`Reset ${mode.toUpperCase()} progress for this puzzle?`)) resetCurrentPuzzle();
+    });
+
+    document.getElementById("dailyBtn").addEventListener("click", () => {
+      mode = "daily";
+      localStorage.setItem(`numdle:${SALT}:mode`, mode);
+      // keep randomSeed as-is for when user returns to random
+      restartForSettings({ keepMode: true, keepRandomSeed: true, dailyMessage: true });
+    });
+
+    document.getElementById("randomBtn").addEventListener("click", () => {
+      mode = "random";
+      localStorage.setItem(`numdle:${SALT}:mode`, mode);
+      // Always start a NEW random puzzle when clicking Random
+      targetStr = generateNewRandomTarget();
+      restartForSettings({ keepMode: true, keepRandomSeed: true, randomMessage: true, forceTargetAlreadySet: true });
+    });
+
+    // ===== Settings Changes =====
+    digitsSelect.addEventListener("change", () => {
+      digits = Number(digitsSelect.value);
+      localStorage.setItem(`numdle:${SALT}:digits`, String(digits));
+      // Changing digits should rebuild puzzle/board and target.
+      restartForSettings({ keepMode: true, keepRandomSeed: true, settingsMessage: true });
+    });
+
+    difficultySelect.addEventListener("change", () => {
+      difficulty = difficultySelect.value;
+      localStorage.setItem(`numdle:${SALT}:difficulty`, String(difficulty));
+      restartForSettings({ keepMode: true, keepRandomSeed: true, settingsMessage: true });
+    });
+
+    function restartForSettings(opts = {}) {
+      // If in random mode and randomSeed is null, create one so refresh & storage work.
+      if (mode === "random" && randomSeed == null) {
+        // Don't create a new random puzzle unless user explicitly clicked Random.
+        // So generate a seed once if missing (first time ever).
+        randomSeed = Math.floor(Math.random() * 1e9);
+        localStorage.setItem(`numdle:${SALT}:randomSeed`, String(randomSeed));
+      }
+
+      if (!opts.forceTargetAlreadySet) computeTarget();
+
+      loadState();
+      makeBoard();
+      renderAll();
+
+      if (state.done) {
+        setStatus(state.won
+          ? `✅ Completed! The number was <strong class="mono">${targetStr}</strong>.`
+          : `❌ Completed. The number was <strong class="mono">${targetStr}</strong>.`
+        );
+      } else {
+        if (opts.randomMessage) {
+          setStatus(`🎲 Random mode. New puzzle generated! Guess <strong>${state.row + 1}</strong> of <strong>${maxGuesses()}</strong>.`);
+        } else if (opts.dailyMessage) {
+          setStatus(`Daily mode. Guess <strong>${state.row + 1}</strong> of <strong>${maxGuesses()}</strong>.`);
+        } else if (opts.settingsMessage) {
+          setStatus(`Settings updated. Guess <strong>${state.row + 1}</strong> of <strong>${maxGuesses()}</strong>.`);
+        } else {
+          setStatus(`${mode === "daily" ? "Daily" : "Random"} mode. Guess <strong>${state.row + 1}</strong> of <strong>${maxGuesses()}</strong>.`);
+        }
+      }
+      saveState();
+    }
+
+    // ===== Init =====
+    computeTarget();
+    loadState();
+    makeBoard();
+    renderAll();
+
+    if (state.done) {
+      setStatus(state.won
+        ? `✅ Completed! The number was <strong class="mono">${targetStr}</strong>.`
+        : `❌ Completed. The number was <strong class="mono">${targetStr}</strong>.`
+      );
+    } else {
+      setStatus(`${mode === "daily" ? "Daily" : "Random"} mode. Guess <strong>${state.row + 1}</strong> of <strong>${maxGuesses()}</strong>.`);
+    }
+    saveState();
+  </script>
+</body>
+</html>
