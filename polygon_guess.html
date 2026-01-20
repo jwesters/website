@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Polygon Side Count</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; padding: 20px; }
+    .wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 14px; }
+    h1 { margin: 0 0 6px; font-size: 24px; }
+    .card { border: 1px solid rgba(127,127,127,.35); border-radius: 14px; padding: 14px; }
+    .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    button, input {
+      font: inherit; padding: 10px 12px; border-radius: 10px;
+      border: 1px solid rgba(127,127,127,.45); background: transparent;
+    }
+    button { cursor: pointer; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    canvas { width: 100%; height: 520px; background: rgba(127,127,127,.08); border-radius: 14px; border: 1px solid rgba(127,127,127,.25); }
+    .status { font-size: 14px; opacity: .95; }
+    .big { font-size: 18px; font-weight: 800; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 10px; border: 1px solid rgba(127,127,127,.35);
+      border-radius: 999px; font-size: 13px;
+    }
+    .muted { opacity: .7; }
+    .result { padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(127,127,127,.35); }
+    .ok { border-color: rgba(70,180,120,.7); }
+    .close { border-color: rgba(240,200,70,.75); }
+    .nope { border-color: rgba(220,80,80,.75); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .hint { font-size: 13px; opacity: .75; }
+    .zoomWrap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    input[type="range"] { padding: 0; height: 34px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div>
+      <h1>Polygon Side Count</h1>
+      <div class="muted">
+        Click <b>Show</b>, study the polygon for <b>10 seconds</b> (countdown shown), then guess how many sides it has.
+        Sides are always random from <b>20–150</b>.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <button id="btnShow">Show</button>
+        <button id="btnReset" class="muted">Reset</button>
+
+        <span class="pill" title="Counts down while the polygon is visible">
+          Time left: <span class="mono" id="countdown">—</span>
+        </span>
+
+        <span class="pill" title="Zoom works while visible and after guessing">
+          Zoom: <span class="mono" id="zoomLabel">100%</span>
+        </span>
+
+        <div class="zoomWrap">
+          <input id="zoom" type="range" min="50" max="350" value="100" />
+          <span class="hint">Tip: use mouse wheel / trackpad to zoom too.</span>
+        </div>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <div class="row">
+        <input id="guessInput" type="number" min="1" step="1" placeholder="Your guess…" style="width: 180px;" disabled />
+        <button id="btnGuess" disabled>Submit guess</button>
+        <span class="status" id="status">Press <b>Show</b> to start.</span>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <div id="result" class="result muted" style="display:none;"></div>
+    </div>
+
+    <div class="card">
+      <canvas id="c" width="1200" height="520" aria-label="Polygon display"></canvas>
+      <div class="hint">
+        Zoom centers on the canvas. (Click-and-drag panning can be added if you want.)
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById('c');
+      const ctx = canvas.getContext('2d');
+
+      const btnShow = document.getElementById('btnShow');
+      const btnReset = document.getElementById('btnReset');
+      const btnGuess = document.getElementById('btnGuess');
+      const guessInput = document.getElementById('guessInput');
+      const statusEl = document.getElementById('status');
+      const resultEl = document.getElementById('result');
+
+      const countdownEl = document.getElementById('countdown');
+      const zoomSlider = document.getElementById('zoom');
+      const zoomLabel = document.getElementById('zoomLabel');
+
+      const SHOW_SECONDS = 10;
+      const MIN_SIDES = 20;
+      const MAX_SIDES = 150;
+
+      let phase = 'idle'; // idle | showing | guessing | revealed
+      let hideTimer = null;
+      let countdownTimer = null;
+      let showStartMs = null;
+
+      let currentSides = null;
+      let currentPoly = null; // { pts: [{x,y}], sides }
+      let zoom = 1.0;
+
+      function setPhase(p) {
+        phase = p;
+
+        if (p === 'idle') {
+          btnShow.disabled = false;
+          btnGuess.disabled = true;
+          guessInput.disabled = true;
+          guessInput.value = '';
+          countdownEl.textContent = '—';
+          statusEl.innerHTML = 'Press <b>Show</b> to start.';
+        } else if (p === 'showing') {
+          btnShow.disabled = true;
+          btnGuess.disabled = true;
+          guessInput.disabled = true;
+          guessInput.value = '';
+          statusEl.innerHTML = 'Memorize it…';
+        } else if (p === 'guessing') {
+          btnShow.disabled = false; // allow starting over if they want
+          btnGuess.disabled = false;
+          guessInput.disabled = false;
+          guessInput.focus();
+          countdownEl.textContent = '0.0s';
+          statusEl.innerHTML = 'Polygon hidden. Enter your guess and submit.';
+        } else if (p === 'revealed') {
+          btnShow.disabled = false;
+          btnGuess.disabled = true;
+          guessInput.disabled = true;
+          statusEl.innerHTML = 'Polygon shown again below. Press <b>Show</b> for a new one.';
+        }
+      }
+
+      function clearTimers() {
+        if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+        if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+        showStartMs = null;
+      }
+
+      function randInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+
+      // No "wobble" control, but we still generate an irregular polygon (unequal sides)
+      // by using a gentle random walk on radii + mild angle jitter.
+      function generatePolygon(nSides) {
+        const w = canvas.width, h = canvas.height;
+        const cx = w * 0.5, cy = h * 0.5;
+
+        const base = Math.min(w, h) * 0.32;
+        const wobble = 0.28; // internal fixed irregularity
+
+        const radii = new Array(nSides);
+        let r = 1.0;
+        for (let i = 0; i < nSides; i++) {
+          r += (Math.random() - 0.5) * wobble * 0.30;
+          r = Math.max(0.72, Math.min(1.28, r));
+          const noise = 1 + (Math.random() - 0.5) * wobble;
+          radii[i] = base * r * noise;
+        }
+
+        const angles = new Array(nSides);
+        const step = (Math.PI * 2) / nSides;
+        for (let i = 0; i < nSides; i++) {
+          const jitter = (Math.random() - 0.5) * step * 0.20;
+          angles[i] = i * step + jitter;
+        }
+        angles.sort((a,b) => a-b);
+
+        const pts = angles.map((a, i) => ({
+          x: cx + Math.cos(a) * radii[i],
+          y: cy + Math.sin(a) * radii[i]
+        }));
+
+        return { pts, sides: nSides };
+      }
+
+      function drawBackground() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        ctx.save();
+        ctx.globalAlpha = 0.18;
+        ctx.beginPath();
+        const step = 40;
+        for (let x = 0; x <= canvas.width; x += step) {
+          ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height);
+        }
+        for (let y = 0; y <= canvas.height; y += step) {
+          ctx.moveTo(0, y); ctx.lineTo(canvas.width, y);
+        }
+        ctx.strokeStyle = '#888';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function withZoomDraw(drawFn) {
+        // Zoom around center of canvas
+        const cx = canvas.width * 0.5;
+        const cy = canvas.height * 0.5;
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.scale(zoom, zoom);
+        ctx.translate(-cx, -cy);
+
+        drawFn();
+
+        ctx.restore();
+      }
+
+      function drawPolygon(poly) {
+        drawBackground();
+        withZoomDraw(() => {
+          const pts = poly.pts;
+
+          // fill
+          ctx.save();
+          ctx.globalAlpha = 0.20;
+          ctx.beginPath();
+          ctx.moveTo(pts[0].x, pts[0].y);
+          for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+          ctx.closePath();
+          ctx.fillStyle = '#999';
+          ctx.fill();
+          ctx.restore();
+
+          // stroke
+          ctx.beginPath();
+          ctx.moveTo(pts[0].x, pts[0].y);
+          for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+          ctx.closePath();
+          ctx.strokeStyle = '#e6e6e6';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+
+          // small vertex dots (sparse)
+          ctx.save();
+          ctx.globalAlpha = 0.65;
+          ctx.fillStyle = '#e6e6e6';
+          const dotR = 2.1;
+          const step = Math.max(1, Math.floor(pts.length / 120));
+          for (let i = 0; i < pts.length; i += step) {
+            ctx.beginPath();
+            ctx.arc(pts[i].x, pts[i].y, dotR, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        });
+      }
+
+      function drawHidden() {
+        drawBackground();
+        ctx.save();
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = '#999';
+        ctx.font = '800 28px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Hidden — make your guess!', canvas.width / 2, canvas.height / 2);
+        ctx.restore();
+      }
+
+      function showResultMessage(msg, cls) {
+        resultEl.style.display = 'block';
+        resultEl.className = `result ${cls || ''}`;
+        resultEl.innerHTML = msg;
+      }
+
+      function hideResult() {
+        resultEl.style.display = 'none';
+        resultEl.className = 'result muted';
+        resultEl.textContent = '';
+      }
+
+      function startCountdown() {
+        showStartMs = performance.now();
+        tickCountdown();
+        countdownTimer = setInterval(tickCountdown, 50);
+      }
+
+      function tickCountdown() {
+        if (!showStartMs) return;
+        const elapsed = (performance.now() - showStartMs) / 1000;
+        const remaining = Math.max(0, SHOW_SECONDS - elapsed);
+        countdownEl.textContent = `${remaining.toFixed(1)}s`;
+      }
+
+      function startRound() {
+        clearTimers();
+        hideResult();
+
+        currentSides = randInt(MIN_SIDES, MAX_SIDES);
+        currentPoly = generatePolygon(currentSides);
+
+        setPhase('showing');
+        drawPolygon(currentPoly);
+
+        startCountdown();
+
+        hideTimer = setTimeout(() => {
+          clearTimers();
+          drawHidden();
+          setPhase('guessing');
+        }, SHOW_SECONDS * 1000);
+      }
+
+      function evaluateGuess() {
+        if (phase !== 'guessing') return;
+
+        const g = parseInt(guessInput.value, 10);
+        if (!Number.isFinite(g) || g <= 0) {
+          showResultMessage('Please enter a valid positive number.', 'nope');
+          guessInput.focus();
+          return;
+        }
+
+        const actual = currentSides;
+        const diff = Math.abs(g - actual);
+        const pct = diff / actual;
+
+        let verdict = '';
+        let cls = 'nope';
+
+        if (g === actual) {
+          verdict = '✅ Correct!';
+          cls = 'ok';
+        } else if (pct <= 0.05) {
+          verdict = '🟡 Close! (within 5%)';
+          cls = 'close';
+        } else {
+          verdict = '❌ Not close (more than 5% away).';
+          cls = 'nope';
+        }
+
+        const lower = Math.ceil(actual * 0.95);
+        const upper = Math.floor(actual * 1.05);
+
+        showResultMessage(
+          `<div class="big">${verdict}</div>
+           <div style="height:6px"></div>
+           <div>Actual sides: <b>${actual}</b></div>
+           <div>Your guess: <b>${g}</b> <span class="muted">(off by ${diff}, ${(pct*100).toFixed(2)}%)</span></div>
+           <div class="muted">“Close” range (±5%): ${lower} to ${upper}</div>`,
+          cls
+        );
+
+        // Show the polygon again AFTER they guess
+        drawPolygon(currentPoly);
+        setPhase('revealed');
+      }
+
+      function resetAll() {
+        clearTimers();
+        currentSides = null;
+        currentPoly = null;
+        hideResult();
+        drawBackground();
+        setPhase('idle');
+      }
+
+      // Zoom controls
+      function setZoomFromPercent(pct) {
+        const clamped = Math.max(50, Math.min(350, pct));
+        zoomSlider.value = String(clamped);
+        zoom = clamped / 100;
+        zoomLabel.textContent = `${clamped}%`;
+
+        // Redraw if we have something to show (during showing or revealed)
+        if ((phase === 'showing' || phase === 'revealed') && currentPoly) {
+          drawPolygon(currentPoly);
+        }
+      }
+
+      zoomSlider.addEventListener('input', () => {
+        setZoomFromPercent(parseInt(zoomSlider.value, 10));
+      });
+
+      // Mouse wheel / trackpad zoom on canvas
+      canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const delta = -Math.sign(e.deltaY);
+        const currentPct = parseInt(zoomSlider.value, 10);
+        const step = e.ctrlKey ? 10 : 6;
+        setZoomFromPercent(currentPct + delta * step);
+      }, { passive: false });
+
+      // Events
+      btnShow.addEventListener('click', startRound);
+      btnGuess.addEventListener('click', evaluateGuess);
+      guessInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') evaluateGuess();
+      });
+      btnReset.addEventListener('click', resetAll);
+
+      // Init
+      drawBackground();
+      setZoomFromPercent(100);
+      setPhase('idle');
+    })();
+  </script>
+</body>
+</html>

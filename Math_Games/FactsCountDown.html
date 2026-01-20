@@ -1,0 +1,1092 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Math Facts Countdown</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --card:rgba(255,255,255,0.08);
+      --text:rgba(255,255,255,0.92);
+      --muted:rgba(255,255,255,0.65);
+      --bad:#ff5c5c;
+      --good:#3be37b;
+      --line:rgba(255,255,255,0.14);
+      --shadow:0 16px 50px rgba(0,0,0,0.35);
+      --radius:18px;
+      --white:#ffffff;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(1200px 700px at 15% 10%, rgba(80,140,255,0.25), transparent 55%),
+        radial-gradient(900px 600px at 85% 20%, rgba(255,110,180,0.20), transparent 55%),
+        radial-gradient(800px 600px at 40% 90%, rgba(60,255,180,0.12), transparent 55%),
+        var(--bg);
+      min-height:100vh;
+      display:grid;
+      place-items:center;
+      padding:20px;
+    }
+    .wrap{width:min(920px,100%);display:grid;gap:14px;}
+    header{
+      display:flex; align-items:baseline; justify-content:space-between;
+      gap:12px; padding:10px 6px; flex-wrap:wrap;
+    }
+    h1{margin:0;font-size:clamp(20px,2.6vw,30px);letter-spacing:.2px;}
+    .subtitle{margin:0;color:var(--muted);font-size:14px;}
+    .panel{
+      background:var(--card);
+      border:1px solid var(--line);
+      box-shadow:var(--shadow);
+      border-radius:var(--radius);
+      overflow:hidden;
+    }
+    .panelInner{padding:18px;}
+    .chip{
+      font-size:12px; color:var(--muted);
+      border:1px solid var(--line);
+      padding:6px 10px; border-radius:999px;
+      background:rgba(0,0,0,0.18);
+      white-space:nowrap;
+    }
+    .kbd{
+      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      font-size:12px; padding:2px 6px;
+      border:1px solid var(--line);
+      border-radius:8px; background:rgba(0,0,0,0.18);
+      color:rgba(255,255,255,0.86);
+      margin-left:6px;
+    }
+
+    button{
+      appearance:none;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,0.06);
+      color:var(--text);
+      border-radius:14px;
+      padding:14px 14px;
+      font-weight:650;
+      font-size:16px;
+      cursor:pointer;
+      transition:transform .06s ease, background .15s ease, border-color .15s ease;
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px; min-height:54px;
+    }
+    button:hover{background:rgba(255,255,255,0.10);border-color:rgba(255,255,255,0.22);}
+    button:active{transform:scale(.99);}
+    button.secondary{
+      background:rgba(255,255,255,0.04);
+      font-weight:800;
+      font-size:14px;
+      padding:12px 14px;
+      min-height:46px;
+      justify-content:center;
+    }
+    .hidden{display:none !important;}
+
+    .rules{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+      margin-top:6px;
+    }
+
+    .optionsBlock{
+      display:grid; gap:10px;
+      margin-top:10px;
+      padding:12px;
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:rgba(0,0,0,0.16);
+    }
+    .row{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:12px; flex-wrap:wrap;
+    }
+    .label{
+      font-weight:900; font-size:14px;
+      color:rgba(255,255,255,0.92);
+    }
+    .pillGroup{
+      display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;
+    }
+    .pill{
+      min-width:72px;
+      padding:10px 14px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,0.06);
+      color:var(--text);
+      font-size:14px;
+      font-weight:900;
+      cursor:pointer;
+      transition:transform .06s ease, background .15s ease, border-color .15s ease;
+    }
+    .pill:hover{background:rgba(255,255,255,0.10);border-color:rgba(255,255,255,0.22);}
+    .pill:active{transform:scale(.99);}
+    .pill.active{
+      background:var(--white);
+      color:#000;
+      border-color:var(--white);
+    }
+
+    .menuGrid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:12px;
+      margin-top:14px;
+    }
+    @media (max-width:520px){ .menuGrid{grid-template-columns:1fr;} }
+
+    /* Teacher options (readable dropdown) */
+    .teacherSpacer{height:18px;}
+    details.teacher{
+      border:1px solid rgba(255,255,255,0.22);
+      border-radius:16px;
+      background:rgba(255,255,255,0.06);
+      overflow:hidden;
+    }
+    details.teacher[open]{ background:rgba(255,255,255,0.07); }
+    details.teacher > summary{
+      list-style:none;
+      cursor:pointer;
+      padding:14px 14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      font-weight:1000;
+      user-select:none;
+    }
+    details.teacher > summary::-webkit-details-marker{ display:none; }
+    .teacherBody{
+      padding:14px;
+      border-top:1px solid rgba(255,255,255,0.18);
+      display:grid;
+      gap:12px;
+    }
+    .teacherGrid{
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr;
+      gap:12px;
+    }
+    @media (max-width:840px){ .teacherGrid{grid-template-columns:1fr;} }
+    .field{display:grid; gap:6px;}
+    .field label{
+      font-weight:1000;
+      font-size:13px;
+      color:rgba(255,255,255,0.92);
+    }
+    .teacher select{
+      appearance:none;
+      border:1px solid rgba(255,255,255,0.25);
+      background:rgba(0,0,0,0.50);
+      color:rgba(255,255,255,0.98);
+      border-radius:12px;
+      padding:12px 12px;
+      font-weight:1000;
+      font-size:15px;
+      outline:none;
+      cursor:pointer;
+    }
+    .teacher select:focus{
+      border-color:rgba(255,255,255,0.55);
+      box-shadow:0 0 0 3px rgba(255,255,255,0.10);
+    }
+    .teacher select option{ background:#10182b; color:#ffffff; }
+    .linkRow{
+      display:flex;
+      gap:10px;
+      align-items:stretch;
+      flex-wrap:wrap;
+    }
+    .linkRow input{
+      flex:1 1 360px;
+      min-width:260px;
+      padding:12px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,0.22);
+      background:rgba(0,0,0,0.38);
+      color:rgba(255,255,255,0.96);
+      font-size:13px;
+      font-weight:900;
+      outline:none;
+    }
+    .tinyNote{
+      color:rgba(255,255,255,0.70);
+      font-size:12px;
+      line-height:1.35;
+    }
+
+    /* Game */
+    .gameArea{display:grid;gap:12px;}
+    .prompt{
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:18px;
+      background:rgba(255,255,255,0.06);
+      display:grid;
+      gap:12px;
+    }
+    .topBar{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px; flex-wrap:wrap;
+    }
+    .bigTimer{
+      font-weight:1000;
+      font-size:28px;
+      letter-spacing:.5px;
+      font-variant-numeric:tabular-nums;
+      padding:10px 14px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,0.22);
+    }
+    .scoreBox{
+      display:flex; gap:8px; flex-wrap:wrap;
+      align-items:center;
+    }
+    .stat{
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,0.18);
+      font-weight:900;
+      font-variant-numeric:tabular-nums;
+    }
+
+    .question{
+      font-size:clamp(32px,5vw,54px);
+      font-weight:900;
+      letter-spacing:.4px;
+      text-align:center;
+      padding:6px 0 2px;
+      font-variant-numeric:tabular-nums;
+    }
+    .answerRow{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:center;
+      flex-wrap:wrap;
+    }
+    input[type="text"]{
+      width:min(240px,100%);
+      padding:14px 14px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,0.22);
+      color:var(--text);
+      font-size:18px;
+      outline:none;
+      text-align:center;
+      font-weight:900;
+      font-variant-numeric:tabular-nums;
+    }
+    input[type="text"]::placeholder{color:rgba(255,255,255,0.35);}
+    .msg{min-height:20px;text-align:center;font-size:14px;color:var(--muted);}
+    .msg.good{color:var(--good);font-weight:900;}
+    .msg.bad{color:var(--bad);font-weight:900;}
+
+    .footerBtns{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:center;
+      margin-top:4px;
+    }
+
+    /* Results */
+    .resultBig{
+      font-size:clamp(28px,4vw,44px);
+      font-weight:1000;
+      text-align:center;
+      font-variant-numeric:tabular-nums;
+    }
+    .resultRow{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+    @media (max-width:640px){ .resultRow{grid-template-columns:1fr;} }
+    .resultCard{
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:14px;
+      background:rgba(0,0,0,0.16);
+      display:grid;
+      gap:6px;
+    }
+    .resultCard .k{color:var(--muted); font-size:12px; font-weight:900; letter-spacing:.2px;}
+    .resultCard .v{font-size:22px; font-weight:1000; font-variant-numeric:tabular-nums;}
+
+    /* Review */
+    .reviewPanel{
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:16px;
+      background:rgba(0,0,0,0.14);
+      display:grid;
+      gap:10px;
+      margin-top:10px;
+    }
+    .reviewTitle{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      font-weight:1000;
+      font-size:16px;
+    }
+    .reviewSummary{
+      color:rgba(255,255,255,0.86);
+      line-height:1.35;
+      font-size:14px;
+    }
+    .wrongList{display:grid;gap:8px;}
+    .wrongItem{
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:12px;
+      background:rgba(255,255,255,0.05);
+      display:grid;
+      gap:6px;
+    }
+    .wrongQ{font-weight:1000;font-size:16px;}
+    .wrongMeta{color:var(--muted);font-size:13px;line-height:1.35;}
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Math Facts Countdown</h1>
+        <p class="subtitle">Answer as many as you can before the timer hits zero.</p>
+      </div>
+      <div class="chip">Press <span class="kbd">Enter</span> to submit</div>
+    </header>
+
+    <div class="panel">
+      <div class="panelInner">
+
+        <!-- MENU -->
+        <section id="menuScreen">
+          <div style="font-weight:1000; font-size:18px;">Choose your game</div>
+          <div class="rules">
+            <div><strong>Addition:</strong> 0+0 to 9+9</div>
+            <div><strong>Subtraction:</strong> subtract by 0–9; if subtracting by 6–9, minuend may be up to 15; no negatives</div>
+            <div><strong>Multiplication:</strong> 0×0 to 10×10</div>
+            <div><strong>Division:</strong> related multiplication facts; no ÷0; no remainders</div>
+            <div><strong>All:</strong> random mix of all four</div>
+          </div>
+
+          <div class="optionsBlock">
+            <div class="row">
+              <div class="label">Time</div>
+              <div class="pillGroup" role="group" aria-label="Time selection">
+                <button class="pill active" type="button" data-seconds="30">30s</button>
+                <button class="pill" type="button" data-seconds="60">1 min</button>
+                <button class="pill" type="button" data-seconds="120">2 min</button>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="label">Advance on wrong?</div>
+              <div class="pillGroup" role="group" aria-label="Advance on wrong selection">
+                <button class="pill active" type="button" data-adv="no">No</button>
+                <button class="pill" type="button" data-adv="yes">Yes</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="menuGrid">
+            <button type="button" data-mode="add"><span>Addition (+)</span><span class="chip">0–9 facts</span></button>
+            <button type="button" data-mode="sub"><span>Subtraction (−)</span><span class="chip">0–9, up to 15</span></button>
+            <button type="button" data-mode="mul"><span>Multiplication (×)</span><span class="chip">0–10 facts</span></button>
+            <button type="button" data-mode="div"><span>Division (÷)</span><span class="chip">no remainders</span></button>
+            <button type="button" data-mode="all"><span>All (mix)</span><span class="chip">random mix</span></button>
+          </div>
+
+          <div class="teacherSpacer"></div>
+
+          <!-- Teacher Options -->
+          <details class="teacher" id="teacherDetails">
+            <summary>
+              <span>Teacher Options</span>
+              <span class="chip">Create a share link</span>
+            </summary>
+
+            <div class="teacherBody">
+              <div class="teacherGrid">
+                <div class="field">
+                  <label for="tMode">Mode</label>
+                  <select id="tMode">
+                    <option value="add">Addition</option>
+                    <option value="sub">Subtraction</option>
+                    <option value="mul">Multiplication</option>
+                    <option value="div">Division</option>
+                    <option value="all" selected>All (mix)</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label for="tTime">Time</label>
+                  <select id="tTime">
+                    <option value="30">30 seconds</option>
+                    <option value="60">1 minute</option>
+                    <option value="120">2 minutes</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label for="tAdvance">Advance on wrong</label>
+                  <select id="tAdvance">
+                    <option value="no">No</option>
+                    <option value="yes">Yes</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="linkRow">
+                <input id="shareLink" type="text" readonly value="" aria-label="Generated share link" />
+                <button id="copyLinkBtn" type="button" class="secondary">Copy</button>
+              </div>
+              <div class="tinyNote" id="copyStatus"></div>
+              <div class="tinyNote">Links auto-start with the selected settings.</div>
+            </div>
+          </details>
+        </section>
+
+        <!-- GAME -->
+        <section id="gameScreen" class="hidden gameArea">
+          <div class="prompt">
+            <div class="topBar">
+              <div class="chip" id="modeChip">Mode: Addition (+)</div>
+              <div class="bigTimer" id="timerDisplay">0:30</div>
+              <div class="scoreBox">
+                <div class="stat" id="correctStat">Correct: 0</div>
+                <div class="stat" id="wrongStat">Wrong: 0</div>
+              </div>
+            </div>
+
+            <div class="question" id="questionText">0 + 0 = ?</div>
+
+            <div class="answerRow">
+              <input
+                id="answerInput"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                placeholder="Type answer"
+                aria-label="Answer"
+                pattern="[0-9]*"
+              />
+              <button id="submitBtn" type="button" style="min-width:140px;">Submit</button>
+            </div>
+
+            <div class="msg" id="message"></div>
+
+            <div class="footerBtns">
+              <button id="quitBtn" type="button" class="secondary">Quit</button>
+              <button id="restartBtn" type="button" class="secondary">Restart</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- RESULTS -->
+        <section id="resultScreen" class="hidden">
+          <div class="prompt">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+              <div style="font-weight:1000; font-size:18px;">Time’s up!</div>
+              <div class="chip" id="resultModeChip">Mode: Addition (+)</div>
+            </div>
+
+            <div class="resultBig" id="resultHeadline">0 correct</div>
+
+            <div class="resultRow">
+              <div class="resultCard">
+                <div class="k">Correct</div>
+                <div class="v" id="resultCorrect">0</div>
+              </div>
+              <div class="resultCard">
+                <div class="k">Wrong</div>
+                <div class="v" id="resultWrong">0</div>
+              </div>
+              <div class="resultCard">
+                <div class="k">Total attempted</div>
+                <div class="v" id="resultTotal">0</div>
+              </div>
+              <div class="resultCard">
+                <div class="k">Accuracy</div>
+                <div class="v" id="resultAcc">0%</div>
+              </div>
+            </div>
+
+            <div class="footerBtns">
+              <button id="reviewBtn" type="button">Show wrong questions</button>
+              <button id="playAgainBtn" type="button">Play again</button>
+              <button id="menuBtn" type="button" class="secondary">Back to menu</button>
+            </div>
+
+            <div id="reviewPanel" class="reviewPanel hidden" aria-live="polite">
+              <div class="reviewTitle">
+                <span>Wrong Questions</span>
+                <span class="chip" id="wrongCountChip">0 wrong</span>
+              </div>
+              <div class="reviewSummary" id="patternSummary"></div>
+              <div class="wrongList" id="wrongList"></div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ---------- DOM ----------
+  const menuScreen = document.getElementById("menuScreen");
+  const gameScreen = document.getElementById("gameScreen");
+  const resultScreen = document.getElementById("resultScreen");
+
+  const modeChip = document.getElementById("modeChip");
+  const timerDisplay = document.getElementById("timerDisplay");
+  const correctStat = document.getElementById("correctStat");
+  const wrongStat = document.getElementById("wrongStat");
+
+  const questionText = document.getElementById("questionText");
+  const answerInput = document.getElementById("answerInput");
+  const submitBtn = document.getElementById("submitBtn");
+  const messageEl = document.getElementById("message");
+
+  const quitBtn = document.getElementById("quitBtn");
+  const restartBtn = document.getElementById("restartBtn");
+
+  const resultModeChip = document.getElementById("resultModeChip");
+  const resultHeadline = document.getElementById("resultHeadline");
+  const resultCorrect = document.getElementById("resultCorrect");
+  const resultWrong = document.getElementById("resultWrong");
+  const resultTotal = document.getElementById("resultTotal");
+  const resultAcc = document.getElementById("resultAcc");
+
+  const reviewBtn = document.getElementById("reviewBtn");
+  const reviewPanel = document.getElementById("reviewPanel");
+  const wrongCountChip = document.getElementById("wrongCountChip");
+  const patternSummary = document.getElementById("patternSummary");
+  const wrongList = document.getElementById("wrongList");
+
+  const playAgainBtn = document.getElementById("playAgainBtn");
+  const menuBtn = document.getElementById("menuBtn");
+
+  const timePills = Array.from(document.querySelectorAll('.pill[data-seconds]'));
+  const advPills = Array.from(document.querySelectorAll('.pill[data-adv]'));
+
+  // Teacher options
+  const tMode = document.getElementById("tMode");
+  const tTime = document.getElementById("tTime");
+  const tAdvance = document.getElementById("tAdvance");
+  const shareLink = document.getElementById("shareLink");
+  const copyLinkBtn = document.getElementById("copyLinkBtn");
+  const copyStatus = document.getElementById("copyStatus");
+
+  // ---------- UTIL ----------
+  const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+
+  function show(el){ el.classList.remove("hidden"); }
+  function hide(el){ el.classList.add("hidden"); }
+
+  function setMessage(text, kind=""){
+    messageEl.textContent = text || "";
+    messageEl.classList.remove("good","bad");
+    if(kind) messageEl.classList.add(kind);
+  }
+
+  function stripNonDigits(s){ return (s || "").replace(/\D+/g, ""); }
+
+  function formatMMSS(totalSeconds){
+    totalSeconds = Math.max(0, Math.floor(totalSeconds));
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    return `${m}:${String(s).padStart(2,"0")}`;
+  }
+
+  function buildUrl(params){
+    const url = new URL(window.location.href);
+    url.search = "";
+    for (const [k,v] of Object.entries(params)){
+      if (v === "" || v === null || v === undefined) continue;
+      url.searchParams.set(k, String(v));
+    }
+    return url.toString();
+  }
+
+  function parseQuery(){
+    const p = new URLSearchParams(window.location.search);
+    return {
+      mode: p.get("mode") || "",
+      time: p.get("time") || "",
+      advance: p.get("advance") || "",
+      start: p.get("start") || "" // when present, auto-start
+    };
+  }
+
+  // ---------- RULES ----------
+  const MODE_INFO = {
+    add: { name: "Addition (+)" },
+    sub: { name: "Subtraction (−)" },
+    mul: { name: "Multiplication (×)" },
+    div: { name: "Division (÷)" },
+    all: { name: "All (mix)" }
+  };
+
+  function makeQuestionForMode(m){
+    if(m === "add"){
+      const a = randInt(0,9), b = randInt(0,9);
+      return { mode:m, a, b, op:"+", text:`${a} + ${b} = ?`, ans:a+b };
+    }
+    if(m === "sub"){
+      const b = randInt(0,9);
+      const maxMinuend = (b >= 6) ? 15 : 9;
+      const a = randInt(b, maxMinuend);
+      return { mode:m, a, b, op:"−", text:`${a} − ${b} = ?`, ans:a-b };
+    }
+    if(m === "mul"){
+      const a = randInt(0,10), b = randInt(0,10);
+      return { mode:m, a, b, op:"×", text:`${a} × ${b} = ?`, ans:a*b };
+    }
+    if(m === "div"){
+      const divisor = randInt(1,10);
+      const quotient = randInt(0,10);
+      const dividend = divisor * quotient;
+      return { mode:m, a:dividend, b:divisor, op:"÷", text:`${dividend} ÷ ${divisor} = ?`, ans:quotient };
+    }
+    const pick = ["add","sub","mul","div"][randInt(0,3)];
+    return makeQuestionForMode(pick);
+  }
+
+  // ---------- STATE ----------
+  let selectedSeconds = 30;
+  let advanceOnWrong = false;
+
+  let mode = null;
+  let current = null;
+
+  let correct = 0;
+  let wrong = 0;
+
+  let endAtMs = 0;
+  let ticking = false;
+  let rafId = 0;
+
+  let runLog = [];
+
+  function resetRun(){
+    correct = 0;
+    wrong = 0;
+    current = null;
+    runLog = [];
+
+    setMessage("");
+    answerInput.value = "";
+    updateStats();
+
+    hide(reviewPanel);
+    reviewBtn.textContent = "Show wrong questions";
+    wrongList.innerHTML = "";
+    patternSummary.textContent = "";
+    wrongCountChip.textContent = "0 wrong";
+  }
+
+  function updateStats(){
+    correctStat.textContent = `Correct: ${correct}`;
+    wrongStat.textContent = `Wrong: ${wrong}`;
+  }
+
+  function setTimerDisplay(secondsLeft){
+    timerDisplay.textContent = formatMMSS(secondsLeft);
+  }
+
+  // ---------- INPUT: digits only ----------
+  answerInput.addEventListener("keydown", (e) => {
+    const allowedKeys = ["Backspace","Delete","ArrowLeft","ArrowRight","Home","End","Tab","Enter"];
+    if (allowedKeys.includes(e.key)) return;
+    if (e.ctrlKey || e.metaKey) return;
+    if (/^\d$/.test(e.key)) return;
+    e.preventDefault();
+  });
+
+  answerInput.addEventListener("input", () => {
+    const clean = stripNonDigits(answerInput.value);
+    if (answerInput.value !== clean) answerInput.value = clean;
+  });
+
+  answerInput.addEventListener("paste", (e) => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData("text");
+    const clean = stripNonDigits(text);
+    document.execCommand("insertText", false, clean);
+  });
+
+  function parseWholeNumber(){
+    const s = stripNonDigits(answerInput.value).trim();
+    if (s === "") return null;
+    return Number(s);
+  }
+
+  // ---------- GAME LOOP ----------
+  function loadNextQuestion(){
+    current = makeQuestionForMode(mode);
+    questionText.textContent = current.text;
+
+    runLog.push({
+      mode: current.mode,
+      a: current.a,
+      b: current.b,
+      op: current.op,
+      text: current.text,
+      correctAnswer: current.ans,
+      firstSeenAtMs: performance.now(),
+      attempts: [],
+      wasEverCorrect: false
+    });
+
+    answerInput.value = "";
+    answerInput.focus({preventScroll:true});
+    setMessage("");
+  }
+
+  function startCountdown(){
+    const now = performance.now();
+    endAtMs = now + selectedSeconds * 1000;
+    ticking = true;
+
+    const tick = () => {
+      if(!ticking) return;
+
+      const msLeft = endAtMs - performance.now();
+      const secondsLeft = Math.ceil(msLeft / 1000);
+      setTimerDisplay(clamp(secondsLeft, 0, 10000));
+
+      if(msLeft <= 0){
+        ticking = false;
+        finishRun();
+        return;
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+
+    cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function finishRun(){
+    cancelAnimationFrame(rafId);
+    ticking = false;
+
+    hide(gameScreen);
+    show(resultScreen);
+
+    const total = correct + wrong;
+    const acc = total === 0 ? 0 : Math.round((correct / total) * 100);
+
+    resultModeChip.textContent = `Mode: ${MODE_INFO[mode].name}`;
+    resultCorrect.textContent = String(correct);
+    resultWrong.textContent = String(wrong);
+    resultTotal.textContent = String(total);
+    resultAcc.textContent = `${acc}%`;
+    resultHeadline.textContent = `${correct} correct`;
+
+    setTimerDisplay(0);
+
+    renderReview();
+    hide(reviewPanel);
+    reviewBtn.textContent = "Show wrong questions";
+  }
+
+  function currentLogEntry(){
+    return runLog.length ? runLog[runLog.length - 1] : null;
+  }
+
+  function submit(){
+    if(!ticking || !current) return;
+
+    const val = parseWholeNumber();
+    if(val === null){
+      setMessage("Type a number.", "bad");
+      return;
+    }
+
+    const entry = currentLogEntry();
+    if(entry) entry.attempts.push(val);
+
+    if(val === current.ans){
+      correct++;
+      if(entry) entry.wasEverCorrect = true;
+
+      updateStats();
+      setMessage("Correct!", "good");
+      loadNextQuestion();
+      return;
+    }
+
+    wrong++;
+    updateStats();
+    setMessage("Wrong.", "bad");
+
+    if(advanceOnWrong){
+      loadNextQuestion();
+    }else{
+      answerInput.select();
+      answerInput.focus({preventScroll:true});
+    }
+  }
+
+  submitBtn.addEventListener("click", submit);
+  answerInput.addEventListener("keydown", (e) => { if(e.key === "Enter") submit(); });
+
+  // ---------- REVIEW + PATTERN ----------
+  function getWrongQuestions(){
+    return runLog.filter(q => q.attempts.some(a => a !== q.correctAnswer));
+  }
+
+  function analyzePattern(wrongs){
+    if(wrongs.length === 0) return "No wrong questions this round.";
+
+    const buckets = new Map();
+    const bump = (label) => buckets.set(label, (buckets.get(label) || 0) + 1);
+
+    for(const q of wrongs){
+      if(q.mode === "add"){
+        bump(`Addition: +${q.a}`);
+        bump(`Addition: +${q.b}`);
+      }else if(q.mode === "sub"){
+        bump(`Subtraction: −${q.b}`);
+        if(q.b >= 6) bump(`Subtraction: high subtract (6–9)`);
+        if(q.a >= 12) bump(`Subtraction: minuend 12–15`);
+      }else if(q.mode === "mul"){
+        bump(`Multiplication: ×${q.a}`);
+        bump(`Multiplication: ×${q.b}`);
+      }else if(q.mode === "div"){
+        bump(`Division: ÷${q.b}`);
+      }
+    }
+
+    let topLabel = null, topCount = 0;
+    for(const [label,count] of buckets.entries()){
+      if(count > topCount){ topCount = count; topLabel = label; }
+    }
+
+    const ratio = topCount / wrongs.length;
+    if(topLabel && topCount >= 2 && ratio >= 0.40){
+      return `Likely pattern: <strong>${topLabel}</strong> (shows up ${topCount} of ${wrongs.length} wrong questions).`;
+    }
+
+    const top3 = Array.from(buckets.entries()).sort((a,b) => b[1]-a[1]).slice(0,3);
+    const parts = top3.map(([label,count]) => `${label} (${count})`);
+    return `No single strong pattern, but the most common trouble spots were: <strong>${parts.join(", ")}</strong>.`;
+  }
+
+  function renderReview(){
+    const wrongs = getWrongQuestions();
+    wrongCountChip.textContent = `${wrongs.length} wrong`;
+    patternSummary.innerHTML = analyzePattern(wrongs);
+
+    wrongList.innerHTML = "";
+    if(wrongs.length === 0){
+      const div = document.createElement("div");
+      div.className = "wrongItem";
+      div.innerHTML = `<div class="wrongQ">Perfect round 🎉</div><div class="wrongMeta">You didn’t miss any questions.</div>`;
+      wrongList.appendChild(div);
+      return;
+    }
+
+    for(const q of wrongs){
+      const attemptsStr = q.attempts.join(", ");
+      const wrongAttempts = q.attempts.filter(a => a !== q.correctAnswer);
+      const wrongStr = wrongAttempts.length ? wrongAttempts.join(", ") : "—";
+      const everCorrect = q.wasEverCorrect ? "Eventually correct" : "Not corrected before time ended";
+
+      const safeTitle = q.text.replace("= ?", "").trim().replace(/</g,"&lt;").replace(/>/g,"&gt;");
+      const meta = `Wrong answers: ${wrongStr}\nAll attempts: ${attemptsStr}\nCorrect answer: ${q.correctAnswer}\nResult: ${everCorrect}`
+        .replace(/</g,"&lt;").replace(/>/g,"&gt;")
+        .replace(/\n/g,"<br>");
+
+      const item = document.createElement("div");
+      item.className = "wrongItem";
+      item.innerHTML = `<div class="wrongQ">${safeTitle}</div><div class="wrongMeta">${meta}</div>`;
+      wrongList.appendChild(item);
+    }
+  }
+
+  reviewBtn.addEventListener("click", () => {
+    const showing = !reviewPanel.classList.contains("hidden");
+    if(showing){
+      hide(reviewPanel);
+      reviewBtn.textContent = "Show wrong questions";
+    }else{
+      renderReview();
+      show(reviewPanel);
+      reviewBtn.textContent = "Hide wrong questions";
+    }
+  });
+
+  // ---------- MENU HANDLERS ----------
+  function setSelectedTime(seconds){
+    selectedSeconds = seconds;
+    timePills.forEach(b => b.classList.toggle("active", Number(b.dataset.seconds) === seconds));
+  }
+
+  function setSelectedAdvance(isYes){
+    advanceOnWrong = !!isYes;
+    advPills.forEach(b => b.classList.toggle("active", (b.dataset.adv === "yes") === advanceOnWrong));
+  }
+
+  timePills.forEach(btn => btn.addEventListener("click", () => {
+    setSelectedTime(Number(btn.dataset.seconds) || 30);
+    // keep teacher time synced
+    tTime.value = String(selectedSeconds);
+    updateShareLink();
+  }));
+
+  advPills.forEach(btn => btn.addEventListener("click", () => {
+    setSelectedAdvance(btn.dataset.adv === "yes");
+    // keep teacher advance synced
+    tAdvance.value = advanceOnWrong ? "yes" : "no";
+    updateShareLink();
+  }));
+
+  document.querySelectorAll("button[data-mode]").forEach(btn => {
+    btn.addEventListener("click", () => startMode(btn.dataset.mode));
+  });
+
+  function startMode(m){
+    mode = m;
+    resetRun();
+
+    hide(menuScreen);
+    hide(resultScreen);
+    show(gameScreen);
+
+    const timeLabel = selectedSeconds >= 60 ? (selectedSeconds/60 + " min") : (selectedSeconds + "s");
+    modeChip.textContent =
+      `Mode: ${MODE_INFO[mode].name} • ${timeLabel} • Advance on wrong: ${advanceOnWrong ? "Yes" : "No"}`;
+
+    setTimerDisplay(selectedSeconds);
+
+    loadNextQuestion();
+    startCountdown();
+  }
+
+  function goMenu(){
+    cancelAnimationFrame(rafId);
+    ticking = false;
+    mode = null;
+
+    hide(gameScreen);
+    hide(resultScreen);
+    show(menuScreen);
+
+    setTimerDisplay(selectedSeconds);
+    setMessage("");
+  }
+
+  quitBtn.addEventListener("click", goMenu);
+  restartBtn.addEventListener("click", () => { if(mode) startMode(mode); });
+
+  playAgainBtn.addEventListener("click", () => { if(mode) startMode(mode); else goMenu(); });
+  menuBtn.addEventListener("click", goMenu);
+
+  // ---------- TEACHER LINK ----------
+  function updateShareLink(){
+    const params = {
+      mode: tMode.value,
+      time: tTime.value,
+      advance: tAdvance.value,
+      start: "1" // auto-start on open
+    };
+    shareLink.value = buildUrl(params);
+  }
+
+  async function copyShareLink(){
+    const text = shareLink.value.trim();
+    if(!text){
+      copyStatus.textContent = "No link to copy yet.";
+      return;
+    }
+    try{
+      await navigator.clipboard.writeText(text);
+      copyStatus.textContent = "Copied!";
+    }catch(err){
+      shareLink.focus();
+      shareLink.select();
+      try{
+        document.execCommand("copy");
+        copyStatus.textContent = "Copied!";
+      }catch(e){
+        copyStatus.textContent = "Couldn’t copy automatically — select the link and copy it.";
+      }
+    }
+    setTimeout(() => { copyStatus.textContent = ""; }, 1600);
+  }
+
+  tMode.addEventListener("change", updateShareLink);
+  tTime.addEventListener("change", () => {
+    // also sync main time selection UI to teacher time (optional but nice)
+    const s = Number(tTime.value);
+    setSelectedTime([30,60,120].includes(s) ? s : 30);
+    updateShareLink();
+  });
+  tAdvance.addEventListener("change", () => {
+    setSelectedAdvance(tAdvance.value === "yes");
+    updateShareLink();
+  });
+  copyLinkBtn.addEventListener("click", copyShareLink);
+
+  // ---------- APPLY URL PARAMS ----------
+  function applyParamsOnLoad(){
+    const q = parseQuery();
+
+    // time
+    const t = Number(q.time);
+    if([30,60,120].includes(t)) setSelectedTime(t);
+
+    // advance
+    if(q.advance === "yes") setSelectedAdvance(true);
+    else if(q.advance === "no") setSelectedAdvance(false);
+
+    // seed teacher UI from current settings
+    tTime.value = String(selectedSeconds);
+    tAdvance.value = advanceOnWrong ? "yes" : "no";
+
+    if(q.mode && ["add","sub","mul","div","all"].includes(q.mode)){
+      tMode.value = q.mode;
+    }else{
+      tMode.value = "all";
+    }
+
+    updateShareLink();
+
+    // auto-start
+    if(q.start === "1" && q.mode && ["add","sub","mul","div","all"].includes(q.mode)){
+      // Use params exactly (including teacher-selected ones)
+      startMode(q.mode);
+    }else{
+      // stay on menu
+      setTimerDisplay(selectedSeconds);
+    }
+  }
+
+  applyParamsOnLoad();
+})();
+</script>
+</body>
+</html>
