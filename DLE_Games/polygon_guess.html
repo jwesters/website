@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Polygon Side Count</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      margin: 0; padding: 20px;
+    }
+    .wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 14px; }
+    h1 { margin: 0 0 6px; font-size: 24px; }
+    .card {
+      border: 1px solid rgba(127,127,127,.35);
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    button, input {
+      font: inherit;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(127,127,127,.45);
+      background: transparent;
+    }
+    button { cursor: pointer; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    canvas {
+      width: 100%;
+      height: 520px;
+      background: rgba(127,127,127,.08);
+      border-radius: 14px;
+      border: 1px solid rgba(127,127,127,.25);
+    }
+    .status { font-size: 14px; opacity: .95; }
+    .big { font-size: 18px; font-weight: 800; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border: 1px solid rgba(127,127,127,.35);
+      border-radius: 999px;
+      font-size: 13px;
+    }
+    .muted { opacity: .7; }
+    .result {
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(127,127,127,.35);
+    }
+    .ok { border-color: rgba(70,180,120,.7); }
+    .close { border-color: rgba(240,200,70,.75); }
+    .nope { border-color: rgba(220,80,80,.75); }
+    .mono { font-family: ui-monospace, Menlo, Consolas, monospace; }
+    input[type="range"] { height: 32px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <h1>Polygon Side Count</h1>
+    <div class="muted">
+      Study the polygon for <b>10 seconds</b>, then guess how many sides it has.
+      Polygons always have <b>20–100 sides</b>.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <button id="btnShow">Show</button>
+      <button id="btnReset" class="muted">Reset</button>
+
+      <span class="pill">
+        Time left: <span class="mono" id="countdown">—</span>
+      </span>
+
+      <span class="pill">
+        Zoom: <span class="mono" id="zoomLabel">100%</span>
+      </span>
+
+      <input id="zoom" type="range" min="50" max="350" value="100" />
+    </div>
+
+    <div style="height:10px"></div>
+
+    <div class="row">
+      <input id="guessInput" type="number" placeholder="Your guess…" disabled />
+      <button id="btnGuess" disabled>Submit guess</button>
+      <span class="status" id="status">Press <b>Show</b> to start.</span>
+    </div>
+
+    <div style="height:10px"></div>
+    <div id="result" class="result muted" style="display:none;"></div>
+  </div>
+
+  <div class="card">
+    <canvas id="c" width="1200" height="520"></canvas>
+  </div>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+
+  const btnShow = document.getElementById('btnShow');
+  const btnReset = document.getElementById('btnReset');
+  const btnGuess = document.getElementById('btnGuess');
+  const guessInput = document.getElementById('guessInput');
+  const statusEl = document.getElementById('status');
+  const resultEl = document.getElementById('result');
+  const countdownEl = document.getElementById('countdown');
+  const zoomSlider = document.getElementById('zoom');
+  const zoomLabel = document.getElementById('zoomLabel');
+
+  const SHOW_SECONDS = 10;
+  const MIN_SIDES = 20;
+  const MAX_SIDES = 100;
+
+  let phase = 'idle';
+  let currentSides = null;
+  let polygon = null;
+  let zoom = 1;
+  let hideTimer = null;
+  let countdownTimer = null;
+  let startTime = null;
+
+  function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+
+  function generatePolygon(n){
+    const cx = canvas.width/2;
+    const cy = canvas.height/2;
+    const base = Math.min(canvas.width,canvas.height)*0.32;
+    const pts=[];
+    const step = Math.PI*2/n;
+
+    for(let i=0;i<n;i++){
+      const angle = i*step + (Math.random()-0.5)*step*0.2;
+      const r = base*(0.8+Math.random()*0.4);
+      pts.push({x:cx+Math.cos(angle)*r,y:cy+Math.sin(angle)*r});
+    }
+    pts.sort((a,b)=>Math.atan2(a.y-cy,a.x-cx)-Math.atan2(b.y-cy,b.x-cx));
+    return pts;
+  }
+
+  function drawBackground(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+
+  function drawPolygon(){
+    drawBackground();
+    ctx.save();
+    ctx.translate(canvas.width/2,canvas.height/2);
+    ctx.scale(zoom,zoom);
+    ctx.translate(-canvas.width/2,-canvas.height/2);
+
+    ctx.beginPath();
+    ctx.moveTo(polygon[0].x,polygon[0].y);
+    polygon.forEach(p=>ctx.lineTo(p.x,p.y));
+    ctx.closePath();
+    ctx.fillStyle='rgba(150,150,150,0.25)';
+    ctx.fill();
+    ctx.strokeStyle='#eee';
+    ctx.lineWidth=3;
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function hidePolygon(){
+    drawBackground();
+    ctx.fillStyle='#aaa';
+    ctx.font='bold 28px system-ui';
+    ctx.textAlign='center';
+    ctx.fillText('Hidden — make your guess!',canvas.width/2,canvas.height/2);
+  }
+
+  function startCountdown(){
+    startTime=performance.now();
+    countdownTimer=setInterval(()=>{
+      const t=Math.max(0,SHOW_SECONDS-(performance.now()-startTime)/1000);
+      countdownEl.textContent=t.toFixed(1)+'s';
+    },50);
+  }
+
+  function startRound(){
+    clearTimers();
+    resultEl.style.display='none';
+
+    currentSides=randInt(MIN_SIDES,MAX_SIDES);
+    polygon=generatePolygon(currentSides);
+
+    phase='showing';
+    statusEl.textContent='Memorize it…';
+    drawPolygon();
+    startCountdown();
+
+    hideTimer=setTimeout(()=>{
+      clearTimers();
+      hidePolygon();
+      phase='guessing';
+      guessInput.disabled=false;
+      btnGuess.disabled=false;
+      statusEl.textContent='Polygon hidden. Enter your guess.';
+    },SHOW_SECONDS*1000);
+  }
+
+  function evaluateGuess(){
+    const g=parseInt(guessInput.value,10);
+    if(!g||g<=0)return;
+
+    const diff=Math.abs(g-currentSides);
+    const pct=diff/currentSides;
+    let cls='nope',msg='❌ Not close';
+
+    if(g===currentSides){cls='ok';msg='✅ Correct!';}
+    else if(pct<=0.05){cls='close';msg='🟡 Close! (within 5%)';}
+
+    resultEl.className='result '+cls;
+    resultEl.innerHTML=
+      `<div class="big">${msg}</div>
+       <div>Actual sides: <b>${currentSides}</b></div>
+       <div>Your guess: <b>${g}</b></div>`;
+    resultEl.style.display='block';
+
+    drawPolygon();
+    phase='revealed';
+    btnGuess.disabled=true;
+    guessInput.disabled=true;
+    statusEl.textContent='Polygon shown again. Press Show for a new one.';
+  }
+
+  function clearTimers(){
+    clearTimeout(hideTimer);
+    clearInterval(countdownTimer);
+    countdownEl.textContent='—';
+  }
+
+  zoomSlider.oninput=()=>{
+    zoom=zoomSlider.value/100;
+    zoomLabel.textContent=zoomSlider.value+'%';
+    if(polygon&&(phase==='showing'||phase==='revealed'))drawPolygon();
+  };
+
+  canvas.addEventListener('wheel',e=>{
+    e.preventDefault();
+    zoomSlider.value=Math.min(350,Math.max(50,parseInt(zoomSlider.value)-Math.sign(e.deltaY)*6));
+    zoomSlider.oninput();
+  },{passive:false});
+
+  btnShow.onclick=startRound;
+  btnGuess.onclick=evaluateGuess;
+  btnReset.onclick=()=>{
+    clearTimers();
+    drawBackground();
+    resultEl.style.display='none';
+    guessInput.value='';
+    guessInput.disabled=true;
+    btnGuess.disabled=true;
+    statusEl.textContent='Press Show to start.';
+  };
+
+  drawBackground();
+})();
+</script>
+</body>
+</html>

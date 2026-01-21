@@ -101,7 +101,7 @@
     button:active{transform:scale(.99);}
     button.secondary{
       background:rgba(255,255,255,0.04);
-      font-weight:700;
+      font-weight:800;
       font-size:14px;
       padding:12px 14px;
       min-height:46px;
@@ -113,6 +113,14 @@
       font-weight:950;
       padding:16px 14px;
     }
+    button.primaryStart{
+      background:var(--white);
+      color:#000;
+      border-color:var(--white);
+      font-weight:950;
+      justify-content:center;
+    }
+    button.primaryStart:hover{background:#f2f2f2;}
     .hidden{display:none !important;}
 
     .rules{
@@ -209,7 +217,55 @@
       border-color:var(--white);
     }
 
-    /* Space between operation grid and teacher options */
+    /* Difficulty config panel (reveals after choosing operation) */
+    .configPanel{
+      margin-top:12px;
+      padding:14px;
+      border:1px solid var(--line);
+      border-radius:16px;
+      background:rgba(0,0,0,0.18);
+      display:grid;
+      gap:12px;
+    }
+    .configTop{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .configTitle{
+      font-weight:950;
+      font-size:16px;
+      letter-spacing:.2px;
+    }
+    .diffGrid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:12px;
+    }
+    @media (max-width:520px){ .diffGrid{grid-template-columns:1fr;} }
+
+    .diffBtn{
+      justify-content:center;
+      font-size:18px;
+      font-weight:950;
+      padding:16px 14px;
+      min-height:58px;
+    }
+    .diffBtn.active{
+      background:var(--white);
+      color:#000;
+      border-color:var(--white);
+    }
+    .configActions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:center;
+    }
+
+    /* Space between operation area and teacher options */
     .teacherSpacer{height:18px;}
 
     /* Teacher options dropdown (more readable) */
@@ -424,7 +480,7 @@
     <header>
       <div>
         <h1>Math Facts Race</h1>
-        <p class="subtitle">Pick a mode → answer correctly → see your time.</p>
+        <p class="subtitle">Pick an operation → choose difficulty → press Start.</p>
       </div>
       <div class="chip">Press <span class="kbd">Enter</span> to submit</div>
     </header>
@@ -467,17 +523,38 @@
             </div>
           </div>
 
-          <!-- Operation buttons -->
+          <!-- Operation buttons (ONLY these show initially) -->
           <div class="menuGrid" id="operationGrid">
-            <button type="button" data-op="add"><span>Addition (+)</span><span class="chip">Easy/Hard</span></button>
-            <button type="button" data-op="sub"><span>Subtraction (−)</span><span class="chip">Easy/Hard</span></button>
-            <button type="button" data-op="mul"><span>Multiplication (×)</span><span class="chip">Easy/Hard</span></button>
-            <button type="button" data-op="div"><span>Division (÷)</span><span class="chip">Easy/Hard</span></button>
+            <button type="button" class="opChoice" data-op="add"><span>Addition (+)</span></button>
+            <button type="button" class="opChoice" data-op="sub"><span>Subtraction (−)</span></button>
+            <button type="button" class="opChoice" data-op="mul"><span>Multiplication (×)</span></button>
+            <button type="button" class="opChoice" data-op="div"><span>Division (÷)</span></button>
+          </div>
+
+          <!-- Revealed after choosing an operation -->
+          <div id="opConfig" class="configPanel hidden" aria-live="polite">
+            <div class="configTop">
+              <div>
+                <div class="configTitle">Operation: <span id="pickedOpName">Addition (+)</span></div>
+                <div class="rules" id="pickedOpRule">Easy: — • Hard: —</div>
+              </div>
+              <span class="chip" id="pickedOpChip">Choose difficulty</span>
+            </div>
+
+            <div class="diffGrid" aria-label="Choose difficulty">
+              <button id="easyBtn" type="button" class="diffBtn">Easy</button>
+              <button id="hardBtn" type="button" class="diffBtn">Hard</button>
+            </div>
+
+            <div class="configActions">
+              <button id="startBtn" type="button" class="primaryStart" style="min-width:220px;">Start</button>
+              <button id="changeBtn" type="button" class="secondary" style="min-width:180px;">Change operation</button>
+            </div>
           </div>
 
           <div class="teacherSpacer"></div>
 
-          <!-- Teacher Options -->
+          <!-- Teacher Options (still underneath) -->
           <details class="teacher" id="teacherDetails">
             <summary>
               <span>Teacher Options</span>
@@ -541,31 +618,6 @@
               <div class="tinyNote">Tip: For auto-start links, pick an Operation and a Difficulty and set Auto-start to “Yes”.</div>
             </div>
           </details>
-        </section>
-
-        <!-- DIFFICULTY PICKER -->
-        <section id="difficultyScreen" class="hidden">
-          <div class="prompt">
-            <div class="modeTitle">
-              <div style="font-weight:900; font-size:16px;">
-                Operation: <span id="pickedOpName">Addition (+)</span>
-              </div>
-              <div class="chip" id="pickedOpRule"></div>
-            </div>
-
-            <div style="text-align:center; font-weight:950; font-size:18px; padding:6px 0 0;">
-              Choose difficulty
-            </div>
-
-            <div class="menuGrid" style="margin-top:10px;">
-              <button id="easyBtn" type="button" class="bigChoice"><span>Easy</span></button>
-              <button id="hardBtn" type="button" class="bigChoice"><span>Hard</span></button>
-            </div>
-
-            <div class="footerBtns">
-              <button id="diffBackBtn" type="button" class="secondary">Back</button>
-            </div>
-          </div>
         </section>
 
         <!-- GAME -->
@@ -648,15 +700,8 @@
 (() => {
   // ---------- DOM ----------
   const menuScreen = document.getElementById("menuScreen");
-  const difficultyScreen = document.getElementById("difficultyScreen");
   const gameScreen = document.getElementById("gameScreen");
   const resultScreen = document.getElementById("resultScreen");
-
-  const pickedOpName = document.getElementById("pickedOpName");
-  const pickedOpRule = document.getElementById("pickedOpRule");
-  const easyBtn = document.getElementById("easyBtn");
-  const hardBtn = document.getElementById("hardBtn");
-  const diffBackBtn = document.getElementById("diffBackBtn");
 
   const modeNameEl = document.getElementById("modeName");
   const miniRuleEl = document.getElementById("miniRule");
@@ -690,6 +735,17 @@
   // Main menu option buttons
   const qBtns = Array.from(document.querySelectorAll(".qBtn"));
   const advBtns = Array.from(document.querySelectorAll(".ynBtn"));
+
+  // Operation + config
+  const opChoices = Array.from(document.querySelectorAll(".opChoice[data-op]"));
+  const opConfig = document.getElementById("opConfig");
+  const pickedOpName = document.getElementById("pickedOpName");
+  const pickedOpRule = document.getElementById("pickedOpRule");
+  const pickedOpChip = document.getElementById("pickedOpChip");
+  const easyBtn = document.getElementById("easyBtn");
+  const hardBtn = document.getElementById("hardBtn");
+  const startBtn = document.getElementById("startBtn");
+  const changeBtn = document.getElementById("changeBtn");
 
   // Teacher Options elements
   const tMode = document.getElementById("tMode");
@@ -828,30 +884,21 @@
   };
 
   const RULES = {
-    add: {
-      easy: "0+0 to 5+5",
-      hard: "0+0 to 9+9"
-    },
-    sub: {
-      easy: "Subtract by 0–5; no negatives",
-      hard: "Subtract by 0–9; if subtracting by 6–9, minuend may be up to 15; no negatives"
-    },
-    mul: {
-      easy: "0×0 to 5×5",
-      hard: "0×0 to 10×10"
-    },
-    div: {
-      easy: "Related 5×5 facts; divisor 1–5; no remainders",
-      hard: "Related facts; divisor 1–10; no remainders"
-    }
+    add: { easy: "0+0 to 5+5", hard: "0+0 to 9+9" },
+    sub: { easy: "Subtract by 0–5; no negatives", hard: "Subtract by 0–9; if subtracting by 6–9, minuend may be up to 15; no negatives" },
+    mul: { easy: "0×0 to 5×5", hard: "0×0 to 10×10" },
+    div: { easy: "Related 5×5 facts; divisor 1–5; no remainders", hard: "Related facts; divisor 1–10; no remainders" }
   };
 
-  let mode = null;                 // add/sub/mul/div
-  let difficulty = null;           // easy/hard
-  let pendingMode = null;          // chosen operation before difficulty selected
+  let mode = null;                 // add/sub/mul/div (for the running game)
+  let difficulty = null;           // easy/hard (for the running game)
+
+  // Menu selections (before the game starts)
+  let pendingMode = null;
+  let pendingDifficulty = "hard";  // default selection when you open the panel
 
   let TOTAL = 10;
-  let advanceOnWrong = false; // default "No"
+  let advanceOnWrong = false;      // default "No"
 
   let startMs = 0;
   let timerRunning = false;
@@ -903,7 +950,7 @@
     if(m === "sub"){
       if(diff === "easy"){
         const b = randInt(0,5);
-        const a = randInt(b, 9); // keep within typical facts, no negatives
+        const a = randInt(b, 9); // no negatives
         return { mode:m, diff, a, b, op:"−", correctAnswer:a-b, text:`${a} − ${b} = ?` };
       }else{
         const b = randInt(0,9);
@@ -918,7 +965,6 @@
       const b = randInt(0, max);
       return { mode:m, diff, a, b, op:"×", correctAnswer:a*b, text:`${a} × ${b} = ?` };
     }
-
     // division
     if(diff === "easy"){
       const divisor = randInt(1,5);
@@ -960,7 +1006,6 @@
 
   function finishRun(){
     const t = elapsedMs();
-
     const rec = recordBestIfTop3(t);
 
     hide(gameScreen);
@@ -971,11 +1016,8 @@
 
     const base = `You finished ${TOTAL} questions in ${formatTimeMs(t)}.`;
     if(rec.madeTop3){
-      if(rec.rank === 1){
-        resultMsg.textContent = `🏆 New best time! ${base}`;
-      }else{
-        resultMsg.textContent = `🎉 New record (#${rec.rank} for these settings). ${base}`;
-      }
+      if(rec.rank === 1) resultMsg.textContent = `🏆 New best time! ${base}`;
+      else resultMsg.textContent = `🎉 New record (#${rec.rank} for these settings). ${base}`;
     }else{
       resultMsg.textContent = base;
     }
@@ -1153,7 +1195,6 @@
 
   function renderBestTimes(){
     const arr = getBestForCurrent();
-
     bestModeChip.textContent = settingsLabel();
 
     bestList.innerHTML = "";
@@ -1249,16 +1290,38 @@
   tStart.addEventListener("change", updateShareLink);
   copyLinkBtn.addEventListener("click", copyShareLink);
 
+  // Menu config panel helpers
+  function setPendingDifficulty(diff){
+    pendingDifficulty = (diff === "easy") ? "easy" : "hard";
+    easyBtn.classList.toggle("active", pendingDifficulty === "easy");
+    hardBtn.classList.toggle("active", pendingDifficulty === "hard");
+    pickedOpChip.textContent = `Difficulty: ${pendingDifficulty.toUpperCase()}`;
+  }
+
+  function openConfig(op){
+    pendingMode = op;
+    pickedOpName.textContent = MODE_INFO[op].name;
+    pickedOpRule.textContent = `Easy: ${RULES[op].easy} • Hard: ${RULES[op].hard}`;
+    show(opConfig);
+    // default to hard unless already set by URL or user
+    setPendingDifficulty(pendingDifficulty || "hard");
+    // scroll a bit into view on small screens
+    opConfig.scrollIntoView({behavior:"smooth", block:"nearest"});
+  }
+
+  function closeConfig(){
+    pendingMode = null;
+    hide(opConfig);
+  }
+
   // Navigation helpers
   function goMenu(){
     resetRun();
     mode = null;
     difficulty = null;
-    pendingMode = null;
 
     hide(gameScreen);
     hide(resultScreen);
-    hide(difficultyScreen);
     show(menuScreen);
 
     // Keep teacher defaults synced to main settings
@@ -1267,9 +1330,87 @@
     updateShareLink();
   }
 
-  function goDifficultyPicker(op){
-    pendingMode = op;
-    pickedOpName.textContent = MODE_INFO[op].name;
-    pickedOpRule.textContent = `Easy: ${RULES[op].easy} • Hard: ${RULES[op].hard}`;
+  function startModeFromMenu(){
+    if(!pendingMode) return;
+    startMode(pendingMode, pendingDifficulty);
+  }
 
-    hide
+  function startMode(op, diff){
+    mode = op;
+    difficulty = (diff === "easy") ? "easy" : "hard";
+
+    resetRun();
+
+    modeNameEl.textContent = `${MODE_INFO[mode].name} • ${difficulty.toUpperCase()}`;
+    miniRuleEl.textContent = (difficulty === "easy")
+      ? `Easy: ${RULES[mode].easy}`
+      : `Hard: ${RULES[mode].hard}`;
+
+    hide(menuScreen);
+    hide(resultScreen);
+    show(gameScreen);
+
+    loadNextQuestion();
+  }
+
+  // Menu controls: questions count + advance on wrong
+  qBtns.forEach(btn => btn.addEventListener("click", () => setMainCount(btn.dataset.count)));
+  advBtns.forEach(btn => btn.addEventListener("click", () => setMainAdvance(btn.dataset.adv === "yes")));
+
+  // Operation buttons -> open config
+  opChoices.forEach(btn => {
+    btn.addEventListener("click", () => openConfig(btn.dataset.op));
+  });
+
+  // Difficulty buttons
+  easyBtn.addEventListener("click", () => setPendingDifficulty("easy"));
+  hardBtn.addEventListener("click", () => setPendingDifficulty("hard"));
+
+  // Start / change buttons
+  startBtn.addEventListener("click", startModeFromMenu);
+  changeBtn.addEventListener("click", closeConfig);
+
+  // Game buttons
+  backBtn.addEventListener("click", goMenu);
+  restartBtn.addEventListener("click", () => { if(!mode) return goMenu(); startMode(mode, difficulty); });
+  againBtn.addEventListener("click", () => { if(!mode) return goMenu(); startMode(mode, difficulty); });
+  menuBtn.addEventListener("click", goMenu);
+
+  // Apply URL params (teacher share links)
+  function applyQueryDefaults(){
+    const q = parseQuery();
+
+    if(q.count) setMainCount(Number(q.count));
+    if(q.advance) setMainAdvance(q.advance === "yes");
+
+    // sync teacher defaults to current
+    tCount.value = String(TOTAL);
+    tAdvance.value = advanceOnWrong ? "yes" : "no";
+
+    // prefill teacher selectors
+    tMode.value = q.mode || "";
+    tDiff.value = q.diff || "";
+    tStart.value = q.start === "1" ? "1" : "0";
+    updateShareLink();
+
+    // If mode/diff are present, open config panel pre-selected
+    if(q.mode && (q.mode in MODE_INFO)){
+      openConfig(q.mode);
+      if(q.diff === "easy" || q.diff === "hard") setPendingDifficulty(q.diff);
+    }
+
+    // Autostart if requested and valid
+    if(q.start === "1" && q.mode && (q.diff === "easy" || q.diff === "hard")){
+      startMode(q.mode, q.diff);
+      return;
+    }
+
+    goMenu();
+  }
+
+  // Init
+  applyQueryDefaults();
+})();
+</script>
+</body>
+</html>

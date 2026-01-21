@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Scattergories Letter Die + Topic Roll</title>
+
+  <style>
+    :root{
+      --bg:#f4f6fb;
+      --card:#ffffff;
+      --ink:#111111;
+      --muted:#3b3b3b;
+      --border:#d9d9d9;
+      --shadow: 0 18px 40px rgba(0,0,0,.10);
+      --cubeSize: 150px;
+    }
+    *{box-sizing:border-box}
+
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background: var(--bg);
+      color:var(--ink);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+    }
+
+    .card{
+      width:min(700px, 100%);
+      background: var(--card);
+      border:1px solid var(--border);
+      border-radius:18px;
+      padding:18px;
+      box-shadow: var(--shadow);
+    }
+
+    h1{
+      margin:0 0 8px;
+      font-size: clamp(22px, 3vw, 28px);
+    }
+    .sub{
+      margin:0 0 14px;
+      color:var(--muted);
+      font-size:14px;
+    }
+
+    /* --- DIE --- */
+    .stage{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:280px;
+      background:#fafafa;
+      border:1px solid var(--border);
+      border-radius:14px;
+      position:relative;
+    }
+    .hint{
+      position:absolute;
+      bottom:10px;
+      width:100%;
+      text-align:center;
+      font-size:12px;
+      color:#555;
+    }
+    .scene{
+      width:var(--cubeSize);
+      height:var(--cubeSize);
+      perspective:900px;
+    }
+    .cube{
+      width:var(--cubeSize);
+      height:var(--cubeSize);
+      position:relative;
+      transform-style:preserve-3d;
+      transform: rotateX(-25deg) rotateY(30deg);
+      transition: transform 1s cubic-bezier(.2,.8,.2,1);
+    }
+    .cube.rolling{ transition:none; }
+
+    .face{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#fff;
+      border:2px solid #e0e0e0;
+      border-radius:16px;
+      box-shadow:0 10px 22px rgba(0,0,0,.08);
+    }
+    .face span{
+      font-size:58px;
+      font-weight:900;
+      color:#000;
+    }
+
+    .front  { transform: translateZ(calc(var(--cubeSize)/2)); }
+    .back   { transform: rotateY(180deg) translateZ(calc(var(--cubeSize)/2)); }
+    .right  { transform: rotateY(90deg) translateZ(calc(var(--cubeSize)/2)); }
+    .left   { transform: rotateY(-90deg) translateZ(calc(var(--cubeSize)/2)); }
+    .top    { transform: rotateX(90deg) translateZ(calc(var(--cubeSize)/2)); }
+    .bottom { transform: rotateX(-90deg) translateZ(calc(var(--cubeSize)/2)); }
+
+    /* --- CONTROLS --- */
+    .controls{
+      display:flex;
+      gap:10px;
+      margin-top:14px;
+      flex-wrap:wrap;
+    }
+    button{
+      padding:11px 14px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:#111;
+      color:#fff;
+      font-weight:700;
+      cursor:pointer;
+    }
+    button:disabled{ opacity:.55; }
+
+    .resultBox{
+      margin-top:12px;
+      padding:12px;
+      background:#fafafa;
+      border:1px solid var(--border);
+      border-radius:14px;
+    }
+    .row{
+      display:flex;
+      justify-content:space-between;
+      margin:6px 0;
+    }
+    .label{
+      font-size:12px;
+      color:#444;
+      text-transform:uppercase;
+    }
+    .value{
+      font-size:18px;
+      font-weight:800;
+    }
+
+    /* --- MODAL --- */
+    .modalOverlay{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.45);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:999;
+    }
+    .modalOverlay.show{ display:flex; }
+
+    .modal{
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:18px;
+      padding:18px;
+      width:min(420px, 90%);
+      box-shadow:var(--shadow);
+      text-align:center;
+    }
+    .modalLetter{
+      font-size:72px;
+      font-weight:900;
+      margin-bottom:10px;
+    }
+    .modalTopic{
+      font-size:20px;
+      font-weight:800;
+      margin-bottom:16px;
+    }
+    .modal button{
+      width:100%;
+      margin-top:8px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h1>Letter Die + Topic Roll</h1>
+    <p class="sub">Roll the die to get a letter and a random Scattergories topic.</p>
+
+    <div class="stage">
+      <div class="scene">
+        <div id="cube" class="cube">
+          <div class="face front"><span id="f_front">A</span></div>
+          <div class="face back"><span id="f_back">B</span></div>
+          <div class="face right"><span id="f_right">C</span></div>
+          <div class="face left"><span id="f_left">D</span></div>
+          <div class="face top"><span id="f_top">E</span></div>
+          <div class="face bottom"><span id="f_bottom">F</span></div>
+        </div>
+      </div>
+      <div class="hint">Press Space or click Roll</div>
+    </div>
+
+    <div class="controls">
+      <button id="rollBtn">Roll</button>
+      <button id="rollAgainBtn" disabled>Roll again</button>
+    </div>
+
+    <div class="resultBox">
+      <div class="row">
+        <div class="label">Last Letter</div>
+        <div id="lastLetter" class="value">—</div>
+      </div>
+      <div class="row">
+        <div class="label">Last Topic</div>
+        <div id="lastTopic" class="value">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- POPUP -->
+  <div id="modalOverlay" class="modalOverlay">
+    <div class="modal">
+      <div id="modalLetter" class="modalLetter">—</div>
+      <div id="modalTopic" class="modalTopic">—</div>
+      <button id="modalRollAgainBtn">Roll again</button>
+    </div>
+  </div>
+
+  <script>
+    const LETTERS = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","R","S","T","W"];
+
+    const TOPICS = [
+      "Animals","Fruits or vegetables","Countries","Cities or towns",
+      "Things you find in a classroom","Sports","Things that are cold",
+      "Things that are hot","Items you pack for a trip",
+      "Foods you eat for breakfast","Things you see in the sky",
+      "Types of weather","Musical instruments","Things found at the beach",
+      "Hobbies","Things that are green","Jobs or occupations",
+      "Things you find in a park","Books or book characters",
+      "Things that are round","Things you wear","Vehicles",
+      "Things that make noise","Things found in the kitchen",
+      "Types of buildings","Things you can recycle","School subjects",
+      "Things you find in nature","Board games or card games",
+      "Things you use every day","Animals that live in water",
+      "Things that are sticky","Things that are soft",
+      "Things you do after school","Things that are colorful",
+      "Things you find at a grocery store","Things that move fast",
+      "Things you might collect","Things that smell good",
+      "Things that smell bad","Things you plug in",
+      "Things you might see on a farm","Things that are made of metal",
+      "Things that are made of wood","Things you find in a backpack",
+      "Things you can jump on or over","Things that have wheels",
+      "Things you find in winter","Things you find in summer",
+      "Things that make you happy"
+    ];
+
+    const cube = document.getElementById("cube");
+    const rollBtn = document.getElementById("rollBtn");
+    const rollAgainBtn = document.getElementById("rollAgainBtn");
+
+    const modalOverlay = document.getElementById("modalOverlay");
+    const modalLetter = document.getElementById("modalLetter");
+    const modalTopic = document.getElementById("modalTopic");
+    const modalRollAgainBtn = document.getElementById("modalRollAgainBtn");
+
+    const lastLetter = document.getElementById("lastLetter");
+    const lastTopic = document.getElementById("lastTopic");
+
+    const faces = ["f_front","f_back","f_right","f_left","f_top","f_bottom"]
+      .map(id => document.getElementById(id));
+
+    const ORIENTATIONS = [
+      {x:-25,y:30},{x:-25,y:120},{x:-25,y:210},{x:-25,y:300},
+      {x:65,y:30},{x:65,y:120},{x:65,y:210},{x:65,y:300}
+    ];
+
+    const rand = arr => arr[Math.floor(Math.random()*arr.length)];
+
+    function shuffleFaces(){
+      faces.forEach(f => f.textContent = rand(LETTERS));
+    }
+
+    function setRotation(o, spins=0){
+      cube.style.transform =
+        `rotateX(${o.x + spins*360}deg) rotateY(${o.y + spins*360}deg)`;
+    }
+
+    let rolling=false;
+
+    async function roll(){
+      if(rolling) return;
+      rolling=true;
+
+      rollBtn.disabled = true;
+      rollAgainBtn.disabled = true;
+
+      const letter = rand(LETTERS);
+      const topic  = rand(TOPICS);
+
+      const start = performance.now();
+      while(performance.now()-start < 1200){
+        shuffleFaces();
+        setRotation(rand(ORIENTATIONS),2);
+        await new Promise(r=>setTimeout(r,60));
+      }
+
+      setRotation(rand(ORIENTATIONS),0);
+
+      lastLetter.textContent = letter;
+      lastTopic.textContent = topic;
+
+      modalLetter.textContent = letter;
+      modalTopic.textContent = topic;
+      modalOverlay.classList.add("show");
+
+      rollBtn.disabled = false;
+      rollAgainBtn.disabled = false;
+      rolling=false;
+    }
+
+    rollBtn.onclick = roll;
+    rollAgainBtn.onclick = roll;
+    modalRollAgainBtn.onclick = () => {
+      modalOverlay.classList.remove("show");
+      roll();
+    };
+
+    window.addEventListener("keydown", e=>{
+      if(e.code==="Space"){ e.preventDefault(); roll(); }
+      if(e.key==="Escape"){ modalOverlay.classList.remove("show"); }
+    });
+
+    shuffleFaces();
+  </script>
+</body>
+</html>
