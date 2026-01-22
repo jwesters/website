@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Weird City or Made Up?</title>
+  <style>
+    :root{
+      --bg:#0f1220; --text:#e8ecff; --muted:#aeb6e6;
+      --good:#38d39f; --bad:#ff5d6c; --warn:#ffd166;
+      --ring: rgba(120,160,255,.35);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      background: radial-gradient(1100px 700px at 20% 10%, #1b2150 0%, transparent 60%),
+                  radial-gradient(900px 600px at 90% 30%, #2a1b50 0%, transparent 60%),
+                  var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      display:flex; align-items:center; justify-content:center;
+      padding:22px;
+    }
+    .wrap{width:min(980px,100%); display:grid; grid-template-columns:1.2fr .8fr; gap:18px; align-items:start;}
+    @media (max-width:900px){.wrap{grid-template-columns:1fr}}
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow: 0 18px 60px rgba(0,0,0,.35);
+      border-radius: 18px; overflow:hidden;
+    }
+    .hd{padding:18px 18px 10px; border-bottom:1px solid rgba(255,255,255,.07); background:linear-gradient(180deg, rgba(255,255,255,.05), transparent);}
+    h1{font-size:22px; margin:0; letter-spacing:.3px;}
+    .sub{margin:8px 0 0; color:var(--muted); font-size:13px; line-height:1.35;}
+    .main{padding:18px;}
+    .pill{
+      font-size:12px; padding:6px 10px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.03);
+      color:var(--muted); display:inline-flex; gap:8px; align-items:center; user-select:none;
+      flex-wrap:wrap;
+    }
+    .pill b{color:var(--text)}
+    .title{display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap;}
+    .nameBox{
+      background: rgba(0,0,0,.25);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 18px;
+      padding:18px;
+      text-align:center;
+      position:relative;
+      outline: none;
+    }
+    .nameLabel{font-size:12px; color:var(--muted); margin-bottom:10px; letter-spacing:.18em; text-transform:uppercase;}
+    .bigName{font-size: clamp(26px, 4.4vw, 44px); line-height:1.05; font-weight:800; margin:0; word-break:break-word;}
+    .btnRow{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px;}
+    .btn{
+      appearance:none; border:1px solid rgba(255,255,255,.12);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      color:var(--text); border-radius:14px; padding:14px; font-weight:800; cursor:pointer;
+      transition:transform .06s ease, border-color .2s ease, background .2s ease;
+      user-select:none; text-align:center; letter-spacing:.2px;
+    }
+    .btn:focus{outline:none; box-shadow:0 0 0 4px var(--ring);}
+    .btn:hover{border-color: rgba(160,190,255,.35); background: rgba(255,255,255,.06);}
+    .btn:active{transform: translateY(1px);}
+    .btn.secondary{background: rgba(0,0,0,.2);}
+    .btn.good{border-color: rgba(56,211,159,.35);}
+    .btn.bad{border-color: rgba(255,93,108,.35);}
+    .row{display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-top:14px;}
+    .score{display:flex; gap:14px; align-items:center; flex-wrap:wrap;}
+    .stat{background: rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.10); border-radius:14px; padding:10px 12px; min-width:150px;}
+    .stat .k{color:var(--muted); font-size:12px;}
+    .stat .v{font-size:20px; font-weight:900; margin-top:2px;}
+    .mini{font-size:12px; color:var(--muted); line-height:1.35;}
+    .section{background: rgba(0,0,0,.18); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:12px; margin-bottom:12px;}
+    .section h3{margin:0 0 8px; font-size:13px; letter-spacing:.2px;}
+    label{font-size:12px; color:var(--muted);}
+    input[type="checkbox"]{accent-color:#7aa3ff;}
+    .toast{margin-top:12px; padding:10px 12px; border-radius:14px; border:1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.18); display:none; gap:10px; align-items:flex-start;}
+    .dot{width:10px;height:10px;border-radius:50%; margin-top:4px; background:var(--muted);}
+    .toast.good{display:flex; border-color: rgba(56,211,159,.25);} .toast.good .dot{background:var(--good);}
+    .toast.bad{display:flex; border-color: rgba(255,93,108,.25);} .toast.bad .dot{background:var(--bad);}
+    .toast.warn{display:flex; border-color: rgba(255,209,102,.25);} .toast.warn .dot{background:var(--warn);}
+    code{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+    .overlay{position:fixed; inset:0; background: rgba(5,7,18,.72); backdrop-filter: blur(10px); display:none; align-items:center; justify-content:center; padding:20px; z-index:99;}
+    .modal{width:min(720px,100%); background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03)); border:1px solid rgba(255,255,255,.12); border-radius:22px; box-shadow:0 25px 80px rgba(0,0,0,.55); overflow:hidden;}
+    .modal .hd{padding:18px; border-bottom:1px solid rgba(255,255,255,.08); background: rgba(0,0,0,.18);}
+    .modal h2{margin:0; font-size:26px;}
+    .modal .bd{padding:18px;}
+    .modal .big{font-size:54px; font-weight:1000; margin: 2px 0 0; line-height:1;}
+    .modal .foot{padding:18px; border-top:1px solid rgba(255,255,255,.08); display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; background: rgba(0,0,0,.12);}
+    .table{width:100%; border-collapse:collapse; margin-top:10px; border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,.08);}
+    .table th,.table td{padding:10px; border-bottom:1px solid rgba(255,255,255,.06); font-size:12px; text-align:left;}
+    .table th{color:var(--muted); font-weight:900; letter-spacing:.12em; text-transform:uppercase;}
+    .table tr:last-child td{border-bottom:none;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="hd">
+        <div class="title">
+          <h1>Weird City or Made Up?</h1>
+          <span class="pill">
+            <span><b>SFW</b></span>
+            <span>•</span>
+            <span id="poolPill">Loading…</span>
+            <span>•</span>
+            <span id="breakdownPill">—</span>
+          </span>
+        </div>
+        <p class="sub">Guess if the name is a <b>real city/place</b> or <b>made up</b>. One wrong answer ends your streak.</p>
+      </div>
+
+      <div class="main">
+        <div class="nameBox" tabindex="0">
+          <div class="nameLabel">Name</div>
+          <p class="bigName" id="currentName">Press Start</p>
+
+          <div class="btnRow">
+            <button class="btn good" id="btnReal" disabled>✅ Real City / Place</button>
+            <button class="btn bad" id="btnFake" disabled>🚫 Made Up</button>
+          </div>
+
+          <div id="toast" class="toast">
+            <span class="dot"></span>
+            <div class="mini" id="toastText"></div>
+          </div>
+
+          <div class="row">
+            <div class="score">
+              <div class="stat">
+                <div class="k">Current streak</div>
+                <div class="v" id="streak">0</div>
+              </div>
+              <div class="stat">
+                <div class="k">Local best</div>
+                <div class="v" id="best">—</div>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button class="btn secondary" id="startBtn" disabled>Start</button>
+              <button class="btn secondary" id="skipBtn" disabled>Skip</button>
+            </div>
+          </div>
+
+          <p class="mini" id="loadNote" style="margin-top:10px;">
+            Loading list… If this gets stuck on “fallback”, host the folder (GitHub Pages / Live Server). <code>file://</code> blocks loading.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="hd">
+        <div class="title">
+          <h1>Options</h1>
+          <span class="pill">Single file • Local storage optional</span>
+        </div>
+        <p class="sub">All names come from one text file. High scores are stored locally on this device.</p>
+      </div>
+
+      <div class="main">
+        <div class="section">
+          <h3>Local high score</h3>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+            <div class="mini">Save top 3 streaks locally.</div>
+            <label style="display:flex; align-items:center; gap:8px; font-weight:800;">
+              <input type="checkbox" id="saveScores" checked />
+              Enabled
+            </label>
+          </div>
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+            <button class="btn secondary" id="viewScores">View best times</button>
+            <button class="btn secondary" id="resetScores">Reset best times</button>
+          </div>
+          <p class="mini" style="margin:10px 0 0;">
+            “Best times” = best <b>streaks</b>, with date stamps.
+          </p>
+        </div>
+
+        <div class="section">
+          <h3>Single text file format</h3>
+          <div class="mini">
+            Put a <b>prefix</b> then a name, one per line:
+            <ul style="margin:6px 0 0; padding-left:18px;">
+              <li><code>R|Moose Jaw</code> (R = real)</li>
+              <li><code>F|Misty Pickle Junction</code> (F = fake)</li>
+            </ul>
+            Comments allowed: lines starting with <code>#</code> are ignored.
+          </div>
+          <div class="mini" style="margin-top:10px;">
+            File name expected beside this HTML: <code>city_game_list.txt</code>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Keyboard</h3>
+          <div class="mini">
+            <ul style="margin:0; padding-left:18px;">
+              <li><b>R</b> = Real</li>
+              <li><b>F</b> = Fake</li>
+              <li><b>S</b> = Skip</li>
+              <li><b>Enter</b> = Start/Restart</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL -->
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <div class="hd">
+        <h2 id="modalTitle">Game Over</h2>
+        <div class="mini" id="modalSubtitle"></div>
+      </div>
+      <div class="bd" id="modalBody"></div>
+      <div class="foot">
+        <button class="btn secondary" id="closeModal">Close</button>
+        <button class="btn" id="playAgain">Play again</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const el = (id) => document.getElementById(id);
+
+  // --------------------
+  // Single file to load
+  // --------------------
+  const LIST_FILE = "city_game_list.txt";
+
+  // Fallback list (ALL SFW)
+  const FALLBACK_LINES = [
+    "R|Moose Jaw",
+    "R|Truth or Consequences",
+    "R|Wawa",
+    "R|Flin Flon",
+    "R|Boring",
+    "F|Misty Pickle Junction",
+    "F|Cedar Waffle Hollow",
+    "F|Sunny Banjo Springs",
+    "F|Hidden Marble Corners",
+    "F|Silver Otter Ridge"
+  ];
+
+  // --------------------
+  // Local Best (top 3)
+  // --------------------
+  const STORAGE_KEY = "weirdcity_singlefile_best_v1";
+  function loadBest(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return [];
+      const parsed = JSON.parse(raw);
+      if(!Array.isArray(parsed)) return [];
+      return parsed.filter(x => typeof x.score === "number" && typeof x.ts === "number").slice(0,3);
+    }catch(_){ return []; }
+  }
+  function saveBest(list){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0,3))); }catch(_){}
+  }
+  function formatDate(ts){
+    const d = new Date(ts);
+    return d.toLocaleString(undefined, { year:"numeric", month:"short", day:"2-digit", hour:"2-digit", minute:"2-digit" });
+  }
+
+  // --------------------
+  // Parse list file lines
+  // --------------------
+  function normalizeLine(s){
+    return s.replace(/\uFEFF/g,"").trim();
+  }
+
+  function isSfwName(name){
+    // Lightweight SFW guard: blocks obvious adult profanity.
+    // (Not a perfect filter, but it prevents accidental slips if your file is SFW.)
+    const lower = name.toLowerCase();
+    const banned = [
+      "fuck","shit","cunt","porn","sex","dick","pussy","asshole","bitch","whore","slut",
+      "cock","tits","boob","nipple","dildo","intercourse","anal"
+    ];
+    return !banned.some(w => lower.includes(w));
+  }
+
+  function parseLine(line){
+    const s = normalizeLine(line);
+    if(!s || s.startsWith("#")) return null;
+
+    // Format: R|Name  or  F|Name
+    const m = s.match(/^([RF])\s*\|\s*(.+)$/i);
+    if(!m) return null;
+
+    const kind = m[1].toUpperCase();
+    const name = m[2].trim();
+
+    if(!name) return null;
+    if(!isSfwName(name)) return null; // enforce SFW regardless
+
+    return {
+      name,
+      answer: (kind === "R") ? "real" : "fake"
+    };
+  }
+
+  async function loadFromFile(path){
+    const res = await fetch(path, { cache: "no-store" });
+    if(!res.ok) throw new Error(`Failed to load ${path} (${res.status})`);
+    const text = await res.text();
+    const items = [];
+    const seen = new Set();
+    text.split(/\r?\n/g).forEach(line => {
+      const obj = parseLine(line);
+      if(!obj) return;
+      const key = obj.answer + "::" + obj.name.toLowerCase();
+      if(seen.has(key)) return;
+      seen.add(key);
+      items.push(obj);
+    });
+    return items;
+  }
+
+  // --------------------
+  // UI refs
+  // --------------------
+  const currentNameEl = el("currentName");
+  const btnReal = el("btnReal");
+  const btnFake = el("btnFake");
+  const startBtn = el("startBtn");
+  const skipBtn = el("skipBtn");
+  const toast = el("toast");
+  const toastText = el("toastText");
+  const streakEl = el("streak");
+  const bestEl = el("best");
+  const poolPill = el("poolPill");
+  const breakdownPill = el("breakdownPill");
+  const loadNote = el("loadNote");
+
+  const saveScoresToggle = el("saveScores");
+  const viewScores = el("viewScores");
+  const resetScores = el("resetScores");
+
+  const overlay = el("overlay");
+  const modalTitle = el("modalTitle");
+  const modalSubtitle = el("modalSubtitle");
+  const modalBody = el("modalBody");
+  const closeModal = el("closeModal");
+  const playAgain = el("playAgain");
+
+  // --------------------
+  // Game state
+  // --------------------
+  let pool = [];
+  let streak = 0;
+  let running = false;
+  let current = null;
+  let listSource = "file";
+
+  function showToast(kind, html){
+    toast.className = "toast " + kind;
+    toastText.innerHTML = html;
+    toast.style.display = "flex";
+  }
+  function hideToast(){
+    toast.className = "toast";
+    toast.style.display = "none";
+  }
+  function setButtonsEnabled(on){
+    btnReal.disabled = !on;
+    btnFake.disabled  = !on;
+    skipBtn.disabled = !on;
+  }
+  function pickRandom(){
+    return pool[Math.floor(Math.random()*pool.length)];
+  }
+
+  function renderBest(){
+    if(!saveScoresToggle.checked){ bestEl.textContent = "—"; return; }
+    const best = loadBest();
+    bestEl.textContent = best.length ? String(best[0].score) : "—";
+  }
+
+  function countBreakdown(items){
+    let r=0,f=0;
+    for(const it of items){
+      if(it.answer === "real") r++;
+      else if(it.answer === "fake") f++;
+    }
+    return { real:r, fake:f };
+  }
+
+  async function init(){
+    poolPill.textContent = "Loading…";
+    breakdownPill.textContent = "—";
+    startBtn.disabled = true;
+    setButtonsEnabled(false);
+
+    try{
+      pool = await loadFromFile(LIST_FILE);
+      listSource = "file";
+    }catch(err){
+      console.warn(err);
+      // fallback
+      const seen = new Set();
+      pool = FALLBACK_LINES.map(parseLine).filter(Boolean).filter(it => {
+        const key = it.answer + "::" + it.name.toLowerCase();
+        if(seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      listSource = "fallback";
+    }
+
+    // Safety: ensure we actually have both types
+    const br = countBreakdown(pool);
+    if(br.real < 5 || br.fake < 5){
+      // If your file is malformed, still keep game usable:
+      console.warn("List missing enough real/fake entries; adding fallback extras.");
+      FALLBACK_LINES.forEach(line => {
+        const it = parseLine(line);
+        if(!it) return;
+        pool.push(it);
+      });
+    }
+
+    // Update pills
+    const br2 = countBreakdown(pool);
+    poolPill.textContent = `${pool.length.toLocaleString()} names`;
+    breakdownPill.textContent = `${br2.real.toLocaleString()} real • ${br2.fake.toLocaleString()} fake`;
+
+    loadNote.innerHTML =
+      (listSource === "file")
+        ? `Loaded <b>${pool.length.toLocaleString()}</b> names from <code>${LIST_FILE}</code>.`
+        : `Couldn’t load <code>${LIST_FILE}</code>, using a <b>fallback</b> list. Host the folder (GitHub Pages / Live Server). <code>file://</code> blocks loading.`;
+
+    renderBest();
+    startBtn.disabled = false;
+  }
+
+  function newRound(){
+    current = pickRandom();
+    currentNameEl.textContent = current.name;
+    hideToast();
+  }
+
+  function startGame(){
+    streak = 0;
+    running = true;
+    streakEl.textContent = "0";
+    setButtonsEnabled(true);
+    startBtn.textContent = "Restart";
+    newRound();
+  }
+
+  function recordIfBest(score){
+    if(!saveScoresToggle.checked) return { rank:null };
+    const list = loadBest();
+    const entry = { score, ts: Date.now() };
+    list.push(entry);
+    list.sort((a,b) => b.score - a.score || a.ts - b.ts);
+    const top3 = list.slice(0,3);
+    saveBest(top3);
+    const rank = top3.findIndex(x => x.ts === entry.ts && x.score === entry.score);
+    return { rank: rank >= 0 ? rank+1 : null };
+  }
+
+  function endGame(){
+    running = false;
+    setButtonsEnabled(false);
+
+    modalTitle.textContent = "Game Over";
+    const { rank } = recordIfBest(streak);
+    renderBest();
+
+    modalSubtitle.innerHTML = `List source: <b>${listSource}</b> • High-score: <b>${saveScoresToggle.checked ? "ON" : "OFF"}</b>`;
+
+    const bestList = saveScoresToggle.checked ? loadBest() : [];
+    const bestTable = saveScoresToggle.checked
+      ? `<table class="table">
+           <thead><tr><th>Rank</th><th>Streak</th><th>When</th></tr></thead>
+           <tbody>
+             ${bestList.length ? bestList.map((x,i)=>`
+               <tr><td>#${i+1}</td><td><b>${x.score}</b></td><td>${formatDate(x.ts)}</td></tr>
+             `).join("") : `<tr><td colspan="3" style="color:var(--muted);">No saved scores yet.</td></tr>`}
+           </tbody>
+         </table>`
+      : `<div class="mini" style="margin-top:10px;">Local high-score saving is OFF.</div>`;
+
+    modalBody.innerHTML = `
+      <div class="mini" style="color:var(--muted);">Your streak</div>
+      <div class="big">${streak}</div>
+
+      <div class="toast bad" style="display:flex; margin-top:12px;">
+        <span class="dot"></span>
+        <div class="mini"><b>Last name:</b> ${current?.name ?? "—"}</div>
+      </div>
+
+      ${rank ? `
+        <div class="toast good" style="display:flex; margin-top:12px;">
+          <span class="dot"></span>
+          <div class="mini"><b>New record!</b> You’re #${rank}.</div>
+        </div>` : ""}
+
+      <div style="height:1px; background:rgba(255,255,255,.08); margin:12px 0;"></div>
+      <div class="mini"><b>Best streaks</b></div>
+      ${bestTable}
+    `;
+
+    overlay.style.display = "flex";
+  }
+
+  function handleGuess(guess){
+    if(!running || !current) return;
+    const correct = (guess === current.answer);
+    if(correct){
+      streak++;
+      streakEl.textContent = String(streak);
+      showToast("good", `<b>Correct!</b> Streak is now <b>${streak}</b>.`);
+      setTimeout(newRound, 320);
+    }else{
+      showToast("bad", `<b>Wrong!</b>`);
+      setTimeout(endGame, 140);
+    }
+  }
+
+  function skip(){
+    if(!running) return;
+    showToast("warn", `<b>Skipped.</b> No points added.`);
+    setTimeout(newRound, 200);
+  }
+
+  // Events
+  startBtn.addEventListener("click", startGame);
+  btnReal.addEventListener("click", () => handleGuess("real"));
+  btnFake.addEventListener("click", () => handleGuess("fake"));
+  skipBtn.addEventListener("click", skip);
+
+  saveScoresToggle.addEventListener("change", renderBest);
+
+  viewScores.addEventListener("click", () => {
+    modalTitle.textContent = "Best times";
+    modalSubtitle.textContent = "";
+    const bestList = saveScoresToggle.checked ? loadBest() : [];
+    const bestTable = saveScoresToggle.checked
+      ? `<table class="table">
+           <thead><tr><th>Rank</th><th>Streak</th><th>When</th></tr></thead>
+           <tbody>
+             ${bestList.length ? bestList.map((x,i)=>`
+               <tr><td>#${i+1}</td><td><b>${x.score}</b></td><td>${formatDate(x.ts)}</td></tr>
+             `).join("") : `<tr><td colspan="3" style="color:var(--muted);">No saved scores yet.</td></tr>`}
+           </tbody>
+         </table>`
+      : `<div class="mini" style="margin-top:10px;">Local high-score saving is OFF.</div>`;
+    modalBody.innerHTML = bestTable;
+    overlay.style.display = "flex";
+  });
+
+  resetScores.addEventListener("click", () => {
+    if(!confirm("Reset saved best streaks?")) return;
+    try{ localStorage.removeItem(STORAGE_KEY); }catch(_){}
+    renderBest();
+    alert("Reset complete.");
+  });
+
+  closeModal.addEventListener("click", () => overlay.style.display = "none");
+  playAgain.addEventListener("click", () => { overlay.style.display = "none"; startGame(); });
+  overlay.addEventListener("click", (e) => { if(e.target === overlay) overlay.style.display = "none"; });
+
+  // Keyboard: R/F/S/Enter
+  window.addEventListener("keydown", (e) => {
+    if(e.key === "Escape" && overlay.style.display === "flex"){ overlay.style.display = "none"; return; }
+    if(e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
+    const k = e.key.toLowerCase();
+    if(k === "r") handleGuess("real");
+    if(k === "f") handleGuess("fake");
+    if(k === "s") skip();
+    if(k === "enter" && !startBtn.disabled) startGame();
+  });
+
+  // Boot
+  init();
+})();
+</script>
+</body>
+</html>
