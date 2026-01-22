@@ -7,7 +7,8 @@
   <style>
     :root{
       --bg:#0b0b0f; --card:#14141c; --ink:#f2f2f4; --muted:#a7a7b3; --line:#2a2a36;
-      --btn:#1f1f2c; --btn2:#2a2a3a; --accent:#c8c8ff;
+      --btn:#1f1f2c; --btn2:#2a2a3a;
+      --good:#2ecc71; --bad:#ff5c5c;
     }
     *{box-sizing:border-box}
     body{
@@ -34,7 +35,7 @@
       border-radius:16px;
       padding:18px;
       background:rgba(255,255,255,.03);
-      min-height:94px;
+      min-height:104px;
       display:flex; flex-direction:column; justify-content:center;
     }
     .bandname{
@@ -52,7 +53,7 @@
       gap:10px;
       align-content:start;
     }
-    button, select, input[type="text"]{
+    button, select{
       width:100%;
       padding:11px 12px;
       border-radius:12px;
@@ -65,7 +66,13 @@
     button{cursor:pointer; font-weight:700}
     button:hover{background:var(--btn2)}
     .full{grid-column:1 / -1}
-    label{
+    .toggles{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      grid-column:1 / -1;
+    }
+    label.toggle{
       display:flex; gap:10px; align-items:center;
       padding:10px 12px;
       border-radius:12px;
@@ -76,6 +83,17 @@
       user-select:none;
     }
     input[type="checkbox"]{transform:scale(1.1)}
+    .pill{
+      margin-left:auto;
+      font-size:11px;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.02);
+      color:var(--muted);
+    }
+    .pill.good{border-color:rgba(46,204,113,.35); color:rgba(46,204,113,.95)}
+    .pill.bad{border-color:rgba(255,92,92,.35); color:rgba(255,92,92,.95)}
     .history{
       margin-top:16px;
       border-top:1px solid var(--line);
@@ -95,7 +113,9 @@
       display:flex; align-items:center; justify-content:space-between;
       gap:10px;
     }
-    .chip span{font-weight:700}
+    .chip .left{display:flex; flex-direction:column; gap:2px}
+    .chip .title{font-weight:800}
+    .chip .tagline{font-size:11px; color:var(--muted)}
     .chip button{
       width:auto;
       padding:6px 10px;
@@ -109,6 +129,7 @@
       .controls{grid-template-columns:1fr}
       .list{grid-template-columns:1fr}
       .bandname{font-size:30px}
+      .toggles{grid-template-columns:1fr}
     }
   </style>
 </head>
@@ -116,7 +137,7 @@
   <div class="wrap">
     <div class="card">
       <h1>Band Name Generator</h1>
-      <p class="sub">Randomly combines <b>two words</b> from your death-metal word pool (single words split from band names + song titles) to generate band names.</p>
+      <p class="sub">Randomly combines <b>2 or 3 words</b> from your metal word pool to generate band names. Includes a <b>SFW / NSFW</b> filter.</p>
 
       <div class="row">
         <div class="name">
@@ -128,8 +149,8 @@
           <button id="gen">Generate</button>
           <button id="gen10">Generate 10</button>
 
-          <button id="copy">Copy name</button>
           <button id="clearHistory">Clear history</button>
+          <button id="copyLatest">Copy latest</button>
 
           <select id="separator" class="full" title="Separator">
             <option value="space">Separator: Space (e.g., Cannibal Corpse)</option>
@@ -137,20 +158,19 @@
             <option value="none">Separator: None (e.g., CannibalCorpse)</option>
           </select>
 
-          <label class="full">
-            <input id="titleCase" type="checkbox" checked />
-            Title Case (Capitalize Words)
-          </label>
+          <div class="toggles">
+            <label class="toggle">
+              <input id="threeWords" type="checkbox" />
+              3-word names
+              <span id="wordsPill" class="pill">2 words</span>
+            </label>
 
-          <label class="full">
-            <input id="avoidRepeats" type="checkbox" checked />
-            Avoid repeating the same combo in this session
-          </label>
-
-          <label class="full">
-            <input id="noSameWord" type="checkbox" checked />
-            Don’t allow the same word twice (e.g., “Death Death”)
-          </label>
+            <label class="toggle">
+              <input id="sfwMode" type="checkbox" checked />
+              SFW mode
+              <span id="sfwPill" class="pill good">SFW</span>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -164,9 +184,13 @@
 
 <script>
 /*
-  Word pool = your previously generated lists.
-  - We store them as a big whitespace-separated block, then split to words.
-  - We de-duplicate at runtime.
+  Word pool notes:
+  - Stored as whitespace-separated tokens.
+  - Cleaned + deduped at runtime.
+  - SFW mode filters out profanity words (substring-based).
+  - Remove any word containing "jailbait" in ALL modes.
+  - Title Case is applied automatically.
+  - Same-word duplicates in a single name are prevented automatically.
 */
 const WORDS_TEXT = `
 cannibal corpse death morbid angel deicide obituary autopsy entombed carcass napalm exhumed
@@ -195,7 +219,7 @@ agonized screamed howled shrieked cried wailed moaned groaned silenced executed 
 murdered killed terminated ended finished destroyed annihilated erased extinguished obliterated
 consumed voided emptied nullified ended
 
-/* +300 additional nouns (new batch) */
+/* +300 additional nouns (original batch) */
 abomination abyss anatomist anguish antichrist apathy apostasy apparition ashes assault atavism
 barbarity beast blight blister bog bonepile brimstone butchery cadence calamity carnivore
 catastrophe cauterization ceremony chasm clergy coagulation collapse conquest contagion
@@ -244,16 +268,139 @@ warbanner warbeast warbringer ward warden warrens wastemarch watchtower weaponry
 widowmaker willbreaker windstorm witch witchhouse wraith wretchling zeal zealotry
 `.trim();
 
-function buildWordPool() {
-  // Split on any whitespace, keep only alphabetic (plus a few), and dedupe.
-  const raw = WORDS_TEXT
-    .split(/\s+/g)
-    .map(w => w.trim())
-    .filter(Boolean);
+// +450 NSFW-ish tokens (kept in separate block)
+const EXTRA_NSFW_450 = `
+abuser acidbath afterbirth agoraphobic alchemy amputator anvilhead apocalypsewhore
+archfiend arsonist asphalt atrocityblade backbreaker backstabber bastardcore
+batshit bedlam bilehammer blackened blackout bloodbath bloodclot bloodfucker
+bloodletting bloodpit bloodrage bloodsoaked bloodstorm blowtorch bodybag
+bonebreaker bonecrusher bonegrinder boneshatter bonevault brainfuck brainrot
+brainstem butcherblast butcherknife cadaverbag cadavershit cadaverstorm
+cancerous carnage carnivorefuck carnal cesspit chainsaw chaoswhore chokehold
+clawhammer coffinrot corpsebag corpseburn corpsefucker corpsegrinder corpsepile
+corpsestench corpsewhisper crackskull cremator crucifier cuntblast cuntgrinder
+cuntrot cutthroat cyclops deathbag deathbitch deathcult deathfucker deathgrind
+deathhammer deathknell deathmask deathnoise deathpit deathrattle deathstorm
+deathwhore decaylord decomposer defacer defilement deflesh demonfuck desecrator
+devilhook devilspawn devourer dirtslave disembodier disfigure dismemberfuck
+dissector dogfucker doomfucker doomhammer doomlord doomnoise dragger driller
+drownfuck drunkard earthripper edgecrusher effigyfuck enraged enforcer
+entrails entrailstorm eradicator executionfuck exsanguinator eyeballfucker
+facesplitter faceripper fallout fecalmatter festering fuckbag fuckcult fuckhammer
+fuckpit fuckstorm furnace fury gallowsfuck gorebag gorehammer gorehound gorelord
+goreripper gorestorm gravebitch gravefuck gravegrinder gravehammer gravepit
+gravesludge grindcorefuck grinderfuck gutbucket gutfuck gutgrinder gutpile
+gutspill gutwrench hammerfuck hammerlord handcrusher headfuck headhunter
+headsmash hellbag hellblast hellcult helldriver hellfucker hellgrind hellpit
+hellstorm hexblade hogtie hookerfuck horncrusher horrorfuck hostiledick
+impaler infernofuck infestator ironfuck ironstorm knifefuck knucklefuck
+krusher lacerator leechfuck limbcrusher liverrot meatfuck meatgrinder meatstorm
+meatwound mindfuck mindrot misogynist molesterfuck morguefuck mortuarygrind
+murderfuck nailbombfuck necrofucker necropit necrosludge necrostorm nervefuck
+nihilfuck noosefuck obituaryfuck obliterator offalfuck organspiller paincult
+painfucker painhammer painlord painstorm parasitefuck peckergrind pestfuck
+pigfucker pissgrave pissrot pissstorm plaguefuck plowsharefuck pulverizer
+pussbucket pussrot putridfuck rabidfuck ragehammer rampager rancidflesh
+razorjaw rectalfuck redrumfucker remainsfuck ripperfuck roadrage rotbag
+rotbrain rotfuck rotgrind rotlord rotstorm rustfuck sawblade scalperfuck
+scumfuck septicfuck sewerflesh shankfuck shitbag shitbrain shitcrusher
+shitcult shitfucker shitgrind shitlord shitpit shitstorm slaughterfuck
+sludgehammer sludgefuck sludgepit smashfuck snufffucker soulcrusher soulfuck
+soulgrind soulrot spinebreaker spinefuck splatterfuck stabber starvefuck
+steelhammer stemripper stinkfuck stonegrind stormfuck stranglerfuck streetviolence
+sulfurfuck terrorfuck throatfuck toothcrusher torchfuck tormentfuck toxicfuck
+trenchfuck triggerfuck ultrafuck undertakerfuck unholyfuck vagrantfuck venomfuck
+vicegrind violencefuck viscera viscrot voidfuck vomitfuck warfuck wargrind
+warhammerfuck warpath wastelandfuck weaponfuck wreckagefuck
+`.trim();
+
+// +250 more metal-related but *somewhat* SFW tokens
+const EXTRA_SFW_250 = `
+amplifier anthem arpeggio aria armature ashfall astral atonal aurae backline
+ballad banshee baritone basilisk bastion battalion bellows blackoutblade
+blastbeat blizzard boneyard bramblebrand brandish breakneck brimfire
+broadsword broodlord cadencekeeper callout canopy cataclysmic cathedral
+cavernous chainmail chant chorus chromatic cinderborn citadelcore cleaver
+cloistered cloven cobalt coldforge colossuscore commandment conduit
+conjurer coronation cosmoscarver counterpoint crescent crescendo
+crimsonveil crossfade crowcaller cryptwarden crystalbane
+cycloneborn daggersong darken darkglass darkhalo darkmantle darkspire
+deathchant deathmark deathveil decibel deepwood defiant delirium
+demonheart dirgeborn dirgecraft dirgefield distortion drakeborn
+dreadblade dreadchorus dreadforge dreadmantle dreadspire driftveil
+drumroll duskborn duskforge duskveil earthshard echo echochamber
+eclipse elderfire elegy emberborn emberforge emberveil enchanter
+endtime epicenter essencefall etherborn evernight
+fablefang falloutcore fanged firebrand firestormer flameborn flamelord
+flareforge flintstone fogborn forgeborn forgehymn forgelight forgewarden
+fracturecore frostborn frostchant frostforge frostveil
+galesong gallowsgate gateway ghostchant ghostforge ghostlight
+glassblade gloomveil graniteheart gravestonecore gridlock
+halberd harmonics harshnoise hazeheart headstone hymn
+hymnbook hymncraft hyperspeed ignition incantor inkstone
+ironborn ironchant ironforge ironhymn ironveil
+keening keychange kindle knightfall labyrinthine lacquer lakebed
+lament lantern lichen lichgate lifebloodline lightninglord
+lockstep longnight lowtide lunar lunarbane
+maelstrom magnitude mandolin mantis mantle march
+marrowcore masonry megaton metronome midnightcore
+mindscape minefield monolithcore moonforge moonglass
+mourncraft mournhymn mournveil murmur mythic
+nightchant nightforge nightglass nightliturgy nightmantle nightspire
+nocturne northwind obituarybell obsidian omenforge
+orchestra overdrive overtone paladin pallbearercore
+panthera phantomforge phantomlight phase shift
+pitchblack pitchfork pluck plectrum
+polyrhythm procession prophecycore psalter pulse
+quartz quiver rafter raven ravenlord
+resonance riff riffage riffsmith ritualcore rivet
+roadcase rune runeblade runecraft runeforge
+sable sabertooth sanctumcore satellite saxophone scale
+scarab scimitar scoria scroll scrollwork
+secondhand septum serenity shadowforge shadowglass
+shadowhymn shadowmantle shadowspire shimmer
+signal silencecore skullhelm skystone sleet
+slowburn sledge solstice soundcheck
+soundwall spindrift spire spiregate
+stormborn stormchant stormforge stormglass stormhymn
+stormmantle stormspire stratosphere stringbend
+subharmonic sunless sundering
+sustain swordchant swordforge syllable
+tactician talisman tempo tenebrous
+thrashcore thunderforge thunderhymn thunderveil
+tideborn timbre tonic torchlightcore
+tremolo tribune triumphant tundra
+undertone unison vale valor
+vengeancecore verse vibrato vigil
+voidchant voidforge voidglass voidhymn voidmantle voidspire
+warbanner warcall warchant warforge warhymn warlight
+warpathcore waveforms weaponizedwind
+whetstone wideawake wildfire
+windchant windforge windglass windhymn windmantle windspire
+winterborn winterforge winterveil
+wiresong wolfsbane wolflord
+wraithchant wraithforge wraithlight wyrm
+xylophone yonder zephyr
+`.trim();
+
+function splitTokens(text){
+  return text.split(/\s+/g).map(w => w.trim()).filter(Boolean);
+}
+
+// Substring-based profanity filter (kept intentionally specific to avoid false positives like "assault").
+const PROFANITY_RE = /(fuck|shit|cunt|piss|dick|cock|whore|bastard|slut|twat|bitch|motherfucker)/i;
+
+function buildAllWords() {
+  const raw = [
+    ...splitTokens(WORDS_TEXT),
+    ...splitTokens(EXTRA_NSFW_450),
+    ...splitTokens(EXTRA_SFW_250),
+  ];
 
   const cleaned = raw
     .map(w => w.replace(/[^a-zA-Z0-9'-]/g, ""))
-    .filter(w => w.length >= 3); // keep names readable
+    .filter(w => w.length >= 3)
+    .filter(w => !w.toLowerCase().includes("jailbait"));
 
   // Deduplicate (case-insensitive)
   const seen = new Set();
@@ -265,71 +412,99 @@ function buildWordPool() {
   return pool;
 }
 
-const WORD_POOL = buildWordPool();
-const usedCombos = new Set(); // session-only
+const ALL_WORDS = buildAllWords();
+let ACTIVE_POOL = [];
 
 const elName = document.getElementById("bandname");
 const elMeta = document.getElementById("meta");
 const elHistory = document.getElementById("history");
 
 const elSep = document.getElementById("separator");
-const elTitle = document.getElementById("titleCase");
-const elAvoid = document.getElementById("avoidRepeats");
-const elNoSame = document.getElementById("noSameWord");
+const elThree = document.getElementById("threeWords");
+const elSfw = document.getElementById("sfwMode");
+const elWordsPill = document.getElementById("wordsPill");
+const elSfwPill = document.getElementById("sfwPill");
 
-function randInt(n){ return Math.floor(Math.random()*n); }
+function randInt(n){ return Math.floor(Math.random() * n); }
 
 function titleCaseWord(w){
   if (!w) return w;
   return w[0].toUpperCase() + w.slice(1).toLowerCase();
 }
 
-function formatName(a, b){
-  const sepMode = elSep.value;
-  const doTitle = elTitle.checked;
+function computeActivePool(){
+  const sfw = elSfw.checked;
+  ACTIVE_POOL = sfw ? ALL_WORDS.filter(w => !PROFANITY_RE.test(w)) : ALL_WORDS.slice();
 
-  const A = doTitle ? titleCaseWord(a) : a;
-  const B = doTitle ? titleCaseWord(b) : b;
-
-  if (sepMode === "hyphen") return `${A}-${B}`;
-  if (sepMode === "none") return `${A}${B}`;
-  return `${A} ${B}`;
+  // Pills
+  elWordsPill.textContent = elThree.checked ? "3 words" : "2 words";
+  if (sfw){
+    elSfwPill.textContent = "SFW";
+    elSfwPill.classList.add("good");
+    elSfwPill.classList.remove("bad");
+  } else {
+    elSfwPill.textContent = "NSFW";
+    elSfwPill.classList.add("bad");
+    elSfwPill.classList.remove("good");
+  }
 }
 
-function pickTwoWords(){
-  if (WORD_POOL.length < 2) return ["—","—"];
+function formatName(words){
+  const sepMode = elSep.value;
+  const mapped = words.map(w => titleCaseWord(w));
 
-  let a, b, tries = 0;
+  if (sepMode === "hyphen") return mapped.join("-");
+  if (sepMode === "none") return mapped.join("");
+  return mapped.join(" ");
+}
 
-  while (tries++ < 5000) {
-    a = WORD_POOL[randInt(WORD_POOL.length)];
-    b = WORD_POOL[randInt(WORD_POOL.length)];
+function pickDistinctWords(count){
+  const pool = ACTIVE_POOL;
+  if (pool.length < count) return Array.from({length: count}, () => "—");
 
-    if (elNoSame.checked && a.toLowerCase() === b.toLowerCase()) continue;
+  const chosen = [];
+  const used = new Set();
 
-    const comboKey = `${a.toLowerCase()}|${b.toLowerCase()}`;
-    if (elAvoid.checked && usedCombos.has(comboKey)) continue;
-
-    usedCombos.add(comboKey);
-    return [a, b];
+  let guard = 0;
+  while (chosen.length < count && guard++ < 20000){
+    const w = pool[randInt(pool.length)];
+    const key = w.toLowerCase();
+    if (used.has(key)) continue;
+    used.add(key);
+    chosen.push(w);
   }
 
-  // Fallback: just pick anything
-  a = WORD_POOL[randInt(WORD_POOL.length)];
-  do { b = WORD_POOL[randInt(WORD_POOL.length)]; } while (elNoSame.checked && a.toLowerCase() === b.toLowerCase());
-  return [a, b];
+  // Fallback (should never happen with a big pool)
+  while (chosen.length < count) chosen.push(pool[randInt(pool.length)]);
+  return chosen;
 }
 
 function renderMeta(){
-  elMeta.textContent = `Words loaded: ${WORD_POOL.length.toLocaleString()} • Combos used: ${usedCombos.size.toLocaleString()}`;
+  const sfw = elSfw.checked;
+  const nWords = elThree.checked ? 3 : 2;
+  const profanityCount = ALL_WORDS.filter(w => PROFANITY_RE.test(w)).length;
+  elMeta.textContent =
+    `Mode: ${sfw ? "SFW" : "NSFW"} • Name length: ${nWords} words • Active words: ${ACTIVE_POOL.length.toLocaleString()} ` +
+    `• Profanity tokens available (NSFW): ${profanityCount.toLocaleString()}`;
 }
 
 function addToHistory(name){
   const item = document.createElement("div");
   item.className = "chip";
 
-  const left = document.createElement("span");
-  left.textContent = name;
+  const left = document.createElement("div");
+  left.className = "left";
+
+  const title = document.createElement("div");
+  title.className = "title";
+  title.textContent = name;
+
+  const tagline = document.createElement("div");
+  tagline.className = "tagline";
+  tagline.textContent = `${elSfw.checked ? "SFW" : "NSFW"} • ${elThree.checked ? "3" : "2"} words`;
+
+  left.appendChild(title);
+  left.appendChild(tagline);
 
   const btn = document.createElement("button");
   btn.textContent = "Copy";
@@ -351,8 +526,10 @@ function addToHistory(name){
 }
 
 function generateOne(pushHistory=true){
-  const [a, b] = pickTwoWords();
-  const name = formatName(a, b);
+  computeActivePool();
+  const count = elThree.checked ? 3 : 2;
+  const words = pickDistinctWords(count);
+  const name = formatName(words);
   elName.textContent = name;
   if (pushHistory) addToHistory(name);
   renderMeta();
@@ -364,27 +541,22 @@ document.getElementById("gen10").addEventListener("click", () => {
   for (let i=0;i<10;i++) generateOne(true);
 });
 
-document.getElementById("copy").addEventListener("click", async () => {
+document.getElementById("clearHistory").addEventListener("click", () => {
+  elHistory.innerHTML = "";
+});
+
+document.getElementById("copyLatest").addEventListener("click", async () => {
   const text = elName.textContent.trim();
   if (!text || text === "—") return;
   await navigator.clipboard.writeText(text);
 });
 
-document.getElementById("clearHistory").addEventListener("click", () => {
-  elHistory.innerHTML = "";
-  usedCombos.clear();
-  renderMeta();
-});
-
-[elSep, elTitle].forEach(el => el.addEventListener("change", () => {
-  // reformat current visible name (without changing words)
-  // easiest: just generate a fresh one
+[elSep, elThree, elSfw].forEach(el => el.addEventListener("change", () => {
   generateOne(true);
 }));
 
-[elAvoid, elNoSame].forEach(el => el.addEventListener("change", renderMeta));
-
 // Initial
+computeActivePool();
 renderMeta();
 generateOne(true);
 </script>
