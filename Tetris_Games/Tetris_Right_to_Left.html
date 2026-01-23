@@ -1,0 +1,766 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tetris (Right → Left, Rotated Field)</title>
+  <style>
+    :root{
+      --bg:#0b0f14;
+      --text:#e7eefc;
+      --muted:#9fb0d0;
+      --border:rgba(255,255,255,.10);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;
+      background:linear-gradient(180deg,var(--bg),#070a0f);
+      color:var(--text);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+    }
+
+    /* Sidebar LEFT, game RIGHT */
+    .wrap{
+      width:min(980px, 100%);
+      display:grid;
+      grid-template-columns: 260px 1fr;
+      gap:14px;
+      align-items:start;
+    }
+
+    .side{
+      background:rgba(255,255,255,.04);
+      border:1px solid var(--border);
+      border-radius:18px;
+      padding:14px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+    .card{
+      background:rgba(255,255,255,.03);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px;
+    }
+    .card h2{
+      font-size:13px;
+      margin:0 0 8px 0;
+      color:var(--text);
+      letter-spacing:.2px;
+    }
+    .hint{
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.35;
+    }
+    .controls{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:6px;
+      font-size:12px;
+      color:var(--muted);
+    }
+    .controls .row{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .kbd{
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+      font-size:11px;
+      padding:2px 7px;
+      border-radius:8px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      white-space:nowrap;
+    }
+    .btns{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    button{
+      cursor:pointer;
+      border:1px solid rgba(255,255,255,.15);
+      background:rgba(122,162,255,.14);
+      color:var(--text);
+      padding:8px 10px;
+      border-radius:12px;
+      font-weight:650;
+      font-size:12px;
+      transition:transform .04s ease, background .15s ease, border-color .15s ease;
+    }
+    button:hover{background:rgba(122,162,255,.22); border-color:rgba(122,162,255,.35)}
+    button:active{transform:translateY(1px)}
+    button.secondary{background:rgba(255,255,255,.06)}
+    button.secondary:hover{background:rgba(255,255,255,.10)}
+
+    .nextBox{display:flex;gap:10px;align-items:flex-start}
+    #next{
+      width:120px;height:120px;
+      border-radius:12px;
+      background:rgba(0,0,0,.25);
+      border:1px solid rgba(255,255,255,.10);
+      image-rendering:pixelated;
+    }
+
+    .game{
+      background:rgba(255,255,255,.04);
+      border:1px solid var(--border);
+      border-radius:18px;
+      padding:14px;
+      position:relative;
+      overflow:hidden;
+    }
+    .hud{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:12px;
+    }
+    .title{display:flex;flex-direction:column;gap:2px}
+    .title h1{
+      font-size:18px;
+      margin:0;
+      letter-spacing:.2px;
+    }
+    .title .sub{font-size:12px;color:var(--muted)}
+    .stats{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .pill{
+      background:rgba(255,255,255,.05);
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:6px 10px;
+      font-size:12px;
+      color:var(--text);
+      display:flex;
+      gap:8px;
+      align-items:center;
+      white-space:nowrap;
+    }
+    .pill b{font-weight:650}
+
+    .boardWrap{position:relative;width:100%}
+    canvas#board{
+      display:block;
+      width:100%;
+      height:auto;
+      image-rendering:pixelated;
+      border-radius:14px;
+      background:rgba(0,0,0,.35);
+      border:1px solid rgba(255,255,255,.10);
+    }
+
+    .overlay{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:rgba(0,0,0,.55);
+      backdrop-filter: blur(3px);
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .18s ease;
+    }
+    .overlay.show{opacity:1;pointer-events:auto}
+    .overlay .modal{
+      width:min(420px, 92%);
+      background:rgba(18,24,38,.92);
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:18px;
+      padding:16px;
+      text-align:center;
+      box-shadow: 0 12px 40px rgba(0,0,0,.55);
+    }
+    .overlay .modal h3{
+      margin:0 0 6px 0;
+      font-size:18px;
+      letter-spacing:.2px;
+    }
+    .overlay .modal p{
+      margin:0 0 12px 0;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+    }
+
+    @media (max-width: 860px){
+      .wrap{grid-template-columns:1fr;}
+      #next{width:110px;height:110px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- LEFT SIDEBAR -->
+    <div class="side">
+      <div class="card">
+        <h2>Next Piece</h2>
+        <div class="nextBox">
+          <canvas id="next" width="120" height="120"></canvas>
+          <div class="hint">
+            Ghost outline shows where the piece will lock <b>to the left</b>.
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Controls</h2>
+        <div class="controls">
+          <div class="row"><span><span class="kbd">↑</span> / <span class="kbd">↓</span></span><span>Move up / down</span></div>
+          <div class="row"><span><span class="kbd">←</span></span><span>Speed up (soft push left)</span></div>
+          <div class="row"><span><span class="kbd">→</span></span><span>Rotate</span></div>
+          <div class="row"><span><span class="kbd">Space</span></span><span>Hard drop left</span></div>
+          <div class="row"><span><span class="kbd">P</span></span><span>Pause / Resume</span></div>
+          <div class="row"><span><span class="kbd">R</span></span><span>Restart</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Quick Actions</h2>
+        <div class="btns">
+          <button id="pauseBtn" class="secondary">Pause (P)</button>
+          <button id="resetBtn">Restart (R)</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Notes</h2>
+        <div class="hint">
+          The field is rotated 90°. Full <b>columns</b> clear in the rotated view (implemented as full logical rows).
+        </div>
+      </div>
+    </div>
+
+    <!-- GAME -->
+    <div class="game">
+      <div class="hud">
+        <div class="title">
+          <h1>Tetris (Right → Left)</h1>
+          <div class="sub">The playing field is rotated 90°. Pieces spawn on the right and drift left.</div>
+        </div>
+        <div class="stats">
+          <div class="pill">Score <b id="score">0</b></div>
+          <div class="pill">Lines <b id="lines">0</b></div>
+          <div class="pill">Level <b id="level">1</b></div>
+          <div class="pill">State <b id="state">Playing</b></div>
+        </div>
+      </div>
+
+      <div class="boardWrap">
+        <canvas id="board" aria-label="Tetris board"></canvas>
+      </div>
+
+      <div class="overlay" id="overlay">
+        <div class="modal">
+          <h3 id="overlayTitle">Paused</h3>
+          <p id="overlayText">Press <span class="kbd">P</span> to resume.</p>
+          <div class="btns" style="justify-content:center">
+            <button id="resumeBtn" class="secondary">Resume (P)</button>
+            <button id="restartBtn">Restart (R)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ====== Config ======
+  const COLS = 10;
+  const ROWS = 20;
+  const BLOCK = 32;
+
+  // This game uses a rotated draw transform:
+  // screenX = logicalY, screenY = LOGICAL_W - logicalX
+  // So:
+  // - Increasing logicalY moves RIGHT on screen
+  // - Decreasing logicalY moves LEFT on screen  ✅ (our new gravity)
+  // - Changing logicalX moves UP/DOWN on screen
+
+  const SOFT_PUSH_MS = 60;
+
+  // ====== DOM ======
+  const scoreEl = document.getElementById('score');
+  const linesEl = document.getElementById('lines');
+  const levelEl = document.getElementById('level');
+  const stateEl = document.getElementById('state');
+
+  const boardCanvas = document.getElementById('board');
+  const ctx = boardCanvas.getContext('2d');
+
+  const nextCanvas = document.getElementById('next');
+  const nctx = nextCanvas.getContext('2d');
+
+  const overlay = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlayTitle');
+  const overlayText = document.getElementById('overlayText');
+  const resumeBtn = document.getElementById('resumeBtn');
+  const restartBtn = document.getElementById('restartBtn');
+
+  const pauseBtn = document.getElementById('pauseBtn');
+  const resetBtn = document.getElementById('resetBtn');
+
+  // Rotated canvas sizing
+  const LOGICAL_W = COLS * BLOCK;
+  const LOGICAL_H = ROWS * BLOCK;
+  boardCanvas.width  = LOGICAL_H;
+  boardCanvas.height = LOGICAL_W;
+
+  // ====== Tetrominoes ======
+  const PIECES = [
+    null,
+    [[1,1,1,1]],                         // I
+    [[2,0,0],[2,2,2]],                   // J
+    [[0,0,3],[3,3,3]],                   // L
+    [[4,4],[4,4]],                       // O
+    [[0,5,5],[5,5,0]],                   // S
+    [[0,6,0],[6,6,6]],                   // T
+    [[7,7,0],[0,7,7]],                   // Z
+  ];
+
+  const COLORS = {
+    1:'rgba(122,162,255,0.95)',
+    2:'rgba(255,184,108,0.95)',
+    3:'rgba(255,122,162,0.95)',
+    4:'rgba(125,255,178,0.95)',
+    5:'rgba(255,255,140,0.95)',
+    6:'rgba(170,140,255,0.95)',
+    7:'rgba(255,120,120,0.95)',
+  };
+
+  function cloneMatrix(m){ return m.map(r => r.slice()); }
+  function rotateCW(m){
+    const h=m.length,w=m[0].length;
+    const out=Array.from({length:w},()=>Array(h).fill(0));
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
+        out[x][h-1-y]=m[y][x];
+      }
+    }
+    return out;
+  }
+
+  // ====== Game State ======
+  let board, current, next;
+  let score = 0, lines = 0, level = 1;
+
+  let driftIntervalMs = 650;
+  let lastDriftAt = 0;
+
+  let paused = false;
+  let running = true;
+  let gameOver = false;
+
+  let softPushing = false;
+  let softPushTimer = null;
+
+  // ====== Helpers ======
+  function makeBoard(){
+    return Array.from({length:ROWS},()=>Array(COLS).fill(0));
+  }
+  function randPieceId(){ return 1 + Math.floor(Math.random()*7); }
+
+  function newPiece(){
+    const id = randPieceId();
+    const m = cloneMatrix(PIECES[id]);
+
+    // Spawn at FAR RIGHT on screen:
+    // screen-right corresponds to large logicalY.
+    // piece occupies m.length rows in logicalY, so start at ROWS - m.length.
+    const y = ROWS - m.length;
+
+    // vertically centered on screen => center logicalX
+    const x = Math.floor((COLS - m[0].length)/2);
+
+    return { id, m, x, y };
+  }
+
+  function collides(piece, dx, dy, mOverride=null){
+    const m = mOverride || piece.m;
+    for(let py=0; py<m.length; py++){
+      for(let px=0; px<m[py].length; px++){
+        if(!m[py][px]) continue;
+        const nx = piece.x + px + dx; // logical x
+        const ny = piece.y + py + dy; // logical y
+        if(nx < 0 || nx >= COLS) return true;
+        if(ny < 0 || ny >= ROWS) return true;
+        if(board[ny][nx]) return true;
+      }
+    }
+    return false;
+  }
+
+  function merge(piece){
+    const m = piece.m;
+    for(let py=0; py<m.length; py++){
+      for(let px=0; px<m[py].length; px++){
+        if(!m[py][px]) continue;
+        const bx = piece.x + px;
+        const by = piece.y + py;
+        if(by>=0 && by<ROWS && bx>=0 && bx<COLS){
+          board[by][bx] = piece.id;
+        }
+      }
+    }
+  }
+
+  // Logical row clears. In rotated view, this looks like column clears.
+  function clearRows(){
+    let cleared = 0;
+    for(let y=ROWS-1; y>=0; y--){
+      let full = true;
+      for(let x=0; x<COLS; x++){
+        if(board[y][x] === 0){ full = false; break; }
+      }
+      if(full){
+        cleared++;
+        for(let yy=y; yy>0; yy--){
+          for(let x=0; x<COLS; x++){
+            board[yy][x] = board[yy-1][x];
+          }
+        }
+        for(let x=0; x<COLS; x++) board[0][x] = 0;
+        y++;
+      }
+    }
+
+    if(cleared){
+      const table = [0,100,300,500,800];
+      score += table[Math.min(cleared,4)] * level;
+      lines += cleared;
+      const newLevel = 1 + Math.floor(lines/10);
+      if(newLevel !== level){
+        level = newLevel;
+        driftIntervalMs = Math.max(120, 650 - (level-1)*45);
+      }
+      updateHUD();
+    }
+  }
+
+  function spawnNext(){
+    current = next || newPiece();
+    next = newPiece();
+
+    if(collides(current, 0, 0)){
+      gameOver = true;
+      running = false;
+      setOverlay('Game Over', 'Press R to restart.');
+    }
+    drawNext();
+  }
+
+  function tryRotate(){
+    const rotated = rotateCW(current.m);
+    const kicks = [[0,0],[-1,0],[1,0],[0,-1],[0,1],[-2,0],[2,0],[0,-2],[0,2]];
+    for(const [kx,ky] of kicks){
+      if(!collides(current, kx, ky, rotated)){
+        current.m = rotated;
+        current.x += kx;
+        current.y += ky;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Up/Down = vertical on screen => change logicalX (same mapping as before)
+  function moveVerticalOnScreen(dir){
+    // dir=-1 up, dir=+1 down
+    // With this rotation, "up on screen" means logicalX + 1
+    // and "down on screen" means logicalX - 1.
+    const dx = (dir === -1) ? +1 : -1;
+    if(!collides(current, dx, 0)) current.x += dx;
+  }
+
+  // ====== Right -> Left movement ======
+  // Drift LEFT on screen = decreasing logicalY.
+  function stepLeftOnScreen(){
+    if(!collides(current, 0, -1)){
+      current.y -= 1;
+      return true;
+    }
+    merge(current);
+    clearRows();
+    spawnNext();
+    return false;
+  }
+
+  function hardDropLeftOnScreen(){
+    while(!collides(current, 0, -1)) current.y -= 1;
+    merge(current);
+    clearRows();
+    spawnNext();
+  }
+
+  function getGhostPiece(){
+    const g = { id: current.id, m: current.m, x: current.x, y: current.y };
+    while(!collides(g, 0, -1)) g.y -= 1;
+    return g;
+  }
+
+  // ====== Rendering (rotated 90° clockwise) ======
+  function beginRotatedViewCW(){
+    // screenX=logicalY, screenY=LOGICAL_W-logicalX
+    ctx.setTransform(0, -1, 1, 0, 0, LOGICAL_W);
+  }
+
+  function clearCanvas(){
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0,0,boardCanvas.width,boardCanvas.height);
+    ctx.fillStyle = 'rgba(0,0,0,0.20)';
+    ctx.fillRect(0,0,boardCanvas.width,boardCanvas.height);
+  }
+
+  function drawGrid(){
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    for(let x=0;x<=COLS;x++){
+      ctx.beginPath();
+      ctx.moveTo(x*BLOCK+0.5, 0);
+      ctx.lineTo(x*BLOCK+0.5, ROWS*BLOCK);
+      ctx.stroke();
+    }
+    for(let y=0;y<=ROWS;y++){
+      ctx.beginPath();
+      ctx.moveTo(0, y*BLOCK+0.5);
+      ctx.lineTo(COLS*BLOCK, y*BLOCK+0.5);
+      ctx.stroke();
+    }
+  }
+
+  function drawCell(x,y,id,alpha=1){
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = COLORS[id] || 'rgba(255,255,255,0.9)';
+    ctx.fillRect(x*BLOCK, y*BLOCK, BLOCK, BLOCK);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+    ctx.strokeRect(x*BLOCK+0.5, y*BLOCK+0.5, BLOCK-1, BLOCK-1);
+  }
+
+  function drawBoard(){
+    for(let y=0;y<ROWS;y++){
+      for(let x=0;x<COLS;x++){
+        const id = board[y][x];
+        if(id) drawCell(x,y,id,1);
+      }
+    }
+  }
+
+  function drawPiece(piece){
+    const m = piece.m;
+    for(let py=0; py<m.length; py++){
+      for(let px=0; px<m[py].length; px++){
+        if(!m[py][px]) continue;
+        drawCell(piece.x + px, piece.y + py, piece.id, 1);
+      }
+    }
+  }
+
+  function drawGhost(piece){
+    const m = piece.m;
+    ctx.save();
+    for(let py=0; py<m.length; py++){
+      for(let px=0; px<m[py].length; px++){
+        if(!m[py][px]) continue;
+        const x = piece.x + px;
+        const y = piece.y + py;
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x*BLOCK+2, y*BLOCK+2, BLOCK-4, BLOCK-4);
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawNext(){
+    nctx.clearRect(0,0,nextCanvas.width,nextCanvas.height);
+    nctx.fillStyle = 'rgba(0,0,0,0.15)';
+    nctx.fillRect(0,0,nextCanvas.width,nextCanvas.height);
+
+    const m = next.m;
+    const cell = Math.floor(Math.min(nextCanvas.width, nextCanvas.height) / 6);
+    const w = m[0].length * cell;
+    const h = m.length * cell;
+    const ox = Math.floor((nextCanvas.width - w)/2);
+    const oy = Math.floor((nextCanvas.height - h)/2);
+
+    for(let y=0;y<m.length;y++){
+      for(let x=0;x<m[y].length;x++){
+        if(!m[y][x]) continue;
+        nctx.fillStyle = COLORS[next.id] || 'rgba(255,255,255,0.9)';
+        nctx.fillRect(ox + x*cell, oy + y*cell, cell, cell);
+        nctx.strokeStyle = 'rgba(255,255,255,0.10)';
+        nctx.strokeRect(ox + x*cell + 0.5, oy + y*cell + 0.5, cell-1, cell-1);
+      }
+    }
+  }
+
+  function render(){
+    clearCanvas();
+    beginRotatedViewCW();
+    drawGrid();
+    drawBoard();
+
+    if(!gameOver){
+      drawGhost(getGhostPiece());
+      drawPiece(current);
+    }
+
+    if(paused && !gameOver){
+      ctx.setTransform(1,0,0,1,0,0);
+      ctx.fillStyle = 'rgba(0,0,0,0.15)';
+      ctx.fillRect(0,0,boardCanvas.width,boardCanvas.height);
+    }
+  }
+
+  // ====== Overlay / HUD ======
+  function updateHUD(){
+    scoreEl.textContent = String(score);
+    linesEl.textContent = String(lines);
+    levelEl.textContent = String(level);
+    stateEl.textContent = gameOver ? 'Game Over' : (paused ? 'Paused' : 'Playing');
+  }
+
+  function setOverlay(title, text){
+    overlayTitle.textContent = title;
+    overlayText.innerHTML = text
+      .replaceAll('P','<span class="kbd">P</span>')
+      .replaceAll('R','<span class="kbd">R</span>');
+    overlay.classList.add('show');
+  }
+  function hideOverlay(){ overlay.classList.remove('show'); }
+
+  function setPaused(p){
+    if(gameOver) return;
+    paused = p;
+    updateHUD();
+    if(paused) setOverlay('Paused', 'Press P to resume.');
+    else hideOverlay();
+  }
+
+  // ====== Input ======
+  function startSoftPushLeft(){
+    if(softPushing || paused || gameOver) return;
+    softPushing = true;
+    softPushTimer = setInterval(() => {
+      if(paused || gameOver) return;
+      stepLeftOnScreen();
+      render();
+    }, SOFT_PUSH_MS);
+  }
+  function stopSoftPush(){
+    softPushing = false;
+    if(softPushTimer){
+      clearInterval(softPushTimer);
+      softPushTimer = null;
+    }
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if(!running && gameOver){
+      if(e.code === 'KeyR') restart();
+      return;
+    }
+
+    if(e.code === 'KeyP'){ setPaused(!paused); return; }
+    if(e.code === 'KeyR'){ restart(); return; }
+    if(paused || gameOver) return;
+
+    switch(e.code){
+      case 'ArrowUp':
+        e.preventDefault();
+        moveVerticalOnScreen(-1);
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        moveVerticalOnScreen(+1);
+        break;
+
+      // Adjusted controls for Right->Left:
+      // LEFT = speed up (soft push left)
+      case 'ArrowLeft':
+        e.preventDefault();
+        startSoftPushLeft();
+        break;
+
+      // RIGHT = rotate
+      case 'ArrowRight':
+        e.preventDefault();
+        if(!e.repeat) tryRotate();
+        break;
+
+      // SPACE = hard drop left
+      case 'Space':
+        e.preventDefault();
+        if(!e.repeat) hardDropLeftOnScreen();
+        break;
+    }
+    render();
+  });
+
+  window.addEventListener('keyup', (e) => {
+    if(e.code === 'ArrowLeft') stopSoftPush();
+  });
+
+  pauseBtn.addEventListener('click', () => setPaused(!paused));
+  resetBtn.addEventListener('click', () => restart());
+  resumeBtn.addEventListener('click', () => setPaused(false));
+  restartBtn.addEventListener('click', () => restart());
+
+  // ====== Loop ======
+  function tick(ts){
+    if(!running){
+      render();
+      requestAnimationFrame(tick);
+      return;
+    }
+
+    if(!paused && !gameOver){
+      if(!lastDriftAt) lastDriftAt = ts;
+      if(ts - lastDriftAt >= driftIntervalMs){
+        stepLeftOnScreen();
+        lastDriftAt = ts;
+      }
+    }
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  function restart(){
+    stopSoftPush();
+    board = makeBoard();
+    score = 0; lines = 0; level = 1;
+    driftIntervalMs = 650;
+    lastDriftAt = 0;
+    paused = false;
+    running = true;
+    gameOver = false;
+
+    next = newPiece();
+    spawnNext();
+    hideOverlay();
+    updateHUD();
+    render();
+  }
+
+  // Init
+  restart();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
