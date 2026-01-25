@@ -21,11 +21,12 @@
   a:hover { text-decoration:underline; }
   .muted { color:#777; font-weight:400; margin-left:6px; font-size: 0.9em; }
   .icon { display:inline-block; width: 22px; }
+  .path { color:#777; font-weight:400; margin-left:8px; font-size: 0.85em; }
 </style>
 </head>
 <body>
-  <h1>My GitHub HTML Pages</h1>
-  <p>Auto-generated list of all HTML files in this repository (grouped & sorted).</p>
+  <h1>GitHub HTML Pages</h1>
+  <p>Auto-generated list of HTML files in this repository (grouped & sorted).</p>
 
   <div class="panel">
     <div id="status" class="muted">Loading…</div>
@@ -42,6 +43,9 @@
   // ✅ Options
   const HIDE_ROOT_INDEX_HTML = true;   // hides "/index.html" only
   const HIDE_ALL_INDEX_HTML  = false;  // if you want to hide every ".../index.html", set true
+
+  // ✅ Hide files whose *filename* starts with "NSFW"
+  const HIDE_NSFw_PREFIX = true; // (case-insensitive) NSFW*.html won't be listed
 
   // --- Icon mapping (folder/file keywords -> emoji)
   const ICON_RULES = [
@@ -68,21 +72,49 @@
     return isDir ? DEFAULT_FOLDER_ICON : DEFAULT_FILE_ICON;
   }
 
-  // Folder group key = folder path ("" for root)
-  const groups = new Map(); // path -> array of { path, name }
+  // Group key = TOP-LEVEL folder only ("" for root)
+  // e.g. "DLE_Games/hockeystats/file.html" -> group "DLE_Games"
+  const groups = new Map(); // topFolder -> array of { path, name, relFolder }
+
+  function topLevelFolderFor(filePath) {
+    const parts = filePath.split("/").filter(Boolean);
+    if (parts.length <= 1) return ""; // root file like "foo.html"
+    return parts[0];                  // top-level folder
+  }
+
+  function relativeFolderWithinTop(filePath) {
+    // For displaying where inside the top-level folder it lives (optional)
+    // "DLE_Games/hockeystats/file.html" -> "hockeystats"
+    const parts = filePath.split("/").filter(Boolean);
+    if (parts.length <= 2) return ""; // directly inside top-level folder
+    return parts.slice(1, -1).join("/");
+  }
 
   function addToGroup(filePath) {
-    const parts = filePath.split("/");
-    const name = parts.pop();
-    const folder = parts.join("/"); // "" means root
-    if (!groups.has(folder)) groups.set(folder, []);
-    groups.get(folder).push({ path: filePath, name });
+    const parts = filePath.split("/").filter(Boolean);
+    const name = parts[parts.length - 1];
+    const top = topLevelFolderFor(filePath); // "" or top folder name
+    const relFolder = relativeFolderWithinTop(filePath);
+
+    if (!groups.has(top)) groups.set(top, []);
+    groups.get(top).push({ path: filePath, name, relFolder });
+  }
+
+  function isNSFWName(filename) {
+    // starts with NSFW (case-insensitive) and optionally separator, e.g. NSFW_, NSFW-, NSFW space
+    // "NSFWsomething.html", "NSFW_something.html", "nsfw-something.html"
+    return /^nsfw([_\-\s]|$)/i.test(filename);
   }
 
   function shouldHide(filePath) {
     const lower = filePath.toLowerCase();
+    const filename = filePath.split("/").pop() || "";
+
     if (HIDE_ALL_INDEX_HTML && lower.endsWith("/index.html")) return true;
     if (HIDE_ROOT_INDEX_HTML && lower === "index.html") return true;
+
+    if (HIDE_NSFw_PREFIX && isNSFWName(filename)) return true;
+
     return false;
   }
 
@@ -109,22 +141,22 @@
   function buildUI() {
     statusEl.textContent = "";
 
-    // Sort group names (folders) alphabetically; root first
-    const folderNames = Array.from(groups.keys())
+    // Sort group names alphabetically; root first
+    const groupNames = Array.from(groups.keys())
       .sort((a, b) => {
         if (a === "" && b !== "") return -1;
         if (b === "" && a !== "") return 1;
         return sortAlpha(a, b);
       });
 
-    // Build each folder group
-    for (const folder of folderNames) {
-      const files = groups.get(folder) || [];
-      // Sort files alphabetically by display name
+    for (const group of groupNames) {
+      const files = groups.get(group) || [];
+
+      // Sort files alphabetically by name
       files.sort((a, b) => sortAlpha(a.name, b.name));
 
-      const isRoot = folder === "";
-      const label = isRoot ? "Root" : folder;
+      const isRoot = group === "";
+      const label = isRoot ? "Root" : group;
 
       const details = document.createElement("details");
       details.open = isRoot; // open root by default
@@ -142,10 +174,10 @@
         a.target = "_blank";
         a.rel = "noopener noreferrer";
 
-        // Display name: show file name only inside its folder
-        const displayName = f.name;
+        // Show file name, and (optionally) the subfolder path within the top-level group
+        const subPathHint = (group !== "" && f.relFolder) ? ` <span class="path">(${f.relFolder})</span>` : "";
+        a.innerHTML = `<span class="icon">${iconFor(f.path, false)}</span>${f.name}${subPathHint}`;
 
-        a.innerHTML = `<span class="icon">${iconFor(f.path, false)}</span>${displayName}`;
         li.appendChild(a);
         ul.appendChild(li);
       }
@@ -154,7 +186,7 @@
       groupsEl.appendChild(details);
     }
 
-    if (folderNames.length === 0) {
+    if (groupNames.length === 0) {
       statusEl.textContent = "No HTML files found.";
     }
   }
