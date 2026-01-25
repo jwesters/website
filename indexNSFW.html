@@ -52,6 +52,11 @@
   const HIDE_ROOT_INDEX_HTML = true;
   const HIDE_ALL_INDEX_HTML  = false;
 
+  // --- Hide specific files (anywhere)
+  const HIDE_EXACT_FILES = new Set([
+    "indexnsfw.html"
+  ]);
+
   // --- Icon mapping
   const ICON_RULES = [
     { re: /(tetris)/i, icon: "🧱" },
@@ -72,8 +77,13 @@
   const groupsEl = document.getElementById("groups");
   const lastUpdatedEl = document.getElementById("lastUpdated");
 
-  function iconFor(name, isDir) {
-    const hit = ICON_RULES.find(r => r.re.test(name));
+  function displayName(fileName) {
+    // Remove "NSFW-" from what the user sees (case-insensitive), without changing the link URL/path.
+    return String(fileName).replace(/^nsfw-/i, "");
+  }
+
+  function iconFor(displayText, isDir) {
+    const hit = ICON_RULES.find(r => r.re.test(displayText));
     if (hit) return hit.icon;
     return isDir ? DEFAULT_FOLDER_ICON : DEFAULT_FILE_ICON;
   }
@@ -101,9 +111,16 @@
   }
 
   function shouldHide(filePath) {
-    const lowerPath = filePath.toLowerCase();
+    const lowerPath = String(filePath).toLowerCase();
+
+    // Hide index files per existing options
     if (HIDE_ALL_INDEX_HTML && lowerPath.endsWith("/index.html")) return true;
     if (HIDE_ROOT_INDEX_HTML && lowerPath === "index.html") return true;
+
+    // Hide indexNSFW.html anywhere in the repo
+    const base = lowerPath.split("/").pop();
+    if (HIDE_EXACT_FILES.has(base)) return true;
+
     return false;
   }
 
@@ -148,7 +165,10 @@
       a.href = `${SITE_URL}/${f.path}`;
       a.target = "_blank";
       a.rel = "noopener noreferrer";
-      a.innerHTML = `<span class="icon">${iconFor(f.path, false)}</span>${f.name}`;
+
+      const shown = displayName(f.name);
+      a.innerHTML = `<span class="icon">${iconFor(shown, false)}</span>${shown}`;
+
       li.appendChild(a);
       ul.appendChild(li);
     }
