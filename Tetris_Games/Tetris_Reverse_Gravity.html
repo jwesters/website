@@ -174,15 +174,30 @@
   const createBoard = () => Array.from({length: ROWS}, () => Array(COLS).fill(0));
   const cloneMatrix = (m) => m.map(r => r.slice());
 
+  // ====== FIX: spawn pieces flush to the bottom visible row ======
+  function bottomOccupiedRow(m) {
+    for (let y = m.length - 1; y >= 0; y--) {
+      for (let x = 0; x < m[y].length; x++) {
+        if (m[y][x]) return y;
+      }
+    }
+    return m.length - 1;
+  }
+
   function randomPiece() {
     const p = PIECES[(Math.random() * PIECES.length) | 0];
+    const m = cloneMatrix(p.m);
+    const bottom = bottomOccupiedRow(m);
+    const spawnY = (ROWS - 1) - bottom; // aligns lowest filled blocks to last board row
+
     return {
       id: p.id,
-      m: cloneMatrix(p.m),
-      x: ((COLS / 2) | 0) - ((p.m[0].length / 2) | 0),
-      y: ROWS - p.m.length,
+      m,
+      x: ((COLS / 2) | 0) - ((m[0].length / 2) | 0),
+      y: spawnY,
     };
   }
+  // =============================================================
 
   function collides(piece, offX = 0, offY = 0, testMatrix = piece.m) {
     for (let y = 0; y < testMatrix.length; y++) {
@@ -374,7 +389,7 @@
       ctx.fillText('PAUSED', W/2, H/2);
     }
 
-    // ✅ Game Over overlay in the middle of the playing field
+    // Game Over overlay
     if (gameOver) {
       ctx.globalAlpha = 0.62;
       ctx.fillStyle = '#000';
@@ -384,12 +399,10 @@
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
-      // Title
       ctx.fillStyle = '#ffffff';
       ctx.font = `900 ${Math.floor(BLOCK*0.95)}px system-ui`;
       ctx.fillText('GAME OVER', W/2, H/2 - BLOCK*0.3);
 
-      // Subtitle
       ctx.globalAlpha = 0.9;
       ctx.font = `700 ${Math.floor(BLOCK*0.45)}px system-ui`;
       ctx.fillText('Press R to restart', W/2, H/2 + BLOCK*0.65);
