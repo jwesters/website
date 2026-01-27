@@ -3,15 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Tetris (Arrow Keys Only) + Difficulty (Word File)</title>
+  <title>Tetris (Arrow Keys Only) + Word Unlock + Difficulty</title>
   <style>
     :root{
       --bg:#0b0f14;
-      --panel:#111826;
       --ink:#e8eef7;
       --muted:#9fb0c4;
       --border:#233247;
+      --panel:rgba(0,0,0,0.18);
       --btn:#1f6feb;
+      --warn:#fb7185;
+      --ok:#34d399;
     }
     *{box-sizing:border-box}
     body{
@@ -27,10 +29,10 @@
     }
     .wrap{
       display:grid;
-      grid-template-columns:auto 240px;
+      grid-template-columns:auto 260px;
       gap:16px;
       align-items:start;
-      max-width: 780px;
+      max-width: 860px;
       width:100%;
     }
     .card{
@@ -43,9 +45,9 @@
     .main{
       padding:14px;
       display:flex;
-      gap:14px;
-      align-items:flex-start;
       justify-content:center;
+      align-items:flex-start;
+      gap:14px;
     }
     canvas{
       display:block;
@@ -61,7 +63,7 @@
       gap:12px;
     }
     .title{
-      font-weight:700;
+      font-weight:800;
       letter-spacing:0.3px;
       font-size:16px;
       margin:0 0 6px 0;
@@ -71,7 +73,7 @@
       justify-content:space-between;
       gap:10px;
       padding:10px 12px;
-      background:rgba(0,0,0,0.18);
+      background:var(--panel);
       border:1px solid rgba(255,255,255,0.08);
       border-radius:12px;
       font-size:14px;
@@ -79,7 +81,7 @@
     .stat span:last-child{color:var(--muted)}
     .controls{
       padding:10px 12px;
-      background:rgba(0,0,0,0.18);
+      background:var(--panel);
       border:1px solid rgba(255,255,255,0.08);
       border-radius:12px;
       font-size:13px;
@@ -94,16 +96,16 @@
       color:white;
       padding:10px 12px;
       border-radius:12px;
-      font-weight:700;
+      font-weight:800;
       cursor:pointer;
       flex:1;
-      min-width:100px;
+      min-width:110px;
     }
     button.secondary{
       background:rgba(255,255,255,0.08);
       border:1px solid rgba(255,255,255,0.12);
       color:var(--ink);
-      font-weight:650;
+      font-weight:750;
     }
     button:disabled{opacity:0.55; cursor:not-allowed}
     button:active{transform:translateY(1px)}
@@ -115,13 +117,14 @@
       color:var(--muted);
       font-size:12px;
     }
+
     label{
       display:block;
       font-size:12px;
       color:var(--muted);
       margin-bottom:6px;
     }
-    select{
+    select, input[type="text"]{
       width:100%;
       padding:10px 12px;
       border-radius:12px;
@@ -129,39 +132,56 @@
       background:rgba(0,0,0,0.20);
       color:var(--ink);
       outline:none;
-      font-weight:650;
+      font-weight:750;
     }
-    .banner{
+    input[type="text"]::placeholder{color:rgba(159,176,196,0.7)}
+    .box{
       padding:10px 12px;
-      background:rgba(0,0,0,0.18);
+      background:var(--panel);
       border:1px solid rgba(255,255,255,0.08);
       border-radius:12px;
-      font-size:13px;
-      color:var(--muted);
-      line-height:1.35;
     }
-    .wordbox{
-      padding:10px 12px;
-      background:rgba(0,0,0,0.18);
-      border:1px solid rgba(255,255,255,0.08);
-      border-radius:12px;
-      font-size:14px;
+    .unlockTop{
       display:flex;
+      align-items:center;
       justify-content:space-between;
       gap:10px;
+      margin-bottom:8px;
     }
-    .wordbox .label{ color:var(--muted); font-size:12px; }
-    .wordbox .word{ font-weight:800; letter-spacing:0.4px; }
     .pill{
       display:inline-block;
       padding:2px 8px;
       border-radius:999px;
       border:1px solid rgba(255,255,255,0.14);
       background:rgba(255,255,255,0.06);
-      color:var(--ink);
       font-size:12px;
-      font-weight:750;
-      margin-left:8px;
+      font-weight:850;
+      white-space:nowrap;
+    }
+    .pill.locked{ border-color: rgba(251,113,133,0.45); background: rgba(251,113,133,0.10); }
+    .pill.unlocked{ border-color: rgba(52,211,153,0.45); background: rgba(52,211,153,0.10); }
+    .pattern{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size:18px;
+      letter-spacing:2px;
+      font-weight:900;
+      margin:0 0 8px 0;
+    }
+    .small{
+      font-size:12px;
+      color:var(--muted);
+      margin:0;
+      line-height:1.35;
+    }
+    .shake{
+      animation: shake 220ms linear;
+    }
+    @keyframes shake {
+      0%{ transform:translateX(0) }
+      25%{ transform:translateX(-5px) }
+      50%{ transform:translateX(5px) }
+      75%{ transform:translateX(-4px) }
+      100%{ transform:translateX(0) }
     }
   </style>
 </head>
@@ -171,7 +191,7 @@
       <div class="main">
         <canvas id="game" width="240" height="480" aria-label="Tetris board"></canvas>
       </div>
-      <div class="footer">Arrow keys only • Up rotate • Down = faster drop</div>
+      <div class="footer">Arrow keys only • Up rotate • Down = soft drop</div>
     </div>
 
     <div class="card">
@@ -185,18 +205,21 @@
           <label for="difficulty">Difficulty</label>
           <select id="difficulty">
             <option value="easy">Easy</option>
-            <option value="medium">Medium</option>
+            <option value="medium" selected>Medium</option>
             <option value="hard">Hard</option>
           </select>
-          <p class="hint" style="margin-top:8px;">Difficulty adjusts speed + the “daily word”.</p>
+          <p class="hint" style="margin-top:8px;">Difficulty changes speed + which words are chosen.</p>
         </div>
 
-        <div class="wordbox" title="Pulled from your word file based on difficulty pool">
-          <div>
-            <div class="label">Daily word</div>
-            <div class="word" id="dailyWord">—</div>
+        <div class="box" id="unlockBox">
+          <div class="unlockTop">
+            <span style="font-weight:900;">Unlock word</span>
+            <span class="pill locked" id="lockPill">LOCKED</span>
           </div>
-          <div class="pill" id="wordPoolInfo">Loading…</div>
+          <p class="pattern" id="pattern">—</p>
+          <input id="wordInput" type="text" inputmode="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Type the word to unlock controls" />
+          <p class="small" id="unlockHint">Controls are disabled until you type the word correctly. If you make a mistake, retype the whole word.</p>
+          <p class="small" id="wordStatus" style="margin-top:8px;">Word file: loading…</p>
         </div>
 
         <div class="stat"><span>Score</span><span id="score">0</span></div>
@@ -216,11 +239,7 @@
           <button id="pauseBtn" class="secondary" disabled>Pause</button>
         </div>
 
-        <div class="banner" id="status">
-          Word file: <span id="wordStatus">loading…</span>
-        </div>
-
-        <p class="hint">Tip: click the game area once so the arrow keys focus the page.</p>
+        <p class="hint">Tip: click the game area or the input once if keys don’t respond.</p>
       </div>
     </div>
   </div>
@@ -243,12 +262,13 @@
 
   const startBtn = document.getElementById('startBtn');
   const pauseBtn = document.getElementById('pauseBtn');
-
   const difficultySel = document.getElementById('difficulty');
-  const dailyWordEl = document.getElementById('dailyWord');
-  const wordPoolInfoEl = document.getElementById('wordPoolInfo');
+
+  const unlockBox = document.getElementById('unlockBox');
+  const lockPill = document.getElementById('lockPill');
+  const patternEl = document.getElementById('pattern');
+  const wordInput = document.getElementById('wordInput');
   const wordStatusEl = document.getElementById('wordStatus');
-  const statusBox = document.getElementById('status');
 
   // ===== Colors =====
   const COLORS = {
@@ -305,10 +325,7 @@
   function createBoard() {
     return Array.from({length: ROWS}, () => Array(COLS).fill(null));
   }
-
-  function cloneMatrix(m) {
-    return m.map(row => row.slice());
-  }
+  function cloneMatrix(m) { return m.map(r => r.slice()); }
 
   function rotateMatrixCW(matrix) {
     const h = matrix.length;
@@ -362,7 +379,7 @@
         if (!shape[y][x]) continue;
         const by = piece.y + y;
         const bx = piece.x + x;
-        if (by >= 0 && by < ROWS && bx >= 0 && bx < COLS){
+        if (by >= 0 && by < ROWS && bx >= 0 && bx < COLS) {
           board[by][bx] = type;
         }
       }
@@ -421,18 +438,17 @@
       ctx.fillStyle = 'rgba(0,0,0,0.65)';
       ctx.fillRect(0,0,canvas.width,canvas.height);
       ctx.fillStyle = '#ffffff';
-      ctx.font = '700 24px system-ui, sans-serif';
+      ctx.font = '900 24px system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('Game Over', canvas.width/2, canvas.height/2 - 8);
       ctx.font = '14px system-ui, sans-serif';
       ctx.fillStyle = 'rgba(255,255,255,0.85)';
       ctx.fillText('Press Start to play again', canvas.width/2, canvas.height/2 + 18);
-    }
-    if (paused && !gameOver) {
+    } else if (paused) {
       ctx.fillStyle = 'rgba(0,0,0,0.55)';
       ctx.fillRect(0,0,canvas.width,canvas.height);
       ctx.fillStyle = '#ffffff';
-      ctx.font = '700 22px system-ui, sans-serif';
+      ctx.font = '900 22px system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('Paused', canvas.width/2, canvas.height/2);
     }
@@ -459,7 +475,6 @@
     }
     const w = maxX - minX + 1;
     const h = maxY - minY + 1;
-
     const offsetX = (((nextCanvas.width / size) | 0) - w) / 2;
     const offsetY = (((nextCanvas.height / size) | 0) - h) / 2;
 
@@ -471,20 +486,20 @@
         drawCell(nctx, px, py, size, COLORS[type]);
       }
     }
-
     nctx.strokeStyle = 'rgba(255,255,255,0.12)';
     nctx.strokeRect(0.5,0.5,nextCanvas.width-1,nextCanvas.height-1);
   }
 
-  // ===== Word loading / difficulty pools =====
-  // Uses your file's ORDER (commonest words first):
-  // easy: first 2000, medium: next 3000, hard: rest
-  const WORD_FILE = 'words.txt';
-  let allWords = [];
+  // ===== Words (file) =====
+  const WORD_FILE = 'google-10000-english-no-swears.txt';
+  const fallbackWords = [
+    "cat","dog","tree","house","school","pencil","paper","planet","window","orange",
+    "music","tiger","mouse","green","blue","yellow","purple","rocket","zebra","guitar"
+  ];
   let pools = { easy: [], medium: [], hard: [] };
 
   function sanitizeWord(w){
-    return (w || '').trim().toLowerCase().replace(/[^a-z]/g, '');
+    return (w || '').trim().toLowerCase().replace(/[^a-z]/g,'');
   }
 
   function buildPoolsFromOrder(words){
@@ -497,129 +512,169 @@
       unique.push(w);
     }
     const easyEnd = Math.min(2000, unique.length);
-    const medEnd = Math.min(easyEnd + 3000, unique.length);
-
-    pools.easy = unique.slice(0, easyEnd);
+    const medEnd  = Math.min(easyEnd + 3000, unique.length);
+    pools.easy   = unique.slice(0, easyEnd);
     pools.medium = unique.slice(easyEnd, medEnd);
-    pools.hard = unique.slice(medEnd);
-
+    pools.hard   = unique.slice(medEnd);
     return unique.length;
-  }
-
-  function pickDailyWord(){
-    const mode = difficultySel.value;
-    const list = pools[mode] || [];
-    if (!list.length) {
-      dailyWordEl.textContent = '—';
-      wordPoolInfoEl.textContent = 'No words';
-      return;
-    }
-
-    // Deterministic per day + mode (same word for a given day/mode)
-    const now = new Date();
-    const seedStr = `${now.getUTCFullYear()}-${now.getUTCMonth()+1}-${now.getUTCDate()}-${mode}`;
-    let seed = 0;
-    for (let i=0; i<seedStr.length; i++) seed = (seed*31 + seedStr.charCodeAt(i)) >>> 0;
-
-    const idx = seed % list.length;
-    dailyWordEl.textContent = list[idx];
-    wordPoolInfoEl.textContent = `${mode.toUpperCase()} • ${list.length}`;
   }
 
   async function loadWords(){
     try{
-      wordStatusEl.textContent = 'loading…';
+      wordStatusEl.textContent = 'Word file: loading…';
       const res = await fetch(WORD_FILE, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
-      allWords = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-
-      const total = buildPoolsFromOrder(allWords);
-      wordStatusEl.textContent = `loaded (${total} unique)`;
-      pickDailyWord();
-    } catch (err){
-      console.error(err);
-      wordStatusEl.textContent = `failed (put "${WORD_FILE}" beside the HTML)`;
-      statusBox.style.borderColor = 'rgba(251,113,133,0.45)';
-      statusBox.style.background = 'rgba(251,113,133,0.08)';
-      pickDailyWord();
+      const lines = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      const total = buildPoolsFromOrder(lines);
+      wordStatusEl.textContent = `Word file: loaded (${total} unique)`;
+    } catch (e) {
+      console.warn('Word file load failed, using fallback list.', e);
+      buildPoolsFromOrder(fallbackWords);
+      wordStatusEl.textContent = `Word file: not found (using fallback words)`;
     }
   }
 
-  difficultySel.addEventListener('change', () => {
-    applyDifficultyToSpeed();
-    pickDailyWord();
-  });
+  function pickWordForMode(mode){
+    const list = pools[mode] || [];
+    if (!list.length) return "word";
+    // random per piece (not per day)
+    const idx = (Math.random() * list.length) | 0;
+    return list[idx];
+  }
 
-  // ===== Game state =====
-  let board = createBoard();
-  let current = null;
-  let next = null;
-  let score = 0;
-  let lines = 0;
-  let level = 1;
-
-  // Difficulty speed profiles (lower = faster)
+  // ===== Difficulty speeds =====
   const DIFF = {
     easy:   { base: 820, levelStep: 45, floor: 170 },
     medium: { base: 700, levelStep: 55, floor: 120 },
     hard:   { base: 560, levelStep: 65, floor: 85  },
   };
 
-  let dropBaseMs = 700;
-  let dropMs = dropBaseMs;
+  // ===== Game state =====
+  let board = createBoard();
+  let current = null;
+  let next = null;
+
+  let score = 0;
+  let lines = 0;
+  let level = 1;
+
+  let baseDropMs = 700;
   let lastTime = 0;
-  let dropCounter = 0;
+  let accumulator = 0;
 
   let running = false;
   let paused = false;
   let gameOver = false;
 
-  function updateHUD() {
+  // Unlock/typing state
+  let locked = true;
+  let unlockWord = "";
+  let typed = "";
+
+  // Soft drop state (FIXED): we apply a multiplier instead of swapping timers.
+  const held = { down:false };
+
+  function updateHUD(){
     scoreEl.textContent = String(score);
     linesEl.textContent = String(lines);
     levelEl.textContent = String(level);
   }
 
-  function applyDifficultyToSpeed(){
+  function applyDifficultySpeed(){
     const mode = difficultySel.value;
     const cfg = DIFF[mode] || DIFF.medium;
-    // recompute based on current level
-    dropBaseMs = Math.max(cfg.floor, cfg.base - (level - 1) * cfg.levelStep);
-    dropMs = dropBaseMs;
+    baseDropMs = Math.max(cfg.floor, cfg.base - (level - 1) * cfg.levelStep);
   }
 
-  function resetGame() {
+  function scoreForClears(n) {
+    const base = [0, 100, 300, 500, 800][n] || 0;
+    return base * level;
+  }
+
+  function bumpLevelIfNeeded(){
+    const newLevel = 1 + Math.floor(lines / 10);
+    if (newLevel !== level){
+      level = newLevel;
+      applyDifficultySpeed();
+    }
+  }
+
+  function setLocked(isLocked){
+    locked = isLocked;
+    lockPill.textContent = locked ? 'LOCKED' : 'UNLOCKED';
+    lockPill.classList.toggle('locked', locked);
+    lockPill.classList.toggle('unlocked', !locked);
+
+    if (locked){
+      // keep focus in input for typing
+      wordInput.disabled = false;
+      wordInput.value = '';
+      typed = '';
+      renderPattern();
+      setTimeout(() => wordInput.focus({preventScroll:true}), 0);
+    } else {
+      // stop typing and return to arrow controls
+      wordInput.value = '';
+      wordInput.blur();
+    }
+  }
+
+  function renderPattern(){
+    if (!unlockWord){
+      patternEl.textContent = '—';
+      return;
+    }
+    const shown = unlockWord.split('').map((ch, i) => (i < typed.length ? ch.toUpperCase() : '_')).join(' ');
+    patternEl.textContent = shown;
+  }
+
+  function newUnlockWord(){
+    const mode = difficultySel.value;
+    unlockWord = pickWordForMode(mode);
+    typed = '';
+    renderPattern();
+    setLocked(true);
+  }
+
+  function resetGame(){
     board = createBoard();
     score = 0;
     lines = 0;
     level = 1;
+    applyDifficultySpeed();
 
     lastTime = 0;
-    dropCounter = 0;
+    accumulator = 0;
+
     gameOver = false;
     paused = false;
-
-    applyDifficultyToSpeed();
 
     current = newPiece(randType());
     next = newPiece(randType());
     drawNext();
     updateHUD();
 
+    held.down = false;
+
+    newUnlockWord();
+
     if (collides(board, current, 0, 0)) {
       gameOver = true;
+      running = false;
+      pauseBtn.disabled = true;
     }
     drawBoard();
   }
 
-  function spawnNext() {
+  function spawnNext(){
     current = next;
     current.x = ((COLS / 2) | 0) - ((current.shape[0].length / 2) | 0);
     current.y = -1;
-
     next = newPiece(randType());
     drawNext();
+
+    newUnlockWord();
 
     if (collides(board, current, 0, 0)) {
       gameOver = true;
@@ -628,52 +683,43 @@
     }
   }
 
-  function scoreForClears(n) {
-    const base = [0, 100, 300, 500, 800][n] || 0;
-    return base * level;
-  }
+  function lockPieceAndContinue(){
+    // Merge and keep it on the board (FIXED: ensures pieces “stay on bottom”)
+    merge(board, current);
 
-  function bumpLevelIfNeeded() {
-    const newLevel = 1 + Math.floor(lines / 10);
-    if (newLevel !== level) {
-      level = newLevel;
-      applyDifficultyToSpeed();
+    const cleared = clearLines(board);
+    if (cleared){
+      lines += cleared;
+      score += scoreForClears(cleared);
+      bumpLevelIfNeeded();
     }
+    updateHUD();
+    spawnNext();
   }
 
-  function hardTick() {
+  function stepDownOnce(){
     if (!current || gameOver) return;
-
     if (!collides(board, current, 0, 1)) {
       current.y += 1;
     } else {
-      merge(board, current);
-      const cleared = clearLines(board);
-      if (cleared) {
-        lines += cleared;
-        score += scoreForClears(cleared);
-        bumpLevelIfNeeded();
-      }
-      spawnNext();
+      lockPieceAndContinue();
     }
-    updateHUD();
     drawBoard();
   }
 
-  function tryMove(dx) {
+  function tryMove(dx){
     if (!current || paused || gameOver) return;
-    if (!collides(board, current, dx, 0)) {
-      current.x += dx;
-      drawBoard();
-    }
+    if (collides(board, current, dx, 0)) return;
+    current.x += dx;
+    drawBoard();
   }
 
-  function tryRotate() {
+  function tryRotate(){
     if (!current || paused || gameOver) return;
     const rotated = rotateMatrixCW(current.shape);
     const kicks = [0, -1, 1, -2, 2];
-    for (const k of kicks) {
-      if (!collides(board, current, k, 0, rotated)) {
+    for (const k of kicks){
+      if (!collides(board, current, k, 0, rotated)){
         current.shape = rotated;
         current.x += k;
         drawBoard();
@@ -682,65 +728,101 @@
     }
   }
 
-  function setSoftDrop(on) {
-    if (!running || paused || gameOver) return;
-    // Soft drop is always faster; scale a bit per difficulty
-    const mode = difficultySel.value;
-    const scale = (mode === 'easy') ? 0.16 : (mode === 'hard' ? 0.10 : 0.12);
-    dropMs = on ? Math.max(35, dropBaseMs * scale) : dropBaseMs;
-  }
-
-  function loop(time = 0) {
-    if (!running) {
+  function loop(time=0){
+    if (!running){
       drawBoard();
       return;
     }
-    const delta = time - lastTime;
+
+    const dt = time - lastTime;
     lastTime = time;
 
-    if (!paused && !gameOver) {
-      dropCounter += delta;
-      if (dropCounter >= dropMs) {
-        hardTick();
-        dropCounter = 0;
-      } else {
-        drawBoard();
+    if (!paused && !gameOver){
+      // Soft drop multiplier; when held.down true, gravity is faster.
+      const multiplier = held.down ? 10 : 1;
+
+      // If locked (typing), we still let it fall straight down (no control),
+      // but soft drop does NOT apply while locked (by design).
+      const effMult = locked ? 1 : multiplier;
+
+      accumulator += dt * effMult;
+
+      // Use while-loop so it can “catch up” cleanly without skipping locks
+      while (accumulator >= baseDropMs) {
+        accumulator -= baseDropMs;
+        stepDownOnce();
+        if (gameOver) break;
       }
-    } else {
-      drawBoard();
     }
 
     requestAnimationFrame(loop);
   }
 
-  // ===== Input: Arrow keys ONLY =====
-  const held = { down:false };
+  // ===== Input handling =====
+  // Arrow keys only for gameplay; ignore all other keys globally.
+  // IMPORTANT: do NOT block typing in the input. So if the focused element is the input,
+  // we do not hijack key events.
   window.addEventListener('keydown', (e) => {
+    if (e.target === wordInput) return; // allow typing
+
     const k = e.key;
-    if (k === 'ArrowUp' || k === 'ArrowDown' || k === 'ArrowLeft' || k === 'ArrowRight') {
-      e.preventDefault();
-    } else {
+    const isArrow = (k === 'ArrowUp' || k === 'ArrowDown' || k === 'ArrowLeft' || k === 'ArrowRight');
+    if (!isArrow) return;
+
+    e.preventDefault();
+
+    if (!running || paused || gameOver) return;
+    if (locked) {
+      // controls disabled while locked
+      if (k === 'ArrowDown') { /* still ignore while locked */ }
       return;
     }
-
-    if (!running) return;
-    if (gameOver) return;
 
     if (k === 'ArrowLeft') tryMove(-1);
     if (k === 'ArrowRight') tryMove(1);
     if (k === 'ArrowUp') tryRotate();
-    if (k === 'ArrowDown') {
-      if (!held.down) {
-        held.down = true;
-        setSoftDrop(true);
-      }
-    }
-  }, {passive:false});
+    if (k === 'ArrowDown') held.down = true; // soft drop engaged
+  }, { passive:false });
 
   window.addEventListener('keyup', (e) => {
-    if (e.key === 'ArrowDown') {
-      held.down = false;
-      setSoftDrop(false);
+    if (e.key === 'ArrowDown') held.down = false;
+  });
+
+  window.addEventListener('blur', () => {
+    // Fixes stuck soft-drop if focus is lost
+    held.down = false;
+  });
+
+  // ===== Typing (unlock) =====
+  wordInput.addEventListener('input', () => {
+    if (!locked) return;
+
+    // Only keep letters; do not use keyboard shortcuts for the game.
+    let v = wordInput.value.toLowerCase().replace(/[^a-z]/g,'');
+    // Limit length to the target word
+    if (v.length > unlockWord.length) v = v.slice(0, unlockWord.length);
+
+    typed = v;
+    wordInput.value = v;
+    renderPattern();
+
+    // Check correctness as they type
+    const targetPrefix = unlockWord.slice(0, typed.length);
+    if (typed !== targetPrefix) {
+      // wrong → reset and keep the same word
+      typed = '';
+      wordInput.value = '';
+      renderPattern();
+
+      unlockBox.classList.remove('shake');
+      void unlockBox.offsetWidth; // restart animation
+      unlockBox.classList.add('shake');
+      return;
+    }
+
+    if (typed.length === unlockWord.length) {
+      // unlocked!
+      setLocked(false);
     }
   });
 
@@ -750,20 +832,43 @@
     running = true;
     pauseBtn.disabled = false;
     pauseBtn.textContent = 'Pause';
-    loop();
+    requestAnimationFrame(loop);
   });
 
   pauseBtn.addEventListener('click', () => {
     if (!running || gameOver) return;
     paused = !paused;
     pauseBtn.textContent = paused ? 'Resume' : 'Pause';
+    if (!paused && locked) {
+      setTimeout(() => wordInput.focus({preventScroll:true}), 0);
+    }
     drawBoard();
   });
 
+  difficultySel.addEventListener('change', () => {
+    applyDifficultySpeed();
+    // If currently locked, pick a new word in the new pool for consistency
+    if (running && !gameOver) newUnlockWord();
+  });
+
   // ===== Init =====
-  resetGame();
-  drawBoard();
-  loadWords();
+  function init(){
+    // build initial pools first (fallback), then attempt file load
+    buildPoolsFromOrder(fallbackWords);
+    loadWords().then(() => {
+      // keep current word logic consistent
+      if (!running) {
+        unlockWord = pickWordForMode(difficultySel.value);
+        typed = '';
+        renderPattern();
+        setLocked(true);
+      }
+    });
+
+    resetGame();
+    drawBoard();
+  }
+  init();
 })();
 </script>
 </body>
