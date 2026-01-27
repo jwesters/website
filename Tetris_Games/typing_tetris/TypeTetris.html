@@ -1,0 +1,770 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tetris (Arrow Keys Only) + Difficulty (Word File)</title>
+  <style>
+    :root{
+      --bg:#0b0f14;
+      --panel:#111826;
+      --ink:#e8eef7;
+      --muted:#9fb0c4;
+      --border:#233247;
+      --btn:#1f6feb;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      background:radial-gradient(1200px 800px at 30% 10%, #132034 0%, var(--bg) 55%, #070a0f 100%);
+      color:var(--ink);
+      display:flex;
+      min-height:100vh;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+    }
+    .wrap{
+      display:grid;
+      grid-template-columns:auto 240px;
+      gap:16px;
+      align-items:start;
+      max-width: 780px;
+      width:100%;
+    }
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+      border:1px solid var(--border);
+      border-radius:14px;
+      box-shadow:0 10px 30px rgba(0,0,0,0.35);
+      overflow:hidden;
+    }
+    .main{
+      padding:14px;
+      display:flex;
+      gap:14px;
+      align-items:flex-start;
+      justify-content:center;
+    }
+    canvas{
+      display:block;
+      background:rgba(0,0,0,0.25);
+      border:1px solid rgba(255,255,255,0.10);
+      border-radius:10px;
+      image-rendering:pixelated;
+    }
+    .side{
+      padding:14px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+    .title{
+      font-weight:700;
+      letter-spacing:0.3px;
+      font-size:16px;
+      margin:0 0 6px 0;
+    }
+    .stat{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      padding:10px 12px;
+      background:rgba(0,0,0,0.18);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:12px;
+      font-size:14px;
+    }
+    .stat span:last-child{color:var(--muted)}
+    .controls{
+      padding:10px 12px;
+      background:rgba(0,0,0,0.18);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:12px;
+      font-size:13px;
+      color:var(--muted);
+      line-height:1.35;
+    }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; }
+    button{
+      appearance:none;
+      border:none;
+      background:var(--btn);
+      color:white;
+      padding:10px 12px;
+      border-radius:12px;
+      font-weight:700;
+      cursor:pointer;
+      flex:1;
+      min-width:100px;
+    }
+    button.secondary{
+      background:rgba(255,255,255,0.08);
+      border:1px solid rgba(255,255,255,0.12);
+      color:var(--ink);
+      font-weight:650;
+    }
+    button:disabled{opacity:0.55; cursor:not-allowed}
+    button:active{transform:translateY(1px)}
+    .hint{ font-size:12px; color:var(--muted); margin:0; }
+    .footer{
+      text-align:center;
+      padding:10px 14px;
+      border-top:1px solid rgba(255,255,255,0.08);
+      color:var(--muted);
+      font-size:12px;
+    }
+    label{
+      display:block;
+      font-size:12px;
+      color:var(--muted);
+      margin-bottom:6px;
+    }
+    select{
+      width:100%;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,0.12);
+      background:rgba(0,0,0,0.20);
+      color:var(--ink);
+      outline:none;
+      font-weight:650;
+    }
+    .banner{
+      padding:10px 12px;
+      background:rgba(0,0,0,0.18);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:12px;
+      font-size:13px;
+      color:var(--muted);
+      line-height:1.35;
+    }
+    .wordbox{
+      padding:10px 12px;
+      background:rgba(0,0,0,0.18);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:12px;
+      font-size:14px;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .wordbox .label{ color:var(--muted); font-size:12px; }
+    .wordbox .word{ font-weight:800; letter-spacing:0.4px; }
+    .pill{
+      display:inline-block;
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.14);
+      background:rgba(255,255,255,0.06);
+      color:var(--ink);
+      font-size:12px;
+      font-weight:750;
+      margin-left:8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="main">
+        <canvas id="game" width="240" height="480" aria-label="Tetris board"></canvas>
+      </div>
+      <div class="footer">Arrow keys only • Up rotate • Down = faster drop</div>
+    </div>
+
+    <div class="card">
+      <div class="side">
+        <div>
+          <p class="title">Next</p>
+          <canvas id="next" width="120" height="120" aria-label="Next piece preview"></canvas>
+        </div>
+
+        <div>
+          <label for="difficulty">Difficulty</label>
+          <select id="difficulty">
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+          <p class="hint" style="margin-top:8px;">Difficulty adjusts speed + the “daily word”.</p>
+        </div>
+
+        <div class="wordbox" title="Pulled from your word file based on difficulty pool">
+          <div>
+            <div class="label">Daily word</div>
+            <div class="word" id="dailyWord">—</div>
+          </div>
+          <div class="pill" id="wordPoolInfo">Loading…</div>
+        </div>
+
+        <div class="stat"><span>Score</span><span id="score">0</span></div>
+        <div class="stat"><span>Lines</span><span id="lines">0</span></div>
+        <div class="stat"><span>Level</span><span id="level">1</span></div>
+
+        <div class="controls">
+          <strong style="color:var(--ink)">Controls</strong><br>
+          ↑ Rotate<br>
+          ← Move left<br>
+          → Move right<br>
+          ↓ Soft drop (faster)
+        </div>
+
+        <div class="row">
+          <button id="startBtn">Start</button>
+          <button id="pauseBtn" class="secondary" disabled>Pause</button>
+        </div>
+
+        <div class="banner" id="status">
+          Word file: <span id="wordStatus">loading…</span>
+        </div>
+
+        <p class="hint">Tip: click the game area once so the arrow keys focus the page.</p>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ===== Board settings =====
+  const COLS = 10, ROWS = 20;
+  const BLOCK = 24;
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+
+  const nextCanvas = document.getElementById('next');
+  const nctx = nextCanvas.getContext('2d');
+
+  const scoreEl = document.getElementById('score');
+  const linesEl = document.getElementById('lines');
+  const levelEl = document.getElementById('level');
+
+  const startBtn = document.getElementById('startBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+
+  const difficultySel = document.getElementById('difficulty');
+  const dailyWordEl = document.getElementById('dailyWord');
+  const wordPoolInfoEl = document.getElementById('wordPoolInfo');
+  const wordStatusEl = document.getElementById('wordStatus');
+  const statusBox = document.getElementById('status');
+
+  // ===== Colors =====
+  const COLORS = {
+    I: '#60a5fa',
+    O: '#fbbf24',
+    T: '#a78bfa',
+    S: '#34d399',
+    Z: '#fb7185',
+    J: '#38bdf8',
+    L: '#f97316',
+  };
+
+  // ===== Tetromino shapes =====
+  const SHAPES = {
+    I: [
+      [0,0,0,0],
+      [1,1,1,1],
+      [0,0,0,0],
+      [0,0,0,0],
+    ],
+    O: [
+      [1,1],
+      [1,1],
+    ],
+    T: [
+      [0,1,0],
+      [1,1,1],
+      [0,0,0],
+    ],
+    S: [
+      [0,1,1],
+      [1,1,0],
+      [0,0,0],
+    ],
+    Z: [
+      [1,1,0],
+      [0,1,1],
+      [0,0,0],
+    ],
+    J: [
+      [1,0,0],
+      [1,1,1],
+      [0,0,0],
+    ],
+    L: [
+      [0,0,1],
+      [1,1,1],
+      [0,0,0],
+    ],
+  };
+
+  const TYPES = Object.keys(SHAPES);
+
+  function createBoard() {
+    return Array.from({length: ROWS}, () => Array(COLS).fill(null));
+  }
+
+  function cloneMatrix(m) {
+    return m.map(row => row.slice());
+  }
+
+  function rotateMatrixCW(matrix) {
+    const h = matrix.length;
+    const w = matrix[0].length;
+    const out = Array.from({length: w}, () => Array(h).fill(0));
+    for (let y=0; y<h; y++){
+      for (let x=0; x<w; x++){
+        out[x][h-1-y] = matrix[y][x];
+      }
+    }
+    return out;
+  }
+
+  function randType() {
+    if (!randType.bag || randType.bag.length === 0) {
+      randType.bag = TYPES.slice();
+      for (let i = randType.bag.length - 1; i > 0; i--) {
+        const j = (Math.random() * (i + 1)) | 0;
+        [randType.bag[i], randType.bag[j]] = [randType.bag[j], randType.bag[i]];
+      }
+    }
+    return randType.bag.pop();
+  }
+
+  function newPiece(type) {
+    const shape = cloneMatrix(SHAPES[type]);
+    const x = ((COLS / 2) | 0) - ((shape[0].length / 2) | 0);
+    const y = -1;
+    return { type, shape, x, y };
+  }
+
+  function collides(board, piece, offX=0, offY=0, shapeOverride=null) {
+    const shape = shapeOverride || piece.shape;
+    for (let y=0; y<shape.length; y++){
+      for (let x=0; x<shape[y].length; x++){
+        if (!shape[y][x]) continue;
+        const bx = piece.x + x + offX;
+        const by = piece.y + y + offY;
+
+        if (bx < 0 || bx >= COLS || by >= ROWS) return true;
+        if (by >= 0 && board[by][bx]) return true;
+      }
+    }
+    return false;
+  }
+
+  function merge(board, piece) {
+    const {shape, type} = piece;
+    for (let y=0; y<shape.length; y++){
+      for (let x=0; x<shape[y].length; x++){
+        if (!shape[y][x]) continue;
+        const by = piece.y + y;
+        const bx = piece.x + x;
+        if (by >= 0 && by < ROWS && bx >= 0 && bx < COLS){
+          board[by][bx] = type;
+        }
+      }
+    }
+  }
+
+  function clearLines(board) {
+    let cleared = 0;
+    outer: for (let y = ROWS - 1; y >= 0; y--) {
+      for (let x = 0; x < COLS; x++) {
+        if (!board[y][x]) continue outer;
+      }
+      board.splice(y, 1);
+      board.unshift(Array(COLS).fill(null));
+      cleared++;
+      y++;
+    }
+    return cleared;
+  }
+
+  function drawCell(g, x, y, size, color) {
+    g.fillStyle = color;
+    g.fillRect(x*size, y*size, size, size);
+    g.strokeStyle = 'rgba(255,255,255,0.08)';
+    g.strokeRect(x*size + 0.5, y*size + 0.5, size-1, size-1);
+  }
+
+  function drawBoard() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    for (let y=0; y<ROWS; y++){
+      for (let x=0; x<COLS; x++){
+        const t = board[y][x];
+        if (!t) continue;
+        drawCell(ctx, x, y, BLOCK, COLORS[t]);
+      }
+    }
+
+    if (current) {
+      const {shape, type} = current;
+      for (let y=0; y<shape.length; y++){
+        for (let x=0; x<shape[y].length; x++){
+          if (!shape[y][x]) continue;
+          const bx = current.x + x;
+          const by = current.y + y;
+          if (by < 0) continue;
+          drawCell(ctx, bx, by, BLOCK, COLORS[type]);
+        }
+      }
+    }
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.strokeRect(0.5,0.5,canvas.width-1,canvas.height-1);
+
+    if (gameOver) {
+      ctx.fillStyle = 'rgba(0,0,0,0.65)';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '700 24px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Game Over', canvas.width/2, canvas.height/2 - 8);
+      ctx.font = '14px system-ui, sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.fillText('Press Start to play again', canvas.width/2, canvas.height/2 + 18);
+    }
+    if (paused && !gameOver) {
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '700 22px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Paused', canvas.width/2, canvas.height/2);
+    }
+  }
+
+  function drawNext() {
+    nctx.clearRect(0,0,nextCanvas.width,nextCanvas.height);
+    nctx.fillStyle = 'rgba(0,0,0,0.15)';
+    nctx.fillRect(0,0,nextCanvas.width,nextCanvas.height);
+
+    if (!next) return;
+
+    const size = 24;
+    const shape = next.shape;
+    const type = next.type;
+
+    let minX=99,minY=99,maxX=-1,maxY=-1;
+    for (let y=0; y<shape.length; y++){
+      for (let x=0; x<shape[y].length; x++){
+        if (!shape[y][x]) continue;
+        minX = Math.min(minX,x); minY=Math.min(minY,y);
+        maxX = Math.max(maxX,x); maxY=Math.max(maxY,y);
+      }
+    }
+    const w = maxX - minX + 1;
+    const h = maxY - minY + 1;
+
+    const offsetX = (((nextCanvas.width / size) | 0) - w) / 2;
+    const offsetY = (((nextCanvas.height / size) | 0) - h) / 2;
+
+    for (let y=0; y<shape.length; y++){
+      for (let x=0; x<shape[y].length; x++){
+        if (!shape[y][x]) continue;
+        const px = (x - minX + offsetX);
+        const py = (y - minY + offsetY);
+        drawCell(nctx, px, py, size, COLORS[type]);
+      }
+    }
+
+    nctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    nctx.strokeRect(0.5,0.5,nextCanvas.width-1,nextCanvas.height-1);
+  }
+
+  // ===== Word loading / difficulty pools =====
+  // Uses your file's ORDER (commonest words first):
+  // easy: first 2000, medium: next 3000, hard: rest
+  const WORD_FILE = 'words.txt';
+  let allWords = [];
+  let pools = { easy: [], medium: [], hard: [] };
+
+  function sanitizeWord(w){
+    return (w || '').trim().toLowerCase().replace(/[^a-z]/g, '');
+  }
+
+  function buildPoolsFromOrder(words){
+    const clean = words.map(sanitizeWord).filter(w => w.length >= 2);
+    const unique = [];
+    const seen = new Set();
+    for (const w of clean){
+      if (seen.has(w)) continue;
+      seen.add(w);
+      unique.push(w);
+    }
+    const easyEnd = Math.min(2000, unique.length);
+    const medEnd = Math.min(easyEnd + 3000, unique.length);
+
+    pools.easy = unique.slice(0, easyEnd);
+    pools.medium = unique.slice(easyEnd, medEnd);
+    pools.hard = unique.slice(medEnd);
+
+    return unique.length;
+  }
+
+  function pickDailyWord(){
+    const mode = difficultySel.value;
+    const list = pools[mode] || [];
+    if (!list.length) {
+      dailyWordEl.textContent = '—';
+      wordPoolInfoEl.textContent = 'No words';
+      return;
+    }
+
+    // Deterministic per day + mode (same word for a given day/mode)
+    const now = new Date();
+    const seedStr = `${now.getUTCFullYear()}-${now.getUTCMonth()+1}-${now.getUTCDate()}-${mode}`;
+    let seed = 0;
+    for (let i=0; i<seedStr.length; i++) seed = (seed*31 + seedStr.charCodeAt(i)) >>> 0;
+
+    const idx = seed % list.length;
+    dailyWordEl.textContent = list[idx];
+    wordPoolInfoEl.textContent = `${mode.toUpperCase()} • ${list.length}`;
+  }
+
+  async function loadWords(){
+    try{
+      wordStatusEl.textContent = 'loading…';
+      const res = await fetch(WORD_FILE, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      allWords = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+
+      const total = buildPoolsFromOrder(allWords);
+      wordStatusEl.textContent = `loaded (${total} unique)`;
+      pickDailyWord();
+    } catch (err){
+      console.error(err);
+      wordStatusEl.textContent = `failed (put "${WORD_FILE}" beside the HTML)`;
+      statusBox.style.borderColor = 'rgba(251,113,133,0.45)';
+      statusBox.style.background = 'rgba(251,113,133,0.08)';
+      pickDailyWord();
+    }
+  }
+
+  difficultySel.addEventListener('change', () => {
+    applyDifficultyToSpeed();
+    pickDailyWord();
+  });
+
+  // ===== Game state =====
+  let board = createBoard();
+  let current = null;
+  let next = null;
+  let score = 0;
+  let lines = 0;
+  let level = 1;
+
+  // Difficulty speed profiles (lower = faster)
+  const DIFF = {
+    easy:   { base: 820, levelStep: 45, floor: 170 },
+    medium: { base: 700, levelStep: 55, floor: 120 },
+    hard:   { base: 560, levelStep: 65, floor: 85  },
+  };
+
+  let dropBaseMs = 700;
+  let dropMs = dropBaseMs;
+  let lastTime = 0;
+  let dropCounter = 0;
+
+  let running = false;
+  let paused = false;
+  let gameOver = false;
+
+  function updateHUD() {
+    scoreEl.textContent = String(score);
+    linesEl.textContent = String(lines);
+    levelEl.textContent = String(level);
+  }
+
+  function applyDifficultyToSpeed(){
+    const mode = difficultySel.value;
+    const cfg = DIFF[mode] || DIFF.medium;
+    // recompute based on current level
+    dropBaseMs = Math.max(cfg.floor, cfg.base - (level - 1) * cfg.levelStep);
+    dropMs = dropBaseMs;
+  }
+
+  function resetGame() {
+    board = createBoard();
+    score = 0;
+    lines = 0;
+    level = 1;
+
+    lastTime = 0;
+    dropCounter = 0;
+    gameOver = false;
+    paused = false;
+
+    applyDifficultyToSpeed();
+
+    current = newPiece(randType());
+    next = newPiece(randType());
+    drawNext();
+    updateHUD();
+
+    if (collides(board, current, 0, 0)) {
+      gameOver = true;
+    }
+    drawBoard();
+  }
+
+  function spawnNext() {
+    current = next;
+    current.x = ((COLS / 2) | 0) - ((current.shape[0].length / 2) | 0);
+    current.y = -1;
+
+    next = newPiece(randType());
+    drawNext();
+
+    if (collides(board, current, 0, 0)) {
+      gameOver = true;
+      running = false;
+      pauseBtn.disabled = true;
+    }
+  }
+
+  function scoreForClears(n) {
+    const base = [0, 100, 300, 500, 800][n] || 0;
+    return base * level;
+  }
+
+  function bumpLevelIfNeeded() {
+    const newLevel = 1 + Math.floor(lines / 10);
+    if (newLevel !== level) {
+      level = newLevel;
+      applyDifficultyToSpeed();
+    }
+  }
+
+  function hardTick() {
+    if (!current || gameOver) return;
+
+    if (!collides(board, current, 0, 1)) {
+      current.y += 1;
+    } else {
+      merge(board, current);
+      const cleared = clearLines(board);
+      if (cleared) {
+        lines += cleared;
+        score += scoreForClears(cleared);
+        bumpLevelIfNeeded();
+      }
+      spawnNext();
+    }
+    updateHUD();
+    drawBoard();
+  }
+
+  function tryMove(dx) {
+    if (!current || paused || gameOver) return;
+    if (!collides(board, current, dx, 0)) {
+      current.x += dx;
+      drawBoard();
+    }
+  }
+
+  function tryRotate() {
+    if (!current || paused || gameOver) return;
+    const rotated = rotateMatrixCW(current.shape);
+    const kicks = [0, -1, 1, -2, 2];
+    for (const k of kicks) {
+      if (!collides(board, current, k, 0, rotated)) {
+        current.shape = rotated;
+        current.x += k;
+        drawBoard();
+        return;
+      }
+    }
+  }
+
+  function setSoftDrop(on) {
+    if (!running || paused || gameOver) return;
+    // Soft drop is always faster; scale a bit per difficulty
+    const mode = difficultySel.value;
+    const scale = (mode === 'easy') ? 0.16 : (mode === 'hard' ? 0.10 : 0.12);
+    dropMs = on ? Math.max(35, dropBaseMs * scale) : dropBaseMs;
+  }
+
+  function loop(time = 0) {
+    if (!running) {
+      drawBoard();
+      return;
+    }
+    const delta = time - lastTime;
+    lastTime = time;
+
+    if (!paused && !gameOver) {
+      dropCounter += delta;
+      if (dropCounter >= dropMs) {
+        hardTick();
+        dropCounter = 0;
+      } else {
+        drawBoard();
+      }
+    } else {
+      drawBoard();
+    }
+
+    requestAnimationFrame(loop);
+  }
+
+  // ===== Input: Arrow keys ONLY =====
+  const held = { down:false };
+  window.addEventListener('keydown', (e) => {
+    const k = e.key;
+    if (k === 'ArrowUp' || k === 'ArrowDown' || k === 'ArrowLeft' || k === 'ArrowRight') {
+      e.preventDefault();
+    } else {
+      return;
+    }
+
+    if (!running) return;
+    if (gameOver) return;
+
+    if (k === 'ArrowLeft') tryMove(-1);
+    if (k === 'ArrowRight') tryMove(1);
+    if (k === 'ArrowUp') tryRotate();
+    if (k === 'ArrowDown') {
+      if (!held.down) {
+        held.down = true;
+        setSoftDrop(true);
+      }
+    }
+  }, {passive:false});
+
+  window.addEventListener('keyup', (e) => {
+    if (e.key === 'ArrowDown') {
+      held.down = false;
+      setSoftDrop(false);
+    }
+  });
+
+  // ===== Buttons =====
+  startBtn.addEventListener('click', () => {
+    resetGame();
+    running = true;
+    pauseBtn.disabled = false;
+    pauseBtn.textContent = 'Pause';
+    loop();
+  });
+
+  pauseBtn.addEventListener('click', () => {
+    if (!running || gameOver) return;
+    paused = !paused;
+    pauseBtn.textContent = paused ? 'Resume' : 'Pause';
+    drawBoard();
+  });
+
+  // ===== Init =====
+  resetGame();
+  drawBoard();
+  loadWords();
+})();
+</script>
+</body>
+</html>
