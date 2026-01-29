@@ -1,0 +1,1039 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Binary Wordle (Numbers) — Modes + Timer</title>
+  <style>
+    :root{
+      --bg:#0f1115;
+      --panel:#171a21;
+      --tile:#232836;
+      --tile-border:#3a4257;
+      --text:#e9edf7;
+      --muted:#aab3c7;
+      --good:#2e7d32;   /* green */
+      --bad:#3a3f4b;    /* gray */
+      --shadow: 0 12px 30px rgba(0,0,0,.35);
+      --radius:14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      background: radial-gradient(1200px 700px at 20% -10%, #253056 0%, rgba(37,48,86,0) 60%),
+                  radial-gradient(900px 600px at 90% 10%, #2b5b49 0%, rgba(43,91,73,0) 55%),
+                  var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:22px;
+    }
+    .app{
+      width:min(1020px, 100%);
+      display:grid;
+      gap:18px;
+      grid-template-columns: 1fr;
+    }
+    header{
+      background:rgba(23,26,33,.85);
+      border:1px solid rgba(58,66,87,.6);
+      border-radius:var(--radius);
+      padding:18px 18px;
+      box-shadow:var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+    header h1{
+      margin:0 0 6px 0;
+      font-size:22px;
+      letter-spacing:.3px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    header p{
+      margin:0;
+      color:var(--muted);
+      line-height:1.35;
+      font-size:14px;
+    }
+
+    .timer{
+      font-family:var(--mono);
+      font-size:14px;
+      color:var(--text);
+      padding:8px 12px;
+      border-radius:999px;
+      border:1px solid rgba(58,66,87,.7);
+      background:rgba(15,17,21,.45);
+      display:flex;
+      align-items:center;
+      gap:8px;
+      user-select:none;
+    }
+    .dot{
+      width:9px;height:9px;border-radius:999px;
+      background: rgba(120, 220, 140, .85);
+      box-shadow: 0 0 0 3px rgba(120, 220, 140, .14);
+    }
+    .dot.paused{
+      background: rgba(220, 70, 70, .85);
+      box-shadow: 0 0 0 3px rgba(220, 70, 70, .14);
+    }
+
+    .layout{
+      display:grid;
+      grid-template-columns: 1.25fr .75fr;
+      gap:18px;
+    }
+    @media (max-width: 900px){
+      .layout{grid-template-columns:1fr}
+    }
+
+    .card{
+      background:rgba(23,26,33,.85);
+      border:1px solid rgba(58,66,87,.6);
+      border-radius:var(--radius);
+      padding:18px;
+      box-shadow:var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+
+    /* grid + tiles (CSS vars set dynamically by JS) */
+    .grid{
+      display:grid;
+      gap:10px;
+      margin-top:12px;
+    }
+    .row{
+      display:grid;
+      grid-template-columns: repeat(var(--bits, 8), 1fr);
+      gap:10px;
+    }
+    .tile{
+      height: var(--tileH, 54px);
+      border-radius:12px;
+      background:var(--tile);
+      border:1px solid var(--tile-border);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-family:var(--mono);
+      font-size: var(--tileF, 22px);
+      font-weight:800;
+      letter-spacing:1px;
+      user-select:none;
+      transition: transform .12s ease, background .12s ease, border-color .12s ease;
+      line-height:1;
+    }
+    .tile.good{
+      background:linear-gradient(180deg, rgba(46,125,50,.95), rgba(46,125,50,.75));
+      border-color: rgba(120, 220, 140, .55);
+    }
+    .tile.bad{
+      background:linear-gradient(180deg, rgba(58,63,75,.95), rgba(58,63,75,.72));
+      border-color: rgba(140,150,170,.25);
+      color:rgba(233,237,247,.85);
+    }
+    .tile.pop{ transform:scale(1.04); }
+
+    .controls{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      margin-top:14px;
+      flex-wrap:wrap;
+    }
+    .inputWrap{
+      flex: 1 1 260px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    input[type="text"]{
+      width:100%;
+      padding:12px 12px;
+      border-radius:12px;
+      border:1px solid rgba(58,66,87,.9);
+      background:rgba(15,17,21,.55);
+      color:var(--text);
+      font-size:16px;
+      outline:none;
+    }
+    input[type="text"]:focus{
+      border-color: rgba(120,180,255,.75);
+      box-shadow: 0 0 0 3px rgba(120,180,255,.18);
+    }
+
+    button{
+      border:1px solid rgba(58,66,87,.9);
+      background:rgba(35,40,54,.85);
+      color:var(--text);
+      border-radius:12px;
+      padding:12px 14px;
+      font-size:14px;
+      cursor:pointer;
+      transition: transform .08s ease, background .12s ease, border-color .12s ease;
+      user-select:none;
+      white-space:nowrap;
+    }
+    button:hover{ background: rgba(46,52,70,.9); }
+    button:active{ transform: translateY(1px); }
+    button.primary{
+      background: rgba(52, 112, 255, .35);
+      border-color: rgba(110, 160, 255, .7);
+    }
+    button.primary:hover{ background: rgba(52, 112, 255, .45); }
+    button.danger{
+      background: rgba(220, 70, 70, .22);
+      border-color: rgba(220, 70, 70, .55);
+    }
+
+    .side h2{
+      margin:0 0 10px 0;
+      font-size:16px;
+      letter-spacing:.2px;
+    }
+    .meta{
+      display:grid;
+      gap:10px;
+      margin-top:12px;
+    }
+    .pill{
+      border:1px solid rgba(58,66,87,.6);
+      background:rgba(15,17,21,.4);
+      border-radius:12px;
+      padding:10px 12px;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      font-size:14px;
+      color:var(--muted);
+      align-items:center;
+    }
+    .pill strong{
+      color:var(--text);
+      font-family:var(--mono);
+      font-weight:800;
+    }
+    .msg{
+      margin-top:12px;
+      border-radius:12px;
+      padding:10px 12px;
+      border:1px solid rgba(58,66,87,.6);
+      background:rgba(15,17,21,.45);
+      color:var(--muted);
+      line-height:1.35;
+      font-size:14px;
+      min-height:44px;
+      display:flex;
+      align-items:center;
+      white-space:pre-wrap;
+    }
+    .msg.ok{
+      border-color: rgba(120, 220, 140, .45);
+      color: rgba(200, 255, 215, .95);
+      background: rgba(46,125,50,.16);
+    }
+    .msg.err{
+      border-color: rgba(220, 70, 70, .5);
+      color: rgba(255, 210, 210, .95);
+      background: rgba(220, 70, 70, .14);
+    }
+
+    .kbd{
+      font-family:var(--mono);
+      font-size:12px;
+      color:var(--muted);
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid rgba(58,66,87,.6);
+      background:rgba(15,17,21,.5);
+    }
+
+    .footer{
+      color:rgba(170,179,199,.85);
+      font-size:12px;
+      text-align:center;
+      padding:6px 0 0;
+    }
+
+    /* highscores */
+    .scores{
+      margin-top:12px;
+      display:grid;
+      gap:10px;
+    }
+    .scoreRow{
+      display:flex;
+      justify-content:space-between;
+      align-items:baseline;
+      gap:10px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(58,66,87,.6);
+      background:rgba(15,17,21,.45);
+      color:var(--muted);
+      font-size:13px;
+    }
+    .scoreRow strong{
+      color:var(--text);
+      font-family:var(--mono);
+      font-weight:800;
+      font-size:13px;
+    }
+    .scoreRow small{
+      color:rgba(170,179,199,.85);
+      font-family:var(--mono);
+      font-size:12px;
+    }
+    .rowBtnsInline{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+
+    /* modal */
+    .modalBackdrop{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index:50;
+    }
+    .modal{
+      width:min(620px, 100%);
+      background:rgba(23,26,33,.95);
+      border:1px solid rgba(58,66,87,.75);
+      border-radius:18px;
+      box-shadow:var(--shadow);
+      padding:18px;
+      backdrop-filter: blur(10px);
+    }
+    .modal h3{ margin:0 0 6px 0; font-size:18px; }
+    .modal p{ margin:0 0 14px 0; color:var(--muted); line-height:1.4; white-space:pre-wrap; }
+    .modal .rowBtns{ display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; }
+
+    /* start screen */
+    .screen{
+      position:fixed;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index:60;
+      background:rgba(0,0,0,.55);
+      backdrop-filter: blur(6px);
+    }
+    .startCard{
+      width:min(720px, 100%);
+      background:rgba(23,26,33,.95);
+      border:1px solid rgba(58,66,87,.75);
+      border-radius:18px;
+      box-shadow:var(--shadow);
+      padding:18px;
+    }
+    .startCard h2{
+      margin:0 0 6px 0;
+      font-size:20px;
+      letter-spacing:.2px;
+    }
+    .startCard p{
+      margin:0 0 14px 0;
+      color:var(--muted);
+      line-height:1.4;
+      font-size:14px;
+    }
+    .modes{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:12px;
+    }
+    @media (max-width: 720px){
+      .modes{ grid-template-columns:1fr; }
+    }
+    .modeBtn{
+      text-align:left;
+      padding:14px 14px;
+      border-radius:14px;
+      background:rgba(15,17,21,.45);
+      border:1px solid rgba(58,66,87,.75);
+      cursor:pointer;
+      transition: transform .08s ease, background .12s ease, border-color .12s ease;
+      color:var(--text);
+    }
+    .modeBtn:hover{
+      background:rgba(35,40,54,.85);
+      transform: translateY(-1px);
+    }
+    .modeBtn strong{
+      display:block;
+      font-size:16px;
+      margin-bottom:6px;
+    }
+    .modeBtn span{
+      display:block;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.3;
+      font-family:var(--mono);
+      white-space:pre-wrap;
+    }
+    .startActions{
+      display:flex;
+      justify-content:flex-end;
+      gap:10px;
+      margin-top:14px;
+      flex-wrap:wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="appRoot" style="--bits:8; --tileH:54px; --tileF:22px;">
+    <header>
+      <h1>
+        <span>Binary Wordle (Numbers)</span>
+        <span class="timer" title="Time since game started">
+          <span id="timerDot" class="dot paused"></span>
+          <span id="timerLabel">00:00.0</span>
+        </span>
+      </h1>
+      <p id="subtitle">
+        Choose a mode to start. Guess the number; each guess becomes a padded binary row with position-based feedback.
+      </p>
+    </header>
+
+    <div class="layout">
+      <section class="card">
+        <div class="controls">
+          <div class="inputWrap">
+            <input id="guessInput" type="text" inputmode="numeric" autocomplete="off" placeholder="Enter a number..." maxlength="5" disabled />
+            <button id="submitBtn" class="primary" disabled>Enter</button>
+          </div>
+          <button id="newBtn" class="danger" title="Start a new secret number" disabled>New Game</button>
+          <button id="modeBtn" title="Return to mode selection">Change Mode</button>
+        </div>
+
+        <div class="grid" id="grid"></div>
+
+        <div class="msg" id="msg"></div>
+      </section>
+
+      <aside class="card side">
+        <h2>Game Info</h2>
+        <div class="meta">
+          <div class="pill"><span>Mode</span><strong id="modeLabel">—</strong></div>
+          <div class="pill"><span>Attempts</span><strong id="attemptsLabel">0 / 0</strong></div>
+          <div class="pill"><span>Last Guess (dec)</span><strong id="lastDec">—</strong></div>
+          <div class="pill"><span>Last Guess (bin)</span><strong id="lastBin">—</strong></div>
+        </div>
+
+        <h2 style="margin-top:16px;">High Scores</h2>
+        <div class="scores" id="scores"></div>
+        <div class="rowBtnsInline">
+          <button id="clearScoresBtn" title="Clear saved scores for this mode">Clear Mode Scores</button>
+        </div>
+
+        <div class="msg" style="margin-top:14px;">
+          Tip: Press <span class="kbd">Enter</span> to submit.
+        </div>
+      </aside>
+    </div>
+
+    <div class="footer">Fastest solve wins. Scores are saved locally per mode.</div>
+  </div>
+
+  <!-- Start Screen -->
+  <div class="screen" id="startScreen" aria-hidden="false">
+    <div class="startCard">
+      <h2>Pick a Mode</h2>
+      <p>
+        You’ll see the secret number’s padded binary pattern. Your job is to type the decimal number that matches it.
+        High score is the <span class="kbd">fastest solve time</span> (saved locally per mode).
+      </p>
+
+      <div class="modes" id="modeChoices">
+        <button class="modeBtn" data-mode="easy">
+          <strong>Easy</strong>
+          <span>0–255
+bits: 8
+guesses: 6</span>
+        </button>
+        <button class="modeBtn" data-mode="medium">
+          <strong>Medium</strong>
+          <span>0–4095
+bits: 12
+guesses: 9</span>
+        </button>
+        <button class="modeBtn" data-mode="hard">
+          <strong>Hard</strong>
+          <span>0–65535
+bits: 16
+guesses: 12</span>
+        </button>
+      </div>
+
+      <div class="startActions">
+        <button id="startBtn" class="primary" disabled>Start</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Over Modal -->
+  <div class="modalBackdrop" id="modalBackdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <h3 id="modalTitle">Game Over</h3>
+      <p id="modalBody"></p>
+      <div class="rowBtns">
+        <button id="revealBtn">Reveal</button>
+        <button id="backToModesBtn">Back to Modes</button>
+        <button id="playAgainBtn" class="primary">Play Again</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      // Modes per your spec
+      const MODES = {
+        easy:   { key: "easy",   name: "Easy",   max: 255,   bits: 8,  guesses: 6 },
+        medium: { key: "medium", name: "Medium", max: 4095,  bits: 12, guesses: 9 },
+        hard:   { key: "hard",   name: "Hard",   max: 65535, bits: 16, guesses: 12 },
+      };
+      const SCORE_KEY_PREFIX = "binaryWordle_scores_mode_v1_";
+
+      const appRoot = document.getElementById("appRoot");
+
+      const elGrid = document.getElementById('grid');
+      const elInput = document.getElementById('guessInput');
+      const elSubmit = document.getElementById('submitBtn');
+      const elNew = document.getElementById('newBtn');
+      const elMsg = document.getElementById('msg');
+      const elSubtitle = document.getElementById('subtitle');
+
+      const elModeLabel = document.getElementById('modeLabel');
+      const elAttempts = document.getElementById('attemptsLabel');
+      const elLastDec = document.getElementById('lastDec');
+      const elLastBin = document.getElementById('lastBin');
+
+      const elScores = document.getElementById('scores');
+      const elClearScores = document.getElementById('clearScoresBtn');
+
+      const timerLabel = document.getElementById('timerLabel');
+      const timerDot = document.getElementById('timerDot');
+
+      const startScreen = document.getElementById('startScreen');
+      const modeChoices = document.getElementById('modeChoices');
+      const startBtn = document.getElementById('startBtn');
+
+      const modeBtn = document.getElementById('modeBtn');
+
+      const modalBackdrop = document.getElementById('modalBackdrop');
+      const modalBody = document.getElementById('modalBody');
+      const revealBtn = document.getElementById('revealBtn');
+      const playAgainBtn = document.getElementById('playAgainBtn');
+      const backToModesBtn = document.getElementById('backToModesBtn');
+
+      let mode = null;        // current mode object
+      let secret = 0;
+      let secretBin = "";
+      let attempt = 0;
+      let gameOver = false;
+
+      // timer state
+      let startMs = 0;
+      let endMs = 0;
+      let rafId = 0;
+      let running = false;
+
+      function randInt(min, maxInclusive) {
+        if (window.crypto && crypto.getRandomValues) {
+          const range = maxInclusive - min + 1;
+          const maxUint = 0xFFFFFFFF;
+          const limit = maxUint - (maxUint % range);
+          const buf = new Uint32Array(1);
+          let x;
+          do {
+            crypto.getRandomValues(buf);
+            x = buf[0];
+          } while (x >= limit);
+          return min + (x % range);
+        }
+        return Math.floor(Math.random() * (maxInclusive - min + 1)) + min;
+      }
+
+      function toBinPadded(n) {
+        return n.toString(2).padStart(mode.bits, '0');
+      }
+
+      function setMsg(text, kind = "") {
+        elMsg.classList.remove('ok', 'err');
+        if (kind) elMsg.classList.add(kind);
+        elMsg.textContent = text;
+      }
+
+      function openModal(bodyText) {
+        modalBody.textContent = bodyText;
+        modalBackdrop.style.display = "flex";
+        modalBackdrop.setAttribute("aria-hidden", "false");
+      }
+      function closeModal() {
+        modalBackdrop.style.display = "none";
+        modalBackdrop.setAttribute("aria-hidden", "true");
+      }
+
+      function revealSecret() {
+        return `Secret number: ${secret}\nBinary (${mode.bits}-bit): ${secretBin}`;
+      }
+
+      function formatTime(ms) {
+        const totalTenths = Math.floor(ms / 100);
+        const tenths = totalTenths % 10;
+        const totalSeconds = Math.floor(totalTenths / 10);
+        const seconds = totalSeconds % 60;
+        const minutes = Math.floor(totalSeconds / 60);
+        const mm = String(minutes).padStart(2, "0");
+        const ss = String(seconds).padStart(2, "0");
+        return `${mm}:${ss}.${tenths}`;
+      }
+
+      function timerTick() {
+        if (!running) return;
+        const now = performance.now();
+        const elapsed = now - startMs;
+        timerLabel.textContent = formatTime(elapsed);
+        rafId = requestAnimationFrame(timerTick);
+      }
+
+      function startTimer() {
+        cancelAnimationFrame(rafId);
+        startMs = performance.now();
+        endMs = 0;
+        running = true;
+        timerDot.classList.remove("paused");
+        timerLabel.textContent = "00:00.0";
+        rafId = requestAnimationFrame(timerTick);
+      }
+
+      function stopTimer() {
+        if (!running) return 0;
+        running = false;
+        cancelAnimationFrame(rafId);
+        endMs = performance.now();
+        timerDot.classList.add("paused");
+        const elapsed = endMs - startMs;
+        timerLabel.textContent = formatTime(elapsed);
+        return elapsed;
+      }
+
+      function stopTimerWithoutScore() {
+        running = false;
+        cancelAnimationFrame(rafId);
+        timerDot.classList.add("paused");
+      }
+
+      function setGridSizingForBits(bits) {
+        // Auto-shrink tiles for 12 and 16 bits so it fits on screen.
+        // You can tune these numbers easily.
+        let tileH = 54, tileF = 22, gap = 10;
+
+        if (bits <= 8) {
+          tileH = 54; tileF = 22; gap = 10;
+        } else if (bits <= 12) {
+          tileH = 48; tileF = 20; gap = 8;
+        } else { // 16
+          tileH = 42; tileF = 18; gap = 7;
+        }
+
+        appRoot.style.setProperty("--bits", String(bits));
+        appRoot.style.setProperty("--tileH", tileH + "px");
+        appRoot.style.setProperty("--tileF", tileF + "px");
+
+        // set row gap too (we control only row gap via CSS; adjust by setting inline style)
+        // We'll just update grid/row gaps directly for better responsiveness.
+        elGrid.style.gap = "10px";
+        const rows = elGrid.querySelectorAll(".row");
+        rows.forEach(r => r.style.gap = gap + "px");
+      }
+
+      function buildEmptyGrid() {
+        elGrid.innerHTML = "";
+        for (let r = 0; r < mode.guesses; r++) {
+          const row = document.createElement('div');
+          row.className = 'row';
+          row.dataset.row = String(r);
+
+          for (let c = 0; c < mode.bits; c++) {
+            const tile = document.createElement('div');
+            tile.className = 'tile';
+            tile.textContent = " ";
+            tile.dataset.col = String(c);
+            row.appendChild(tile);
+          }
+          elGrid.appendChild(row);
+        }
+        setGridSizingForBits(mode.bits);
+      }
+
+      function updateSidebar(lastDec = null, lastBin = null) {
+        elModeLabel.textContent = mode ? mode.name : "—";
+        elAttempts.textContent = `${attempt} / ${mode ? mode.guesses : 0}`;
+        elLastDec.textContent = (lastDec === null) ? "—" : String(lastDec);
+        elLastBin.textContent = (lastBin === null) ? "—" : lastBin;
+      }
+
+      function paintRow(rowIndex, guessBin) {
+        const row = elGrid.querySelector(`.row[data-row="${rowIndex}"]`);
+        if (!row) return;
+
+        const tiles = Array.from(row.children);
+
+        for (let i = 0; i < mode.bits; i++) {
+          const bit = guessBin[i];
+          const tile = tiles[i];
+          tile.textContent = bit;
+
+          const isMatch = bit === secretBin[i]; // position-based feedback
+
+          tile.classList.remove('good', 'bad', 'pop');
+          tile.classList.add(isMatch ? 'good' : 'bad');
+
+          setTimeout(() => tile.classList.add('pop'), 10 + i * 12);
+          setTimeout(() => tile.classList.remove('pop'), 170 + i * 12);
+        }
+      }
+
+      function sanitizeInput(val) {
+        // allow up to length of max (e.g., 65535 -> 5)
+        const maxLen = String(mode.max).length;
+        return val.replace(/[^\d]/g, "").slice(0, maxLen);
+      }
+
+      function parseGuess() {
+        const raw = elInput.value.trim();
+        if (!raw) return { ok:false, err:`Enter a number from 0 to ${mode.max}.` };
+        if (!/^\d+$/.test(raw)) return { ok:false, err:`Numbers only (0–${mode.max}).` };
+
+        const n = Number(raw);
+        if (!Number.isFinite(n) || n < 0 || n > mode.max) return { ok:false, err:`Your guess must be between 0 and ${mode.max}.` };
+        return { ok:true, value:n };
+      }
+
+      function scoreKey() {
+        return SCORE_KEY_PREFIX + mode.key;
+      }
+
+      function loadScores() {
+        try {
+          const raw = localStorage.getItem(scoreKey());
+          if (!raw) return [];
+          const parsed = JSON.parse(raw);
+          if (!Array.isArray(parsed)) return [];
+          return parsed
+            .filter(s => s && typeof s.ms === "number" && typeof s.date === "number" && typeof s.attempts === "number")
+            .slice(0, 50);
+        } catch {
+          return [];
+        }
+      }
+
+      function saveScores(scores) {
+        try {
+          localStorage.setItem(scoreKey(), JSON.stringify(scores));
+        } catch {}
+      }
+
+      function renderScores() {
+        if (!mode) {
+          elScores.innerHTML = `<div class="scoreRow"><span>Pick a mode to see scores.</span><strong>—</strong></div>`;
+          return;
+        }
+
+        const scores = loadScores()
+          .slice()
+          .sort((a,b) => a.ms - b.ms)
+          .slice(0, 5);
+
+        if (scores.length === 0) {
+          elScores.innerHTML = `<div class="scoreRow"><span>No ${mode.name} scores yet.</span><strong>—</strong></div>`;
+          return;
+        }
+
+        const html = scores.map((s, idx) => {
+          const d = new Date(s.date);
+          const dateStr = d.toLocaleString(undefined, {
+            year: "numeric", month: "short", day: "2-digit",
+            hour: "2-digit", minute: "2-digit"
+          });
+          return `
+            <div class="scoreRow">
+              <span>#${idx+1} <small>${dateStr}</small></span>
+              <span><strong>${formatTime(s.ms)}</strong> <small>(${s.attempts} tries)</small></span>
+            </div>
+          `;
+        }).join("");
+
+        elScores.innerHTML = html;
+      }
+
+      function maybeRecordHighScore(msElapsed, attemptsUsed) {
+        const entry = { ms: msElapsed, date: Date.now(), attempts: attemptsUsed };
+        const scores = loadScores();
+        scores.push(entry);
+
+        const trimmed = scores
+          .slice()
+          .sort((a,b) => a.ms - b.ms)
+          .slice(0, 10);
+
+        saveScores(trimmed);
+
+        const top5 = trimmed.slice().sort((a,b) => a.ms - b.ms).slice(0, 5);
+        const isTop5 = top5.some(s => s.date === entry.date && s.ms === entry.ms && s.attempts === entry.attempts);
+
+        renderScores();
+        return isTop5;
+      }
+
+      function endGame(won) {
+        gameOver = true;
+        elInput.blur();
+
+        const elapsed = stopTimer();
+
+        if (won) {
+          const isHigh = maybeRecordHighScore(elapsed, attempt);
+          const extra = isHigh ? "🏆 New top score!" : "Nice!";
+          openModal(
+            `✅ Solved (${mode.name})\nTime: ${formatTime(elapsed)}\nAttempts: ${attempt}/${mode.guesses}\n${extra}\n\n${revealSecret()}`
+          );
+        } else {
+          openModal(
+            `❌ Out of tries (${mode.name})\nTime: ${formatTime(elapsed)}\nAttempts: ${attempt}/${mode.guesses}\n\n${revealSecret()}`
+          );
+        }
+      }
+
+      function submitGuess() {
+        if (!mode || gameOver) return;
+
+        const parsed = parseGuess();
+        if (!parsed.ok) {
+          setMsg(parsed.err, 'err');
+          return;
+        }
+
+        const guess = parsed.value;
+        const guessBin = toBinPadded(guess);
+
+        paintRow(attempt, guessBin);
+
+        attempt += 1;
+        updateSidebar(guess, guessBin);
+
+        if (guess === secret) {
+          setMsg("Correct! 🎉", "ok");
+          endGame(true);
+          return;
+        }
+
+        if (attempt >= mode.guesses) {
+          setMsg("No more tries.", "err");
+          endGame(false);
+          return;
+        }
+
+        setMsg("Not it — try again.", "");
+        elInput.value = "";
+        elInput.focus();
+      }
+
+      function newGameSameMode() {
+        secret = randInt(0, mode.max);
+        secretBin = toBinPadded(secret);
+        attempt = 0;
+        gameOver = false;
+
+        buildEmptyGrid();
+        updateSidebar(null, null);
+
+        const maxLen = String(mode.max).length;
+        elInput.maxLength = maxLen;
+        elInput.placeholder = `Enter a number (0–${mode.max})...`;
+
+        elSubtitle.textContent =
+          `${mode.name}: 0–${mode.max}, ${mode.bits}-bit padding, ${mode.guesses} guesses. High score = fastest solve time.`;
+
+        setMsg("New game started. Enter your first guess.", "");
+        elInput.value = "";
+        elInput.focus();
+
+        closeModal();
+        startTimer();
+      }
+
+      function enableGameplayUI(enabled) {
+        elInput.disabled = !enabled;
+        elSubmit.disabled = !enabled;
+        elNew.disabled = !enabled;
+      }
+
+      function showStartScreen(show) {
+        startScreen.style.display = show ? "flex" : "none";
+        startScreen.setAttribute("aria-hidden", show ? "false" : "true");
+      }
+
+      function setMode(modeKey) {
+        mode = MODES[modeKey];
+        elModeLabel.textContent = mode.name;
+        renderScores();
+
+        // prepare UI sizes even before starting
+        appRoot.style.setProperty("--bits", String(mode.bits));
+        setGridSizingForBits(mode.bits);
+
+        // set input max length
+        elInput.maxLength = String(mode.max).length;
+
+        // update attempt label placeholder
+        attempt = 0;
+        updateSidebar(null, null);
+
+        // start button enabled
+        startBtn.disabled = false;
+
+        // set helpful message
+        setMsg(`Mode selected: ${mode.name}. Press Start to begin (timer starts on Start).`, "");
+      }
+
+      function resetToModeSelect() {
+        // stop any timer, disable gameplay
+        stopTimerWithoutScore();
+        gameOver = true; // prevent submissions
+        closeModal();
+
+        enableGameplayUI(false);
+        elInput.value = "";
+        elLastDec.textContent = "—";
+        elLastBin.textContent = "—";
+        timerLabel.textContent = "00:00.0";
+        timerDot.classList.add("paused");
+
+        // keep mode selection, but require choosing again to start
+        mode = null;
+        elModeLabel.textContent = "—";
+        elAttempts.textContent = "0 / 0";
+        elSubtitle.textContent =
+          "Choose a mode to start. Guess the number; each guess becomes a padded binary row with position-based feedback.";
+        setMsg("Pick a mode to begin.", "");
+
+        elGrid.innerHTML = "";
+        renderScores();
+
+        // reset start screen state
+        startBtn.disabled = true;
+        selectedModeKey = null;
+        highlightSelectedMode(null);
+
+        showStartScreen(true);
+      }
+
+      // Mode selection UI
+      let selectedModeKey = null;
+
+      function highlightSelectedMode(key) {
+        const btns = modeChoices.querySelectorAll(".modeBtn");
+        btns.forEach(b => {
+          const is = b.dataset.mode === key;
+          b.style.borderColor = is ? "rgba(110, 160, 255, .75)" : "rgba(58,66,87,.75)";
+          b.style.background = is ? "rgba(52, 112, 255, .18)" : "rgba(15,17,21,.45)";
+        });
+      }
+
+      modeChoices.addEventListener("click", (e) => {
+        const btn = e.target.closest(".modeBtn");
+        if (!btn) return;
+        selectedModeKey = btn.dataset.mode;
+        highlightSelectedMode(selectedModeKey);
+        setMode(selectedModeKey);
+      });
+
+      startBtn.addEventListener("click", () => {
+        if (!selectedModeKey) return;
+        showStartScreen(false);
+        enableGameplayUI(true);
+        gameOver = false;
+        newGameSameMode();
+      });
+
+      // Controls
+      elInput.addEventListener('input', () => {
+        if (!mode) return;
+        const cleaned = sanitizeInput(elInput.value);
+        if (cleaned !== elInput.value) elInput.value = cleaned;
+      });
+
+      elInput.addEventListener('keydown', (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          submitGuess();
+        }
+      });
+
+      elSubmit.addEventListener('click', submitGuess);
+
+      elNew.addEventListener('click', () => {
+        if (!mode) return;
+        newGameSameMode();
+      });
+
+      modeBtn.addEventListener("click", () => {
+        resetToModeSelect();
+      });
+
+      // modal buttons
+      revealBtn.addEventListener('click', () => {
+        setMsg(revealSecret(), "ok");
+      });
+      playAgainBtn.addEventListener('click', () => {
+        if (!mode) return;
+        newGameSameMode();
+      });
+      backToModesBtn.addEventListener('click', () => {
+        resetToModeSelect();
+      });
+      modalBackdrop.addEventListener('click', (e) => {
+        if (e.target === modalBackdrop) closeModal();
+      });
+      window.addEventListener('keydown', (e) => {
+        if (e.key === "Escape" && modalBackdrop.style.display === "flex") closeModal();
+      });
+
+      // clear scores (per mode)
+      elClearScores.addEventListener('click', () => {
+        if (!mode) return;
+        try { localStorage.removeItem(scoreKey()); } catch {}
+        renderScores();
+        setMsg(`Cleared ${mode.name} scores.`, "");
+      });
+
+      // Init state: show start screen
+      enableGameplayUI(false);
+      renderScores();
+      setMsg("Pick a mode to begin.", "");
+      showStartScreen(true);
+    })();
+  </script>
+</body>
+</html>
