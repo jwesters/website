@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Math Equations — Fill the Numbers</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background:#f6f7fb; color:#111; }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 24px; }
+    h1 { margin: 0 0 8px; }
+    .muted { color:#555; }
+    .card { background:#fff; border:1px solid #e7e7ee; border-radius:14px; padding:18px; box-shadow:0 2px 10px rgba(0,0,0,0.04); }
+    .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+    .btn { border:0; border-radius:12px; padding:12px 16px; font-size:16px; cursor:pointer; background:#111; color:#fff; }
+    .btn.secondary { background:#e9e9f2; color:#111; }
+    .btn:active { transform: translateY(1px); }
+    .grid { margin-top: 14px; display:grid; gap: 10px; }
+    .eq {
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding: 12px; border-radius:12px; border:1px solid #ededf5; background:#fafafe;
+    }
+    .eq-left { display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:22px; }
+    .blank {
+      width: 80px; font-size: 20px; padding: 10px 12px;
+      border-radius:10px; border: 2px solid #d8d8e6; background:#fff; outline:none;
+      text-align:center;
+    }
+    .blank:focus { border-color:#111; box-shadow:0 0 0 3px rgba(0,0,0,0.08); }
+    .op { font-weight: 800; }
+    .ans { font-weight: 800; }
+    .tag { font-size:13px; padding:6px 10px; border-radius:999px; border:1px solid #ddd; background:#fff; }
+    .tag.ok { border-color:#bfe5c6; background:#eefaf1; }
+    .tag.no { border-color:#f0bcbc; background:#fff0f0; }
+    .bank { margin-top: 14px; display:flex; gap:10px; flex-wrap:wrap; }
+    .numBtn {
+      min-width: 52px;
+      border-radius: 12px;
+      border: 1px solid #d9d9e7;
+      background:#fff;
+      padding: 10px 12px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .numBtn.used { opacity:0.35; cursor:not-allowed; }
+    .numBtn.selected { outline: 3px solid rgba(0,0,0,0.12); border-color:#111; }
+    hr { border:none; border-top:1px solid #eee; margin:16px 0; }
+    .score { font-weight: 800; font-size: 18px; margin-left:auto; }
+    .rules { line-height:1.35; }
+    .small { font-size: 13px; }
+    .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; padding: 3px 6px; border: 1px solid #ddd; border-bottom-width: 2px; border-radius: 6px; background:#fff; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1><u><b>Math Equations</b></u></h1>
+    <div class="muted rules">
+      Fill in the blanks using the numbers <b>1–10</b>.<br>
+      You may use each number <b>only once</b>.<br>
+      There will be exactly: <b>1 addition</b>, <b>1 subtraction</b>, <b>1 multiplication</b>, <b>1 division</b>, and <b>1 random</b> (one of those four).
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <div class="row">
+        <button class="btn" id="checkBtn">Check</button>
+        <button class="btn secondary" id="clearBtn">Clear All</button>
+        <button class="btn secondary" id="newBtn">New Puzzle</button>
+        <div class="score" id="scoreText">Solved: 0 / 5</div>
+      </div>
+
+      <div class="grid" id="equations"></div>
+
+      <hr />
+
+      <div class="small muted">
+        Number Bank (click a number, then click a blank — or just type):
+        <span class="kbd">Backspace</span> clears a blank
+      </div>
+      <div class="bank" id="bank"></div>
+
+      <div id="message" class="muted" style="margin-top:12px;"></div>
+    </div>
+  </div>
+
+  <script>
+    const eqEl = document.getElementById("equations");
+    const bankEl = document.getElementById("bank");
+    const scoreText = document.getElementById("scoreText");
+    const msgEl = document.getElementById("message");
+
+    let puzzle = null; // { equations:[{id,op,a,b,answer}], used:Set<number>, selected:number|null }
+
+    function shuffleArray(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function generatePuzzle() {
+      // Use numbers 1..10 exactly once
+      let nums = shuffleArray(Array.from({length: 10}, (_, i) => i + 1));
+
+      // Pick division pair first ensuring whole number (try both directions)
+      let divA, divB, divAns;
+      outer:
+      for (let i = 0; i < nums.length; i++) {
+        for (let j = i + 1; j < nums.length; j++) {
+          const a = nums[i], b = nums[j];
+          if (a % b === 0) { divA = a; divB = b; divAns = a / b; break outer; }
+          if (b % a === 0) { divA = b; divB = a; divAns = b / a; break outer; }
+        }
+      }
+      // Rare fallback: force 8 ÷ 4
+      if (divAns === undefined) {
+        divA = 8; divB = 4; divAns = 2;
+        nums = nums.filter(n => n !== 8 && n !== 4);
+      } else {
+        nums = nums.filter(n => n !== divA && n !== divB);
+      }
+
+      // Multiply
+      const mA = nums.shift(), mB = nums.shift();
+      const mAns = mA * mB;
+
+      // Subtract (non-negative)
+      let sA = nums.shift(), sB = nums.shift();
+      if (sB > sA) [sA, sB] = [sB, sA];
+      const sAns = sA - sB;
+
+      // Add
+      const aA = nums.shift(), aB = nums.shift();
+      const aAns = aA + aB;
+
+      // Random op with last two numbers
+      let [x, y] = nums;
+      const randOp = ["add","subtract","multiply","divide"][Math.floor(Math.random()*4)];
+      let rA, rB, rAns, rOp = randOp;
+
+      if (rOp === "add") {
+        rA = x; rB = y; rAns = x + y;
+      } else if (rOp === "multiply") {
+        rA = x; rB = y; rAns = x * y;
+      } else if (rOp === "subtract") {
+        rA = Math.max(x,y); rB = Math.min(x,y); rAns = rA - rB;
+      } else {
+        // division: ensure whole-number; if not possible, switch to add (keeps the "random op" concept)
+        const big = Math.max(x,y), small = Math.min(x,y);
+        if (small !== 0 && big % small === 0) {
+          rA = big; rB = small; rAns = big / small;
+        } else {
+          rOp = "add";
+          rA = x; rB = y; rAns = x + y;
+        }
+      }
+
+      const equations = [
+        { id: crypto.randomUUID(), op: "divide",   a: divA, b: divB, answer: divAns },
+        { id: crypto.randomUUID(), op: "multiply", a: mA,   b: mB,   answer: mAns },
+        { id: crypto.randomUUID(), op: "subtract", a: sA,   b: sB,   answer: sAns },
+        { id: crypto.randomUUID(), op: "add",      a: aA,   b: aB,   answer: aAns },
+        { id: crypto.randomUUID(), op: rOp,        a: rA,   b: rB,   answer: rAns, isRandom: true },
+      ];
+
+      // Shuffle the order so the “random” one isn’t always last visually,
+      // but it still counts as the 5th operation type.
+      shuffleArray(equations);
+
+      return {
+        equations,
+        used: new Set(),
+        selected: null
+      };
+    }
+
+    function opSymbol(op) {
+      if (op === "add") return "+";
+      if (op === "subtract") return "−";
+      if (op === "multiply") return "×";
+      return "÷";
+    }
+
+    function updateBankUI() {
+      const btns = [...bankEl.querySelectorAll("button")];
+      btns.forEach(btn => {
+        const n = Number(btn.dataset.n);
+        btn.classList.toggle("used", puzzle.used.has(n));
+        btn.disabled = puzzle.used.has(n);
+        btn.classList.toggle("selected", puzzle.selected === n);
+      });
+    }
+
+    function currentBlankId() {
+      const active = document.activeElement;
+      if (active && active.classList && active.classList.contains("blank")) return active.id;
+      return null;
+    }
+
+    function setBlankValue(input, value) {
+      const v = value === null ? "" : String(value);
+      input.value = v;
+    }
+
+    function recomputeUsedFromInputs() {
+      puzzle.used.clear();
+      const inputs = [...eqEl.querySelectorAll("input.blank")];
+      for (const inp of inputs) {
+        const val = inp.value.trim();
+        if (!val) continue;
+        const n = Number(val);
+        if (Number.isInteger(n) && n >= 1 && n <= 10) puzzle.used.add(n);
+      }
+    }
+
+    function render() {
+      eqEl.innerHTML = "";
+      bankEl.innerHTML = "";
+      msgEl.textContent = "";
+      scoreText.textContent = "Solved: 0 / 5";
+
+      // Equations (blanks only; answers shown)
+      puzzle.equations.forEach((eq, idx) => {
+        const row = document.createElement("div");
+        row.className = "eq";
+        const sym = opSymbol(eq.op);
+
+        row.innerHTML = `
+          <div class="eq-left">
+            <span><b>${idx + 1}.</b></span>
+            <input class="blank" inputmode="numeric" pattern="\\d*" maxlength="2" id="a-${eq.id}" aria-label="First number for equation ${idx+1}">
+            <span class="op">${sym}</span>
+            <input class="blank" inputmode="numeric" pattern="\\d*" maxlength="2" id="b-${eq.id}" aria-label="Second number for equation ${idx+1}">
+            <span>=</span>
+            <span class="ans">${eq.answer}</span>
+            ${eq.isRandom ? `<span class="tag" title="This line is the random operation">Random</span>` : ``}
+          </div>
+          <div class="tag" id="tag-${eq.id}">Not checked</div>
+        `;
+        eqEl.appendChild(row);
+
+        // Input handlers
+        const aInp = row.querySelector(`#a-${CSS.escape(eq.id)}`);
+        const bInp = row.querySelector(`#b-${CSS.escape(eq.id)}`);
+
+        for (const inp of [aInp, bInp]) {
+          inp.addEventListener("focus", () => {
+            // If a number is selected from bank, user can click into a blank then click bank number, or vice versa.
+          });
+
+          inp.addEventListener("keydown", (e) => {
+            if (e.key === "Backspace" || e.key === "Delete") {
+              // allow normal clearing; we update used on input event
+              return;
+            }
+            if (e.key === "Enter") {
+              e.preventDefault();
+              // jump to next blank
+              const blanks = [...eqEl.querySelectorAll("input.blank")];
+              const i = blanks.indexOf(inp);
+              (blanks[i + 1] || blanks[0]).focus();
+            }
+          });
+
+          inp.addEventListener("input", () => {
+            // keep only digits
+            inp.value = inp.value.replace(/[^\d]/g, "");
+            // clamp 1..10 if they typed something else
+            const val = inp.value.trim();
+            if (val) {
+              const n = Number(val);
+              if (!Number.isInteger(n) || n < 1 || n > 10) {
+                // keep the typed number for a moment, but it won't count as used; could also auto-clear:
+                // inp.value = "";
+              }
+            }
+            recomputeUsedFromInputs();
+            updateBankUI();
+          });
+        }
+      });
+
+      // Bank 1..10
+      for (let n = 1; n <= 10; n++) {
+        const b = document.createElement("button");
+        b.className = "numBtn";
+        b.textContent = n;
+        b.dataset.n = String(n);
+        b.addEventListener("click", () => {
+          // Toggle selection
+          if (puzzle.used.has(n)) return;
+          puzzle.selected = (puzzle.selected === n) ? null : n;
+          updateBankUI();
+
+          // If a blank is focused, fill it immediately
+          const id = currentBlankId();
+          if (id && puzzle.selected !== null) {
+            const inp = document.getElementById(id);
+            // prevent duplicate use: if blank already had a number, free it first
+            inp.value = String(puzzle.selected);
+            puzzle.selected = null; // auto-unselect after placing
+            recomputeUsedFromInputs();
+            updateBankUI();
+          }
+        });
+        bankEl.appendChild(b);
+      }
+
+      // Click a blank to place selected number (if any)
+      eqEl.addEventListener("click", (e) => {
+        const target = e.target;
+        if (!(target instanceof HTMLInputElement)) return;
+        if (!target.classList.contains("blank")) return;
+        if (puzzle.selected === null) return;
+
+        target.value = String(puzzle.selected);
+        puzzle.selected = null;
+        recomputeUsedFromInputs();
+        updateBankUI();
+      });
+
+      // Initial bank state
+      updateBankUI();
+
+      // Focus first blank
+      const first = eqEl.querySelector("input.blank");
+      first?.focus();
+    }
+
+    function evaluateEquation(op, a, b) {
+      if (op === "add") return a + b;
+      if (op === "subtract") return a - b;
+      if (op === "multiply") return a * b;
+      // divide
+      if (b === 0) return NaN;
+      return a / b;
+    }
+
+    function check() {
+      recomputeUsedFromInputs();
+      updateBankUI();
+
+      const blanks = [...eqEl.querySelectorAll("input.blank")];
+      const vals = blanks.map(i => i.value.trim());
+
+      // Quick validation: all filled with 1..10 and no duplicates
+      const nums = [];
+      for (const v of vals) {
+        if (!v) {
+          msgEl.textContent = "Fill in all blanks first.";
+          msgEl.style.color = "#b00020";
+          return;
+        }
+        const n = Number(v);
+        if (!Number.isInteger(n) || n < 1 || n > 10) {
+          msgEl.textContent = "Only use whole numbers 1–10.";
+          msgEl.style.color = "#b00020";
+          return;
+        }
+        nums.push(n);
+      }
+      const set = new Set(nums);
+      if (set.size !== nums.length) {
+        msgEl.textContent = "Each number can only be used once. Fix duplicates.";
+        msgEl.style.color = "#b00020";
+        return;
+      }
+
+      let solved = 0;
+      for (const eq of puzzle.equations) {
+        const a = Number(document.getElementById(`a-${eq.id}`).value);
+        const b = Number(document.getElementById(`b-${eq.id}`).value);
+        const tag = document.getElementById(`tag-${eq.id}`);
+
+        const res = evaluateEquation(eq.op, a, b);
+
+        // For division, require whole-number match as generated (but if student reverses it, it won't match answer)
+        const ok = (Number.isFinite(res) && res === eq.answer);
+
+        if (ok) {
+          solved++;
+          tag.className = "tag ok";
+          tag.textContent = "Correct ✓";
+        } else {
+          tag.className = "tag no";
+          tag.textContent = "Not correct";
+        }
+      }
+
+      scoreText.textContent = `Solved: ${solved} / ${puzzle.equations.length}`;
+      if (solved === puzzle.equations.length) {
+        msgEl.textContent = "✅ Perfect! All equations are correct.";
+        msgEl.style.color = "#0b6b2a";
+      } else {
+        msgEl.textContent = "Keep going — fix the ones marked ‘Not correct’.";
+        msgEl.style.color = "#444";
+      }
+    }
+
+    function clearAll() {
+      const inputs = [...eqEl.querySelectorAll("input.blank")];
+      inputs.forEach(i => i.value = "");
+      puzzle.selected = null;
+      puzzle.used.clear();
+
+      // reset tags
+      puzzle.equations.forEach(eq => {
+        const tag = document.getElementById(`tag-${eq.id}`);
+        if (tag) {
+          tag.className = "tag";
+          tag.textContent = "Not checked";
+        }
+      });
+
+      updateBankUI();
+      scoreText.textContent = `Solved: 0 / ${puzzle.equations.length}`;
+      msgEl.textContent = "";
+      inputs[0]?.focus();
+    }
+
+    function newPuzzle() {
+      puzzle = generatePuzzle();
+      render();
+    }
+
+    document.getElementById("checkBtn").addEventListener("click", check);
+    document.getElementById("clearBtn").addEventListener("click", clearAll);
+    document.getElementById("newBtn").addEventListener("click", newPuzzle);
+
+    // Start
+    newPuzzle();
+  </script>
+</body>
+</html>
