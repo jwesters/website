@@ -1,0 +1,798 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dice 7 Grid (2-Player)</title>
+  <style>
+    :root{
+      --bg:#0f1220;
+      --text:#e9ecff;
+      --muted:#aeb6e8;
+      --accent:#6ee7ff;
+      --accent2:#a78bfa;
+      --good:#5ef3a1;
+      --bad:#ff5f7a;
+      --warn:#ffd166;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 16px;
+    }
+    *{box-sizing:border-box}
+    html{overflow-y: scroll;} /* prevents scrollbar width shifts */
+
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(1200px 700px at 20% 10%, #1b2150 0%, var(--bg) 55%, #0a0d18 100%);
+      color:var(--text);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+    }
+    .app{
+      width:min(1100px, 100%);
+      display:grid;
+      grid-template-columns: 360px 1fr;
+      gap:18px;
+    }
+    @media (max-width: 900px){
+      .app{grid-template-columns:1fr}
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.08);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card .hd{
+      padding:16px 16px 12px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), transparent);
+    }
+    .title{
+      font-size:18px;
+      font-weight:800;
+      letter-spacing:.2px;
+      margin:0 0 6px 0;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .pill{
+      font-size:12px;
+      color: #0c1323;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      padding:4px 10px;
+      border-radius:999px;
+      font-weight:800;
+      white-space:nowrap;
+    }
+    .sub{
+      margin:0;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.25rem;
+    }
+    .body{padding:16px}
+    .divider{height:1px; background:rgba(255,255,255,.08); margin:12px 0}
+
+    button{
+      appearance:none;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius: 14px;
+      font-weight:800;
+      cursor:pointer;
+      transition: transform .06s ease, background .2s ease, border-color .2s ease, opacity .2s ease;
+      user-select:none;
+    }
+    button:hover{background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.22)}
+    button:active{transform: translateY(1px)}
+    button.primary{
+      background: linear-gradient(90deg, rgba(110,231,255,.18), rgba(167,139,250,.14));
+      border-color: rgba(110,231,255,.35);
+    }
+    button.danger{
+      background: rgba(255,95,122,.12);
+      border-color: rgba(255,95,122,.3);
+    }
+    button:disabled{opacity:.45; cursor:not-allowed}
+
+    .hint{
+      font-size:12.5px;
+      color: var(--muted);
+      line-height:1.25rem;
+    }
+
+    /* Left column roll area */
+    .rollArea{
+      display:flex;
+      gap:14px;
+      align-items:center;
+      flex-wrap:wrap;
+      min-height: 128px; /* reserve space so height doesn't change */
+    }
+
+    /* Die (pips) */
+    .die{
+      width: 54px;
+      height: 54px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.07));
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow: 0 8px 18px rgba(0,0,0,.28);
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      padding:8px;
+      gap:6px;
+    }
+    .die.small{width:46px;height:46px;border-radius:13px;padding:7px;gap:5px}
+    .die.big{width:84px;height:84px;border-radius:18px;padding:11px;gap:9px}
+    @media (max-width: 560px){
+      .die.small{width:34px;height:34px;border-radius:10px;padding:5px;gap:4px}
+      .die.big{width:76px;height:76px;border-radius:16px;padding:10px;gap:8px}
+    }
+    .pip{
+      width: 100%;
+      height: 100%;
+      border-radius: 999px;
+      background: rgba(255,255,255,.96);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.35), 0 2px 6px rgba(0,0,0,.20);
+      opacity:0;
+      transform: scale(.8);
+      transition: opacity .12s ease, transform .12s ease;
+    }
+    .pip.on{opacity:1; transform: scale(1)}
+
+    /* Easier-to-read CURRENT ROLL die */
+    .die.current{
+      background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.70));
+      border-color: rgba(255,255,255,.85);
+      box-shadow: 0 10px 24px rgba(0,0,0,.35);
+    }
+    .die.current .pip{
+      background: rgba(10, 14, 28, .92);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.20), 0 2px 6px rgba(0,0,0,.25);
+    }
+
+    /* Toast: never remove from layout */
+    .toast{
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.22);
+      font-size:13px;
+      color:var(--muted);
+      line-height:1.25rem;
+
+      min-height: 44px;
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity .15s ease;
+    }
+    .toast.show{visibility: visible; opacity: 1;}
+    .toast.good{border-color: rgba(94,243,161,.25); background: rgba(94,243,161,.08)}
+    .toast.bad{border-color: rgba(255,95,122,.25); background: rgba(255,95,122,.08)}
+    .toast.warn{border-color: rgba(255,209,102,.26); background: rgba(255,209,102,.07)}
+
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      display:inline-block;
+      margin: 0 2px;
+      white-space:nowrap;
+    }
+
+    /* Board */
+    .boardWrap{ padding:16px; }
+    .boardTop{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:12px;
+      flex-wrap:wrap;
+    }
+    .boardTurnBig{
+      font-size:24px;
+      font-weight:950;
+      letter-spacing:.2px;
+      margin:0;
+      line-height:1.1;
+    }
+    .boardTurnBig .p1{color: var(--accent)}
+    .boardTurnBig .p2{color: var(--accent2)}
+    .boardSub{
+      margin:6px 0 0 0;
+      color: var(--muted);
+      font-size:13px;
+      line-height:1.25rem;
+    }
+
+    .scoreBadge{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+      font-weight:900;
+      white-space:nowrap;
+    }
+    .scoreBadge .p1{color: var(--accent)}
+    .scoreBadge .p2{color: var(--accent2)}
+    .scoreBadge small{
+      font-weight:800;
+      color: var(--muted);
+      margin-left:6px;
+    }
+
+    /* HARD-FIXED board size */
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(5, 92px);
+      grid-template-rows: repeat(5, 92px);
+      gap:10px;
+      width: calc(5 * 92px + 4 * 10px);
+      height: calc(5 * 92px + 4 * 10px);
+      margin: 0 auto;
+      justify-content:center;
+      align-content:center;
+      flex: 0 0 auto;
+    }
+    @media (max-width: 560px){
+      .grid{
+        grid-template-columns: repeat(5, 64px);
+        grid-template-rows: repeat(5, 64px);
+        gap:8px;
+        width: calc(5 * 64px + 4 * 8px);
+        height: calc(5 * 64px + 4 * 8px);
+      }
+    }
+
+    .cell{
+      width: 92px;
+      height: 92px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.10);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      cursor:pointer;
+      transition: transform .08s ease, background .2s ease, border-color .2s ease, filter .2s ease;
+      user-select:none;
+      overflow:hidden;
+      flex: 0 0 auto;
+    }
+    @media (max-width: 560px){
+      .cell{ width:64px; height:64px; border-radius:14px; }
+    }
+    .cell:hover{
+      background: rgba(255,255,255,.07);
+      border-color: rgba(255,255,255,.18);
+      transform: translateY(-1px);
+    }
+    .cell:active{transform: translateY(0px)}
+    .cell.disabled{
+      cursor:not-allowed;
+      filter: grayscale(.25);
+      opacity:.55;
+    }
+    .cell.disabled:hover{transform:none; background: rgba(255,255,255,.04)}
+
+    .cell .ownerStripe{
+      position:absolute;
+      inset:auto 0 0 0;
+      height:6px;
+      background: transparent;
+      opacity:.9;
+    }
+    .cell.p1 .ownerStripe{background: rgba(110,231,255,.7)}
+    .cell.p2 .ownerStripe{background: rgba(167,139,250,.75)}
+
+    /* Highlight eligible erase dice */
+    .cell.eligible{
+      outline: 3px solid rgba(94,243,161,.55);
+      outline-offset: -3px;
+      opacity: 1 !important;
+      filter: none !important;
+    }
+
+    /* Modal */
+    .winOverlay{
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+      z-index: 999;
+    }
+    .winOverlay.show{display:flex}
+    .modal{
+      width:min(520px, 100%);
+      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.12);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .modal .mhd{
+      padding:16px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+    }
+    .modal .mbody{padding:16px}
+    .modal h2{margin:0 0 6px 0; font-size:20px}
+    .modal p{margin:0; color:var(--muted); line-height:1.3rem}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- LEFT PANEL -->
+    <section class="card">
+      <div class="hd">
+        <h1 class="title">Dice 7 Grid <span class="pill">First to 11</span></h1>
+        <p class="sub">
+          Lines are the 5 rows, 5 columns, and 2 diagonals. <br>Empty squares count as 0.
+          If a line sums to <b>7</b>, score <b>+1 per line</b>.<br>
+          If you score, you must erase <b>exactly one</b> die — but only from the dice that made those 7-lines.<br>
+          <br>
+		  Chain reactions are <b>on</b>.
+        </p>
+      </div>
+      <div class="body">
+        <div class="rollArea">
+          <div>
+            <div class="hint" style="margin-bottom:6px;">Current roll</div>
+            <div id="currentDie" aria-label="Current die"></div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:10px; flex:1; min-width: 180px;">
+            <button id="rollBtn" class="primary">Roll Die</button>
+            <button id="restartBtn" class="danger">Restart</button>
+            <div id="toast" class="toast warn"></div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="hint">
+          How it works:
+          <div style="height:10px"></div>
+          <div>• <span class="kbd">Roll</span> → click an empty square to place.</div>
+          <div>• If you score, you must <span class="kbd">Erase</span> one die that contributed to a scoring 7-line.</div>
+          <div>• After erase, scoring checks again (chain reactions). Then turn passes.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT PANEL -->
+    <section class="card">
+      <div class="hd">
+        <h2 class="title" style="font-size:18px; margin:0;">Board</h2>
+        <p class="sub" id="boardMsg">Roll to start.</p>
+      </div>
+      <div class="boardWrap">
+        <div class="boardTop">
+          <div>
+            <p id="turnBig" class="boardTurnBig">Player 1’s turn</p>
+            <p id="actionMsg" class="boardSub">Click <b>Roll Die</b>.</p>
+          </div>
+
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+            <div class="scoreBadge" aria-label="Score">
+              <span class="p1">P1: <span id="scoreP1">0</span></span>
+              <span>—</span>
+              <span class="p2">P2: <span id="scoreP2">0</span></span>
+              <small>(to 11)</small>
+            </div>
+            <button id="autoRollBtn" title="Auto-roll at start of each turn">
+              Auto-roll: <b id="autoRollState">On</b>
+            </button>
+          </div>
+        </div>
+
+        <div id="grid" class="grid" aria-label="5x5 grid"></div>
+      </div>
+    </section>
+  </div>
+
+  <div id="winOverlay" class="winOverlay" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="mhd">
+        <h2 id="winTitle">Player wins!</h2>
+        <p id="winDesc">Nice.</p>
+      </div>
+      <div class="mbody">
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap">
+          <button id="playAgainBtn" class="primary">Play Again</button>
+          <button id="closeWinBtn">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const SIZE = 5;
+  const WIN_SCORE = 11;
+
+  const state = {
+    board: Array.from({length: SIZE}, () => Array(SIZE).fill(null)), // {value, owner}
+    currentPlayer: 0,
+    scores: [0,0],
+    currentRoll: null,
+    phase: "roll", // roll | place | erase | gameover
+    autoRoll: true,
+
+    // When scoring happens, only these positions are legal to erase (union of contributing dice)
+    eligibleErase: new Set(), // keys like "r,c"
+  };
+
+  const el = {
+    grid: document.getElementById('grid'),
+    rollBtn: document.getElementById('rollBtn'),
+    restartBtn: document.getElementById('restartBtn'),
+    currentDie: document.getElementById('currentDie'),
+    scoreP1: document.getElementById('scoreP1'),
+    scoreP2: document.getElementById('scoreP2'),
+    actionMsg: document.getElementById('actionMsg'),
+    boardMsg: document.getElementById('boardMsg'),
+    toast: document.getElementById('toast'),
+    autoRollBtn: document.getElementById('autoRollBtn'),
+    autoRollState: document.getElementById('autoRollState'),
+    turnBig: document.getElementById('turnBig'),
+    winOverlay: document.getElementById('winOverlay'),
+    winTitle: document.getElementById('winTitle'),
+    winDesc: document.getElementById('winDesc'),
+    playAgainBtn: document.getElementById('playAgainBtn'),
+    closeWinBtn: document.getElementById('closeWinBtn'),
+  };
+
+  const PIPS = {
+    1: [4],
+    2: [0,8],
+    3: [0,4,8],
+    4: [0,2,6,8],
+    5: [0,2,4,6,8],
+    6: [0,2,3,5,6,8]
+  };
+
+  const keyOf = (r,c) => `${r},${c}`;
+
+  function makeDie(face, sizeClass="", isCurrent=false) {
+    const die = document.createElement('div');
+    die.className = `die ${sizeClass} ${isCurrent ? "current" : ""}`.trim();
+    for (let i=0;i<9;i++){
+      const pip = document.createElement('div');
+      const on = face && PIPS[face].includes(i);
+      pip.className = 'pip' + (on ? ' on' : '');
+      die.appendChild(pip);
+    }
+    return die;
+  }
+
+  function setCurrentDie(face) {
+    el.currentDie.innerHTML = "";
+    el.currentDie.appendChild(makeDie(face, "big", true));
+  }
+
+  function showToast(msg, kind="warn") {
+    el.toast.className = `toast ${kind} show`;
+    el.toast.textContent = msg;
+  }
+  function hideToast() {
+    el.toast.className = `toast warn`;
+    el.toast.textContent = "";
+  }
+
+  function countFilled() {
+    let n=0;
+    for (let r=0;r<SIZE;r++){
+      for (let c=0;c<SIZE;c++){
+        if (state.board[r][c] !== null) n++;
+      }
+    }
+    return n;
+  }
+
+  function getAllLines() {
+    const lines = [];
+    for (let r=0;r<SIZE;r++){
+      lines.push({type:"row", index:r, cells: Array.from({length:SIZE}, (_,c)=>[r,c])});
+    }
+    for (let c=0;c<SIZE;c++){
+      lines.push({type:"col", index:c, cells: Array.from({length:SIZE}, (_,r)=>[r,c])});
+    }
+    lines.push({type:"diag", index:0, cells: Array.from({length:SIZE}, (_,i)=>[i,i])});
+    lines.push({type:"diag", index:1, cells: Array.from({length:SIZE}, (_,i)=>[i,SIZE-1-i])});
+    return lines;
+  }
+  const ALL_LINES = getAllLines();
+
+  function lineSum(line) {
+    let sum = 0;
+    for (const [r,c] of line.cells) {
+      const cell = state.board[r][c];
+      sum += cell ? cell.value : 0;
+    }
+    return sum;
+  }
+
+  function findScoringLines() {
+    const scoring = [];
+    for (const line of ALL_LINES){
+      if (lineSum(line) === 7) scoring.push(line);
+    }
+    return scoring;
+  }
+
+  function describeLine(line){
+    if (line.type === "row") return `Row ${line.index+1}`;
+    if (line.type === "col") return `Col ${line.index+1}`;
+    return (line.index === 0) ? "Main diagonal" : "Anti-diagonal";
+  }
+
+  function computeEligibleEraseFromLines(scoringLines){
+    const set = new Set();
+    for (const line of scoringLines){
+      for (const [r,c] of line.cells){
+        const cell = state.board[r][c];
+        if (cell) set.add(keyOf(r,c)); // only actual dice "helped"
+      }
+    }
+    return set;
+  }
+
+  function scoreForCurrentPlayer(scoringLines) {
+    const pts = scoringLines.length;
+    if (pts <= 0) return 0;
+    state.scores[state.currentPlayer] += pts;
+    return pts;
+  }
+
+  function checkWin() {
+    if (state.scores[0] >= WIN_SCORE || state.scores[1] >= WIN_SCORE) {
+      state.phase = "gameover";
+      render();
+      const winner = state.scores[0] >= WIN_SCORE ? 0 : 1;
+      const name = winner === 0 ? "Player 1" : "Player 2";
+      el.winTitle.textContent = `${name} wins!`;
+      el.winDesc.textContent = `Final score: ${state.scores[0]} — ${state.scores[1]}`;
+      el.winOverlay.classList.add("show");
+      return true;
+    }
+    return false;
+  }
+
+  function updateTurnHeader() {
+    const p = state.currentPlayer === 0 ? "Player 1" : "Player 2";
+    const cls = state.currentPlayer === 0 ? "p1" : "p2";
+    el.turnBig.innerHTML = `<span class="${cls}">${p}</span>’s turn`;
+  }
+
+  function startTurn() {
+    if (state.phase === "gameover") return;
+    state.currentRoll = null;
+    state.phase = "roll";
+    state.eligibleErase.clear();
+    hideToast();
+    updateTurnHeader();
+
+    if (state.autoRoll) rollDie();
+    else {
+      render();
+      el.actionMsg.innerHTML = `Click <b>Roll Die</b>.`;
+    }
+  }
+
+  function switchTurn() {
+    state.currentPlayer = 1 - state.currentPlayer;
+    startTurn();
+  }
+
+  function rollDie() {
+    if (state.phase !== "roll") return;
+    state.currentRoll = 1 + Math.floor(Math.random() * 6);
+    state.phase = "place";
+    setCurrentDie(state.currentRoll);
+    render();
+    el.actionMsg.innerHTML = `Place the rolled die on any <b>empty</b> square.`;
+  }
+
+  function placeAt(r,c) {
+    if (state.phase !== "place") return;
+    if (state.board[r][c] !== null) return;
+    if (state.currentRoll == null) return;
+
+    state.board[r][c] = { value: state.currentRoll, owner: state.currentPlayer };
+    resolveScoringLoop();
+  }
+
+  function eraseAt(r,c) {
+    if (state.phase !== "erase") return;
+    const k = keyOf(r,c);
+    if (!state.eligibleErase.has(k)) return; // restriction: must be a contributing die
+    if (state.board[r][c] === null) return;
+
+    state.board[r][c] = null;
+    state.eligibleErase.clear(); // will be recomputed if chain scoring happens
+    resolveScoringLoop();
+  }
+
+  function resolveScoringLoop() {
+    if (checkWin()) return;
+
+    const scoringLines = findScoringLines();
+    if (scoringLines.length > 0) {
+      const pts = scoreForCurrentPlayer(scoringLines);
+      const linesText = scoringLines.map(describeLine).join(", ");
+
+      // Only allow erasing dice that were part of these scoring lines (and exist on the board)
+      state.eligibleErase = computeEligibleEraseFromLines(scoringLines);
+
+      // Safety: if somehow empty set (shouldn't happen), fall back to allow none (no erase possible),
+      // but we’ll just pass turn to avoid a soft-lock.
+      if (state.eligibleErase.size === 0) {
+        hideToast();
+        if (countFilled() >= SIZE*SIZE) {
+          state.phase = "gameover";
+          render();
+          el.winTitle.textContent = `Board full — game over`;
+          el.winDesc.textContent = `Final score: ${state.scores[0]} — ${state.scores[1]}`;
+          el.winOverlay.classList.add("show");
+          return;
+        }
+        switchTurn();
+        return;
+      }
+
+      showToast(`Scored +${pts}! (${linesText}) Erase ONE highlighted die (must be from those 7-lines).`, "good");
+      state.phase = "erase";
+
+      if (checkWin()) return;
+
+      render();
+      el.actionMsg.innerHTML = `You scored! Now erase <b>exactly one</b> <b>highlighted</b> die (it must be from the 7-line(s) you just made).`;
+      return;
+    }
+
+    hideToast();
+
+    if (countFilled() >= SIZE*SIZE) {
+      state.phase = "gameover";
+      render();
+      el.winTitle.textContent = `Board full — game over`;
+      el.winDesc.textContent = `Final score: ${state.scores[0]} — ${state.scores[1]}`;
+      el.winOverlay.classList.add("show");
+      return;
+    }
+
+    switchTurn();
+  }
+
+  function restart() {
+    state.board = Array.from({length: SIZE}, () => Array(SIZE).fill(null));
+    state.currentPlayer = 0;
+    state.scores = [0,0];
+    state.currentRoll = null;
+    state.phase = "roll";
+    state.eligibleErase.clear();
+    hideToast();
+    el.winOverlay.classList.remove("show");
+    startTurn();
+  }
+
+  function renderGrid() {
+    el.grid.innerHTML = "";
+    for (let r=0;r<SIZE;r++){
+      for (let c=0;c<SIZE;c++){
+        const cell = document.createElement('div');
+        cell.className = "cell";
+        const data = state.board[r][c];
+        const k = keyOf(r,c);
+
+        if (data) {
+          cell.classList.add(data.owner === 0 ? "p1" : "p2");
+          cell.appendChild(makeDie(data.value, "small", false));
+          const stripe = document.createElement('div');
+          stripe.className = "ownerStripe";
+          cell.appendChild(stripe);
+        }
+
+        let clickable = false;
+
+        if (state.phase === "place") {
+          clickable = (data === null);
+        } else if (state.phase === "erase") {
+          clickable = (data !== null) && state.eligibleErase.has(k);
+          if (state.eligibleErase.has(k)) cell.classList.add("eligible");
+        }
+
+        if (!clickable) cell.classList.add("disabled");
+
+        cell.addEventListener('click', () => {
+          if (state.phase === "place") placeAt(r,c);
+          else if (state.phase === "erase") eraseAt(r,c);
+        });
+
+        el.grid.appendChild(cell);
+      }
+    }
+  }
+
+  function renderStatus() {
+    el.scoreP1.textContent = state.scores[0];
+    el.scoreP2.textContent = state.scores[1];
+    el.autoRollState.textContent = state.autoRoll ? "On" : "Off";
+    el.rollBtn.disabled = !(state.phase === "roll");
+    updateTurnHeader();
+  }
+
+  function renderMessages() {
+    const p = state.currentPlayer === 0 ? "Player 1" : "Player 2";
+    if (state.phase === "roll") {
+      el.boardMsg.textContent = `${p}: roll a die.`;
+      el.actionMsg.innerHTML = `Click <b>Roll Die</b>.`;
+    } else if (state.phase === "place") {
+      el.boardMsg.textContent = `${p}: place your roll on an empty square.`;
+      el.actionMsg.innerHTML = `Place the rolled die on any <b>empty</b> square.`;
+    } else if (state.phase === "erase") {
+      el.boardMsg.textContent = `${p}: erase exactly one contributing die (highlighted).`;
+      el.actionMsg.innerHTML = `Erase <b>exactly one</b> <b>highlighted</b> die.`;
+    } else {
+      el.boardMsg.textContent = `Game over.`;
+      el.actionMsg.innerHTML = `Game over.`;
+    }
+  }
+
+  function render() {
+    renderStatus();
+    renderMessages();
+    renderGrid();
+
+    if (state.currentRoll == null) {
+      el.currentDie.innerHTML = "";
+      el.currentDie.appendChild(makeDie(null, "big", true));
+    }
+  }
+
+  // Events
+  el.rollBtn.addEventListener('click', rollDie);
+  el.restartBtn.addEventListener('click', restart);
+  el.autoRollBtn.addEventListener('click', () => {
+    state.autoRoll = !state.autoRoll;
+    renderStatus();
+    if (state.phase === "roll" && state.autoRoll) rollDie();
+  });
+  el.playAgainBtn.addEventListener('click', () => {
+    el.winOverlay.classList.remove("show");
+    restart();
+  });
+  el.closeWinBtn.addEventListener('click', () => {
+    el.winOverlay.classList.remove("show");
+  });
+
+  // Init
+  startTurn();
+  render();
+})();
+</script>
+</body>
+</html>

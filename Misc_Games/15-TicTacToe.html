@@ -1,0 +1,666 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>15 Tic-Tac-Toe (Even vs Odd)</title>
+  <style>
+    :root{
+      --bg:#0e1020;
+      --text:#eef1ff;
+      --muted:#b8bfe6;
+      --even:#6bffb1;
+      --odd:#ff6b6b;
+      --win:#7aa2ff;
+      --border:rgba(255,255,255,.10);
+      --shadow: 0 12px 30px rgba(0,0,0,.38);
+      --cellBorder: 2px;       /* fixed border thickness */
+      --gap: 10px;
+    }
+
+    *{ box-sizing:border-box; }
+    html, body { height:100%; }
+
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background:
+        radial-gradient(900px 650px at 20% 10%, #1b2050 0%, rgba(27,32,80,0) 55%),
+        radial-gradient(900px 650px at 80% 20%, #2a1b50 0%, rgba(42,27,80,0) 60%),
+        var(--bg);
+      color:var(--text);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:22px;
+    }
+
+    .app{
+      width:min(980px, 100%);
+      display:grid;
+      grid-template-columns: 330px 1fr;
+      gap:18px;
+      align-items:start;
+    }
+    @media (max-width: 860px){ .app{ grid-template-columns:1fr; } }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06) 0%, rgba(255,255,255,.02) 100%);
+      border:1px solid var(--border);
+      border-radius:18px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      backdrop-filter: blur(6px);
+    }
+    .card header{
+      padding:16px 16px 12px;
+      border-bottom:1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255,255,255,.06) 0%, rgba(255,255,255,0) 100%);
+    }
+    h1{ margin:0; font-size:18px; letter-spacing:.2px; }
+    .sub{ margin-top:6px; color:var(--muted); font-size:12.5px; line-height:1.35; }
+
+    .pane{ padding:16px; display:flex; flex-direction:column; gap:14px; }
+    .status{
+      background: rgba(0,0,0,.18);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px;
+    }
+    .row{ display:flex; justify-content:space-between; gap:10px; margin:6px 0; }
+    .label{ color:var(--muted); font-size:12px; }
+    .value{ font-weight:1000; font-size:13px; }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      padding:6px 10px;
+      border-radius:999px;
+      font-weight:1000;
+      font-size:12.5px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.06);
+      white-space:nowrap;
+    }
+    .pill.even{ border-color: rgba(107,255,177,.45); background: rgba(107,255,177,.12); }
+    .pill.odd{  border-color: rgba(255,107,107,.45); background: rgba(255,107,107,.12); }
+
+    .nums{ display:grid; grid-template-columns: repeat(5, 1fr); gap:8px; }
+    .numBtn{
+      appearance:none;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      border-radius:12px;
+      padding:10px 0;
+      font-weight:1000;
+      cursor:pointer;
+      user-select:none;
+      width:100%;
+      outline:none;
+    }
+    .numBtn:hover{ background: rgba(255,255,255,.10); }
+    .numBtn:active{ background: rgba(255,255,255,.12); }
+    .numBtn[disabled]{ opacity:.35; cursor:not-allowed; }
+    .numBtn.selected{
+      box-shadow: 0 0 0 2px rgba(122,162,255,.95) inset;
+      border-color: rgba(122,162,255,.8);
+      background: rgba(122,162,255,.22);
+    }
+    .numBtn:focus-visible{
+      box-shadow: 0 0 0 2px rgba(255,255,255,.35) inset, 0 0 0 2px rgba(0,0,0,0);
+    }
+
+    .actions{ display:flex; gap:10px; flex-wrap:wrap; }
+    .btn{
+      appearance:none;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.07);
+      color: var(--text);
+      padding:10px 12px;
+      border-radius:14px;
+      font-weight:1000;
+      cursor:pointer;
+    }
+    .btn:hover{ background: rgba(255,255,255,.11); }
+    .btn.primary{ background: rgba(122,162,255,.20); border-color: rgba(122,162,255,.55); }
+    .btn.danger{ background: rgba(255,107,107,.16); border-color: rgba(255,107,107,.50); }
+
+    .boardWrap{
+      padding:18px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:14px;
+    }
+    .currentPlayer{
+      width:min(520px, 92vw);
+      text-align:center;
+      padding:10px 12px;
+      border-radius:16px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.18);
+      box-shadow: 0 10px 24px rgba(0,0,0,.22);
+      font-weight:1000;
+      letter-spacing:.2px;
+    }
+    .currentPlayer .hint{
+      display:block;
+      margin-top:3px;
+      font-weight:800;
+      font-size:12.5px;
+      color:var(--muted);
+    }
+
+    /* Board: fixed geometry, no animation transforms */
+    .boardShell{ width:min(440px, 92vw); }
+    .board{
+      width:100%;
+      aspect-ratio:1 / 1;
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--gap);
+      position:relative;
+    }
+    @supports not (aspect-ratio: 1 / 1){
+      .board{ height:min(440px, 92vw); }
+    }
+
+    /* Cells: force square shape + prevent any “growth” illusions */
+    .cell{
+      appearance:none;
+      border: var(--cellBorder) solid rgba(255,255,255,.16);
+      background:
+        radial-gradient(120px 120px at 30% 25%, rgba(255,255,255,.14) 0%, rgba(255,255,255,.06) 55%, rgba(0,0,0,.18) 100%),
+        linear-gradient(180deg, rgba(255,255,255,.07) 0%, rgba(255,255,255,.03) 100%);
+      border-radius:18px;
+
+      width:100%;
+      height:100%;
+      aspect-ratio:1 / 1;          /* double-lock square cells */
+      min-width:0;
+      min-height:0;
+
+      margin:0;
+      padding:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      overflow:hidden;
+
+      font-weight:1000;
+      font-size:54px;
+      line-height:1;
+      font-variant-numeric: tabular-nums;
+
+      color: rgba(255,255,255,.97);
+      text-shadow: 0 2px 0 rgba(0,0,0,.25), 0 8px 18px rgba(0,0,0,.45);
+
+      cursor:pointer;
+      user-select:none;
+      outline:none;
+
+      /* No transform transitions at all */
+      transition: background .12s ease, border-color .12s ease, box-shadow .12s ease, filter .12s ease;
+    }
+    .cell:hover{ filter: brightness(1.12); }
+    .cell:active{ filter: brightness(1.18); }
+    .cell:disabled{ cursor:not-allowed; opacity:.92; }
+
+    /* Remove default focus ring that can look like resizing */
+    .cell:focus{ outline:none; }
+    .cell:focus-visible{
+      box-shadow: 0 0 0 3px rgba(255,255,255,.20) inset;
+    }
+
+    .cell[data-owner="even"]{
+      border-color: rgba(107,255,177,.52);
+      box-shadow: 0 0 0 2px rgba(107,255,177,.10) inset;
+    }
+    .cell[data-owner="odd"]{
+      border-color: rgba(255,107,107,.52);
+      box-shadow: 0 0 0 2px rgba(255,107,107,.10) inset;
+    }
+
+    /* Owner tag via CSS only (does not affect size) */
+    .cell[data-owner]::after{
+      content: attr(data-owner);
+      position:absolute;
+      top:10px;
+      left:10px;
+      padding:4px 8px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:1000;
+      letter-spacing:.5px;
+      text-transform:uppercase;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.30);
+      pointer-events:none;
+    }
+    .cell[data-owner="even"]::after{ border-color: rgba(107,255,177,.40); color: rgba(107,255,177,.98); }
+    .cell[data-owner="odd"]::after{  border-color: rgba(255,107,107,.40); color: rgba(255,107,107,.98); }
+
+    .cell.win{
+      border-color: rgba(122,162,255,.98) !important;
+      box-shadow:
+        0 0 0 3px rgba(122,162,255,.24) inset,
+        0 0 18px rgba(122,162,255,.25),
+        0 0 42px rgba(122,162,255,.16) !important;
+      filter: brightness(1.20);
+    }
+
+    /* Win line overlay */
+    .winLine{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      display:none;
+      z-index:5;
+    }
+    .winLine.show{ display:block; }
+    .winLine .bar{
+      position:absolute;
+      left:50%;
+      top:50%;
+      transform-origin:center;
+      height:8px;
+      border-radius:999px;
+      background: rgba(122,162,255,.85);
+      box-shadow: 0 0 18px rgba(122,162,255,.28), 0 0 42px rgba(122,162,255,.18);
+    }
+
+    .message{
+      width:min(520px, 92vw);
+      background: rgba(0,0,0,.18);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px 14px;
+      color: var(--muted);
+      font-size:13px;
+      line-height:1.4;
+    }
+    .message strong{ color: var(--text); }
+    .winEven{ color: var(--even); font-weight:1000; }
+    .winOdd{ color: var(--odd); font-weight:1000; }
+    .draw{ color: rgba(255,255,255,.88); font-weight:1000; }
+
+    /* Modal popup */
+    .modalBackdrop{
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+      z-index:50;
+    }
+    .modalBackdrop.show{ display:flex; }
+    .modal{
+      width:min(420px, 92vw);
+      background: linear-gradient(180deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.04) 100%);
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:18px;
+      box-shadow: 0 18px 50px rgba(0,0,0,.55);
+      padding:16px;
+      backdrop-filter: blur(10px);
+    }
+    .modalTitle{ font-size:18px; font-weight:1000; margin:0 0 8px 0; }
+    .modalBody{ color:var(--muted); font-size:13px; line-height:1.4; margin:0 0 14px 0; }
+    .modalActions{ display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <section class="card">
+      <header>
+        <h1>15 Tic-Tac-Toe</h1>
+        <div class="sub">
+          Even plays first: <span class="pill even">0,2,4,6,8</span><br/>
+          Odd plays second: <span class="pill odd">1,3,5,7,9</span><br/>
+          Win by completing a row/column/diagonal that sums to <strong>15</strong>.
+        </div>
+      </header>
+
+      <div class="pane">
+        <div class="status" aria-live="polite">
+          <div class="row"><div class="label">Turn</div><div class="value" id="turnPill">—</div></div>
+          <div class="row"><div class="label">Selected number</div><div class="value" id="selectedValue">—</div></div>
+          <div class="row"><div class="label">Moves</div><div class="value" id="moveCount">0 / 9</div></div>
+        </div>
+
+        <div>
+          <div class="label" style="margin-bottom:8px;">Even numbers (player 1)</div>
+          <div class="nums" id="evenNums"></div>
+        </div>
+
+        <div>
+          <div class="label" style="margin-bottom:8px;">Odd numbers (player 2)</div>
+          <div class="nums" id="oddNums"></div>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" id="newGameBtn" type="button">New game</button>
+          <button class="btn" id="clearSelectBtn" type="button">Clear selection</button>
+          <button class="btn danger" id="resetBtn" type="button">Reset</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <header>
+        <h1>Board</h1>
+        <div class="sub" id="topStatus">Pick a number to begin.</div>
+      </header>
+
+      <div class="boardWrap">
+        <div class="currentPlayer" id="currentPlayerBox">
+          —
+          <span class="hint" id="currentPlayerHint"></span>
+        </div>
+
+        <div class="boardShell">
+          <div class="board" id="board" aria-label="3 by 3 board">
+            <div class="winLine" id="winLineOverlay"><div class="bar" id="winLineBar"></div></div>
+          </div>
+        </div>
+
+        <div class="message" id="message">
+          <strong>How to win:</strong> complete a row/column/diagonal that adds to <strong>15</strong>.
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Winner popup -->
+  <div class="modalBackdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <div class="modalTitle" id="modalTitle">Winner!</div>
+      <div class="modalBody" id="modalBody">—</div>
+      <div class="modalActions">
+        <button class="btn" id="modalCloseBtn" type="button">Close</button>
+        <button class="btn primary" id="modalNewGameBtn" type="button">New game</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const EVEN = [0,2,4,6,8];
+  const ODD  = [1,3,5,7,9];
+
+  const LINES = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+
+  const elEven = document.getElementById('evenNums');
+  const elOdd  = document.getElementById('oddNums');
+  const elBoard = document.getElementById('board');
+  const elTurnPill = document.getElementById('turnPill');
+  const elSelected = document.getElementById('selectedValue');
+  const elMoveCount = document.getElementById('moveCount');
+  const elTopStatus = document.getElementById('topStatus');
+  const elMessage = document.getElementById('message');
+  const elCPBox = document.getElementById('currentPlayerBox');
+  const elCPHint = document.getElementById('currentPlayerHint');
+
+  const btnNew = document.getElementById('newGameBtn');
+  const btnReset = document.getElementById('resetBtn');
+  const btnClearSel = document.getElementById('clearSelectBtn');
+
+  const elWinOverlay = document.getElementById('winLineOverlay');
+  const elWinBar = document.getElementById('winLineBar');
+
+  const modalBackdrop = document.getElementById('modalBackdrop');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalBody = document.getElementById('modalBody');
+  const modalCloseBtn = document.getElementById('modalCloseBtn');
+  const modalNewGameBtn = document.getElementById('modalNewGameBtn');
+
+  let state;
+
+  function initState(){
+    state = {
+      turn: 'even',
+      selected: null,
+      used: new Set(),
+      board: Array(9).fill(null).map(() => ({ value:null, owner:null })),
+      moves: 0,
+      gameOver: false,
+      winningLine: null
+    };
+  }
+
+  function renderNumberPools(){
+    elEven.innerHTML = '';
+    elOdd.innerHTML = '';
+    for (const n of EVEN) elEven.appendChild(makeNumBtn(n, 'even'));
+    for (const n of ODD)  elOdd.appendChild(makeNumBtn(n, 'odd'));
+  }
+
+  function makeNumBtn(n, owner){
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'numBtn';
+    b.textContent = n;
+    b.dataset.num = String(n);
+    b.dataset.owner = owner;
+
+    b.addEventListener('click', () => {
+      if (state.gameOver) return;
+      if (state.turn !== owner) return;
+      if (state.used.has(n)) return;
+      state.selected = n;
+      syncUI();
+    });
+    return b;
+  }
+
+  function renderBoard(){
+    // Keep overlay; remove/rebuild only cell buttons
+    elBoard.querySelectorAll('button.cell').forEach(n => n.remove());
+
+    for (let i=0; i<9; i++){
+      const cell = state.board[i];
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'cell';
+      b.dataset.idx = String(i);
+
+      if (cell.value !== null){
+        b.textContent = String(cell.value);
+        b.dataset.owner = cell.owner;
+        b.disabled = true;
+      } else {
+        b.textContent = '';
+        b.disabled = state.gameOver;
+      }
+
+      if (state.winningLine && state.winningLine.includes(i)) b.classList.add('win');
+
+      b.addEventListener('click', () => {
+        if (state.gameOver) return;
+        if (state.selected === null){
+          elMessage.innerHTML = '<strong>Pick a number first.</strong>';
+          return;
+        }
+        place(i);
+      });
+
+      elBoard.appendChild(b);
+    }
+  }
+
+  function syncNumberButtons(){
+    document.querySelectorAll('.numBtn').forEach(btn => {
+      const n = Number(btn.dataset.num);
+      const owner = btn.dataset.owner;
+      btn.classList.toggle('selected', state.selected === n);
+      btn.disabled = state.gameOver || owner !== state.turn || state.used.has(n);
+    });
+
+    elSelected.textContent = (state.selected === null) ? '—' : String(state.selected);
+  }
+
+  function setCurrentPlayerUI(){
+    const who = state.turn === 'even' ? 'Even' : 'Odd';
+    elTurnPill.innerHTML = '<span class="pill ' + state.turn + '">' + who + ' to play</span>';
+
+    if (state.gameOver) return;
+
+    if (state.selected === null){
+      elTopStatus.textContent = who + ': choose a number, then a square.';
+      elCPBox.innerHTML = who + "’s Turn";
+      elCPHint.textContent = (who === 'Even') ? 'Choose 0,2,4,6,8' : 'Choose 1,3,5,7,9';
+    } else {
+      elTopStatus.textContent = who + ': place ' + state.selected + ' on the board.';
+      elCPBox.innerHTML = who + "’s Turn";
+      elCPHint.textContent = 'Place ' + state.selected + ' on any empty square';
+    }
+  }
+
+  function findWinningLine(){
+    for (const line of LINES){
+      const vals = line.map(i => state.board[i].value);
+      if (vals.every(v => v !== null)){
+        const sum = vals[0] + vals[1] + vals[2];
+        if (sum === 15) return { line, sum };
+      }
+    }
+    return null;
+  }
+
+  function place(idx){
+    const n = state.selected;
+    if (n === null) return;
+    if (state.board[idx].value !== null) return;
+    if (state.used.has(n)) return;
+
+    const isEven = (n % 2 === 0);
+    if (state.turn === 'even' && !isEven) return;
+    if (state.turn === 'odd' && isEven) return;
+
+    state.board[idx] = { value:n, owner: state.turn };
+    state.used.add(n);
+    state.moves++;
+    state.selected = null;
+
+    const win = findWinningLine();
+    if (win){
+      state.gameOver = true;
+      state.winningLine = win.line;
+
+      const winner = (state.turn === 'even') ? 'Even' : 'Odd';
+      const cls = (state.turn === 'even') ? 'winEven' : 'winOdd';
+
+      elTopStatus.textContent = winner + ' wins!';
+      elCPBox.innerHTML = winner + ' Wins 🎉';
+      elCPHint.textContent = 'Winning line highlighted';
+      elMessage.innerHTML = '<span class="' + cls + '">' + winner + ' wins!</span> A line sums to <strong>15</strong>.';
+
+      syncUI();          // renders winning cells
+      drawWinLine(win.line);
+      showModal(winner);
+
+      return;
+    }
+
+    if (state.moves >= 9){
+      state.gameOver = true;
+      elTopStatus.textContent = 'Draw';
+      elCPBox.innerHTML = 'Draw 🤝';
+      elCPHint.textContent = 'Board is full';
+      elMessage.innerHTML = '<span class="draw">Draw.</span> Board is full.';
+      hideWinLine();
+      syncUI();
+      return;
+    }
+
+    state.turn = (state.turn === 'even') ? 'odd' : 'even';
+    elMessage.innerHTML = '<strong>Goal:</strong> complete a row/column/diagonal that adds to <strong>15</strong>.';
+    hideWinLine();
+    syncUI();
+  }
+
+  function syncUI(){
+    elMoveCount.textContent = state.moves + ' / 9';
+    renderBoard();
+    syncNumberButtons();
+    setCurrentPlayerUI();
+  }
+
+  // Win line through centers of 3 cells
+  function cellCenterForIndex(i){
+    const btn = elBoard.querySelector('button.cell[data-idx="' + i + '"]');
+    const boardRect = elBoard.getBoundingClientRect();
+    const r = btn.getBoundingClientRect();
+    return {
+      cx: (r.left - boardRect.left) + r.width / 2,
+      cy: (r.top - boardRect.top) + r.height / 2
+    };
+  }
+
+  function drawWinLine(line){
+    // wait for layout to settle
+    requestAnimationFrame(() => {
+      const a = cellCenterForIndex(line[0]);
+      const b = cellCenterForIndex(line[2]);
+
+      const dx = b.cx - a.cx;
+      const dy = b.cy - a.cy;
+      const length = Math.hypot(dx, dy);
+      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+      const midX = (a.cx + b.cx) / 2;
+      const midY = (a.cy + b.cy) / 2;
+
+      elWinBar.style.width = (length + 34) + 'px';
+      elWinBar.style.left = midX + 'px';
+      elWinBar.style.top = midY + 'px';
+      elWinBar.style.transform = 'translate(-50%, -50%) rotate(' + angle + 'deg)';
+
+      elWinOverlay.classList.add('show');
+    });
+  }
+
+  function hideWinLine(){
+    elWinOverlay.classList.remove('show');
+  }
+
+  function showModal(winner){
+    modalTitle.textContent = winner + ' Wins!';
+    modalBody.innerHTML = 'You completed a line that sums to <strong>15</strong>.';
+    modalBackdrop.classList.add('show');
+  }
+  function hideModal(){
+    modalBackdrop.classList.remove('show');
+  }
+
+  function newGame(){
+    initState();
+    renderNumberPools();
+    elMessage.innerHTML = '<strong>How to win:</strong> complete a row/column/diagonal that adds to <strong>15</strong>.';
+    hideWinLine();
+    hideModal();
+    syncUI();
+  }
+
+  modalCloseBtn.addEventListener('click', hideModal);
+  modalNewGameBtn.addEventListener('click', newGame);
+  modalBackdrop.addEventListener('click', (e) => { if (e.target === modalBackdrop) hideModal(); });
+
+  btnNew.addEventListener('click', newGame);
+  btnReset.addEventListener('click', newGame);
+  btnClearSel.addEventListener('click', () => { if (!state.gameOver){ state.selected = null; syncUI(); } });
+
+  // Start
+  newGame();
+})();
+</script>
+</body>
+</html>

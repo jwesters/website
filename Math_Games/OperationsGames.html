@@ -21,7 +21,7 @@
     }
     .eq-left { display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:22px; }
     .blank {
-      width: 80px; font-size: 20px; padding: 10px 12px;
+      width: 92px; font-size: 20px; padding: 10px 12px;
       border-radius:10px; border: 2px solid #d8d8e6; background:#fff; outline:none;
       text-align:center;
     }
@@ -33,7 +33,7 @@
     .tag.no { border-color:#f0bcbc; background:#fff0f0; }
     .bank { margin-top: 14px; display:flex; gap:10px; flex-wrap:wrap; }
     .numBtn {
-      min-width: 52px;
+      min-width: 58px;
       border-radius: 12px;
       border: 1px solid #d9d9e7;
       background:#fff;
@@ -48,30 +48,78 @@
     .rules { line-height:1.35; }
     .small { font-size: 13px; }
     .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; padding: 3px 6px; border: 1px solid #ddd; border-bottom-width: 2px; border-radius: 6px; background:#fff; }
+    .modeTag { font-size: 13px; padding: 6px 10px; border-radius: 999px; border: 1px solid #ddd; background:#fff; }
+
+    /* Mode menu alignment */
+    .modeGrid {
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+      align-items: stretch;
+    }
+    .modeCard {
+      border:1px solid #e7e7ee;
+      border-radius:14px;
+      padding:14px;
+      background:#fafafe;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      height:100%;
+    }
+    .modeTitle { font-weight: 800; font-size: 18px; text-align:center; }
+    .modeDesc { color:#555; font-size: 14px; line-height:1.35; text-align:center; }
+    .modeCard .btn { width:100%; margin-top:auto; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <h1><u><b>Math Equations</b></u></h1>
-    <div class="muted rules">
-      Fill in the blanks using the numbers <b>1–10</b>.<br>
-      You may use each number <b>only once</b>.<br>
-      There will be exactly: <b>1 addition</b>, <b>1 subtraction</b>, <b>1 multiplication</b>, <b>1 division</b>, and <b>1 random</b> (one of those four).
+
+    <!-- MODE SELECT -->
+    <div class="card" id="modeScreen" style="margin-top:14px;">
+      <div class="muted rules">
+        Choose a mode. You’ll fill in the blanks using the number bank.<br>
+        You may use each number <b>only once</b>.<br>
+        There will be exactly: <b>1 addition</b>, <b>1 subtraction</b>, <b>1 multiplication</b>, <b>1 division</b>, and <b>1 random</b> (one of those four).<br>
+        <b>Division will always be a whole number.</b>
+      </div>
+
+      <div class="modeGrid">
+        <div class="modeCard">
+          <div class="modeTitle">Normal Mode</div>
+          <div class="modeDesc">Numbers <b>1–10</b>, each used once.</div>
+          <button class="btn" data-pick="normal">Start Normal</button>
+        </div>
+        <div class="modeCard">
+          <div class="modeTitle">Negative Mode</div>
+          <div class="modeDesc">Numbers <b>-5..-1</b> and <b>1..5</b> (no 0), each used once.</div>
+          <button class="btn" data-pick="negative">Start Negative</button>
+        </div>
+      </div>
     </div>
 
-    <div class="card" style="margin-top:14px;">
+    <!-- GAME -->
+    <div class="card" id="gameScreen" style="margin-top:14px; display:none;">
       <div class="row">
         <button class="btn" id="checkBtn">Check</button>
         <button class="btn secondary" id="clearBtn">Clear All</button>
         <button class="btn secondary" id="newBtn">New Puzzle</button>
+        <button class="btn secondary" id="changeModeBtn">Change Mode</button>
         <div class="score" id="scoreText">Solved: 0 / 5</div>
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <div class="muted rules" id="rulesText"></div>
+        <div class="score"><span class="modeTag" id="modeTag"></span></div>
       </div>
 
       <div class="grid" id="equations"></div>
 
       <hr />
 
-      <div class="small muted">
+      <div class="small muted" id="bankHint">
         Number Bank (click a number, then click a blank — or just type):
         <span class="kbd">Backspace</span> clears a blank
       </div>
@@ -82,12 +130,17 @@
   </div>
 
   <script>
+    const modeScreen = document.getElementById("modeScreen");
+    const gameScreen = document.getElementById("gameScreen");
+
     const eqEl = document.getElementById("equations");
     const bankEl = document.getElementById("bank");
     const scoreText = document.getElementById("scoreText");
     const msgEl = document.getElementById("message");
+    const rulesText = document.getElementById("rulesText");
+    const modeTag = document.getElementById("modeTag");
 
-    let puzzle = null; // { equations:[{id,op,a,b,answer}], used:Set<number>, selected:number|null }
+    let puzzle = null; // { mode, pool[], equations[], used:Set<number>, selected:number|null }
 
     function shuffleArray(arr) {
       for (let i = arr.length - 1; i > 0; i--) {
@@ -97,87 +150,138 @@
       return arr;
     }
 
-    function generatePuzzle() {
-      // Use numbers 1..10 exactly once
-      let nums = shuffleArray(Array.from({length: 10}, (_, i) => i + 1));
-
-      // Pick division pair first ensuring whole number (try both directions)
-      let divA, divB, divAns;
-      outer:
-      for (let i = 0; i < nums.length; i++) {
-        for (let j = i + 1; j < nums.length; j++) {
-          const a = nums[i], b = nums[j];
-          if (a % b === 0) { divA = a; divB = b; divAns = a / b; break outer; }
-          if (b % a === 0) { divA = b; divB = a; divAns = b / a; break outer; }
-        }
-      }
-      // Rare fallback: force 8 ÷ 4
-      if (divAns === undefined) {
-        divA = 8; divB = 4; divAns = 2;
-        nums = nums.filter(n => n !== 8 && n !== 4);
-      } else {
-        nums = nums.filter(n => n !== divA && n !== divB);
-      }
-
-      // Multiply
-      const mA = nums.shift(), mB = nums.shift();
-      const mAns = mA * mB;
-
-      // Subtract (non-negative)
-      let sA = nums.shift(), sB = nums.shift();
-      if (sB > sA) [sA, sB] = [sB, sA];
-      const sAns = sA - sB;
-
-      // Add
-      const aA = nums.shift(), aB = nums.shift();
-      const aAns = aA + aB;
-
-      // Random op with last two numbers
-      let [x, y] = nums;
-      const randOp = ["add","subtract","multiply","divide"][Math.floor(Math.random()*4)];
-      let rA, rB, rAns, rOp = randOp;
-
-      if (rOp === "add") {
-        rA = x; rB = y; rAns = x + y;
-      } else if (rOp === "multiply") {
-        rA = x; rB = y; rAns = x * y;
-      } else if (rOp === "subtract") {
-        rA = Math.max(x,y); rB = Math.min(x,y); rAns = rA - rB;
-      } else {
-        // division: ensure whole-number; if not possible, switch to add (keeps the "random op" concept)
-        const big = Math.max(x,y), small = Math.min(x,y);
-        if (small !== 0 && big % small === 0) {
-          rA = big; rB = small; rAns = big / small;
-        } else {
-          rOp = "add";
-          rA = x; rB = y; rAns = x + y;
-        }
-      }
-
-      const equations = [
-        { id: crypto.randomUUID(), op: "divide",   a: divA, b: divB, answer: divAns },
-        { id: crypto.randomUUID(), op: "multiply", a: mA,   b: mB,   answer: mAns },
-        { id: crypto.randomUUID(), op: "subtract", a: sA,   b: sB,   answer: sAns },
-        { id: crypto.randomUUID(), op: "add",      a: aA,   b: aB,   answer: aAns },
-        { id: crypto.randomUUID(), op: rOp,        a: rA,   b: rB,   answer: rAns, isRandom: true },
-      ];
-
-      // Shuffle the order so the “random” one isn’t always last visually,
-      // but it still counts as the 5th operation type.
-      shuffleArray(equations);
-
-      return {
-        equations,
-        used: new Set(),
-        selected: null
-      };
-    }
-
     function opSymbol(op) {
       if (op === "add") return "+";
       if (op === "subtract") return "−";
       if (op === "multiply") return "×";
       return "÷";
+    }
+
+    function getPoolForMode(mode) {
+      if (mode === "normal") return Array.from({length: 10}, (_, i) => i + 1);
+      return [-5,-4,-3,-2,-1, 1,2,3,4,5]; // negative (no 0)
+    }
+
+    function modeLabel(mode) {
+      if (mode === "normal") return "Normal Mode (1–10)";
+      return "Negative Mode (-5..-1, 1..5)";
+    }
+
+    function sanitizeInputValue(raw) {
+      raw = raw.replace(/[^\d-]/g, "");
+      if (raw.includes("-")) raw = raw.replace(/(?!^)-/g, "");
+      return raw;
+    }
+
+    function evaluateEquation(op, a, b) {
+      if (op === "add") return a + b;
+      if (op === "subtract") return a - b;
+      if (op === "multiply") return a * b;
+      if (b === 0) return NaN;
+      return a / b;
+    }
+
+    function isExactDivision(a, b) {
+      if (b === 0) return false;
+      return Number.isInteger(a / b);
+    }
+
+    function pickPair(arr) {
+      const i = Math.floor(Math.random() * arr.length);
+      let j = Math.floor(Math.random() * (arr.length - 1));
+      if (j >= i) j++;
+      const a = arr[i], b = arr[j];
+      const hi = Math.max(i, j), lo = Math.min(i, j);
+      arr.splice(hi, 1);
+      arr.splice(lo, 1);
+      return [a, b];
+    }
+
+    function generatePuzzle(mode) {
+      const poolBase = getPoolForMode(mode);
+
+      // Brute-force a bit to guarantee we can create one whole-number division
+      for (let attempt = 0; attempt < 4000; attempt++) {
+        const working = shuffleArray(poolBase.slice());
+
+        // Division pair: must be exact in one direction
+        let divA, divB, divAns;
+        let foundDiv = false;
+        for (let i = 0; i < working.length && !foundDiv; i++) {
+          for (let j = i + 1; j < working.length && !foundDiv; j++) {
+            const x = working[i], y = working[j];
+            if (isExactDivision(x, y)) { divA = x; divB = y; divAns = x / y; foundDiv = true; break; }
+            if (isExactDivision(y, x)) { divA = y; divB = x; divAns = y / x; foundDiv = true; break; }
+          }
+        }
+        if (!foundDiv) continue;
+
+        // remove chosen division numbers
+        working.splice(working.indexOf(divA), 1);
+        working.splice(working.indexOf(divB), 1);
+
+        // Multiply
+        const [mA, mB] = pickPair(working);
+        const mAns = mA * mB;
+
+        // Subtract (non-negative in normal mode; free in negative mode)
+        let [sA, sB] = pickPair(working);
+        if (mode === "normal" && sB > sA) [sA, sB] = [sB, sA];
+        const sAns = sA - sB;
+
+        // Add
+        const [aA, aB] = pickPair(working);
+        const aAns = aA + aB;
+
+        // Random op uses last two numbers
+        const [x, y] = working;
+        const randOp = ["add","subtract","multiply","divide"][Math.floor(Math.random()*4)];
+        let rA, rB, rAns, rOp = randOp;
+
+        if (rOp === "add") {
+          rA = x; rB = y; rAns = x + y;
+        } else if (rOp === "multiply") {
+          rA = x; rB = y; rAns = x * y;
+        } else if (rOp === "subtract") {
+          if (mode === "normal") { rA = Math.max(x,y); rB = Math.min(x,y); }
+          else { rA = x; rB = y; }
+          rAns = rA - rB;
+        } else {
+          // division must be exact; if not possible, switch to add (keeps "random op" idea)
+          if (isExactDivision(x, y)) { rA = x; rB = y; rAns = x / y; }
+          else if (isExactDivision(y, x)) { rA = y; rB = x; rAns = y / x; }
+          else { rOp = "add"; rA = x; rB = y; rAns = x + y; }
+        }
+
+        const equations = [
+          { id: crypto.randomUUID(), op: "divide",   a: divA, b: divB, answer: divAns },
+          { id: crypto.randomUUID(), op: "multiply", a: mA,   b: mB,   answer: mAns },
+          { id: crypto.randomUUID(), op: "subtract", a: sA,   b: sB,   answer: sAns },
+          { id: crypto.randomUUID(), op: "add",      a: aA,   b: aB,   answer: aAns },
+          { id: crypto.randomUUID(), op: rOp,        a: rA,   b: rB,   answer: rAns, isRandom: true },
+        ];
+
+        shuffleArray(equations);
+        return { mode, pool: poolBase.slice(), equations, used: new Set(), selected: null };
+      }
+
+      // ultra-rare fallback: try normal
+      return { mode: "normal", pool: getPoolForMode("normal"), equations: [], used: new Set(), selected: null };
+    }
+
+    function updateRulesUI() {
+      const mode = puzzle.mode;
+      let rangeText = "";
+      if (mode === "normal") rangeText = "Fill in the blanks using the numbers <b>1–10</b>.";
+      else rangeText = "Fill in the blanks using the numbers <b>-5..-1</b> and <b>1..5</b> (no 0).";
+
+      rulesText.innerHTML =
+        `${rangeText}<br>
+         You may use each number <b>only once</b>.<br>
+         There will be exactly: <b>1 addition</b>, <b>1 subtraction</b>, <b>1 multiplication</b>, <b>1 division</b>, and <b>1 random</b> (one of those four).<br>
+         <b>Division will always be a whole number.</b>`;
+
+      modeTag.textContent = modeLabel(mode);
     }
 
     function updateBankUI() {
@@ -196,19 +300,15 @@
       return null;
     }
 
-    function setBlankValue(input, value) {
-      const v = value === null ? "" : String(value);
-      input.value = v;
-    }
-
     function recomputeUsedFromInputs() {
       puzzle.used.clear();
+      const allowed = new Set(getPoolForMode(puzzle.mode));
       const inputs = [...eqEl.querySelectorAll("input.blank")];
       for (const inp of inputs) {
         const val = inp.value.trim();
-        if (!val) continue;
+        if (!val || val === "-") continue;
         const n = Number(val);
-        if (Number.isInteger(n) && n >= 1 && n <= 10) puzzle.used.add(n);
+        if (Number.isInteger(n) && allowed.has(n)) puzzle.used.add(n);
       }
     }
 
@@ -217,8 +317,9 @@
       bankEl.innerHTML = "";
       msgEl.textContent = "";
       scoreText.textContent = "Solved: 0 / 5";
+      updateRulesUI();
 
-      // Equations (blanks only; answers shown)
+      // Equations
       puzzle.equations.forEach((eq, idx) => {
         const row = document.createElement("div");
         row.className = "eq";
@@ -227,9 +328,9 @@
         row.innerHTML = `
           <div class="eq-left">
             <span><b>${idx + 1}.</b></span>
-            <input class="blank" inputmode="numeric" pattern="\\d*" maxlength="2" id="a-${eq.id}" aria-label="First number for equation ${idx+1}">
+            <input class="blank" inputmode="text" maxlength="3" id="a-${eq.id}" aria-label="First number for equation ${idx+1}">
             <span class="op">${sym}</span>
-            <input class="blank" inputmode="numeric" pattern="\\d*" maxlength="2" id="b-${eq.id}" aria-label="Second number for equation ${idx+1}">
+            <input class="blank" inputmode="text" maxlength="3" id="b-${eq.id}" aria-label="Second number for equation ${idx+1}">
             <span>=</span>
             <span class="ans">${eq.answer}</span>
             ${eq.isRandom ? `<span class="tag" title="This line is the random operation">Random</span>` : ``}
@@ -238,23 +339,13 @@
         `;
         eqEl.appendChild(row);
 
-        // Input handlers
         const aInp = row.querySelector(`#a-${CSS.escape(eq.id)}`);
         const bInp = row.querySelector(`#b-${CSS.escape(eq.id)}`);
 
         for (const inp of [aInp, bInp]) {
-          inp.addEventListener("focus", () => {
-            // If a number is selected from bank, user can click into a blank then click bank number, or vice versa.
-          });
-
           inp.addEventListener("keydown", (e) => {
-            if (e.key === "Backspace" || e.key === "Delete") {
-              // allow normal clearing; we update used on input event
-              return;
-            }
             if (e.key === "Enter") {
               e.preventDefault();
-              // jump to next blank
               const blanks = [...eqEl.querySelectorAll("input.blank")];
               const i = blanks.indexOf(inp);
               (blanks[i + 1] || blanks[0]).focus();
@@ -262,50 +353,40 @@
           });
 
           inp.addEventListener("input", () => {
-            // keep only digits
-            inp.value = inp.value.replace(/[^\d]/g, "");
-            // clamp 1..10 if they typed something else
-            const val = inp.value.trim();
-            if (val) {
-              const n = Number(val);
-              if (!Number.isInteger(n) || n < 1 || n > 10) {
-                // keep the typed number for a moment, but it won't count as used; could also auto-clear:
-                // inp.value = "";
-              }
-            }
+            inp.value = sanitizeInputValue(inp.value);
             recomputeUsedFromInputs();
             updateBankUI();
           });
         }
       });
 
-      // Bank 1..10
-      for (let n = 1; n <= 10; n++) {
+      // Bank
+      const pool = getPoolForMode(puzzle.mode);
+      pool.forEach((n) => {
         const b = document.createElement("button");
         b.className = "numBtn";
         b.textContent = n;
         b.dataset.n = String(n);
+
         b.addEventListener("click", () => {
-          // Toggle selection
           if (puzzle.used.has(n)) return;
           puzzle.selected = (puzzle.selected === n) ? null : n;
           updateBankUI();
 
-          // If a blank is focused, fill it immediately
           const id = currentBlankId();
           if (id && puzzle.selected !== null) {
             const inp = document.getElementById(id);
-            // prevent duplicate use: if blank already had a number, free it first
             inp.value = String(puzzle.selected);
-            puzzle.selected = null; // auto-unselect after placing
+            puzzle.selected = null;
             recomputeUsedFromInputs();
             updateBankUI();
           }
         });
-        bankEl.appendChild(b);
-      }
 
-      // Click a blank to place selected number (if any)
+        bankEl.appendChild(b);
+      });
+
+      // Click blank to place selected number
       eqEl.addEventListener("click", (e) => {
         const target = e.target;
         if (!(target instanceof HTMLInputElement)) return;
@@ -318,41 +399,28 @@
         updateBankUI();
       });
 
-      // Initial bank state
       updateBankUI();
-
-      // Focus first blank
-      const first = eqEl.querySelector("input.blank");
-      first?.focus();
-    }
-
-    function evaluateEquation(op, a, b) {
-      if (op === "add") return a + b;
-      if (op === "subtract") return a - b;
-      if (op === "multiply") return a * b;
-      // divide
-      if (b === 0) return NaN;
-      return a / b;
+      eqEl.querySelector("input.blank")?.focus();
     }
 
     function check() {
       recomputeUsedFromInputs();
       updateBankUI();
 
+      const allowed = new Set(getPoolForMode(puzzle.mode));
       const blanks = [...eqEl.querySelectorAll("input.blank")];
       const vals = blanks.map(i => i.value.trim());
 
-      // Quick validation: all filled with 1..10 and no duplicates
       const nums = [];
       for (const v of vals) {
-        if (!v) {
+        if (!v || v === "-") {
           msgEl.textContent = "Fill in all blanks first.";
           msgEl.style.color = "#b00020";
           return;
         }
         const n = Number(v);
-        if (!Number.isInteger(n) || n < 1 || n > 10) {
-          msgEl.textContent = "Only use whole numbers 1–10.";
+        if (!Number.isInteger(n) || !allowed.has(n)) {
+          msgEl.textContent = "Only use numbers from the current number bank.";
           msgEl.style.color = "#b00020";
           return;
         }
@@ -372,8 +440,6 @@
         const tag = document.getElementById(`tag-${eq.id}`);
 
         const res = evaluateEquation(eq.op, a, b);
-
-        // For division, require whole-number match as generated (but if student reverses it, it won't match answer)
         const ok = (Number.isFinite(res) && res === eq.answer);
 
         if (ok) {
@@ -402,7 +468,6 @@
       puzzle.selected = null;
       puzzle.used.clear();
 
-      // reset tags
       puzzle.equations.forEach(eq => {
         const tag = document.getElementById(`tag-${eq.id}`);
         if (tag) {
@@ -418,16 +483,36 @@
     }
 
     function newPuzzle() {
-      puzzle = generatePuzzle();
+      puzzle = generatePuzzle(puzzle.mode);
       render();
+    }
+
+    function startMode(mode) {
+      puzzle = generatePuzzle(mode);
+      modeScreen.style.display = "none";
+      gameScreen.style.display = "block";
+      render();
+    }
+
+    function backToModeSelect() {
+      puzzle = null;
+      eqEl.innerHTML = "";
+      bankEl.innerHTML = "";
+      msgEl.textContent = "";
+      modeScreen.style.display = "block";
+      gameScreen.style.display = "none";
     }
 
     document.getElementById("checkBtn").addEventListener("click", check);
     document.getElementById("clearBtn").addEventListener("click", clearAll);
     document.getElementById("newBtn").addEventListener("click", newPuzzle);
+    document.getElementById("changeModeBtn").addEventListener("click", backToModeSelect);
 
-    // Start
-    newPuzzle();
+    modeScreen.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-pick]");
+      if (!btn) return;
+      startMode(btn.dataset.pick);
+    });
   </script>
 </body>
 </html>
