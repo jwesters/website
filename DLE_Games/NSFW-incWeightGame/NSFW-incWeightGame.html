@@ -107,13 +107,6 @@
       line-height:1.1;
       word-break:break-word;
     }
-    .subLine{
-      color:var(--muted);
-      font-size:12px;
-      font-weight:800;
-      letter-spacing:.2px;
-      text-transform:uppercase;
-    }
 
     .actions{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
     button{
@@ -197,7 +190,7 @@
           <div id="setup">
             <div class="small">
               Reads from <strong>common_items_1000_unique_natural.csv</strong> in the same folder.
-              Choose a unit once per run. Each round compares <em>multiples</em> of items. No ties.
+              Choose a unit once per run. Each round compares multiples of items. No ties.
             </div>
             <div class="hr"></div>
             <div class="small" style="margin-bottom:8px;"><strong>Before you start:</strong> Do you want to guess in kilograms or pounds?</div>
@@ -213,14 +206,12 @@
           <div id="round" style="display:none;">
             <div class="vsRow">
               <div class="itemBox" id="leftBox" role="button" tabindex="0" aria-label="Left side">
-                <div class="subLine" id="leftSub">Left</div>
                 <div class="bigLine" id="leftText">—</div>
               </div>
 
               <div class="vs">VS</div>
 
               <div class="itemBox" id="rightBox" role="button" tabindex="0" aria-label="Right side">
-                <div class="subLine" id="rightSub">Right</div>
                 <div class="bigLine" id="rightText">—</div>
               </div>
             </div>
@@ -266,7 +257,7 @@
   <script>
     // ======== CONFIG ========
     const CSV_FILE = "common_items_1000_unique_natural.csv";
-    const HS_KEY = "heavierGame_top5_multiples_v1";
+    const HS_KEY = "heavierGame_top5_multiples_v2";
 
     // "Loose" closeness band: heavier side typically 1.4x–3x the other (not super close).
     const LOOSE_MIN_RATIO = 1.4;
@@ -280,7 +271,6 @@
     let unit = null; // "kg" or "lbs"
     let score = 0;
 
-    // Current round payload
     let roundData = null; // { left: {count,name,total}, right:{...}, heavier: "left"|"right" }
     let answered = false;
     let isGameOver = false;
@@ -322,15 +312,15 @@
     function setVisible(el, yes){ el.style.display = yes ? "" : "none"; }
     function randInt(n){ return Math.floor(Math.random()*n); }
     function clamp(x,a,b){ return Math.max(a, Math.min(b, x)); }
+    function randomBetween(a,b){ return a + Math.random() * (b-a); }
 
     function formatNumber(n){
-      // 1,000,000 style
       return Number(n).toLocaleString();
     }
 
-    function formatUnitTotal(val){
-      // totals can be huge; show 3 decimals like the CSV for consistency
-      return Number(val).toFixed(3) + " " + unit;
+    function formatTotal(val){
+      // REQUIREMENT: round to 2 decimals at most (always show 2 for consistency)
+      return Number(val).toFixed(2) + " " + unit;
     }
 
     function splitCSVLine(line){
@@ -456,49 +446,26 @@
     }
 
     function chooseCountForWeight(w){
-      // w = per-unit weight (in chosen unit)
-      // Return a readable whole number count between 1 and MAX_COUNT, biased:
-      // - tiny items -> sometimes huge counts
-      // - medium/heavy items -> smaller counts
       if(w <= 0) return 1;
 
-      // Choose "target total" band in the chosen unit.
-      // For tiny weights, use bigger totals to make comparisons interesting.
       let target;
-      if(w < 0.01) target = randomBetween(50, 5000);          // e.g., insects
-      else if(w < 0.1) target = randomBetween(5, 500);        // small things
-      else if(w < 1) target = randomBetween(10, 2000);        // bottles, etc.
-      else if(w < 10) target = randomBetween(10, 3000);       // animals, appliances
-      else if(w < 200) target = randomBetween(100, 15000);    // big animals
-      else target = randomBetween(500, 50000);                // vehicles, whales
+      if(w < 0.01) target = randomBetween(50, 5000);
+      else if(w < 0.1) target = randomBetween(5, 500);
+      else if(w < 1) target = randomBetween(10, 2000);
+      else if(w < 10) target = randomBetween(10, 3000);
+      else if(w < 200) target = randomBetween(100, 15000);
+      else target = randomBetween(500, 50000);
 
       let count = Math.round(target / w);
       count = clamp(count, 1, MAX_COUNT);
 
-      // For very small weights, occasionally push higher (up to cap)
       if(w < 0.005 && Math.random() < 0.35){
-        count = clamp(count * (10 ** randInt(3)), 1, MAX_COUNT); // x1, x10, x100
+        count = clamp(count * (10 ** randInt(3)), 1, MAX_COUNT);
       }
       return count;
     }
 
-    function randomBetween(a,b){ return a + Math.random() * (b-a); }
-
     function makeMultiplesRound(){
-      // Goal:
-      // - Build two expressions: (nA * wA) vs (nB * wB)
-      // - Ensure no ties
-      // - Keep ratio in a "loose" band (roughly 1.4x–3x)
-      // - Keep counts readable (<= 1,000,000)
-      //
-      // Approach:
-      // 1) pick items A and B
-      // 2) pick count for side A
-      // 3) set a desired ratio R (1.4–3.0) and decide which side is heavier
-      // 4) compute target total for side B so totals are in that ratio (roughly)
-      // 5) choose a count for B to get near that target (rounded)
-      // 6) validate; if fails, retry
-
       for(let attempt=0; attempt<3000; attempt++){
         const pair = pickTwoDistinctItems();
         if(!pair) return null;
@@ -506,73 +473,36 @@
 
         const wA = getUnitWeight(A);
         const wB = getUnitWeight(B);
-
         if(!(wA > 0) || !(wB > 0)) continue;
 
-        // base count for A
-        let nA = chooseCountForWeight(wA);
-
-        // desired ratio (heavier / lighter)
-        const R = randomBetween(LOOSE_MIN_RATIO, LOOSE_MAX_RATIO);
-
-        // randomly decide which side is heavier
-        const heavierIsLeft = Math.random() < 0.5;
-
+        const nA = chooseCountForWeight(wA);
         const totalA = nA * wA;
 
-        // Set target total for B depending on heavier side.
-        // If left is heavier, then totalLeft / totalRight ~ R => totalRight ~ totalLeft / R
-        // If right is heavier, then totalRight / totalLeft ~ R => totalRight ~ totalLeft * R
-        let targetTotalB = heavierIsLeft ? (totalA / R) : (totalA * R);
+        const R = randomBetween(LOOSE_MIN_RATIO, LOOSE_MAX_RATIO);
+        const heavierIsLeft = Math.random() < 0.5;
 
-        // Choose count for B based on target total
+        const targetTotalB = heavierIsLeft ? (totalA / R) : (totalA * R);
         let nB = Math.round(targetTotalB / wB);
         nB = clamp(nB, 1, MAX_COUNT);
 
-        // Recompute totals
         const totalB = nB * wB;
 
-        // Avoid ties
-        if(totalA === totalB) continue;
+        if(totalA === totalB) continue; // no ties
 
-        // Determine actual heavier side
         const actualHeavier = (totalA > totalB) ? "left" : "right";
-
-        // We want the designed heavier side to match the actual heavier side.
         if(heavierIsLeft && actualHeavier !== "left") continue;
         if(!heavierIsLeft && actualHeavier !== "right") continue;
 
-        // Ensure ratio is within loose-ish bounds (allow some drift due to rounding)
         const heavierTotal = Math.max(totalA, totalB);
         const lighterTotal = Math.min(totalA, totalB);
         const ratio = heavierTotal / lighterTotal;
-
-        // Accept slightly wider due to rounding, but keep it "loose"
         if(ratio < 1.25 || ratio > 3.5) continue;
 
-        // Make sure both counts look "readable" — we already cap, but avoid too many 1s all the time
-        // (Not a hard requirement; mostly aesthetic.)
-        if(nA === 1 && nB === 1){
-          // too trivial; try again
-          continue;
-        }
-
-        // Build display strings
-        const left = {
-          count: heavierIsLeft ? nA : nA, // left is always A in this construction
-          name: A.item,
-          unitWeight: wA,
-          total: totalA
-        };
-        const right = {
-          count: nB,
-          name: B.item,
-          unitWeight: wB,
-          total: totalB
-        };
+        if(nA === 1 && nB === 1) continue;
 
         return {
-          left, right,
+          left: { count: nA, name: A.item, total: totalA },
+          right: { count: nB, name: B.item, total: totalB },
           heavier: actualHeavier,
           ratio
         };
@@ -635,9 +565,10 @@
       const totalL = roundData.left.total;
       const totalR = roundData.right.total;
 
+      // REQUIREMENT: show how much each side weighs in chosen units, rounded to 2 decimals.
       const msgTotals =
-        `${formatNumber(roundData.left.count)} ${roundData.left.name} = ${formatUnitTotal(totalL)}  •  ` +
-        `${formatNumber(roundData.right.count)} ${roundData.right.name} = ${formatUnitTotal(totalR)}`;
+        `${formatNumber(roundData.left.count)} ${roundData.left.name} = ${formatTotal(totalL)}  •  ` +
+        `${formatNumber(roundData.right.count)} ${roundData.right.name} = ${formatTotal(totalR)}`;
 
       if(correct){
         score += 1;
@@ -671,10 +602,10 @@
       setVisible(round, false);
       setVisible(gameover, true);
 
-      overLine1.textContent = "Game Over";
       const msg = customMessage
         ? customMessage
         : `You passed <strong>${score}</strong> round${score===1?"":"s"}.`;
+      overLine1.textContent = "Game Over";
       overLine2.innerHTML = msg + " (Saved to highscores if it’s in the top 5.)";
     }
 
@@ -698,7 +629,6 @@
         const text = await res.text();
         const parsed = parseCSV(text);
 
-        // Ensure unique by item name
         const map = new Map();
         for(const it of parsed){
           if(!map.has(it.item)) map.set(it.item, it);
