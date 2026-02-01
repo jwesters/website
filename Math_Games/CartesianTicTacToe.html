@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dice Coordinate 4-in-a-Row (10x10)</title>
+  <style>
+    :root{
+      --bg:#0f1220;
+      --panel:#171a2b;
+      --panel2:#1e2240;
+      --text:#e9ecff;
+      --muted:#b7bddc;
+      --accent:#7aa2ff;
+      --good:#3ddc97;
+      --warn:#ffcc66;
+      --bad:#ff6b6b;
+      --grid:#2a2f55;
+      --cell:#12152a;
+      --cell2:#101327;
+      --hl:#2f7dff55;
+      --hl2:#2f7dff88;
+      --win:#3ddc9755;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius:16px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background: radial-gradient(1200px 800px at 20% 10%, #20265a 0%, #0f1220 55%, #0b0d18 100%);
+      color:var(--text);
+      font-family:var(--sans);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+    }
+
+    .app{
+      width:min(1100px, 98vw);
+      display:grid;
+      grid-template-columns: 360px 1fr;
+      gap:16px;
+    }
+
+    @media (max-width: 920px){
+      .app{grid-template-columns:1fr}
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card h2{
+      margin:0;
+      font-size:18px;
+      letter-spacing:.2px;
+    }
+    .card .hd{
+      padding:14px 14px 12px;
+      background: rgba(0,0,0,.18);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .card .bd{
+      padding:14px;
+    }
+
+    .small{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+    }
+
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .spacer{height:10px}
+    .btn{
+      appearance:none;
+      border:1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.08);
+      color:var(--text);
+      border-radius:12px;
+      padding:10px 12px;
+      font-weight:700;
+      letter-spacing:.2px;
+      cursor:pointer;
+      user-select:none;
+      transition: transform .06s ease, background .15s ease, border-color .15s ease;
+    }
+    .btn:hover{background: rgba(255,255,255,.12)}
+    .btn:active{transform: translateY(1px)}
+    .btn:disabled{
+      opacity:.5;
+      cursor:not-allowed;
+    }
+    .btn.primary{
+      background: linear-gradient(180deg, rgba(122,162,255,.28), rgba(122,162,255,.16));
+      border-color: rgba(122,162,255,.5);
+    }
+    .btn.danger{
+      background: linear-gradient(180deg, rgba(255,107,107,.28), rgba(255,107,107,.16));
+      border-color: rgba(255,107,107,.55);
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:7px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(0,0,0,.18);
+      font-weight:700;
+      font-size:13px;
+    }
+    .pill .dot{
+      width:10px;
+      height:10px;
+      border-radius:50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 3px rgba(122,162,255,.18);
+    }
+    .pill.x .dot{background: var(--accent)}
+    .pill.o .dot{background: var(--warn); box-shadow: 0 0 0 3px rgba(255,204,102,.16)}
+    .pill.win .dot{background: var(--good); box-shadow: 0 0 0 3px rgba(61,220,151,.16)}
+
+    /* Bigger turn display (left) */
+    .turnBig{
+      margin-top:10px;
+      padding:12px 12px;
+      border-radius: 16px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.20);
+      font-weight: 950;
+      letter-spacing: .2px;
+      font-size: 20px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .turnBig .who{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .turnBig .dot{
+      width:12px; height:12px; border-radius:50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(122,162,255,.16);
+    }
+    .turnBig.x .dot{background: var(--accent)}
+    .turnBig.o .dot{background: var(--warn); box-shadow: 0 0 0 4px rgba(255,204,102,.14)}
+    .turnBig .sub{
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--muted);
+      letter-spacing:.2px;
+    }
+
+    .diceArea{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:10px;
+      margin-top:10px;
+    }
+    .die{
+      background: rgba(0,0,0,.22);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 14px;
+      padding: 14px 12px;
+      text-align:center;
+      cursor:pointer;
+      user-select:none;
+      position:relative;
+      transition: transform .06s ease, border-color .15s ease, background .15s ease;
+      min-height:72px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      gap:6px;
+    }
+    .die:hover{background: rgba(0,0,0,.28)}
+    .die:active{transform: translateY(1px)}
+    .die .n{
+      font-family: var(--mono);
+      font-size: 34px;
+      font-weight: 900;
+      letter-spacing: .4px;
+      line-height: 1;
+    }
+    .die .lbl{
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
+      letter-spacing:.2px;
+    }
+    .die.selected{
+      border-color: rgba(122,162,255,.7);
+      box-shadow: 0 0 0 3px rgba(122,162,255,.18);
+    }
+    .die.rerollPick{
+      border-color: rgba(255,204,102,.9);
+      box-shadow: 0 0 0 3px rgba(255,204,102,.18);
+    }
+    .die.disabled{
+      opacity:.55;
+      cursor:not-allowed;
+    }
+
+    .statusBox{
+      background: rgba(0,0,0,.22);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: 14px;
+      padding: 12px;
+      margin-top:10px;
+    }
+    .statusTitle{
+      font-weight:900;
+      letter-spacing:.2px;
+      margin-bottom:6px;
+    }
+    .statusText{
+      color: var(--muted);
+      font-size: 13px;
+      line-height:1.35;
+      white-space:pre-line;
+    }
+
+    /* Board */
+    .boardWrap{
+      padding:14px;
+    }
+    .boardTop{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom:12px;
+    }
+    .boardTitle{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .boardTitle .big{
+      font-size:20px;
+      font-weight:900;
+      letter-spacing:.2px;
+    }
+    .legend{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .grid{
+      width: 100%;
+      max-width: 650px;
+      aspect-ratio: 1 / 1;
+      display:grid;
+      grid-template-columns: 34px repeat(10, 1fr);
+      grid-template-rows: repeat(10, 1fr) 34px;
+      gap: 2px;
+      background: rgba(255,255,255,.06);
+      padding: 10px;
+      border-radius: 18px;
+      border:1px solid rgba(255,255,255,.10);
+    }
+
+    .axisCell{
+      background: rgba(0,0,0,.18);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color: var(--muted);
+      font-weight:800;
+      font-family: var(--mono);
+      border-radius: 10px;
+      user-select:none;
+      font-size: 14px;
+    }
+
+    .cell{
+      background: linear-gradient(180deg, rgba(0,0,0,.26), rgba(0,0,0,.18));
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      user-select:none;
+      position:relative;
+      transition: transform .06s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
+    }
+    .cell:hover{background: rgba(0,0,0,.30)}
+    .cell:active{transform: translateY(1px)}
+    .cell.disabled{
+      cursor:not-allowed;
+      opacity:.7;
+    }
+    .mark{
+      font-family: var(--mono);
+      font-size: 30px;
+      font-weight: 900;
+      letter-spacing: .5px;
+      line-height: 1;
+    }
+    .mark.x{color: var(--accent)}
+    .mark.o{color: var(--warn)}
+
+    .cell.hl{
+      border-color: rgba(122,162,255,.75);
+      box-shadow: 0 0 0 3px rgba(122,162,255,.20);
+      background: linear-gradient(180deg, rgba(47,125,255,.22), rgba(47,125,255,.10));
+    }
+    .cell.hl:hover{background: linear-gradient(180deg, rgba(47,125,255,.26), rgba(47,125,255,.12))}
+    .cell.win{
+      border-color: rgba(61,220,151,.9);
+      box-shadow: 0 0 0 3px rgba(61,220,151,.18);
+      background: linear-gradient(180deg, rgba(61,220,151,.18), rgba(61,220,151,.08));
+    }
+
+    /* Modal */
+    .modalBackdrop{
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+      z-index: 50;
+    }
+    .modalBackdrop.show{display:flex}
+    .modal{
+      width:min(560px, 96vw);
+      background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .modal .mhd{
+      padding:14px 14px 12px;
+      background: rgba(0,0,0,.18);
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .modal .mhd .title{
+      font-weight: 900;
+      letter-spacing:.2px;
+      font-size: 16px;
+    }
+    .modal .mbd{
+      padding: 14px;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 14px;
+      white-space: pre-line;
+    }
+    .modal .mft{
+      padding: 14px;
+      display:flex;
+      gap:10px;
+      justify-content:flex-end;
+      flex-wrap:wrap;
+      border-top: 1px solid rgba(255,255,255,.08);
+      background: rgba(0,0,0,.14);
+    }
+
+    .mono{font-family:var(--mono)}
+    .k{color:var(--text); font-weight:900}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Left panel -->
+    <div class="card">
+      <div class="hd">
+        <h2>Dice Coordinate Game</h2>
+        <button class="btn danger" id="btnReset" title="Reset the whole game">Reset</button>
+      </div>
+      <div class="bd">
+        <div class="row">
+          <span class="pill" id="pillPhase"><span class="dot" style="background:var(--muted); box-shadow:0 0 0 3px rgba(183,189,220,.14)"></span><span id="phaseText">Phase: Roll</span></span>
+        </div>
+
+        <!-- Bigger "who's turn" on left -->
+        <div class="turnBig x" id="turnBig">
+          <div class="who">
+            <span class="dot"></span>
+            <span id="turnBigText">Player X</span>
+          </div>
+          <div class="sub">Turn</div>
+        </div>
+
+        <div class="spacer"></div>
+
+        <button class="btn primary" id="btnRoll">Roll 3 Dice (0–9)</button>
+
+        <div class="diceArea" id="diceArea">
+          <div class="die disabled" data-i="0" aria-label="Die 1">
+            <div class="n mono">–</div>
+            <div class="lbl">Die 1</div>
+          </div>
+          <div class="die disabled" data-i="1" aria-label="Die 2">
+            <div class="n mono">–</div>
+            <div class="lbl">Die 2</div>
+          </div>
+          <div class="die disabled" data-i="2" aria-label="Die 3">
+            <div class="n mono">–</div>
+            <div class="lbl">Die 3</div>
+          </div>
+        </div>
+
+        <div class="statusBox">
+          <div class="statusTitle" id="statusTitle">How to play</div>
+          <div class="statusText" id="statusText">
+Roll three dice (0–9).
+Pick any two dice.
+You may place at (A,B) or (B,A) by clicking a highlighted square.
+You can overwrite an opponent's mark.
+If you land on your own mark, you reroll ONE die, then pick any two dice and try again (chaining allowed).
+If you roll triples, you can place anywhere — but NOT on your own mark.
+Win with 4+ in a row.
+          </div>
+        </div>
+
+        <div class="spacer"></div>
+
+        <div class="small">
+          <span class="k">Cartesian orientation:</span> (0,0) is bottom-left.
+          X increases to the right; Y increases upward.
+        </div>
+      </div>
+    </div>
+
+    <!-- Board -->
+    <div class="card">
+      <div class="hd">
+        <div style="display:flex; flex-direction:column; gap:2px;">
+          <h2 style="margin:0;">10×10 Board</h2>
+          <div class="small">Click highlighted squares to place.</div>
+        </div>
+        <div class="legend">
+          <span class="pill"><span class="dot" style="background:var(--accent); box-shadow:0 0 0 3px rgba(122,162,255,.18)"></span>X</span>
+          <span class="pill"><span class="dot" style="background:var(--warn); box-shadow:0 0 0 3px rgba(255,204,102,.16)"></span>O</span>
+          <span class="pill"><span class="dot" style="background:#2f7dff; box-shadow:0 0 0 3px rgba(47,125,255,.18)"></span>Valid</span>
+          <span class="pill"><span class="dot" style="background:var(--good); box-shadow:0 0 0 3px rgba(61,220,151,.16)"></span>Win line</span>
+        </div>
+      </div>
+
+      <div class="boardWrap">
+        <div class="boardTop">
+          <div class="boardTitle">
+            <div class="big" id="bigStatus">Roll to begin</div>
+            <div class="small" id="subStatus">Then choose two dice.</div>
+          </div>
+          <div class="row">
+            <button class="btn" id="btnHelp">Rules</button>
+          </div>
+        </div>
+
+        <div class="grid" id="grid" aria-label="10 by 10 game board"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modalBackdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal">
+      <div class="mhd">
+        <div class="title" id="modalTitle">Modal</div>
+        <!-- header close can be hidden per-modal -->
+        <button class="btn" id="btnModalClose">Close</button>
+      </div>
+      <div class="mbd" id="modalBody"></div>
+      <div class="mft" id="modalFooter"></div>
+    </div>
+  </div>
+
+  <script>
+    // ========= Utilities =========
+    const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+    // ========= Game State =========
+    const SIZE = 10; // 0..9
+    const EMPTY = "";
+    let board = Array.from({length: SIZE}, () => Array(SIZE).fill(EMPTY));
+
+    let currentPlayer = "X"; // X starts
+    let phase = "ROLL"; // ROLL, PICK, PLACE, TRIPLES_ANYWHERE, REROLL_PICK
+    let dice = [null, null, null];
+    let selectedDiceIdx = []; // indices chosen for placement (0..2), size 0..2
+    let lastChosenPair = null; // {aIdx, bIdx} or null
+    let validTargets = []; // list of {x,y} allowed squares for click (normal placement)
+    let gameOver = false;
+    let winLine = []; // list of {x,y} to highlight
+
+    // ========= DOM =========
+    const btnRoll = document.getElementById("btnRoll");
+    const btnReset = document.getElementById("btnReset");
+    const diceArea = document.getElementById("diceArea");
+    const dieEls = Array.from(diceArea.querySelectorAll(".die"));
+    const gridEl = document.getElementById("grid");
+
+    const phaseText = document.getElementById("phaseText");
+    const bigStatus = document.getElementById("bigStatus");
+    const subStatus = document.getElementById("subStatus");
+
+    const statusTitle = document.getElementById("statusTitle");
+    const statusText = document.getElementById("statusText");
+
+    const btnHelp = document.getElementById("btnHelp");
+
+    const turnBig = document.getElementById("turnBig");
+    const turnBigText = document.getElementById("turnBigText");
+
+    const modalBackdrop = document.getElementById("modalBackdrop");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalBody = document.getElementById("modalBody");
+    const modalFooter = document.getElementById("modalFooter");
+    const btnModalClose = document.getElementById("btnModalClose");
+
+    // ========= Board Rendering =========
+    // Render with y from 9 down to 0 (top to bottom) to match Cartesian (0,0 bottom-left).
+    function buildGrid(){
+      gridEl.innerHTML = "";
+
+      for(let y=SIZE-1; y>=0; y--){
+        const yLbl = document.createElement("div");
+        yLbl.className = "axisCell";
+        yLbl.textContent = y.toString();
+        gridEl.appendChild(yLbl);
+
+        for(let x=0; x<SIZE; x++){
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          cell.dataset.x = x.toString();
+          cell.dataset.y = y.toString();
+          cell.title = `(${x}, ${y})`;
+
+          const mark = document.createElement("div");
+          mark.className = "mark mono";
+          const v = board[y][x];
+          if(v === "X"){
+            mark.textContent = "X";
+            mark.classList.add("x");
+          } else if(v === "O"){
+            mark.textContent = "O";
+            mark.classList.add("o");
+          } else {
+            mark.textContent = "";
+          }
+          cell.appendChild(mark);
+
+          cell.addEventListener("click", onCellClick);
+          gridEl.appendChild(cell);
+        }
+      }
+
+      const corner = document.createElement("div");
+      corner.className = "axisCell";
+      corner.textContent = "";
+      gridEl.appendChild(corner);
+
+      for(let x=0; x<SIZE; x++){
+        const xLbl = document.createElement("div");
+        xLbl.className = "axisCell";
+        xLbl.textContent = x.toString();
+        gridEl.appendChild(xLbl);
+      }
+    }
+
+    function updateGridHighlights(){
+      const cells = Array.from(gridEl.querySelectorAll(".cell"));
+      for(const cell of cells){
+        cell.classList.remove("hl","win","disabled");
+        const x = parseInt(cell.dataset.x, 10);
+        const y = parseInt(cell.dataset.y, 10);
+
+        if(winLine.some(p => p.x === x && p.y === y)){
+          cell.classList.add("win");
+        }
+
+        let clickable = false;
+        if(!gameOver){
+          if(phase === "PLACE"){
+            clickable = validTargets.some(p => p.x === x && p.y === y);
+            if(clickable) cell.classList.add("hl");
+          } else if(phase === "TRIPLES_ANYWHERE"){
+            clickable = board[y][x] !== currentPlayer; // cannot place on own
+            if(clickable) cell.classList.add("hl");
+          }
+        }
+
+        if(!clickable) cell.classList.add("disabled");
+      }
+    }
+
+    // ========= Dice Rendering =========
+    function updateDiceUI(){
+      dieEls.forEach((el, i) => {
+        const nEl = el.querySelector(".n");
+        const val = dice[i];
+        nEl.textContent = (val === null ? "–" : String(val));
+
+        el.classList.remove("selected", "rerollPick", "disabled");
+
+        if(phase === "ROLL" || gameOver){
+          el.classList.add("disabled");
+        } else if(phase === "TRIPLES_ANYWHERE"){
+          el.classList.add("disabled");
+        }
+
+        if(selectedDiceIdx.includes(i)){
+          el.classList.add("selected");
+        }
+
+        if(phase === "REROLL_PICK"){
+          const allowed = lastChosenPair && (i === lastChosenPair.aIdx || i === lastChosenPair.bIdx);
+          if(!allowed) el.classList.add("disabled");
+          else el.classList.add("rerollPick");
+        }
+      });
+    }
+
+    // ========= UI State =========
+    function setPhase(next){
+      phase = next;
+      phaseText.textContent = `Phase: ${prettyPhase(phase)}`;
+      updateDiceUI();
+      updateGridHighlights();
+      updateButtons();
+    }
+
+    function prettyPhase(p){
+      switch(p){
+        case "ROLL": return "Roll";
+        case "PICK": return "Pick dice";
+        case "PLACE": return "Place";
+        case "TRIPLES_ANYWHERE": return "Triples: place anywhere";
+        case "REROLL_PICK": return "Pick a die to reroll";
+        default: return p;
+      }
+    }
+
+    function updateButtons(){
+      btnRoll.disabled = gameOver ? true : (phase !== "ROLL");
+    }
+
+    function updateTurnUI(){
+      turnBigText.textContent = `Player ${currentPlayer}`;
+      turnBig.classList.remove("x","o");
+      turnBig.classList.add(currentPlayer === "X" ? "x" : "o");
+    }
+
+    function setMainStatus(title, subtitle){
+      bigStatus.textContent = title;
+      subStatus.textContent = subtitle;
+    }
+
+    function showRulesModal(){
+      openModal({
+        title: "Rules",
+        body: [
+          "• Board is 10×10 with coordinates 0–9 on both axes.",
+          "• (0,0) is bottom-left; X increases right; Y increases up.",
+          "• Each turn: Roll three dice (0–9).",
+          "• Pick any two dice. You may place at (A,B) or (B,A) by clicking a highlighted square.",
+          "• You may overwrite an opponent's mark.",
+          "• If you land on YOUR own mark: choose ONE die to reroll, then you may use any two of the three dice again (reroll chaining allowed).",
+          "• If you roll triples: you may place ANYWHERE, but NOT on your own mark.",
+          "• Win with 4+ in a row (horizontal/vertical/diagonal).",
+        ].join("\n"),
+        showHeaderClose: true,
+        includeFooterClose: true
+      });
+    }
+
+    // ========= Modal =========
+    function openModal({title, body, buttons = [], showHeaderClose = true, includeFooterClose = true}){
+      modalTitle.textContent = title;
+      modalBody.textContent = body;
+      modalFooter.innerHTML = "";
+
+      // Header close visibility
+      btnModalClose.style.display = showHeaderClose ? "inline-flex" : "none";
+
+      // Footer buttons (custom)
+      if(buttons && buttons.length){
+        for(const b of buttons){
+          modalFooter.appendChild(b);
+        }
+      }
+
+      // Footer close (single close control if requested)
+      if(includeFooterClose){
+        const btnClose = document.createElement("button");
+        btnClose.className = "btn";
+        btnClose.textContent = "Close";
+        btnClose.addEventListener("click", closeModal);
+        modalFooter.appendChild(btnClose);
+      }
+
+      modalBackdrop.classList.add("show");
+      modalBackdrop.setAttribute("aria-hidden", "false");
+    }
+
+    function closeModal(){
+      modalBackdrop.classList.remove("show");
+      modalBackdrop.setAttribute("aria-hidden", "true");
+    }
+
+    btnModalClose.addEventListener("click", closeModal);
+    modalBackdrop.addEventListener("click", (e) => {
+      if(e.target === modalBackdrop) closeModal();
+    });
+
+    // ========= Game Logic =========
+    function resetGame(){
+      board = Array.from({length: SIZE}, () => Array(SIZE).fill(EMPTY));
+      currentPlayer = "X";
+      dice = [null, null, null];
+      selectedDiceIdx = [];
+      validTargets = [];
+      lastChosenPair = null;
+      gameOver = false;
+      winLine = [];
+
+      buildGrid();
+      updateTurnUI();
+      setPhase("ROLL");
+      setMainStatus("Roll to begin", "Then choose two dice.");
+      statusTitle.textContent = "How to play";
+      updateDiceUI();
+      updateButtons();
+    }
+
+    function rollDice(){
+      dice = [randInt(0,9), randInt(0,9), randInt(0,9)];
+      selectedDiceIdx = [];
+      validTargets = [];
+      winLine = [];
+      updateDiceUI();
+
+      if(dice[0] === dice[1] && dice[1] === dice[2]){
+        setMainStatus(`Player ${currentPlayer}: Triples! (${dice[0]}-${dice[1]}-${dice[2]})`, "Place anywhere (not on your own mark).");
+        openModal({
+          title: "Triples!",
+          body: `You rolled ${dice[0]}-${dice[1]}-${dice[2]}.\n\nYou may place your ${currentPlayer} anywhere on the board (but NOT on a square that already contains your own ${currentPlayer}).`,
+          showHeaderClose: true,
+          includeFooterClose: true
+        });
+        setPhase("TRIPLES_ANYWHERE");
+      } else {
+        setMainStatus(`Player ${currentPlayer}: Choose any two dice`, "Then click a highlighted square to place.");
+        setPhase("PICK");
+      }
+    }
+
+    function onDieClick(i){
+      if(gameOver) return;
+
+      if(phase === "PICK" || phase === "PLACE"){
+        if(selectedDiceIdx.includes(i)){
+          selectedDiceIdx = selectedDiceIdx.filter(x => x !== i);
+        } else {
+          if(selectedDiceIdx.length >= 2) return;
+          selectedDiceIdx.push(i);
+        }
+        updateDiceUI();
+        computeValidTargetsFromSelection();
+      } else if(phase === "REROLL_PICK"){
+        if(!lastChosenPair) return;
+        const allowed = (i === lastChosenPair.aIdx || i === lastChosenPair.bIdx);
+        if(!allowed) return;
+
+        const old = dice[i];
+        dice[i] = randInt(0,9);
+
+        selectedDiceIdx = [];
+        validTargets = [];
+        lastChosenPair = null;
+
+        setMainStatus(`Player ${currentPlayer}: Rerolled die ${i+1}: ${old} → ${dice[i]}`, "Now pick any two dice again.");
+        statusTitle.textContent = "Reroll complete";
+        statusText.textContent = `You rerolled one die. You may now pick ANY two dice and place again (same turn).`;
+
+        // If reroll results in triples, treat as triples.
+        if(dice[0] === dice[1] && dice[1] === dice[2]){
+          openModal({
+            title: "Triples!",
+            body: `After the reroll, you now have ${dice[0]}-${dice[1]}-${dice[2]}.\n\nYou may place your ${currentPlayer} anywhere (not on your own mark).`,
+            showHeaderClose: true,
+            includeFooterClose: true
+          });
+          setPhase("TRIPLES_ANYWHERE");
+          setMainStatus(`Player ${currentPlayer}: Triples! (${dice[0]}-${dice[1]}-${dice[2]})`, "Place anywhere (not on your own mark).");
+        } else {
+          setPhase("PICK");
+          setMainStatus(`Player ${currentPlayer}: Choose any two dice`, "Then click a highlighted square to place.");
+        }
+
+        updateDiceUI();
+        updateGridHighlights();
+      }
+    }
+
+    function computeValidTargetsFromSelection(){
+      validTargets = [];
+      winLine = [];
+
+      if(selectedDiceIdx.length !== 2){
+        setPhase("PICK");
+        setMainStatus(`Player ${currentPlayer}: Choose any two dice`, "Then click a highlighted square to place.");
+        updateGridHighlights();
+        return;
+      }
+
+      const a = dice[selectedDiceIdx[0]];
+      const b = dice[selectedDiceIdx[1]];
+      if(a === null || b === null) return;
+
+      validTargets.push({x:a, y:b});
+      if(a !== b) validTargets.push({x:b, y:a});
+
+      setPhase("PLACE");
+      const t1 = `(${a},${b})`;
+      const t2 = (a===b) ? "" : ` and (${b},${a})`;
+      setMainStatus(`Player ${currentPlayer}: Place your mark`, `Click ${t1}${t2} (highlighted).`);
+      updateGridHighlights();
+    }
+
+    function onCellClick(e){
+      if(gameOver) return;
+      const cell = e.currentTarget;
+      const x = parseInt(cell.dataset.x, 10);
+      const y = parseInt(cell.dataset.y, 10);
+
+      if(phase === "PLACE"){
+        if(!validTargets.some(p => p.x === x && p.y === y)) return;
+        placeAt(x, y);
+      } else if(phase === "TRIPLES_ANYWHERE"){
+        if(board[y][x] === currentPlayer) return;
+        placeAt(x, y);
+      }
+    }
+
+    function placeAt(x, y){
+      const existing = board[y][x];
+
+      board[y][x] = currentPlayer;
+      buildGrid();
+
+      // Win check AFTER placement
+      const win = computeWinLine(currentPlayer);
+      if(win.length > 0){
+        winLine = win;
+        buildGrid();
+        updateGridHighlights();
+
+        gameOver = true;
+        setMainStatus(`Player ${currentPlayer} wins!`, "Reset to play again.");
+        statusTitle.textContent = "Game Over";
+        statusText.textContent = `Player ${currentPlayer} made 4+ in a row.\n\nPress Reset to play again.`;
+
+        // Win screen: ONLY ONE close (footer close), and no header close
+        openModal({
+          title: "Game Over",
+          body: `Player ${currentPlayer} wins!`,
+          showHeaderClose: false,
+          includeFooterClose: true
+        });
+
+        updateButtons();
+        updateDiceUI();
+        return;
+      }
+
+      // Landed on own mark (only possible in normal place)
+      if(existing === currentPlayer && phase !== "TRIPLES_ANYWHERE"){
+        setMainStatus(`Player ${currentPlayer}: Landed on your own mark`, "Choose ONE die to reroll, then place again (same turn).");
+        statusTitle.textContent = "Reroll!";
+        statusText.textContent =
+          "You landed on your own symbol.\n\nClick ONE of the two dice you used to reroll it.\nAfter rerolling, you may use ANY two of the three dice to place again.\n(You can chain rerolls.)";
+
+        lastChosenPair = { aIdx: selectedDiceIdx[0], bIdx: selectedDiceIdx[1] };
+        setPhase("REROLL_PICK");
+        updateDiceUI();
+        updateGridHighlights();
+        return;
+      }
+
+      nextTurn();
+    }
+
+    function nextTurn(){
+      currentPlayer = (currentPlayer === "X") ? "O" : "X";
+      dice = [null, null, null];
+      selectedDiceIdx = [];
+      validTargets = [];
+      lastChosenPair = null;
+      winLine = [];
+
+      updateTurnUI();
+      setPhase("ROLL");
+      setMainStatus(`Player ${currentPlayer}: Roll 3 Dice`, "Then choose two dice.");
+      statusTitle.textContent = "Next turn";
+      statusText.textContent = "Press Roll to get three dice (0–9).";
+      buildGrid();
+      updateGridHighlights();
+      updateDiceUI();
+      updateButtons();
+    }
+
+    function computeWinLine(player){
+      const dirs = [
+        {dx:1, dy:0},
+        {dx:0, dy:1},
+        {dx:1, dy:1},
+        {dx:1, dy:-1},
+      ];
+      const inBounds = (x,y) => x>=0 && x<SIZE && y>=0 && y<SIZE;
+
+      for(let y=0; y<SIZE; y++){
+        for(let x=0; x<SIZE; x++){
+          if(board[y][x] !== player) continue;
+
+          for(const d of dirs){
+            const px = x - d.dx;
+            const py = y - d.dy;
+            if(inBounds(px,py) && board[py][px] === player) continue;
+
+            let line = [];
+            let cx = x, cy = y;
+            while(inBounds(cx,cy) && board[cy][cx] === player){
+              line.push({x:cx, y:cy});
+              cx += d.dx;
+              cy += d.dy;
+            }
+
+            if(line.length >= 4) return line;
+          }
+        }
+      }
+      return [];
+    }
+
+    // ========= Event Wiring =========
+    btnRoll.addEventListener("click", () => {
+      if(gameOver) return;
+      if(phase !== "ROLL") return;
+      rollDice();
+    });
+
+    btnReset.addEventListener("click", () => {
+      // Reset screen: ONLY Reset or Close, and NO top-left close
+      const resetBtn = document.createElement("button");
+      resetBtn.className = "btn danger";
+      resetBtn.textContent = "Reset";
+      resetBtn.addEventListener("click", () => { closeModal(); resetGame(); });
+
+      openModal({
+        title: "Reset game?",
+        body: "This will clear the board and start over.",
+        buttons: [resetBtn],
+        showHeaderClose: false,
+        includeFooterClose: true
+      });
+    });
+
+    btnHelp.addEventListener("click", showRulesModal);
+
+    dieEls.forEach((el) => {
+      el.addEventListener("click", () => {
+        const i = parseInt(el.dataset.i, 10);
+        if(gameOver) return;
+
+        if(phase === "ROLL") return;
+        if(phase === "TRIPLES_ANYWHERE") return;
+        if(dice[i] === null) return;
+
+        onDieClick(i);
+      });
+    });
+
+    // ========= Init =========
+    resetGame();
+  </script>
+</body>
+</html>

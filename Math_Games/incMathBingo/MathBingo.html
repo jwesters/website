@@ -1,0 +1,946 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>75-Ball Bingo Math Caller</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --panel2: rgba(255,255,255,.035);
+      --text:#e6eefc;
+      --muted:#9fb0d0;
+      --shadow: 0 14px 40px rgba(0,0,0,.35);
+      --radius: 16px;
+
+      /* sized to fit one screen on a typical laptop */
+      --ball: clamp(150px, 20vh, 210px);
+      --chipH: 40px;
+      --chipMinW: 44px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background:
+        radial-gradient(1200px 600px at 20% 15%, rgba(125,211,252,.14), transparent 60%),
+        radial-gradient(900px 600px at 80% 25%, rgba(52,211,153,.10), transparent 55%),
+        radial-gradient(900px 800px at 50% 85%, rgba(251,191,36,.08), transparent 60%),
+        var(--bg);
+      color:var(--text);
+      overflow:hidden; /* keep on one screen; internal lists can scroll */
+    }
+
+    .wrap{
+      height:100%;
+      width:min(1100px, 100%);
+      margin:0 auto;
+      padding:14px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    header{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      align-items:flex-start;
+    }
+    h1{
+      margin:0;
+      font-size:19px;
+      font-weight:780;
+      letter-spacing:.2px;
+    }
+    .sub{
+      color:var(--muted);
+      font-size:13px;
+      margin-top:4px;
+      line-height:1.25;
+    }
+
+    .controls{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      margin-left:auto;
+      flex-wrap:wrap;
+    }
+    button{
+      border:none;
+      cursor:pointer;
+      padding:10px 14px;
+      border-radius:12px;
+      background:rgba(255,255,255,.07);
+      color:var(--text);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.10);
+      font-weight:700;
+      letter-spacing:.2px;
+      user-select:none;
+      white-space:nowrap;
+      transition: transform .08s ease, background .15s ease, filter .15s ease;
+    }
+    button:hover{ background:rgba(255,255,255,.10); }
+    button:active{ transform: translateY(1px) scale(.99); }
+    button.primary{
+      background:#ffffff;
+      color:#000000;
+      box-shadow: var(--shadow);
+    }
+    button.primary:hover{ filter:brightness(1.02); }
+    button:disabled{ opacity:.55; cursor:not-allowed; transform:none; }
+
+    .card{
+      flex:1;
+      min-height:0;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255,255,255,.10);
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+    }
+    .hd{
+      padding:12px 14px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .title{
+      font-weight:850;
+      font-size:13px;
+      letter-spacing:.35px;
+      text-transform:uppercase;
+    }
+    .status{
+      display:flex;
+      gap:8px;
+      font-size:13px;
+      color:var(--muted);
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .pill{
+      padding:6px 10px;
+      border-radius:999px;
+      background: rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      white-space:nowrap;
+    }
+
+    .bd{
+      padding:12px 14px 14px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      min-height:0;
+    }
+
+    .stage{
+      position:relative;
+      background: var(--panel2);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius: 14px;
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      flex:0 0 auto;
+      min-height: calc(var(--ball) + 120px);
+    }
+    .hint{
+      position:absolute;
+      left:12px;
+      top:10px;
+      color:var(--muted);
+      font-size:12.5px;
+      user-select:none;
+    }
+
+    /* NEW: Letter hint above the ball */
+    .hintHeader{
+      text-align:center;
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      user-select:none;
+      max-width: min(720px, 96%);
+    }
+    .hintLetter{
+      font-size: clamp(34px, 5vh, 54px);
+      font-weight: 950;
+      line-height: 1;
+      color:#ffffff;
+      letter-spacing: 2px;
+    }
+    .hintExpr{
+      font-size: clamp(18px, 2.4vh, 22px);
+      font-weight: 900;
+      color: rgba(230,238,252,.95);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis; /* this line is outside the ball; it’s fine here */
+    }
+
+    .ballWrap{
+      height: var(--ball);
+      width: min(680px, 96%);
+      position:relative;
+      display:grid;
+      place-items:center;
+    }
+
+    /* White ball */
+    .ball{
+      height: var(--ball);
+      width: var(--ball);
+      border-radius:50%;
+      background:
+        radial-gradient(circle at 30% 30%, #ffffff, #f0f0f0 35%, #e5e5e5 60%);
+      box-shadow:
+        0 22px 46px rgba(0,0,0,.55),
+        inset 0 0 0 2px rgba(0,0,0,.12);
+      display:grid;
+      place-items:center;
+      position:absolute;
+    }
+    .ball::before{
+      content:"";
+      position:absolute;
+      inset:10px;
+      border-radius:50%;
+      box-shadow: inset 0 0 0 2px rgba(0,0,0,.10);
+    }
+
+    /* Expression face on the ball: NO ellipsis; JS auto-fits font size */
+    .face{
+      width: 90%;
+      height: 66%;
+      border-radius: 18px;
+      background:#ffffff;
+      border:2px solid rgba(0,0,0,.15);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:10px 14px;
+      overflow:hidden;
+    }
+    .expr{
+      color:#000000;
+      font-weight:950;
+      letter-spacing:.4px;
+      line-height:1;
+      text-align:center;
+      white-space:nowrap;
+      font-size: 52px; /* JS will reduce as needed */
+    }
+    .placeholder .expr{
+      color:#777777;
+      font-weight:900;
+    }
+
+    /* Roll-in + bounce */
+    .animateIn{ animation: rollIn .85s cubic-bezier(.2,.9,.2,1) both; }
+    @keyframes rollIn{
+      0%{
+        transform: translateX(-320px) translateY(-60px) rotate(-540deg) scale(.75);
+        opacity:0;
+      }
+      70%{
+        transform: translateX(18px) translateY(10px) rotate(18deg) scale(1.02);
+        opacity:1;
+      }
+      84%{ transform: translateY(-16px) rotate(0deg); }
+      92%{ transform: translateY(6px); }
+      100%{ transform: translateY(0) rotate(0deg); }
+    }
+
+    .drawOverlay{
+      position:absolute;
+      inset:0;
+      cursor:pointer;
+      background: transparent;
+      border-radius:14px;
+    }
+    .drawOverlay:focus{
+      outline: 2px solid rgba(255,255,255,.55);
+      outline-offset: -2px;
+    }
+
+    /* Lists */
+    .lists{
+      flex:1;
+      min-height:0;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+    }
+    .listBox{
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius:14px;
+      display:flex;
+      flex-direction:column;
+      min-height:0;
+      overflow:hidden;
+    }
+    .top{
+      padding:10px 12px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      font-size:13px;
+      font-weight:750;
+      align-items:center;
+    }
+    .mini{
+      font-weight:600;
+      color:var(--muted);
+      white-space:nowrap;
+    }
+    .chips{
+      padding:10px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      overflow:auto;
+      align-content:flex-start;
+      min-height:0;
+    }
+    .chip{
+      min-width: var(--chipMinW);
+      height: var(--chipH);
+      padding:0 10px;
+      border-radius:999px;
+      background:#ffffff;
+      border:1px solid rgba(0,0,0,.15);
+      color:#000000;
+      font-weight:900;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      white-space:nowrap;
+      font-size: 14px;
+    }
+    .empty{
+      font-size:13px;
+      color:var(--muted);
+    }
+
+    /* Toast */
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:14px;
+      transform:translateX(-50%);
+      background:#ffffff;
+      color:#000000;
+      padding:10px 12px;
+      border-radius:12px;
+      box-shadow: var(--shadow);
+      font-size:13px;
+      opacity:0;
+      transition:opacity .18s ease, transform .18s ease;
+      z-index:999;
+      pointer-events:none;
+    }
+    .toast.show{
+      opacity:1;
+      transform:translateX(-50%) translateY(-4px);
+    }
+
+    /* Mode modal */
+    .modalBackdrop{
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,.60);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+      z-index: 1000;
+    }
+    .modalBackdrop.show{ display:flex; }
+    .modal{
+      width:min(520px, 100%);
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      overflow:hidden;
+    }
+    .modalHd{
+      padding:14px 16px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+    }
+    .modalHd h2{
+      margin:0;
+      font-size:16px;
+      font-weight:900;
+      letter-spacing:.2px;
+      color: rgba(230,238,252,.95);
+    }
+    .modalBd{
+      padding:14px 16px 16px;
+      color: rgba(230,238,252,.92);
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+    .modeGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    .modeBtn{
+      text-align:left;
+      padding:12px 12px;
+      border-radius:14px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color: rgba(230,238,252,.95);
+      font-weight:850;
+      cursor:pointer;
+      user-select:none;
+      transition: background .15s ease, transform .08s ease;
+    }
+    .modeBtn:hover{ background: rgba(255,255,255,.10); }
+    .modeBtn:active{ transform: translateY(1px) scale(.99); }
+    .modeBtn.selected{
+      background:#ffffff;
+      color:#000000;
+      border-color: rgba(255,255,255,.30);
+    }
+    .modeDesc{
+      font-size:12.5px;
+      color: var(--muted);
+      margin-top:6px;
+      font-weight:650;
+    }
+    .modalFt{
+      padding:12px 16px 16px;
+      display:flex;
+      justify-content:flex-end;
+      gap:10px;
+      border-top:1px solid rgba(255,255,255,.10);
+    }
+
+    @media (max-width: 780px){
+      body{ overflow:auto; }
+      .wrap{ height:auto; }
+      .lists{ grid-template-columns:1fr; }
+      .modeGrid{ grid-template-columns:1fr; }
+      .stage{ min-height: calc(var(--ball) + 140px); }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>75-Ball Bingo Math Caller</h1>
+        <div class="sub">Choose an operation, then click the panel (or press Space / Enter) to draw. Each number is drawn once.</div>
+      </div>
+      <div class="controls">
+        <button id="btnDraw" class="primary">Draw Next Ball</button>
+        <button id="btnReset">Reset / New Game</button>
+      </div>
+    </header>
+
+    <section class="card">
+      <div class="hd">
+        <div class="title">Current Expression</div>
+        <div class="status">
+          <div class="pill">Mode: <b id="modeLabel" style="color:rgba(230,238,252,.95)">—</b></div>
+          <div class="pill"><span id="pickedCount">0</span> / 75 picked</div>
+          <div class="pill">Remaining: <span id="remainCount">75</span></div>
+        </div>
+      </div>
+
+      <div class="bd">
+        <div class="stage" id="stage">
+          <div class="hint">Tip: Click anywhere in this panel to draw</div>
+
+          <!-- NEW: hint above the ball -->
+          <div class="hintHeader" aria-live="polite">
+            <div class="hintLetter" id="hintLetter">—</div>
+            <div class="hintExpr" id="hintExpr">—</div>
+          </div>
+
+          <div class="ballWrap">
+            <div id="ball" class="ball placeholder" role="img" aria-label="Current math expression ball">
+              <div class="face" id="face">
+                <div id="expr" class="expr">—</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="drawOverlay" id="drawOverlay" tabindex="0" aria-label="Draw next ball"></div>
+        </div>
+
+        <div class="lists">
+          <div class="listBox">
+            <div class="top">
+              <div>Picked (chronological)</div>
+              <div class="mini"><span id="chronoMini">0</span> balls</div>
+            </div>
+            <div class="chips" id="pickedChrono">
+              <div class="empty">No balls drawn yet.</div>
+            </div>
+          </div>
+
+          <div class="listBox">
+            <div class="top">
+              <div>Picked (sorted B→O, then #)</div>
+              <div class="mini"><span id="sortedMini">0</span> balls</div>
+            </div>
+            <div class="chips" id="pickedSorted">
+              <div class="empty">No balls drawn yet.</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.25;">
+          Ranges: B 1–15 • I 16–30 • N 31–45 • G 46–60 • O 61–75. (Ball shows an expression that equals the drawn number.)
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Start / mode selection modal -->
+  <div class="modalBackdrop show" id="modeModal" role="dialog" aria-modal="true" aria-label="Choose mode">
+    <div class="modal">
+      <div class="modalHd">
+        <h2>Choose a mode</h2>
+      </div>
+      <div class="modalBd">
+        <div class="modeGrid" id="modeGrid">
+          <div class="modeBtn" data-mode="add" tabindex="0">
+            Addition
+            <div class="modeDesc">Two non-negative numbers that add to the ball number.</div>
+          </div>
+          <div class="modeBtn" data-mode="sub" tabindex="0">
+            Subtraction
+            <div class="modeDesc">Positive result only (a − b), minuend ≤ 99.</div>
+          </div>
+          <div class="modeBtn" data-mode="mul" tabindex="0">
+            Multiplication
+            <div class="modeDesc">Integer factors; primes can be 1×target or fall back to +/−.</div>
+          </div>
+          <div class="modeBtn" data-mode="div" tabindex="0">
+            Division
+            <div class="modeDesc">Whole-number division; primes can be ÷1 or fall back to +/−.</div>
+          </div>
+        </div>
+      </div>
+      <div class="modalFt">
+        <button id="btnStart" class="primary" disabled>Start</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    // 75-ball BINGO ranges
+    const RANGES = [
+      { letter: "B", start: 1,  end: 15 },
+      { letter: "I", start: 16, end: 30 },
+      { letter: "N", start: 31, end: 45 },
+      { letter: "G", start: 46, end: 60 },
+      { letter: "O", start: 61, end: 75 }
+    ];
+
+    const MODE_NAMES = {
+      add: "Addition",
+      sub: "Subtraction",
+      mul: "Multiplication",
+      div: "Division"
+    };
+
+    const state = {
+      deck: [],
+      picked: [],            // picked items {letter, number, expr}
+      isAnimating: false,
+      mode: null
+    };
+
+    const els = {
+      btnDraw: document.getElementById("btnDraw"),
+      btnReset: document.getElementById("btnReset"),
+      ball: document.getElementById("ball"),
+      expr: document.getElementById("expr"),
+      face: document.getElementById("face"),
+      hintLetter: document.getElementById("hintLetter"),
+      hintExpr: document.getElementById("hintExpr"),
+      pickedCount: document.getElementById("pickedCount"),
+      remainCount: document.getElementById("remainCount"),
+      pickedChrono: document.getElementById("pickedChrono"),
+      pickedSorted: document.getElementById("pickedSorted"),
+      chronoMini: document.getElementById("chronoMini"),
+      sortedMini: document.getElementById("sortedMini"),
+      toast: document.getElementById("toast"),
+      drawOverlay: document.getElementById("drawOverlay"),
+      stage: document.getElementById("stage"),
+      modeModal: document.getElementById("modeModal"),
+      modeGrid: document.getElementById("modeGrid"),
+      btnStart: document.getElementById("btnStart"),
+      modeLabel: document.getElementById("modeLabel")
+    };
+
+    function randInt(min, max){
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function isPrime(n){
+      if(n <= 1) return false;
+      if(n <= 3) return true;
+      if(n % 2 === 0 || n % 3 === 0) return false;
+      for(let i=5; i*i<=n; i+=6){
+        if(n % i === 0 || n % (i+2) === 0) return false;
+      }
+      return true;
+    }
+
+    function getBingoLetterForNumber(n){
+      for(const r of RANGES){
+        if(n >= r.start && n <= r.end) return r.letter;
+      }
+      return "?";
+    }
+
+    function buildDeck(){
+      const d=[];
+      for(const r of RANGES){
+        for(let n=r.start;n<=r.end;n++){
+          d.push({ letter:r.letter, number:n });
+        }
+      }
+      return d;
+    }
+
+    // Fisher-Yates shuffle
+    function shuffle(a){
+      for(let i=a.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [a[i],a[j]]=[a[j],a[i]];
+      }
+      return a;
+    }
+
+    function sortKey(c){
+      const o={B:0,I:1,N:2,G:3,O:4};
+      return o[c.letter]*1000 + c.number;
+    }
+
+    // --- Expression generators (implied equals target) ---
+    function genAddExpr(target){
+      const a = randInt(0, target);
+      const b = target - a;
+      return `${a} + ${b}`;
+    }
+
+    function genSubExpr(target){
+      // a - b = target, a <= 99, b >= 0
+      const a = randInt(target, 99);
+      const b = a - target;
+      return `${a} − ${b}`;
+    }
+
+    function factorPairs(target){
+      const pairs = [];
+      for(let a=1; a*a<=target; a++){
+        if(target % a === 0) pairs.push([a, target/a]);
+      }
+      return pairs;
+    }
+
+    function genMulExpr(target){
+      // If prime: allow 1×target, but also sometimes fallback to +/−
+      if(isPrime(target)){
+        if(Math.random() < 0.45){
+          return (Math.random() < 0.5) ? genAddExpr(target) : genSubExpr(target);
+        }
+        return `1 × ${target}`;
+      }
+
+      const pairs = factorPairs(target); // includes [1,target]
+      const nonTrivial = pairs.filter(([a,b]) => a !== 1 && b !== 1);
+      const choiceList = nonTrivial.length ? nonTrivial : pairs;
+
+      const [a,b] = choiceList[randInt(0, choiceList.length-1)];
+      return `${a} × ${b}`;
+    }
+
+    function genDivExpr(target){
+      // Whole-number division: a ÷ b = target -> a = target*b
+      // For primes: sometimes use ÷1, otherwise fallback to +/−
+      if(isPrime(target)){
+        if(Math.random() < 0.35){
+          return `${target} ÷ 1`;
+        }
+        return (Math.random() < 0.5) ? genAddExpr(target) : genSubExpr(target);
+      }
+
+      // Choose b, keep dividend friendly
+      const candidates = [];
+      for(let b=2; b<=12; b++) candidates.push(b);
+      const filtered = candidates.filter(b => target*b <= 180);
+      const pool = filtered.length ? filtered : candidates;
+
+      const b = pool[randInt(0, pool.length-1)];
+      const a = target * b;
+
+      if(Math.random() < 0.08){
+        return `${target} ÷ 1`;
+      }
+      return `${a} ÷ ${b}`;
+    }
+
+    function makeExprForTarget(target){
+      switch(state.mode){
+        case "add": return genAddExpr(target);
+        case "sub": return genSubExpr(target);
+        case "mul": return genMulExpr(target);
+        case "div": return genDivExpr(target);
+        default: return "—";
+      }
+    }
+
+    // --- Auto-fit expression text on the ball (NO ellipsis) ---
+    function fitExprText(){
+      const exprEl = els.expr;
+      const box = els.face;
+      const max = 64;
+      const min = 16;
+
+      if(!exprEl.textContent || exprEl.textContent.trim() === "—"){
+        exprEl.style.fontSize = "52px";
+        return;
+      }
+
+      exprEl.style.fontSize = max + "px";
+
+      const pad = 6;
+      const maxW = box.clientWidth - pad*2;
+      const maxH = box.clientHeight - pad*2;
+
+      let size = max;
+      for(let i=0;i<100;i++){
+        const w = exprEl.scrollWidth;
+        const h = exprEl.scrollHeight;
+        if(w <= maxW && h <= maxH) break;
+        size -= 1;
+        if(size <= min){ size = min; break; }
+        exprEl.style.fontSize = size + "px";
+      }
+    }
+
+    function setBallAndHint(exprStr, bingoLetter, animate){
+      els.ball.classList.toggle("placeholder", !exprStr || exprStr === "—");
+
+      els.expr.textContent = exprStr || "—";
+      els.hintLetter.textContent = bingoLetter || "—";
+      els.hintExpr.textContent = exprStr || "—";
+
+      requestAnimationFrame(() => fitExprText());
+
+      if(animate){
+        els.ball.classList.remove("animateIn");
+        void els.ball.offsetWidth;
+        els.ball.classList.add("animateIn");
+      }
+    }
+
+    function showToast(msg){
+      els.toast.textContent = msg;
+      els.toast.classList.add("show");
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(() => els.toast.classList.remove("show"), 1200);
+    }
+
+    function renderLists(){
+      els.chronoMini.textContent = state.picked.length;
+      els.sortedMini.textContent = state.picked.length;
+
+      els.pickedChrono.innerHTML = "";
+      els.pickedSorted.innerHTML = "";
+
+      if(state.picked.length === 0){
+        els.pickedChrono.innerHTML = '<div class="empty">No balls drawn yet.</div>';
+        els.pickedSorted.innerHTML = '<div class="empty">No balls drawn yet.</div>';
+        return;
+      }
+
+      // Chronological
+      for(const c of state.picked){
+        const el = document.createElement("div");
+        el.className = "chip";
+        el.textContent = `${c.letter}: ${c.expr}`;
+        els.pickedChrono.appendChild(el);
+      }
+
+      // Sorted B->O then number
+      const sorted = [...state.picked].sort((a,b)=>sortKey(a)-sortKey(b));
+      for(const c of sorted){
+        const el = document.createElement("div");
+        el.className = "chip";
+        el.textContent = `${c.letter}: ${c.expr}`;
+
+        els.pickedSorted.appendChild(el);
+      }
+    }
+
+    function renderCounts(){
+      els.pickedCount.textContent = state.picked.length;
+      els.remainCount.textContent = state.deck.length;
+
+      const canDraw = !!state.mode && state.deck.length > 0 && !state.isAnimating && !els.modeModal.classList.contains("show");
+      els.btnDraw.disabled = !canDraw;
+
+      els.modeLabel.textContent = state.mode ? MODE_NAMES[state.mode] : "—";
+    }
+
+    function drawNext(){
+      if(!state.mode) return;
+      if(state.isAnimating) return;
+      if(state.deck.length === 0){
+        showToast("All balls have been drawn.");
+        return;
+      }
+      if(els.modeModal.classList.contains("show")) return;
+
+      state.isAnimating = true;
+      renderCounts();
+
+      const card = state.deck.pop(); // {letter, number}
+      const expr = makeExprForTarget(card.number);
+      const bingoLetter = getBingoLetterForNumber(card.number);
+
+      state.picked.push({ ...card, expr });
+
+      setBallAndHint(expr, bingoLetter, true);
+
+      setTimeout(() => {
+        state.isAnimating = false;
+        renderLists();
+        renderCounts();
+        if(state.deck.length === 0){
+          showToast("Done! All 75 drawn.");
+        } else {
+          showToast(expr);
+        }
+      }, 900);
+    }
+
+    function resetToMenu(){
+      state.deck = [];
+      state.picked = [];
+      state.isAnimating = false;
+      state.mode = null;
+
+      // reset UI
+      setBallAndHint("—", "—", false);
+      renderLists();
+      renderCounts();
+
+      // reset selection
+      selectedMode = null;
+      [...els.modeGrid.querySelectorAll(".modeBtn")].forEach(b => b.classList.remove("selected"));
+      els.btnStart.disabled = true;
+
+      els.modeModal.classList.add("show");
+      showToast("Choose a mode");
+    }
+
+    function startGameWithMode(mode){
+      state.mode = mode;
+      state.deck = shuffle(buildDeck());
+      state.picked = [];
+      state.isAnimating = false;
+
+      setBallAndHint("—", "—", false);
+      renderLists();
+      renderCounts();
+
+      els.modeModal.classList.remove("show");
+      showToast(`${MODE_NAMES[mode]} mode`);
+    }
+
+    // --- Mode modal interactions ---
+    let selectedMode = null;
+
+    function selectMode(mode){
+      selectedMode = mode;
+      [...els.modeGrid.querySelectorAll(".modeBtn")].forEach(b=>{
+        b.classList.toggle("selected", b.dataset.mode === mode);
+      });
+      els.btnStart.disabled = !selectedMode;
+    }
+
+    els.modeGrid.addEventListener("click", (e)=>{
+      const btn = e.target.closest(".modeBtn");
+      if(!btn) return;
+      selectMode(btn.dataset.mode);
+    });
+    els.modeGrid.addEventListener("keydown", (e)=>{
+      const btn = e.target.closest(".modeBtn");
+      if(!btn) return;
+      if(e.key === "Enter" || e.key === " "){
+        e.preventDefault();
+        selectMode(btn.dataset.mode);
+      }
+    });
+    els.btnStart.addEventListener("click", ()=>{
+      if(!selectedMode) return;
+      startGameWithMode(selectedMode);
+    });
+
+    // Main events
+    els.btnDraw.addEventListener("click", drawNext);
+    els.btnReset.addEventListener("click", resetToMenu);
+
+    // Clickable stage + overlay for draw
+    els.stage.addEventListener("click", (e)=>{
+      if(e.target.closest("button")) return;
+      drawNext();
+    });
+    els.drawOverlay.addEventListener("click", drawNext);
+    els.drawOverlay.addEventListener("keydown", (e)=>{
+      if(e.key === "Enter" || e.key === " "){
+        e.preventDefault();
+        drawNext();
+      }
+    });
+
+    window.addEventListener("keydown", (e)=>{
+      const modalOpen = els.modeModal.classList.contains("show");
+      if(modalOpen) return;
+
+      if(e.key === " " || e.key === "Enter"){
+        e.preventDefault();
+        drawNext();
+      }
+      if(e.key.toLowerCase() === "r"){
+        resetToMenu();
+      }
+    });
+
+    window.addEventListener("resize", ()=>fitExprText());
+
+    // Init
+    resetToMenu();
+  </script>
+</body>
+</html>

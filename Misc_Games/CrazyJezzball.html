@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>JezzBall Clone — Spinning Cursor Direction</title>
+<title>Crazy JezzBall Clone — Spinning Cursor Direction</title>
 <style>
   :root { color-scheme: dark; }
   body{
@@ -22,6 +22,7 @@
     background: rgba(255,255,255,0.08);
     border:1px solid rgba(255,255,255,0.12);
     border-radius:999px; padding:6px 10px;
+    white-space:nowrap;
   }
   button{
     background: rgba(255,255,255,0.10);
@@ -32,6 +33,12 @@
     cursor:pointer;
   }
   button:hover{ background: rgba(255,255,255,0.14); }
+  button.danger{
+    border-color: rgba(255,120,140,0.35);
+    background: rgba(255,120,140,0.12);
+  }
+  button.danger:hover{ background: rgba(255,120,140,0.18); }
+
   canvas{
     width:100%;
     height:auto;
@@ -54,7 +61,7 @@
     backdrop-filter: blur(3px);
   }
   .card{
-    width:min(560px, 92vw);
+    width:min(620px, 92vw);
     background: rgba(18,24,34,0.92);
     border:1px solid rgba(255,255,255,0.14);
     border-radius:16px;
@@ -63,7 +70,37 @@
   }
   .card h2{ margin:0 0 8px; }
   .card p{ margin:0 0 12px; opacity:.9; }
-  .row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+
+  .divider{
+    height:1px;
+    background: rgba(255,255,255,0.10);
+    margin:12px 0;
+    display:none;
+  }
+  .scoresBlock{
+    display:none;
+  }
+  .scoresTitle{
+    font-weight:700;
+    margin:0 0 8px;
+    opacity:.95;
+  }
+  .scoresBox{
+    border:1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.05);
+    border-radius:12px;
+    padding:10px 10px;
+    font-size:13px;
+    line-height:1.3;
+    font-variant-numeric: tabular-nums;
+  }
+  .scoresBox .rowLine{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .scoresBox .muted{ opacity:.72; }
 </style>
 </head>
 <body>
@@ -72,7 +109,7 @@
     <div class="stats">
       <div class="pill"><b>Level</b>: <span id="level">1</span></div>
       <div class="pill"><b>Lives</b>: <span id="lives">3</span></div>
-      <div class="pill"><b>Captured</b>: <span id="captured">0%</span></div>
+      <div class="pill"><b>Captured</b>: <span id="captured">0.0%</span></div>
       <div class="pill"><b>Target</b>: <span id="target">75%</span></div>
       <div class="pill"><b>Balls</b>: <span id="balls">2</span></div>
       <div class="pill"><b>Aim</b>: Cursor spins — click to shoot wall direction</div>
@@ -96,10 +133,20 @@
 <div class="overlay" id="overlay">
   <div class="card">
     <h2 id="overlayTitle">Paused</h2>
-    <p id="overlayText">Press Resume to continue.</p>
+    <p id="overlayText">Press Continue to continue.</p>
+
+    <div class="divider" id="scoresDivider"></div>
+    <div class="scoresBlock" id="scoresBlock">
+      <div class="scoresTitle">Top 5 (Local)</div>
+      <div class="scoresBox" id="scoresOverlay"></div>
+    </div>
+
+    <div class="divider" id="buttonsDivider"></div>
+
     <div class="row">
-      <button id="resume">Resume</button>
+      <button id="continueBtn">Continue</button>
       <button id="overlayRestart">Restart</button>
+      <button class="danger" id="overlayClearScores">Reset Scores</button>
     </div>
   </div>
 </div>
@@ -117,11 +164,18 @@
     balls: document.getElementById('balls'),
     restart: document.getElementById('restart'),
     pause: document.getElementById('pause'),
+
     overlay: document.getElementById('overlay'),
     overlayTitle: document.getElementById('overlayTitle'),
     overlayText: document.getElementById('overlayText'),
-    resume: document.getElementById('resume'),
-    overlayRestart: document.getElementById('overlayRestart')
+    continueBtn: document.getElementById('continueBtn'),
+    overlayRestart: document.getElementById('overlayRestart'),
+    overlayClearScores: document.getElementById('overlayClearScores'),
+
+    scoresBlock: document.getElementById('scoresBlock'),
+    scoresOverlay: document.getElementById('scoresOverlay'),
+    scoresDivider: document.getElementById('scoresDivider'),
+    buttonsDivider: document.getElementById('buttonsDivider')
   };
 
   const W = canvas.width, H = canvas.height;
@@ -143,10 +197,85 @@
     cursorSoft: 'rgba(232,238,246,0.35)'
   };
 
+  // ---------------------------
+  // High Scores (localStorage)
+  // ---------------------------
+  const SCORE_KEY = 'crazyJezzball_top5_v1';
+
+  function loadScores(){
+    try {
+      const raw = localStorage.getItem(SCORE_KEY);
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [];
+    } catch(e){
+      return [];
+    }
+  }
+
+  function saveScores(scores){
+    try { localStorage.setItem(SCORE_KEY, JSON.stringify(scores)); }
+    catch(e){ /* ignore */ }
+  }
+
+  // Sort: level desc, capturedPct desc, then timestamp desc (display stability)
+  function sortScores(scores){
+    scores.sort((a,b) => {
+      if (b.level !== a.level) return b.level - a.level;
+      if (b.capturedPct !== a.capturedPct) return b.capturedPct - a.capturedPct;
+      return (b.ts || 0) - (a.ts || 0);
+    });
+    return scores;
+  }
+
+  function addScore(entry){
+    const scores = loadScores();
+    scores.push(entry); // duplicates/ties allowed
+    sortScores(scores);
+    const top5 = scores.slice(0,5);
+    saveScores(top5);
+  }
+
+  function clearAllScores(){
+    try { localStorage.removeItem(SCORE_KEY); } catch(e){}
+  }
+
+  function fmtPctInt(p){ return Math.max(0, Math.min(100, Math.round(p))) + '%'; }
+  function fmtPct1(ratio){
+    const pct = Math.max(0, Math.min(100, ratio * 100));
+    return pct.toFixed(1) + '%';
+  }
+
+  function renderScoresOverlay(scores){
+    if (!scores || scores.length === 0){
+      ui.scoresOverlay.innerHTML = `<div class="muted">No scores yet.</div>`;
+      return;
+    }
+    ui.scoresOverlay.innerHTML = scores.map((s, i) => {
+      const when = s.when || '';
+      return `
+        <div class="rowLine">
+          <span>${i+1}. <b>Level</b> ${s.level} — <b>Captured</b> ${fmtPctInt(s.capturedPct)}</span>
+          <span class="muted">${when}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function nowStamp(){
+    const d = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  // ---------------------------
   // Game state
+  // ---------------------------
   let paused = false;
   let level = 1;
   let lives = 3;
+  const MAX_LIVES = 9;
+
   let targetCapture = 0.75;
   let ballCount = 2;
 
@@ -155,7 +284,6 @@
   let balls = [];
 
   // Builder: arbitrary-angle line growing both directions
-  // {x,y, ux,uy, aDist,bDist, aMax,bMax}
   let builder = null;
 
   // Speeds & stability
@@ -167,7 +295,10 @@
   let mouseInside = false;
   const mouse = { x: W/2, y: H/2 };
   let aimAngle = 0;              // radians
-  const AIM_SPIN_SPEED = 2.4;    // rad/sec (cursor rotates continuously)
+  const AIM_SPIN_SPEED = 2.4;    // rad/sec
+
+  // prevent double-saving on game over
+  let gameEnded = false;
 
   function idx(cx, cy){ return cy * COLS + cx; }
   function inBounds(cx, cy){ return cx>=0 && cy>=0 && cx<COLS && cy<ROWS; }
@@ -193,7 +324,7 @@
         if (grid[idx(x,y)]===1) filled++;
       }
     }
-    return filled/playable;
+    return playable ? (filled/playable) : 0;
   }
 
   function updateUI(){
@@ -201,14 +332,36 @@
     ui.lives.textContent = lives;
     ui.target.textContent = Math.round(targetCapture*100) + '%';
     ui.balls.textContent = ballCount;
-    ui.captured.textContent = Math.round(computeCaptureRatio()*100) + '%';
+    ui.captured.textContent = fmtPct1(computeCaptureRatio()); // Option A: show one decimal to avoid rounding confusion
+  }
+
+  function setScoresVisibility(show){
+    ui.scoresBlock.style.display = show ? 'block' : 'none';
+    ui.scoresDivider.style.display = show ? 'block' : 'none';
+    ui.buttonsDivider.style.display = show ? 'block' : 'none';
+    ui.overlayClearScores.style.display = show ? '' : 'none';
   }
 
   function showOverlay(title, text){
     ui.overlayTitle.textContent = title;
-    ui.overlayText.textContent = text;
+    ui.overlayText.innerHTML = text;
     ui.overlay.style.display = 'grid';
+
+    const isGameOver = (title === 'Game Over');
+
+    // Only show scores on Game Over (NOT between rounds)
+    setScoresVisibility(isGameOver);
+
+    // Between rounds: ONLY "Continue"
+    ui.continueBtn.style.display = isGameOver ? 'none' : '';
+    ui.overlayRestart.style.display = isGameOver ? '' : 'none';
+    ui.overlayClearScores.style.display = isGameOver ? '' : 'none';
+
+    if (isGameOver){
+      renderScoresOverlay(loadScores());
+    }
   }
+
   function hideOverlay(){ ui.overlay.style.display = 'none'; }
 
   function resetGame(full=true){
@@ -219,6 +372,7 @@
     spawnBalls(ballCount);
     builder = null;
     paused = false;
+    gameEnded = false;
     hideOverlay();
     updateUI();
   }
@@ -230,13 +384,26 @@
     spawnBalls(ballCount);
     builder = null;
     paused = false;
+    gameEnded = false;
     hideOverlay();
     updateUI();
   }
 
   function gameOver(){
+    if (gameEnded) return;
+    gameEnded = true;
+
+    const capturedPct = Math.round(computeCaptureRatio()*100);
+
+    addScore({
+      level,
+      capturedPct,
+      when: nowStamp(),
+      ts: Date.now()
+    });
+
     paused = true;
-    showOverlay('Game Over', `You reached level ${level}.`);
+    showOverlay('Game Over', `You reached level ${level}. Captured ${capturedPct}%.`);
   }
 
   // --- Ball vs solid grid collision ---
@@ -259,7 +426,6 @@
   }
 
   function resolveBallVsWalls(ball){
-    // robust resolve to prevent sticking
     for (let iter=0; iter<6; iter++){
       const {cx, cy} = pointToCell(ball.x, ball.y);
       const rad = Math.ceil((ball.r+1)/GRID);
@@ -306,7 +472,6 @@
       }
     }
 
-    // clamp screen
     if (ball.x < ball.r){ ball.x = ball.r; ball.vx = Math.abs(ball.vx); }
     if (ball.x > W-ball.r){ ball.x = W-ball.r; ball.vx = -Math.abs(ball.vx); }
     if (ball.y < ball.r){ ball.y = ball.r; ball.vy = Math.abs(ball.vy); }
@@ -338,7 +503,6 @@
 
   // --- Geometry helpers ---
   function segmentIntersectsBall(seg, ball){
-    // seg {x1,y1,x2,y2,t}
     const {x1,y1,x2,y2,t} = seg;
     const px = ball.x, py = ball.y;
     const vx = x2-x1, vy = y2-y1;
@@ -353,19 +517,14 @@
   }
 
   function traceMaxDistance(x, y, ux, uy){
-    // Ray-march forward from (x,y) along (ux,uy) until we hit a solid cell or border.
-    // Returns maximum distance (px) allowed.
-    // Step size ~ GRID/2 for accuracy.
     const step = GRID * 0.5;
     let dist = 0;
     for (let i=0; i<20000; i++){
       const nx = x + ux*(dist + step);
       const ny = y + uy*(dist + step);
 
-      // hard border
       if (nx < 0 || nx >= W || ny < 0 || ny >= H) break;
 
-      // stop when the *centerline* enters a wall cell
       const c = pointToCell(nx, ny);
       if (!inBounds(c.cx,c.cy) || grid[idx(c.cx,c.cy)] === 1) break;
 
@@ -387,7 +546,6 @@
   }
 
   function floodFillCapture(){
-    // mark empty reachable from balls; everything else becomes wall (captured)
     const seen = new Uint8Array(COLS*ROWS);
     const qx = new Int32Array(COLS*ROWS);
     const qy = new Int32Array(COLS*ROWS);
@@ -430,7 +588,6 @@
     const ux = Math.cos(angle);
     const uy = Math.sin(angle);
 
-    // Maximum distances in both directions until hitting a wall/border
     const aMax = traceMaxDistance(x, y, -ux, -uy);
     const bMax = traceMaxDistance(x, y,  ux,  uy);
 
@@ -467,7 +624,6 @@
     builder.aDist = Math.min(builder.aMax, builder.aDist + GROW_SPEED_PX*dt);
     builder.bDist = Math.min(builder.bMax, builder.bDist + GROW_SPEED_PX*dt);
 
-    // Growing wall hit detection
     const segs = builderSegments(builder);
     for (const ball of balls){
       for (const seg of segs){
@@ -490,8 +646,12 @@
       updateUI();
 
       if (computeCaptureRatio() >= targetCapture){
+        // +1 life between rounds (level complete), max 9
+        lives = Math.min(MAX_LIVES, lives + 1);
+        updateUI();
+
         paused = true;
-        showOverlay('Level Complete!', `Captured ${Math.round(computeCaptureRatio()*100)}%. Resume for Level ${level+1}.`);
+        showOverlay('Level Complete!', `Captured ${fmtPct1(computeCaptureRatio())}.<br> +1 life! (Lives: ${lives}/${MAX_LIVES}) <br> Continue for Level ${level+1}.`);
       }
     }
   }
@@ -521,13 +681,11 @@
     const tipX = x + Math.cos(a)*len;
     const tipY = y + Math.sin(a)*len;
 
-    // small halo
     ctx.fillStyle = COLORS.cursorSoft;
     ctx.beginPath();
     ctx.arc(x, y, 6, 0, Math.PI*2);
     ctx.fill();
 
-    // arrow shaft
     ctx.strokeStyle = COLORS.cursor;
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
@@ -536,7 +694,6 @@
     ctx.lineTo(tipX, tipY);
     ctx.stroke();
 
-    // arrow head
     const leftA  = a + Math.PI*0.85;
     const rightA = a - Math.PI*0.85;
     ctx.beginPath();
@@ -552,7 +709,6 @@
     ctx.fillStyle = COLORS.bg;
     ctx.fillRect(0,0,W,H);
 
-    // subtle grid
     ctx.strokeStyle = COLORS.grid;
     ctx.lineWidth = 1;
     for (let x=0; x<=W; x+=GRID*4){
@@ -562,7 +718,6 @@
       ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
     }
 
-    // walls
     ctx.fillStyle = COLORS.wall;
     for (let y=0;y<ROWS;y++){
       for (let x=0;x<COLS;x++){
@@ -572,7 +727,6 @@
       }
     }
 
-    // builder
     if (builder){
       const segs = builderSegments(builder);
       ctx.strokeStyle = (dangerTimer>0) ? COLORS.danger : COLORS.grow;
@@ -590,7 +744,6 @@
       ctx.fill();
     }
 
-    // balls
     for (const b of balls){
       ctx.fillStyle = b.color;
       ctx.beginPath();
@@ -598,7 +751,6 @@
       ctx.fill();
     }
 
-    // cursor last (on top)
     drawSpinningCursor();
   }
 
@@ -620,7 +772,6 @@
   canvas.addEventListener('click', (ev) => {
     if (paused) return;
     const p = canvasToLocal(ev);
-    // Use current spinning cursor direction at click time
     startBuilderAt(p.x, p.y, aimAngle);
   });
 
@@ -633,15 +784,26 @@
   ui.restart.addEventListener('click', () => resetGame(true));
   ui.overlayRestart.addEventListener('click', () => resetGame(true));
   ui.pause.addEventListener('click', () => togglePause());
-  ui.resume.addEventListener('click', () => {
+
+  ui.continueBtn.addEventListener('click', () => {
     const title = ui.overlayTitle.textContent || '';
     if (title.includes('Level Complete')) nextLevel();
     else { paused = false; hideOverlay(); }
   });
 
+  function confirmClearScores(){
+    if (confirm('Reset high scores? This cannot be undone.')) {
+      clearAllScores();
+      if (ui.overlayTitle.textContent === 'Game Over') {
+        renderScoresOverlay(loadScores());
+      }
+    }
+  }
+  ui.overlayClearScores.addEventListener('click', confirmClearScores);
+
   function togglePause(){
     paused = !paused;
-    if (paused) showOverlay('Paused', 'Press Resume to continue.');
+    if (paused) showOverlay('Paused', 'Press Continue to continue.');
     else hideOverlay();
   }
 
@@ -653,7 +815,6 @@
 
     if (!paused){
       dangerTimer = Math.max(0, dangerTimer - dt);
-      // spin aim continuously
       aimAngle = (aimAngle + AIM_SPIN_SPEED*dt) % (Math.PI*2);
 
       moveBalls(dt);
@@ -666,6 +827,9 @@
   }
 
   // init
+  // Ensure scores UI is hidden by default (only shown on Game Over)
+  setScoresVisibility(false);
+
   resetGame(true);
   requestAnimationFrame(tick);
 })();

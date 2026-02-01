@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bingo Card Generator (5x5 • Export PDF 2x2 per page)</title>
+
+  <style>
+    :root{
+      --card-border: 2px;
+      --cell-border: 1px;
+      --gap: 10px;
+      --font: 13px;
+    }
+    body{
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      margin: 16px;
+      color: #111;
+      background: #f6f7fb;
+    }
+    h1{ margin: 0 0 10px 0; font-size: 20px; }
+
+    .wrap{
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+    .panel{
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    label{ font-weight: 900; font-size: 13px; display:block; margin: 10px 0 6px; }
+    input[type="number"]{
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+      background: #fff;
+    }
+    .checks{
+      display:flex;
+      gap: 12px;
+      align-items:center;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .checks label{
+      margin: 0;
+      font-weight: 900;
+      display:flex;
+      align-items:center;
+      gap: 8px;
+    }
+    button{
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      border: 0;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 950;
+      cursor: pointer;
+      background: #2563eb;
+      color: #fff;
+    }
+    button.secondary{ background: #111827; }
+    button.ghost{
+      background: #e5e7eb;
+      color: #111;
+      font-weight: 950;
+    }
+    button:disabled{
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    .hint{
+      font-size: 12px;
+      color: #555;
+      line-height: 1.35;
+      margin-top: 10px;
+    }
+    .miniHint{
+      font-size: 11px;
+      color: #666;
+      margin-top: 6px;
+      line-height: 1.35;
+    }
+
+    /* Output */
+    #output{
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+      min-height: 220px;
+    }
+    .cards{
+      display: grid;
+      gap: var(--gap);
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      align-items: start;
+    }
+
+    .card{
+      border: var(--card-border) solid #111;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .cardHeader{
+      display:flex;
+      justify-content: space-between;
+      align-items:center;
+      padding: 8px 10px;
+      border-bottom: 2px solid #111;
+    }
+    .cardTitle{
+      font-weight: 950;
+      letter-spacing: .18em;
+      font-size: 16px;
+      text-transform: uppercase;
+    }
+    .cardId{
+      font-size: 12px;
+      color: #333;
+      font-weight: 950;
+    }
+
+    table{
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    th, td{
+      border: var(--cell-border) solid #111;
+      text-align: center;
+      vertical-align: middle;
+      padding: 6px;
+      font-size: var(--font);
+      height: 44px;
+    }
+    th{
+      background: #f3f4f6;
+      padding: 6px 4px;
+    }
+    .thWrap{
+      display:flex;
+      flex-direction: column;
+      align-items:center;
+      line-height: 1.05;
+    }
+    .thLetter{
+      font-size: 13px;
+      font-weight: 1000;
+      letter-spacing: .2em;
+    }
+    .thRange{
+      font-size: 11px;
+      font-weight: 950;
+      color: #333;
+      margin-top: 2px;
+    }
+
+    .free{
+      font-weight: 1000;
+      background: #fef3c7;
+      font-size: 12px;
+      letter-spacing: .03em;
+    }
+
+    .status{
+      margin-top: 10px;
+      font-size: 12px;
+      font-weight: 900;
+      color: #111;
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      padding: 8px;
+      border-radius: 10px;
+      display: none;
+    }
+    .spinner{
+      display:inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid #999;
+      border-top-color: transparent;
+      border-radius: 50%;
+      vertical-align: -2px;
+      margin-right: 6px;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin{ to { transform: rotate(360deg); } }
+
+    @media print{
+      body{ background:#fff; margin: 0; }
+      .wrap{ display:block; }
+      .panel{ display:none; }
+      #output{ border: 0; box-shadow: none; padding: 0; }
+      /* Print layout also 2x2 */
+      .cards{
+        gap: 10px;
+        grid-template-columns: repeat(2, 1fr);
+      }
+      th, td{ height: 40px; }
+    }
+  </style>
+</head>
+<body>
+  <h1>5×5 Bingo Card Generator — Export PDF (2×2 per page)</h1>
+
+  <div class="wrap">
+    <div class="panel">
+      <label for="count">Number of cards (max 25)</label>
+      <input id="count" type="number" min="1" max="25" value="8" />
+
+      <div class="checks">
+        <label><input id="blankMode" type="checkbox" /> Generate blank cards</label>
+      </div>
+
+      <button id="generateBtn">Generate Cards</button>
+
+      <button id="printBtn" class="secondary">Print</button>
+      <button id="pdfBtn" class="ghost">Export as PDF (Download)</button>
+
+      <div id="status" class="status"><span class="spinner"></span><span id="statusText">Building PDF…</span></div>
+
+      <div class="hint">
+        Columns use classic ranges: <b>B</b> 1–15, <b>I</b> 16–30, <b>N</b> 31–45, <b>G</b> 46–60, <b>O</b> 61–75.
+        <br/>Numbers are <b>sorted smallest→largest</b> down each column.
+        <br/>Center square always reads <b>FREE SPACE</b>.
+      </div>
+      <div class="miniHint">
+        PDF export is generated in-browser and forces <b>2×2 cards per PDF page</b> (max 4 per page).
+      </div>
+    </div>
+
+    <div id="output">
+      <div class="cards" id="cards"></div>
+    </div>
+  </div>
+
+  <!-- Libraries for PDF generation -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+  <script>
+    // 5x5 only. Max 25 cards. Numbers or blank. Center always FREE SPACE.
+    const elCount = document.getElementById("count");
+    const elBlank = document.getElementById("blankMode");
+    const elCards = document.getElementById("cards");
+
+    const elGenerate = document.getElementById("generateBtn");
+    const elPrint = document.getElementById("printBtn");
+    const elPdf = document.getElementById("pdfBtn");
+
+    const elStatus = document.getElementById("status");
+    const elStatusText = document.getElementById("statusText");
+
+    function setBusy(isBusy, msg="") {
+      elPdf.disabled = isBusy;
+      elGenerate.disabled = isBusy;
+      elPrint.disabled = isBusy;
+      if (isBusy) {
+        elStatus.style.display = "block";
+        elStatusText.textContent = msg || "Working…";
+      } else {
+        elStatus.style.display = "none";
+      }
+    }
+
+    function shuffleInPlace(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function pickUniqueSorted(min, max, count) {
+      const arr = [];
+      for (let n = min; n <= max; n++) arr.push(n);
+      shuffleInPlace(arr);
+      const picked = arr.slice(0, count);
+      picked.sort((a,b) => a - b);
+      return picked;
+    }
+
+    function buildGrid(blankMode) {
+      const grid = Array.from({ length: 5 }, () => Array(5).fill(""));
+
+      if (!blankMode) {
+        const B = pickUniqueSorted(1, 15, 5);
+        const I = pickUniqueSorted(16, 30, 5);
+        const N = pickUniqueSorted(31, 45, 5);
+        const G = pickUniqueSorted(46, 60, 5);
+        const O = pickUniqueSorted(61, 75, 5);
+
+        for (let r = 0; r < 5; r++) {
+          grid[r][0] = B[r];
+          grid[r][1] = I[r];
+          grid[r][2] = N[r];
+          grid[r][3] = G[r];
+          grid[r][4] = O[r];
+        }
+      }
+
+      grid[2][2] = "FREE SPACE";
+      return grid;
+    }
+
+    function renderCard(grid, index) {
+      const card = document.createElement("div");
+      card.className = "card";
+
+      const head = document.createElement("div");
+      head.className = "cardHeader";
+
+      const title = document.createElement("div");
+      title.className = "cardTitle";
+      title.textContent = "BINGO";
+
+      const id = document.createElement("div");
+      id.className = "cardId";
+      id.textContent = `Card #${index + 1}`;
+
+      head.appendChild(title);
+      head.appendChild(id);
+      card.appendChild(head);
+
+      const table = document.createElement("table");
+
+      const thead = document.createElement("thead");
+      const trh = document.createElement("tr");
+
+      const headers = [
+        ["B","(1–15)"],
+        ["I","(16–30)"],
+        ["N","(31–45)"],
+        ["G","(46–60)"],
+        ["O","(61–75)"]
+      ];
+
+      headers.forEach(([letter, range]) => {
+        const th = document.createElement("th");
+        const wrap = document.createElement("div");
+        wrap.className = "thWrap";
+
+        const l = document.createElement("div");
+        l.className = "thLetter";
+        l.textContent = letter;
+
+        const r = document.createElement("div");
+        r.className = "thRange";
+        r.textContent = range;
+
+        wrap.appendChild(l);
+        wrap.appendChild(r);
+        th.appendChild(wrap);
+        trh.appendChild(th);
+      });
+
+      thead.appendChild(trh);
+      table.appendChild(thead);
+
+      const tbody = document.createElement("tbody");
+      for (let r = 0; r < 5; r++) {
+        const tr = document.createElement("tr");
+        for (let c = 0; c < 5; c++) {
+          const td = document.createElement("td");
+          const val = grid[r][c];
+          td.textContent = val;
+          if (val === "FREE SPACE") td.classList.add("free");
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
+      table.appendChild(tbody);
+
+      card.appendChild(table);
+      return card;
+    }
+
+    function generateCards() {
+      let count = parseInt(elCount.value, 10);
+      if (!Number.isFinite(count)) count = 1;
+      count = Math.max(1, Math.min(25, count));
+      elCount.value = count;
+
+      const blankMode = !!elBlank.checked;
+
+      elCards.innerHTML = "";
+      for (let i = 0; i < count; i++) {
+        const grid = buildGrid(blankMode);
+        elCards.appendChild(renderCard(grid, i));
+      }
+    }
+
+    function doPrint() {
+      window.print();
+    }
+
+    function buildPdfPageContainer(cardsForPage) {
+      // Create an offscreen container that formats exactly 2x2
+      const page = document.createElement("div");
+      page.style.width = "816px";   // approx letter width at 96dpi
+      page.style.height = "1056px"; // approx letter height at 96dpi
+      page.style.background = "#ffffff";
+      page.style.boxSizing = "border-box";
+      page.style.padding = "24px";
+      page.style.display = "grid";
+      page.style.gridTemplateColumns = "repeat(2, 1fr)";
+      page.style.gridAutoRows = "1fr";
+      page.style.gap = "16px";
+      page.style.alignItems = "stretch";
+      page.style.justifyItems = "stretch";
+
+      // Make sure cards fit comfortably on a page
+      cardsForPage.forEach(cardEl => {
+        const clone = cardEl.cloneNode(true);
+        clone.style.width = "100%";
+        clone.style.height = "100%";
+        page.appendChild(clone);
+      });
+
+      // If less than 4 cards, add empty placeholders to preserve layout (optional)
+      const placeholdersNeeded = 4 - cardsForPage.length;
+      for (let i = 0; i < placeholdersNeeded; i++) {
+        const ph = document.createElement("div");
+        ph.style.border = "0";
+        page.appendChild(ph);
+      }
+
+      // Offscreen mount
+      page.style.position = "fixed";
+      page.style.left = "-10000px";
+      page.style.top = "0";
+      document.body.appendChild(page);
+      return page;
+    }
+
+    async function exportAsPDF() {
+      if (!window.html2canvas || !window.jspdf || !window.jspdf.jsPDF) {
+        alert("PDF libraries failed to load. Check your internet connection (CDN).");
+        return;
+      }
+
+      const cardEls = Array.from(document.querySelectorAll(".card"));
+      if (cardEls.length === 0) {
+        alert("No cards to export. Click Generate Cards first.");
+        return;
+      }
+
+      setBusy(true, "Building PDF pages (2×2)…");
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "letter" });
+
+      // Render 4 cards per page (2x2)
+      const perPage = 4;
+      const totalPages = Math.ceil(cardEls.length / perPage);
+
+      // Use moderate scale for clarity without huge files
+      const scale = 2;
+
+      for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+        setBusy(true, `Rendering page ${pageIndex + 1} of ${totalPages}…`);
+
+        const start = pageIndex * perPage;
+        const slice = cardEls.slice(start, start + perPage);
+
+        // Build a dedicated 2x2 page container and render it
+        const pageContainer = buildPdfPageContainer(slice);
+
+        // Allow layout to settle
+        await new Promise(r => setTimeout(r, 40));
+
+        const canvas = await html2canvas(pageContainer, {
+          backgroundColor: "#ffffff",
+          scale,
+          useCORS: true
+        });
+
+        // Remove offscreen container
+        pageContainer.remove();
+
+        if (pageIndex > 0) pdf.addPage();
+
+        const imgData = canvas.toDataURL("image/jpeg", 0.92);
+
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+
+        // Full-bleed inside PDF page (we already included padding in container)
+        pdf.addImage(imgData, "JPEG", 0, 0, pageW, pageH);
+      }
+
+      const ts = new Date();
+      const pad2 = n => String(n).padStart(2, "0");
+      const filename = `bingo_cards_${ts.getFullYear()}-${pad2(ts.getMonth()+1)}-${pad2(ts.getDate())}_${pad2(ts.getHours())}${pad2(ts.getMinutes())}.pdf`;
+
+      setBusy(true, "Saving PDF…");
+      pdf.save(filename);
+      setBusy(false);
+    }
+
+    elGenerate.addEventListener("click", generateCards);
+    elPrint.addEventListener("click", doPrint);
+    elPdf.addEventListener("click", exportAsPDF);
+
+    // Initial render
+    generateCards();
+  </script>
+</body>
+</html>

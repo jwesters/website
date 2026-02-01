@@ -1,0 +1,1209 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Math Memory Match (4x4)</title>
+  <style>
+    :root{
+      --bg:#0f172a;
+      --text:#e5e7eb;
+      --muted:#9ca3af;
+      --accent:#38bdf8;
+      --shadow: 0 10px 25px rgba(0,0,0,.35);
+      --radius: 16px;
+    }
+
+    *{ box-sizing: border-box; }
+    body{
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: radial-gradient(1200px 800px at 20% 10%, #172554 0%, var(--bg) 60%, #020617 100%);
+      color:var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    .wrap{
+      width:min(980px, 94vw);
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:16px;
+      padding: 18px 0;
+    }
+
+    header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      padding:14px 16px;
+      background: rgba(17,28,54,.85);
+      border:1px solid rgba(148,163,184,.18);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .title{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+    .title h1{
+      margin:0;
+      font-size:18px;
+      letter-spacing:.2px;
+    }
+    .title .sub{
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.25;
+    }
+
+    .controls{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .pill{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:8px 12px;
+      border-radius:999px;
+      background: rgba(2,6,23,.35);
+      border:1px solid rgba(148,163,184,.16);
+      color:var(--text);
+      font-size:13px;
+      white-space:nowrap;
+    }
+    .pill b{ font-variant-numeric: tabular-nums; letter-spacing:.3px; }
+
+    button{
+      appearance:none;
+      border:none;
+      padding:10px 12px;
+      border-radius: 12px;
+      background: rgba(56,189,248,.14);
+      color: var(--text);
+      border:1px solid rgba(56,189,248,.35);
+      cursor:pointer;
+      font-weight:600;
+      font-size:13px;
+      transition: transform .06s ease, background .15s ease, border-color .15s ease, opacity .15s ease;
+    }
+    button:hover{ background: rgba(56,189,248,.20); border-color: rgba(56,189,248,.55); }
+    button:active{ transform: translateY(1px); }
+    button.secondary{
+      background: rgba(148,163,184,.10);
+      border-color: rgba(148,163,184,.22);
+    }
+    button.secondary:hover{
+      background: rgba(148,163,184,.14);
+      border-color: rgba(148,163,184,.35);
+    }
+    button:disabled{
+      opacity:.45;
+      cursor:not-allowed;
+    }
+
+    main{
+      display:grid;
+      grid-template-columns: 1fr 340px;
+      gap:16px;
+      align-items:start;
+    }
+    @media (max-width: 920px){
+      main{ grid-template-columns: 1fr; }
+    }
+
+    .board{
+      padding:16px;
+      background: rgba(17,28,54,.70);
+      border:1px solid rgba(148,163,184,.18);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap:12px;
+      width: min(560px, 100%);
+      margin: 0 auto;
+    }
+
+    .card{
+      position:relative;
+      width:100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 16px;
+      transform-style: preserve-3d;
+      transition: transform .22s ease;
+      cursor:pointer;
+      user-select:none;
+      outline: none;
+      background: transparent;
+      padding:0;
+    }
+    .card:focus-visible{
+      box-shadow: 0 0 0 3px rgba(56,189,248,.55);
+    }
+
+    .card .face{
+      position:absolute;
+      inset:0;
+      border-radius:16px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:900;
+
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: clip;
+
+      backface-visibility:hidden;
+      box-shadow: 0 8px 18px rgba(0,0,0,.25);
+      border: 1px solid rgba(148,163,184,.18);
+      transition: filter .18s ease, opacity .25s ease, transform .25s ease;
+      padding: 8px 10px;
+      text-align:center;
+      line-height:1;
+    }
+
+    .front{
+      background: linear-gradient(180deg, rgba(30,41,59,.9), rgba(2,6,23,.8));
+      color: rgba(229,231,235,.92);
+    }
+    .front::after{
+      content:"";
+      position:absolute;
+      inset:10px;
+      border-radius:12px;
+      border:1px dashed rgba(148,163,184,.18);
+      pointer-events:none;
+    }
+
+    .back{
+      background: linear-gradient(180deg, rgba(56,189,248,.25), rgba(2,6,23,.85));
+      transform: rotateY(180deg);
+      color: white;
+      text-shadow: 0 2px 10px rgba(0,0,0,.35);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .backText{
+      display:inline-block;
+      white-space:nowrap;
+      line-height:1;
+      letter-spacing:.15px;
+      transform: translateZ(0);
+      font-size: 40px; /* JS overwrites */
+    }
+
+    .card.flipped{ transform: rotateY(180deg); }
+
+    /* Match feedback */
+    .card.matching .back{
+      filter: brightness(1.25) saturate(1.15);
+      box-shadow: 0 0 0 2px rgba(52,211,153,.35), 0 12px 26px rgba(0,0,0,.35);
+    }
+    .card.matching .back::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      border-radius:16px;
+      background: radial-gradient(circle at 30% 20%, rgba(52,211,153,.35), rgba(34,197,94,.10), rgba(0,0,0,0));
+      pointer-events:none;
+    }
+
+    /* Vanish animation */
+    .card.vanish .face{
+      opacity: 0;
+      transform: scale(.88);
+    }
+    .card.vanish{ pointer-events:none; }
+
+    .card.matched{
+      pointer-events:none;
+      cursor:default;
+    }
+    .card.matched .face{
+      opacity:0;
+      transform: scale(.88);
+    }
+
+    .side{
+      padding:16px;
+      background: rgba(17,28,54,.70);
+      border:1px solid rgba(148,163,184,.18);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+
+    .section h2{
+      margin:0 0 8px 0;
+      font-size:14px;
+      color: rgba(229,231,235,.92);
+      letter-spacing:.2px;
+    }
+    .small{
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.4;
+    }
+
+    .scores{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+
+    .scoreRow{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      border-radius:12px;
+      background: rgba(2,6,23,.35);
+      border:1px solid rgba(148,163,184,.14);
+      font-size:13px;
+      font-variant-numeric: tabular-nums;
+    }
+    .badge{
+      font-size:11px;
+      padding:3px 8px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.18);
+      color: rgba(229,231,235,.92);
+      background: rgba(148,163,184,.08);
+      text-transform: uppercase;
+      letter-spacing: .3px;
+    }
+
+    .toast{
+      margin-top:6px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(148,163,184,.18);
+      background: rgba(2,6,23,.35);
+      font-size:13px;
+      display:none;
+    }
+    .toast.show{ display:block; }
+    .toast.good{ border-color: rgba(52,211,153,.35); }
+
+    /* Overlays */
+    .overlay{
+      position:fixed;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+      background: rgba(2,6,23,.72);
+      backdrop-filter: blur(8px);
+      z-index: 50;
+    }
+    .overlay.show{ display:flex; }
+
+    .modal{
+      width: min(620px, 94vw);
+      background: rgba(17,28,54,.95);
+      border: 1px solid rgba(148,163,184,.22);
+      border-radius: 20px;
+      box-shadow: 0 18px 40px rgba(0,0,0,.45);
+      padding: 18px;
+    }
+    .modal h3{
+      margin: 0 0 8px 0;
+      font-size: 20px;
+      letter-spacing: .2px;
+    }
+    .modal .meta{
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.35;
+    }
+
+    /* Start overlay readability */
+    #startOverlay .modal{
+      background: rgba(245, 248, 255, 0.96);
+      border: 1px solid rgba(15, 23, 42, 0.18);
+    }
+    #startOverlay .modal,
+    #startOverlay .modal h3,
+    #startOverlay .modal .meta,
+    #startOverlay .choiceGroup label{
+      color: #0f172a;
+    }
+    #startOverlay .labelHint{
+      color: rgba(15, 23, 42, 0.75);
+    }
+    #startOverlay .choiceGroup{
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(15, 23, 42, 0.12);
+    }
+    #startOverlay select{
+      background: rgba(255, 255, 255, 0.98);
+      color: #0f172a;
+      border: 2px solid rgba(15, 23, 42, 0.18);
+    }
+    #startOverlay select option{ color:#0f172a; }
+
+    .startGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 14px;
+    }
+    @media (max-width: 520px){
+      .startGrid{ grid-template-columns: 1fr; }
+    }
+
+    .choiceGroup{
+      padding: 14px;
+      border-radius: 16px;
+      background: rgba(2,6,23,.40);
+      border: 1px solid rgba(148,163,184,.16);
+    }
+    .choiceGroup label{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      font-size: 13px;
+      margin-bottom: 10px;
+      letter-spacing: .2px;
+      font-weight: 900;
+    }
+    .labelHint{
+      font-size:12px;
+      font-weight: 700;
+    }
+
+    select{
+      width:100%;
+      padding: 12px 12px;
+      border-radius: 14px;
+      background: rgba(148,163,184,.12);
+      color: var(--text);
+      border: 1px solid rgba(148,163,184,.28);
+      font-weight: 900;
+      font-size: 16px;
+      outline: none;
+    }
+    select:focus{
+      box-shadow: 0 0 0 4px rgba(56,189,248,.32);
+      border-color: rgba(56,189,248,.55);
+    }
+
+    .startActions{
+      display:flex;
+      gap:10px;
+      justify-content:flex-end;
+      margin-top: 14px;
+      flex-wrap:wrap;
+    }
+    .primaryBig{
+      padding: 12px 16px;
+      font-size: 15px;
+      border-radius: 14px;
+    }
+
+    #startBtn{
+      background: #0b2a6b !important;
+      color: #ffffff !important;
+      border-color: rgba(11, 42, 107, 0.85) !important;
+    }
+    #startBtn:hover{ background: #0a2560 !important; }
+    #startBtn:active{ background: #091f52 !important; }
+
+    .modalActions{
+      display:flex;
+      gap:10px;
+      justify-content:flex-end;
+      margin-top: 14px;
+      flex-wrap:wrap;
+    }
+
+    .bigTime{
+      font-size: 28px;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+      margin-top: 6px;
+    }
+
+    .kbd{
+      display:inline-block;
+      padding:2px 6px;
+      border-radius:8px;
+      border:1px solid rgba(148,163,184,.2);
+      background: rgba(148,163,184,.08);
+      color: rgba(229,231,235,.92);
+      font-size:11px;
+      margin-left:6px;
+    }
+
+    /* Hidden measurer (NOT transformed) */
+    #measurer{
+      position: fixed;
+      left: -9999px;
+      top: -9999px;
+      visibility: hidden;
+      pointer-events: none;
+      white-space: nowrap;
+      font-weight: 900;
+      letter-spacing: .15px;
+      line-height: 1;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">
+        <h1>Math Memory Match (4×4)</h1>
+        <div class="sub" id="modeLine">Choose a mode to start.</div>
+      </div>
+
+      <div class="controls">
+        <div class="pill" title="Elapsed time">
+          ⏱️ <span>Time:</span> <b id="timeText">00:00.0</b>
+        </div>
+        <button id="restartBtn" class="secondary" title="Restart the same board" disabled>Restart</button>
+        <button id="newBtn" title="New game (choose mode)" disabled>New Game</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="board">
+        <div class="grid" id="grid" aria-label="Memory game grid"></div>
+      </section>
+
+      <aside class="side">
+        <div class="section">
+          <h2>Best Times (Top 3)</h2>
+          <div class="small" id="scoreLabel">Mode: —</div>
+          <div class="scores" id="scores"></div>
+          <div class="toast" id="toast"></div>
+        </div>
+
+        <div class="section">
+          <h2>How to Play</h2>
+          <div class="small">
+            Flip two cards. One is an <b>expression</b> and the other is its <b>result</b>.
+            Results are unique each game. If you miss, the two wrong cards stay up until your next click.
+            <br/><br/>
+            Tip: You can focus a card and press <span class="kbd">Enter</span>.
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Storage</h2>
+          <div class="small">
+            High scores are saved locally per <b>mode + difficulty</b>.
+          </div>
+          <button id="clearScoresBtn" class="secondary" title="Clear saved top times for the current mode">Clear Scores (This Mode)</button>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <!-- hidden measurer -->
+  <div id="measurer"></div>
+
+  <!-- Start Overlay -->
+  <div class="overlay show" id="startOverlay" aria-hidden="false">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="startTitle">
+      <h3 id="startTitle">Choose Your Game Mode</h3>
+      <div class="meta">
+        Pick an <b>operation</b> and <b>difficulty</b>. Timer starts on your first flip.
+      </div>
+
+      <div class="startGrid">
+        <div class="choiceGroup">
+          <label for="opSelect">
+            Operation <span class="labelHint">(+ − × ÷)</span>
+          </label>
+          <select id="opSelect">
+            <option value="add">Addition (+)</option>
+            <option value="sub">Subtraction (−)</option>
+            <option value="mul">Multiplication (×)</option>
+            <option value="div">Division (÷)</option>
+            <option value="all">All Operations (Mixed)</option>
+          </select>
+        </div>
+
+        <div class="choiceGroup">
+          <label for="diffSelect">
+            Difficulty <span class="labelHint">Easy / Medium / Difficult</span>
+          </label>
+          <select id="diffSelect">
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="difficult">Difficult</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="startActions">
+        <button id="startBtn" class="primaryBig">Start Game</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- End Overlay -->
+  <div class="overlay" id="endOverlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="endTitle">
+      <h3 id="endTitle">You finished!</h3>
+      <div class="meta" id="endMeta">Mode: —</div>
+      <div class="bigTime" id="endTime">00:00.0</div>
+
+      <div class="modalActions">
+        <button id="playAgainBtn">New Game</button>
+        <button id="restartSameBtn" class="secondary">Restart</button>
+        <button id="changeModeBtn" class="secondary">Change Mode</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const GRID_SIZE = 4;
+      const TOTAL_CARDS = GRID_SIZE * GRID_SIZE; // 16
+      const PAIRS = TOTAL_CARDS / 2; // 8
+
+      const MATCH_FLASH_MS  = 650;
+      const MATCH_VANISH_MS = 260;
+
+      const modeLineEl = document.getElementById("modeLine");
+
+      const gridEl = document.getElementById("grid");
+      const timeText = document.getElementById("timeText");
+      const restartBtn = document.getElementById("restartBtn");
+      const newBtn = document.getElementById("newBtn");
+      const scoresEl = document.getElementById("scores");
+      const toastEl = document.getElementById("toast");
+      const clearScoresBtn = document.getElementById("clearScoresBtn");
+      const scoreLabelEl = document.getElementById("scoreLabel");
+
+      const startOverlay = document.getElementById("startOverlay");
+      const endOverlay = document.getElementById("endOverlay");
+      const opSelect = document.getElementById("opSelect");
+      const diffSelect = document.getElementById("diffSelect");
+      const startBtn = document.getElementById("startBtn");
+
+      const endMeta = document.getElementById("endMeta");
+      const endTimeEl = document.getElementById("endTime");
+      const playAgainBtn = document.getElementById("playAgainBtn");
+      const restartSameBtn = document.getElementById("restartSameBtn");
+      const changeModeBtn = document.getElementById("changeModeBtn");
+
+      const measurer = document.getElementById("measurer");
+
+      // Game state
+      let deck = [];
+      let cardState = [];
+      let firstIndex = null;
+      let lock = false;
+      let pendingMismatch = null;
+
+      // Timer
+      let started = false;
+      let startTime = 0;
+      let rafId = 0;
+      let endTime = 0;
+
+      // Restart same board
+      let savedDeckForRestart = null;
+
+      // Mode selection
+      let currentOp = "add";      // add/sub/mul/div/all
+      let currentDiff = "easy";   // easy/medium/difficult
+
+      function symbolForOp(op){
+        if(op === "add") return "+";
+        if(op === "sub") return "−";
+        if(op === "mul") return "×";
+        if(op === "div") return "÷";
+        return "±";
+      }
+      function titleForOp(op){
+        if(op === "add") return "Addition";
+        if(op === "sub") return "Subtraction";
+        if(op === "mul") return "Multiplication";
+        if(op === "div") return "Division";
+        if(op === "all") return "All Operations";
+        return "Math";
+      }
+      function titleForDiff(d){
+        if(d === "easy") return "Easy";
+        if(d === "medium") return "Medium";
+        return "Difficult";
+      }
+      function scoreKey(op, diff){
+        return `math_memory_4x4_top3_ms__${op}__${diff}__v4`;
+      }
+
+      function shuffle(arr){
+        for(let i=arr.length-1; i>0; i--){
+          const j = Math.floor(Math.random()*(i+1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      }
+
+      function formatTime(ms){
+        const totalSeconds = ms / 1000;
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = Math.floor(totalSeconds % 60);
+        const tenths  = Math.floor((ms % 1000) / 100);
+        const mm = String(minutes).padStart(2,'0');
+        const ss = String(seconds).padStart(2,'0');
+        return `${mm}:${ss}.${tenths}`;
+      }
+
+      function setToast(msg, kind){
+        toastEl.textContent = msg;
+        toastEl.className = "toast show" + (kind ? (" " + kind) : "");
+        window.clearTimeout(setToast._t);
+        setToast._t = window.setTimeout(() => {
+          toastEl.className = "toast";
+          toastEl.textContent = "";
+        }, 2500);
+      }
+
+      function loadScores(){
+        const key = scoreKey(currentOp, currentDiff);
+        try{
+          const raw = localStorage.getItem(key);
+          if(!raw) return [];
+          const arr = JSON.parse(raw);
+          if(!Array.isArray(arr)) return [];
+          return arr.filter(n => Number.isFinite(n) && n > 0).slice(0,3);
+        }catch{
+          return [];
+        }
+      }
+      function saveScores(times){
+        const key = scoreKey(currentOp, currentDiff);
+        localStorage.setItem(key, JSON.stringify(times.slice(0,3)));
+      }
+
+      function renderScores(){
+        const best = loadScores();
+        scoresEl.innerHTML = "";
+        for(let i=0; i<3; i++){
+          const row = document.createElement("div");
+          row.className = "scoreRow";
+
+          const left = document.createElement("div");
+          left.innerHTML = `<span class="badge">#${i+1}</span>`;
+
+          const right = document.createElement("div");
+          right.style.fontWeight = "900";
+          right.textContent = best[i] ? formatTime(best[i]) : "—";
+
+          row.appendChild(left);
+          row.appendChild(right);
+          scoresEl.appendChild(row);
+        }
+
+        const label = `${titleForOp(currentOp)} • ${titleForDiff(currentDiff)}`;
+        scoreLabelEl.textContent = `Mode: ${label}`;
+        modeLineEl.textContent = `Mode: ${label} — Timer starts on your first flip.`;
+      }
+
+      function showOverlay(el){
+        el.classList.add("show");
+        el.setAttribute("aria-hidden", "false");
+      }
+      function hideOverlay(el){
+        el.classList.remove("show");
+        el.setAttribute("aria-hidden", "true");
+      }
+
+      function startTimerIfNeeded(){
+        if(started) return;
+        started = true;
+        startTime = performance.now();
+        endTime = 0;
+        tick();
+      }
+      function stopTimer(){
+        if(!started) return;
+        endTime = performance.now();
+        started = false;
+        cancelAnimationFrame(rafId);
+        rafId = 0;
+      }
+      function elapsedMs(){
+        if(endTime) return Math.max(0, endTime - startTime);
+        if(started) return Math.max(0, performance.now() - startTime);
+        return 0;
+      }
+      function tick(){
+        timeText.textContent = formatTime(elapsedMs());
+        if(started) rafId = requestAnimationFrame(tick);
+      }
+      function resetTimer(){
+        started = false;
+        startTime = 0;
+        endTime = 0;
+        cancelAnimationFrame(rafId);
+        rafId = 0;
+        timeText.textContent = "00:00.0";
+      }
+
+      // --- Reliable maximize: measure in hidden, non-transformed measurer ---
+      function maximizeTextToCard(backEl, text){
+        if(!backEl) return;
+        const span = backEl.querySelector(".backText");
+        if(!span) return;
+
+        measurer.textContent = text;
+
+        const cs = getComputedStyle(backEl);
+        const padL = parseFloat(cs.paddingLeft) || 0;
+        const padR = parseFloat(cs.paddingRight) || 0;
+        const padT = parseFloat(cs.paddingTop) || 0;
+        const padB = parseFloat(cs.paddingBottom) || 0;
+
+        const availW = Math.max(10, backEl.clientWidth  - padL - padR);
+        const availH = Math.max(10, backEl.clientHeight - padT - padB);
+
+        measurer.style.letterSpacing = ".15px";
+        measurer.style.fontWeight = "900";
+        measurer.style.whiteSpace = "nowrap";
+        measurer.style.lineHeight = "1";
+
+        const minSize = 14;
+        const maxSize = 220;
+
+        const fits = (px) => {
+          measurer.style.fontSize = px + "px";
+          const r = measurer.getBoundingClientRect();
+          return (r.width <= availW + 1) && (r.height <= availH + 1);
+        };
+
+        let lo = minSize, hi = maxSize, best = minSize;
+        while(lo <= hi){
+          const mid = (lo + hi) >> 1;
+          if(fits(mid)){
+            best = mid;
+            lo = mid + 1;
+          } else {
+            hi = mid - 1;
+          }
+        }
+
+        span.textContent = text;
+        span.style.fontSize = best + "px";
+      }
+
+      function randInt(min, max){
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+
+      function opConfig(op, diff){
+        // NOTE: Division max quotient is ALWAYS 10 (per your rule)
+        if(op === "add"){
+          if(diff === "easy")     return { aMin:0,  aMax:10, bMin:0,  bMax:10, resultMax:18 };
+          if(diff === "medium")   return { aMin:0,  aMax:20, bMin:0,  bMax:20, resultMax:20 };
+          return                  { aMin:10, aMax:99, bMin:10, bMax:99, resultMax:198 };
+        }
+        if(op === "sub"){
+          if(diff === "easy")     return { aMin:0,  aMax:20,  bMin:0,  bMax:20,  rMin:1, rMax:10 };
+          if(diff === "medium")   return { aMin:0,  aMax:30,  bMin:0,  bMax:30,  rMin:1, rMax:20 };
+          return                  { aMin:10, aMax:100, bMin:10, bMax:100, rMin:1, rMax:90 };
+        }
+        if(op === "mul"){
+          if(diff === "easy")     return { aMin:0,  aMax:10, bMin:0,  bMax:10, resultMax:50 };
+          if(diff === "medium")   return { aMin:0,  aMax:12, bMin:0,  bMax:12, resultMax:144 };
+          return                  { aMin:2,  aMax:25, bMin:2,  bMax:25, resultMax:625 };
+        }
+        // div
+        if(diff === "easy")       return { qMin:1, qMax:10, bMin:1,  bMax:10, dividendCap: 1000 };
+        if(diff === "medium")     return { qMin:1, qMax:10, bMin:2,  bMax:12, dividendCap: 1000 };
+        return                    { qMin:1, qMax:10, bMin:2,  bMax:25, dividendCap: 625 };
+      }
+
+      function pick(arr){
+        return arr[Math.floor(Math.random() * arr.length)];
+      }
+
+      function generateOnePairForOp(op, diff, usedResults){
+        const cfg = opConfig(op, diff);
+
+        let tries = 0;
+        while(tries < 5000){
+          tries++;
+
+          let a, b, result, exprText;
+
+          if(op === "add"){
+            a = randInt(cfg.aMin, cfg.aMax);
+            b = randInt(cfg.bMin, cfg.bMax);
+            result = a + b;
+            if(result <= 0 || result > cfg.resultMax) continue;
+            if(usedResults.has(result)) continue;
+            exprText = `${a} ${symbolForOp(op)} ${b}`;
+          }
+          else if(op === "sub"){
+            a = randInt(cfg.aMin, cfg.aMax);
+            b = randInt(cfg.bMin, cfg.bMax);
+            if(b >= a) continue;
+            result = a - b;
+            if(result < cfg.rMin || result > cfg.rMax) continue;
+            if(usedResults.has(result)) continue;
+            exprText = `${a} ${symbolForOp(op)} ${b}`;
+          }
+          else if(op === "mul"){
+            a = randInt(cfg.aMin, cfg.aMax);
+            b = randInt(cfg.bMin, cfg.bMax);
+            result = a * b;
+            if(result <= 0 || result > cfg.resultMax) continue;
+
+            if((diff === "easy" || diff === "medium") && (a === 0 || b === 0)) continue;
+            if(diff === "easy" && (a === 1 || b === 1)) continue;
+
+            if(usedResults.has(result)) continue;
+            exprText = `${a} ${symbolForOp(op)} ${b}`;
+          }
+          else { // div (whole number by construction) - expression to result
+            const q = randInt(cfg.qMin, cfg.qMax);  // result (quotient)
+            b = randInt(cfg.bMin, cfg.bMax);        // divisor
+            a = b * q;                               // dividend
+            result = q;
+
+            // keep dividend within cap for difficult mode
+            if(a > cfg.dividendCap) continue;
+
+            // keep away from too-trivial 1 in medium/difficult
+            if((diff === "medium" || diff === "difficult") && result === 1) continue;
+
+            if(usedResults.has(result)) continue;
+            exprText = `${a} ${symbolForOp(op)} ${b}`;
+          }
+
+          return { op, exprText, resultValue: result };
+        }
+
+        return null;
+      }
+
+      function buildPairs(op, diff){
+        const pairs = [];
+        const usedResults = new Set();
+
+        if(op !== "all"){
+          while(pairs.length < PAIRS){
+            const p = generateOnePairForOp(op, diff, usedResults);
+            if(!p) { usedResults.clear(); pairs.length = 0; continue; }
+            usedResults.add(p.resultValue);
+            pairs.push(p);
+          }
+          return pairs;
+        }
+
+        // ALL OPERATIONS mode:
+        // ensure at least one of each op, then fill remaining randomly
+        const ops = ["add","sub","mul","div"];
+        const plan = ops.slice();
+        while(plan.length < PAIRS) plan.push(pick(ops));
+        shuffle(plan);
+
+        let attempts = 0;
+        while(pairs.length < PAIRS){
+          attempts++;
+          if(attempts > 60000){
+            // reset and try again
+            pairs.length = 0;
+            usedResults.clear();
+            attempts = 0;
+            shuffle(plan);
+          }
+
+          const nextOp = plan[pairs.length] || pick(ops);
+          const p = generateOnePairForOp(nextOp, diff, usedResults);
+          if(!p) continue;
+
+          usedResults.add(p.resultValue);
+          pairs.push(p);
+        }
+        return pairs;
+      }
+
+      function buildDeck(op, diff){
+        const pairs = buildPairs(op, diff);
+        const cards = [];
+        pairs.forEach((p, idx) => {
+          const id = `p${idx}`;
+          // expression card shows its own operation symbol inside the text already
+          cards.push({ id, text: p.exprText, kind: "expr", value: p.resultValue });
+          cards.push({ id, text: String(p.resultValue), kind: "res", value: p.resultValue });
+        });
+        return shuffle(cards);
+      }
+
+      function resetStateFromDeck(deckArr){
+        deck = deckArr.slice();
+        cardState = deck.map(() => ({ flipped:false, matched:false }));
+        firstIndex = null;
+        lock = false;
+        pendingMismatch = null;
+        resetTimer();
+        hideOverlay(endOverlay);
+
+        restartBtn.disabled = false;
+        newBtn.disabled = false;
+      }
+
+      function createCardElement(idx){
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "card";
+        btn.setAttribute("aria-label", "Card");
+        btn.dataset.index = String(idx);
+
+        const front = document.createElement("div");
+        front.className = "face front";
+
+        const back = document.createElement("div");
+        back.className = "face back";
+
+        const backText = document.createElement("span");
+        backText.className = "backText";
+        back.appendChild(backText);
+
+        btn.appendChild(front);
+        btn.appendChild(back);
+
+        btn.addEventListener("click", () => onCardClick(idx));
+        btn.addEventListener("keydown", (e) => {
+          if(e.key === "Enter" || e.key === " "){
+            e.preventDefault();
+            onCardClick(idx);
+          }
+        });
+
+        return btn;
+      }
+
+      function renderBoard(){
+        gridEl.innerHTML = "";
+        for(let i=0; i<TOTAL_CARDS; i++){
+          gridEl.appendChild(createCardElement(i));
+        }
+        syncUI(true);
+      }
+
+      function getCardEl(idx){
+        return gridEl.querySelector(`.card[data-index="${idx}"]`);
+      }
+
+      function syncUI(forceFit=false){
+        const cards = gridEl.querySelectorAll(".card");
+        cards.forEach((el) => {
+          const idx = Number(el.dataset.index);
+          const st = cardState[idx];
+          const data = deck[idx];
+
+          el.classList.toggle("flipped", st.flipped);
+          el.classList.toggle("matched", st.matched);
+
+          el.disabled = st.matched;
+          el.style.cursor = st.matched ? "default" : "pointer";
+
+          const back = el.querySelector(".back");
+          if(back){
+            const txt = data ? data.text : "";
+            // double-rAF: ensures sizes are stable before measuring
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => maximizeTextToCard(back, txt));
+            });
+          }
+        });
+      }
+
+      function isMatch(i1, i2){
+        const a = deck[i1], b = deck[i2];
+        if(!a || !b) return false;
+        if(a.id !== b.id) return false;
+        return a.kind !== b.kind; // expression-to-result only
+      }
+
+      function onCardClick(idx){
+        if(lock) return;
+
+        // If mismatch pending, flip those back first on next click
+        if(pendingMismatch){
+          const [a, b] = pendingMismatch;
+          cardState[a].flipped = false;
+          cardState[b].flipped = false;
+          pendingMismatch = null;
+          firstIndex = null;
+          syncUI();
+        }
+
+        const st = cardState[idx];
+        if(st.matched || st.flipped) return;
+
+        startTimerIfNeeded();
+
+        st.flipped = true;
+        syncUI();
+
+        if(firstIndex === null){
+          firstIndex = idx;
+          return;
+        }
+
+        const secondIndex = idx;
+
+        if(isMatch(firstIndex, secondIndex)){
+          lock = true;
+
+          const aIdx = firstIndex;
+          const bIdx = secondIndex;
+
+          const aEl = getCardEl(aIdx);
+          const bEl = getCardEl(bIdx);
+
+          if(aEl) aEl.classList.add("matching");
+          if(bEl) bEl.classList.add("matching");
+
+          window.setTimeout(() => {
+            if(aEl) aEl.classList.add("vanish");
+            if(bEl) bEl.classList.add("vanish");
+
+            window.setTimeout(() => {
+              cardState[aIdx].matched = true;
+              cardState[bIdx].matched = true;
+              cardState[aIdx].flipped = true;
+              cardState[bIdx].flipped = true;
+
+              if(aEl) aEl.classList.remove("matching", "vanish");
+              if(bEl) bEl.classList.remove("matching", "vanish");
+
+              firstIndex = null;
+              lock = false;
+              syncUI();
+              checkWin();
+            }, MATCH_VANISH_MS);
+
+          }, MATCH_FLASH_MS);
+
+        } else {
+          pendingMismatch = [firstIndex, secondIndex];
+          firstIndex = null;
+        }
+      }
+
+      function checkWin(){
+        if(cardState.some(c => !c.matched)) return;
+
+        stopTimer();
+        const t = Math.round(elapsedMs());
+
+        const best = loadScores();
+        best.push(t);
+        best.sort((a,b) => a-b);
+        const top3 = best.slice(0,3);
+        saveScores(top3);
+        renderScores();
+
+        const isNewHigh = top3.includes(t);
+        setToast(
+          isNewHigh ? `Finished in ${formatTime(t)} — New Top 3 time!` : `Finished in ${formatTime(t)}!`,
+          "good"
+        );
+
+        const label = `${titleForOp(currentOp)} • ${titleForDiff(currentDiff)}`;
+        endMeta.textContent = `Mode: ${label}`;
+        endTimeEl.textContent = formatTime(t);
+        showOverlay(endOverlay);
+      }
+
+      function newGameSameMode(){
+        const d = buildDeck(currentOp, currentDiff);
+        savedDeckForRestart = d.slice();
+        resetStateFromDeck(d);
+        renderBoard();
+      }
+
+      function restartSameBoard(){
+        if(!savedDeckForRestart){
+          newGameSameMode();
+          return;
+        }
+        resetStateFromDeck(savedDeckForRestart);
+        renderBoard();
+      }
+
+      function openModeMenu(){
+        if(started) stopTimer();
+        hideOverlay(endOverlay);
+        showOverlay(startOverlay);
+      }
+
+      restartBtn.addEventListener("click", () => {
+        restartSameBoard();
+        setToast("Restarted same board.", "");
+      });
+
+      newBtn.addEventListener("click", () => {
+        openModeMenu();
+      });
+
+      clearScoresBtn.addEventListener("click", () => {
+        localStorage.removeItem(scoreKey(currentOp, currentDiff));
+        renderScores();
+        setToast("Scores cleared for this mode.", "");
+      });
+
+      startBtn.addEventListener("click", () => {
+        currentOp = opSelect.value;
+        currentDiff = diffSelect.value;
+        hideOverlay(startOverlay);
+        renderScores();
+        newGameSameMode();
+        setToast("Game started!", "");
+      });
+
+      playAgainBtn.addEventListener("click", () => openModeMenu());
+      restartSameBtn.addEventListener("click", () => { hideOverlay(endOverlay); restartSameBoard(); });
+      changeModeBtn.addEventListener("click", () => openModeMenu());
+
+      function init(){
+        restartBtn.disabled = true;
+        newBtn.disabled = true;
+
+        deck = Array.from({length: TOTAL_CARDS}, (_, i) => ({ id:`x${i}`, text:"", kind:"", value:0 }));
+        cardState = deck.map(() => ({ flipped:false, matched:false }));
+        renderBoard();
+        renderScores();
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
