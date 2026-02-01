@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Heavier or Lighter? (CSV)</title>
+  <style>
+    :root{
+      --bg:#0f1220; --panel:#171a2b; --panel2:#1e2240; --text:#e9ecff; --muted:#a9b0d6;
+      --good:#2ee59d; --bad:#ff5c7a; --accent:#7aa2ff; --border:rgba(255,255,255,.12);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:radial-gradient(1200px 800px at 20% 10%, #1a2050 0%, transparent 55%),
+                 radial-gradient(900px 600px at 85% 25%, #2a1450 0%, transparent 55%),
+                 var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+    }
+    .app{
+      width:min(980px, 100%);
+      display:grid;
+      gap:14px;
+    }
+    .header{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+      padding:14px 16px;
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border:1px solid var(--border);
+      border-radius:16px;
+      box-shadow:0 18px 60px rgba(0,0,0,.35);
+    }
+    .title{
+      font-size:20px;
+      font-weight:800;
+      letter-spacing:.2px;
+      margin:0;
+      line-height:1.15;
+    }
+    .subtitle{
+      margin:4px 0 0 0;
+      color:var(--muted);
+      font-size:13px;
+    }
+    .stats{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .pill{
+      background:rgba(255,255,255,.06);
+      border:1px solid var(--border);
+      padding:8px 10px;
+      border-radius:999px;
+      font-size:13px;
+      color:var(--text);
+      display:flex;
+      gap:8px;
+      align-items:center;
+      white-space:nowrap;
+    }
+    .pill span{color:var(--muted)}
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:14px;
+    }
+    @media (min-width: 860px){
+      .grid{grid-template-columns: 1.2fr .8fr}
+    }
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:14px;
+      box-shadow:0 18px 60px rgba(0,0,0,.35);
+      overflow:hidden;
+    }
+    .card h2{
+      margin:0 0 10px 0;
+      font-size:14px;
+      color:var(--muted);
+      font-weight:700;
+      letter-spacing:.2px;
+      text-transform:uppercase;
+    }
+    .arena{
+      display:grid;
+      gap:12px;
+    }
+    .vsRow{
+      display:grid;
+      grid-template-columns:1fr auto 1fr;
+      gap:10px;
+      align-items:stretch;
+    }
+    .itemBox{
+      background:rgba(0,0,0,.18);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:14px;
+      min-height:110px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      gap:8px;
+    }
+    .itemLabel{
+      color:var(--muted);
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.25px;
+      font-weight:700;
+    }
+    .itemName{
+      font-size:22px;
+      font-weight:900;
+      line-height:1.1;
+      word-break:break-word;
+    }
+    .vs{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:0 6px;
+      font-weight:900;
+      letter-spacing:.5px;
+      color:rgba(255,255,255,.75);
+      text-shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+    .actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    button{
+      appearance:none;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.08);
+      color:var(--text);
+      padding:12px 14px;
+      border-radius:12px;
+      font-weight:800;
+      cursor:pointer;
+      transition:transform .06s ease, background .15s ease, border-color .15s ease, opacity .15s ease;
+      user-select:none;
+    }
+    button:hover{background:rgba(255,255,255,.12)}
+    button:active{transform:translateY(1px)}
+    button.primary{
+      background:rgba(122,162,255,.18);
+      border-color:rgba(122,162,255,.35);
+    }
+    button.good{
+      background:rgba(46,229,157,.18);
+      border-color:rgba(46,229,157,.35);
+    }
+    button.bad{
+      background:rgba(255,92,122,.18);
+      border-color:rgba(255,92,122,.35);
+    }
+    button:disabled{
+      opacity:.45; cursor:not-allowed;
+      transform:none;
+    }
+    .feedback{
+      border-radius:14px;
+      border:1px dashed rgba(255,255,255,.18);
+      padding:12px;
+      background:rgba(0,0,0,.14);
+      display:grid;
+      gap:6px;
+      min-height:74px;
+    }
+    .feedback .line1{
+      font-weight:900;
+      font-size:16px;
+    }
+    .feedback .line2{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+    }
+    .split{
+      display:grid;
+      gap:14px;
+    }
+    .unitChoices{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .small{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.4;
+    }
+    .hr{
+      height:1px;
+      background:rgba(255,255,255,.10);
+      margin:10px 0;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:13px;
+      overflow:hidden;
+      border-radius:12px;
+    }
+    th, td{
+      padding:10px 10px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      text-align:left;
+      vertical-align:top;
+    }
+    th{
+      color:var(--muted);
+      font-weight:800;
+      font-size:12px;
+      letter-spacing:.2px;
+      text-transform:uppercase;
+      background:rgba(255,255,255,.05);
+    }
+    tr:last-child td{border-bottom:none}
+    .rightActions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:8px;
+    }
+    .note{
+      color:var(--muted);
+      font-size:12px;
+      margin-top:8px;
+    }
+    .error{
+      color:var(--bad);
+      font-weight:800;
+    }
+    .ok{
+      color:var(--good);
+      font-weight:800;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <div>
+        <h1 class="title">Heavier or Lighter?</h1>
+        <p class="subtitle">Guess which item is heavier. One mistake ends the run.</p>
+      </div>
+      <div class="stats">
+        <div class="pill"><span>Score</span><strong id="scorePill">0</strong></div>
+        <div class="pill"><span>Unit</span><strong id="unitPill">—</strong></div>
+        <div class="pill"><span>Items loaded</span><strong id="countPill">0</strong></div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Game</h2>
+        <div class="arena" id="arena">
+          <!-- Setup screen -->
+          <div id="setup">
+            <div class="small">
+              This game reads from <strong>common_items_1000_unique_natural.csv</strong> in the same folder as this HTML file.
+              You’ll choose a unit once per run, then compare two items each round. No ties will be shown.
+            </div>
+            <div class="hr"></div>
+            <div class="small" style="margin-bottom:8px;"><strong>Before you start:</strong> Do you want to guess in kilograms or pounds?</div>
+            <div class="unitChoices">
+              <button class="primary" id="chooseKg">Kilograms (kg)</button>
+              <button class="primary" id="chooseLbs">Pounds (lbs)</button>
+            </div>
+            <div class="note" id="loadStatus">Loading list…</div>
+            <div class="note error" id="loadError" style="display:none;"></div>
+          </div>
+
+          <!-- Round screen -->
+          <div id="round" style="display:none;">
+            <div class="vsRow">
+              <div class="itemBox">
+                <div class="itemLabel">Left item</div>
+                <div class="itemName" id="leftName">—</div>
+              </div>
+              <div class="vs">VS</div>
+              <div class="itemBox">
+                <div class="itemLabel">Right item</div>
+                <div class="itemName" id="rightName">—</div>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button class="good" id="btnLeft">Left is heavier</button>
+              <button class="good" id="btnRight">Right is heavier</button>
+              <button id="btnNext" class="primary" disabled>Next</button>
+            </div>
+
+            <div class="feedback" id="feedbackBox" aria-live="polite">
+              <div class="line1" id="feedbackLine1">Make your guess.</div>
+              <div class="line2" id="feedbackLine2">You’ll see the real weights after you choose.</div>
+            </div>
+          </div>
+
+          <!-- Game over screen -->
+          <div id="gameover" style="display:none;">
+            <div class="feedback" style="border-style:solid;">
+              <div class="line1" id="overLine1">Game Over</div>
+              <div class="line2" id="overLine2">—</div>
+            </div>
+            <div class="rightActions">
+              <button class="primary" id="btnRestart">Play again</button>
+              <button id="btnChangeUnit">Change unit</button>
+            </div>
+            <div class="note">Top 5 highscores are saved locally on this device.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>High Scores (Top 5)</h2>
+        <div class="small">Rounds passed = points. Saved with local date/time.</div>
+        <div class="hr"></div>
+        <div id="hsWrap"></div>
+        <div class="rightActions">
+          <button id="btnClearHS" class="bad">Clear highscores</button>
+        </div>
+        <div class="note">Tip: Host this folder with a local server or on GitHub Pages so CSV loading works reliably.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ======== CONFIG ========
+    const CSV_FILE = "common_items_1000_unique_natural.csv";
+    const HS_KEY = "heavierGame_top5_v1";
+
+    // ======== STATE ========
+    let items = []; // { item, weight_kg, weight_lbs }
+    let unit = null; // "kg" or "lbs"
+    let score = 0;
+
+    let currentLeft = null;
+    let currentRight = null;
+    let answered = false;
+    let isGameOver = false;
+
+    // ======== DOM ========
+    const scorePill = document.getElementById("scorePill");
+    const unitPill = document.getElementById("unitPill");
+    const countPill = document.getElementById("countPill");
+
+    const setup = document.getElementById("setup");
+    const round = document.getElementById("round");
+    const gameover = document.getElementById("gameover");
+
+    const chooseKg = document.getElementById("chooseKg");
+    const chooseLbs = document.getElementById("chooseLbs");
+    const loadStatus = document.getElementById("loadStatus");
+    const loadError = document.getElementById("loadError");
+
+    const leftName = document.getElementById("leftName");
+    const rightName = document.getElementById("rightName");
+
+    const btnLeft = document.getElementById("btnLeft");
+    const btnRight = document.getElementById("btnRight");
+    const btnNext = document.getElementById("btnNext");
+
+    const feedbackLine1 = document.getElementById("feedbackLine1");
+    const feedbackLine2 = document.getElementById("feedbackLine2");
+
+    const overLine1 = document.getElementById("overLine1");
+    const overLine2 = document.getElementById("overLine2");
+
+    const btnRestart = document.getElementById("btnRestart");
+    const btnChangeUnit = document.getElementById("btnChangeUnit");
+
+    const hsWrap = document.getElementById("hsWrap");
+    const btnClearHS = document.getElementById("btnClearHS");
+
+    // ======== UTIL ========
+    function setVisible(el, yes){ el.style.display = yes ? "" : "none"; }
+
+    function formatWeight(value){
+      // value already in chosen unit; show 3 decimals to match CSV
+      return Number(value).toFixed(3) + " " + unit;
+    }
+
+    function parseCSV(text){
+      // Simple CSV parser adequate for our file: item,weight_kg,weight_lbs
+      // Handles quoted item names with commas.
+      const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+      if(lines.length < 2) return [];
+      const header = lines[0].trim().toLowerCase();
+      // Expect: item,weight_kg,weight_lbs
+      const out = [];
+      for(let i=1;i<lines.length;i++){
+        const line = lines[i];
+        const fields = splitCSVLine(line);
+        if(fields.length < 3) continue;
+        const obj = {
+          item: fields[0],
+          weight_kg: Number(fields[1]),
+          weight_lbs: Number(fields[2])
+        };
+        if(!obj.item || !isFinite(obj.weight_kg) || !isFinite(obj.weight_lbs)) continue;
+        out.push(obj);
+      }
+      return out;
+    }
+
+    function splitCSVLine(line){
+      // CSV splitting with quote support
+      const result = [];
+      let cur = "";
+      let inQuotes = false;
+      for(let i=0;i<line.length;i++){
+        const ch = line[i];
+        if(ch === '"'){
+          if(inQuotes && line[i+1] === '"'){ cur += '"'; i++; }
+          else inQuotes = !inQuotes;
+        } else if(ch === ',' && !inQuotes){
+          result.push(cur.trim());
+          cur = "";
+        } else {
+          cur += ch;
+        }
+      }
+      result.push(cur.trim());
+      // remove surrounding quotes
+      return result.map(s => s.replace(/^"(.*)"$/, "$1"));
+    }
+
+    function randInt(n){ return Math.floor(Math.random()*n); }
+
+    function pickTwoNoTie(){
+      if(items.length < 2) return null;
+      let a = null, b = null, tries = 0;
+      while(tries < 2000){
+        a = items[randInt(items.length)];
+        b = items[randInt(items.length)];
+        if(a === b){ tries++; continue; }
+        const wa = unit === "kg" ? a.weight_kg : a.weight_lbs;
+        const wb = unit === "kg" ? b.weight_kg : b.weight_lbs;
+        if(wa !== wb) return [a,b];
+        tries++;
+      }
+      // Fallback: find any non-tie pair by scanning
+      for(let i=0;i<items.length;i++){
+        for(let j=i+1;j<items.length;j++){
+          const wa = unit === "kg" ? items[i].weight_kg : items[i].weight_lbs;
+          const wb = unit === "kg" ? items[j].weight_kg : items[j].weight_lbs;
+          if(wa !== wb) return [items[i], items[j]];
+        }
+      }
+      return null;
+    }
+
+    function updatePills(){
+      scorePill.textContent = String(score);
+      unitPill.textContent = unit ? unit : "—";
+      countPill.textContent = String(items.length);
+    }
+
+    // ======== HIGHSCORES ========
+    function loadHighscores(){
+      try{
+        const raw = localStorage.getItem(HS_KEY);
+        if(!raw) return [];
+        const arr = JSON.parse(raw);
+        if(!Array.isArray(arr)) return [];
+        return arr
+          .filter(x => x && typeof x.score === "number" && typeof x.when === "string")
+          .sort((a,b) => b.score - a.score)
+          .slice(0,5);
+      }catch(e){
+        return [];
+      }
+    }
+
+    function saveHighscores(arr){
+      localStorage.setItem(HS_KEY, JSON.stringify(arr.slice(0,5)));
+    }
+
+    function addHighscore(newScore){
+      const arr = loadHighscores();
+      const entry = {
+        score: newScore,
+        when: new Date().toLocaleString()
+      };
+      arr.push(entry);
+      arr.sort((a,b) => b.score - a.score);
+      saveHighscores(arr.slice(0,5));
+    }
+
+    function renderHighscores(){
+      const hs = loadHighscores();
+      if(hs.length === 0){
+        hsWrap.innerHTML = `<div class="small">No highscores yet. Play a round!</div>`;
+        return;
+      }
+      let html = `<table>
+        <thead><tr><th>#</th><th>Rounds</th><th>Date/Time</th></tr></thead>
+        <tbody>`;
+      hs.forEach((h, idx) => {
+        html += `<tr>
+          <td>${idx+1}</td>
+          <td><strong>${h.score}</strong></td>
+          <td>${escapeHtml(h.when)}</td>
+        </tr>`;
+      });
+      html += `</tbody></table>`;
+      hsWrap.innerHTML = html;
+    }
+
+    function escapeHtml(s){
+      return String(s)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    // ======== GAME FLOW ========
+    function setUnit(newUnit){
+      unit = newUnit; // "kg" or "lbs"
+      updatePills();
+    }
+
+    function startRun(){
+      score = 0;
+      isGameOver = false;
+      answered = false;
+      updatePills();
+      setVisible(setup, false);
+      setVisible(gameover, false);
+      setVisible(round, true);
+      nextRound(true);
+    }
+
+    function nextRound(isFirst=false){
+      answered = false;
+      btnNext.disabled = true;
+      btnLeft.disabled = false;
+      btnRight.disabled = false;
+
+      const pair = pickTwoNoTie();
+      if(!pair){
+        // If we truly cannot get a non-tie pair, end run.
+        endGame("No valid non-tie pairs found in the CSV. Please check the data.");
+        return;
+      }
+      [currentLeft, currentRight] = pair;
+
+      leftName.textContent = currentLeft.item;
+      rightName.textContent = currentRight.item;
+
+      feedbackLine1.textContent = isFirst ? "Make your guess." : "Next round: make your guess.";
+      feedbackLine1.style.color = "var(--text)";
+      feedbackLine2.textContent = "Choose which item is heavier.";
+    }
+
+    function handleGuess(side){ // "left" or "right"
+      if(answered || isGameOver) return;
+      answered = true;
+
+      const wL = unit === "kg" ? currentLeft.weight_kg : currentLeft.weight_lbs;
+      const wR = unit === "kg" ? currentRight.weight_kg : currentRight.weight_lbs;
+
+      const correctSide = (wL > wR) ? "left" : "right";
+      const correct = side === correctSide;
+
+      const leftW = formatWeight(wL);
+      const rightW = formatWeight(wR);
+
+      // Disable guess buttons; enable Next only if correct
+      btnLeft.disabled = true;
+      btnRight.disabled = true;
+
+      if(correct){
+        score += 1;
+        updatePills();
+        feedbackLine1.textContent = "Correct!";
+        feedbackLine1.style.color = "var(--good)";
+        feedbackLine2.textContent =
+          `${currentLeft.item}: ${leftW}  •  ${currentRight.item}: ${rightW}`;
+        btnNext.disabled = false;
+      }else{
+        feedbackLine1.textContent = "Wrong — Game Over!";
+        feedbackLine1.style.color = "var(--bad)";
+        feedbackLine2.textContent =
+          `${currentLeft.item}: ${leftW}  •  ${currentRight.item}: ${rightW}`;
+        endGame();
+      }
+    }
+
+    function endGame(customMessage){
+      isGameOver = true;
+
+      // Save score
+      addHighscore(score);
+      renderHighscores();
+
+      setVisible(round, false);
+      setVisible(gameover, true);
+
+      overLine1.textContent = "Game Over";
+      const msg = customMessage
+        ? customMessage
+        : `You passed <strong>${score}</strong> round${score===1?"":"s"}.`;
+      overLine2.innerHTML = msg + " (Saved to highscores if it’s in the top 5.)";
+    }
+
+    function resetToSetup(){
+      setVisible(round, false);
+      setVisible(gameover, false);
+      setVisible(setup, true);
+      unit = null;
+      updatePills();
+      feedbackLine1.textContent = "Make your guess.";
+      feedbackLine2.textContent = "You’ll see the real weights after you choose.";
+    }
+
+    // ======== LOAD CSV ========
+    async function loadCSV(){
+      loadStatus.textContent = `Loading list from ${CSV_FILE}…`;
+      loadError.style.display = "none";
+      try{
+        const res = await fetch(CSV_FILE, { cache: "no-store" });
+        if(!res.ok){
+          throw new Error(`Fetch failed (${res.status}). Make sure the CSV is in the same folder and served over http(s).`);
+        }
+        const text = await res.text();
+        const parsed = parseCSV(text);
+
+        // Ensure items are unique by name (CSV should already be unique, but safe)
+        const map = new Map();
+        for(const it of parsed){
+          if(!map.has(it.item)) map.set(it.item, it);
+        }
+        items = Array.from(map.values());
+
+        countPill.textContent = String(items.length);
+        loadStatus.innerHTML = `<span class="ok">Loaded ${items.length} items.</span> Choose a unit to start.`;
+      }catch(err){
+        loadError.style.display = "block";
+        loadError.textContent = String(err.message || err);
+        loadStatus.textContent = "Couldn’t load the CSV.";
+      }
+      updatePills();
+    }
+
+    // ======== EVENTS ========
+    chooseKg.addEventListener("click", () => {
+      if(items.length < 2) return;
+      setUnit("kg");
+      startRun();
+    });
+    chooseLbs.addEventListener("click", () => {
+      if(items.length < 2) return;
+      setUnit("lbs");
+      startRun();
+    });
+
+    btnLeft.addEventListener("click", () => handleGuess("left"));
+    btnRight.addEventListener("click", () => handleGuess("right"));
+    btnNext.addEventListener("click", () => {
+      if(isGameOver) return;
+      nextRound(false);
+    });
+
+    btnRestart.addEventListener("click", () => {
+      // Restart same unit
+      if(!unit){
+        resetToSetup();
+        return;
+      }
+      score = 0;
+      isGameOver = false;
+      setVisible(gameover, false);
+      setVisible(round, true);
+      updatePills();
+      nextRound(true);
+    });
+
+    btnChangeUnit.addEventListener("click", () => {
+      resetToSetup();
+    });
+
+    btnClearHS.addEventListener("click", () => {
+      localStorage.removeItem(HS_KEY);
+      renderHighscores();
+    });
+
+    // ======== INIT ========
+    renderHighscores();
+    updatePills();
+    loadCSV();
+  </script>
+</body>
+</html>
