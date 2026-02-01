@@ -1,484 +1,706 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mass Compare (2x–3x spacing)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Heavier or Lighter? (Multiples)</title>
   <style>
-    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-    body { margin: 0; padding: 20px; background: #f6f7fb; }
-    .wrap { max-width: 980px; margin: 0 auto; }
-    .card { background: white; border-radius: 14px; padding: 18px; box-shadow: 0 6px 18px rgba(0,0,0,.08); }
-    .row { display:flex; gap: 14px; flex-wrap: wrap; }
-    .col { flex: 1; min-width: 280px; }
-    h1 { margin: 0 0 10px; font-size: 24px; }
-    h2 { margin: 0 0 10px; font-size: 18px; }
-    p { margin: 8px 0; }
-    button { cursor:pointer; border: none; border-radius: 12px; padding: 14px 14px; font-size: 18px; background: #1f6feb; color: white; }
-    button:disabled { opacity:.5; cursor:not-allowed; }
-    .choiceBtn { width: 100%; text-align: left; background: #111827; }
-    .choiceBtn:hover { filter: brightness(1.08); }
-    .choiceBtn:disabled:hover { filter: none; }
-    .muted { color:#6b7280; }
-    .ok { color:#16a34a; font-weight: 700; }
-    .bad { color:#dc2626; font-weight: 700; }
-    .pill { display:inline-block; padding: 6px 10px; border-radius: 999px; background:#eef2ff; color:#3730a3; font-weight:600; font-size: 13px; }
-    .small { font-size: 13px; }
-    .grid { display:grid; gap: 10px; }
-    .controls { display:flex; gap: 10px; flex-wrap: wrap; align-items:center; }
-    input[type="file"] { padding: 8px; background: #fff; border-radius: 10px; border: 1px solid #e5e7eb; }
-    select { padding: 10px; border-radius: 10px; border: 1px solid #e5e7eb; font-size: 14px; }
-    .stats { display:flex; gap: 10px; flex-wrap: wrap; }
-    .stat { background:#f3f4f6; padding: 10px 12px; border-radius: 12px; }
-    code { background:#f3f4f6; padding: 2px 6px; border-radius: 6px; }
-    .warn { background:#fff7ed; border: 1px solid #fed7aa; padding: 10px 12px; border-radius: 12px; }
+    :root{
+      --bg:#0f1220; --text:#e9ecff; --muted:#a9b0d6;
+      --good:#2ee59d; --bad:#ff5c7a; --accent:#7aa2ff; --border:rgba(255,255,255,.12);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:radial-gradient(1200px 800px at 20% 10%, #1a2050 0%, transparent 55%),
+                 radial-gradient(900px 600px at 85% 25%, #2a1450 0%, transparent 55%),
+                 var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+    }
+    .app{ width:min(980px, 100%); display:grid; gap:14px; }
+    .header{
+      display:flex; align-items:flex-end; justify-content:space-between; gap:12px;
+      padding:14px 16px;
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border:1px solid var(--border);
+      border-radius:16px;
+      box-shadow:0 18px 60px rgba(0,0,0,.35);
+    }
+    .title{ font-size:20px; font-weight:800; margin:0; line-height:1.15; }
+    .subtitle{ margin:4px 0 0 0; color:var(--muted); font-size:13px; }
+    .stats{ display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+    .pill{
+      background:rgba(255,255,255,.06);
+      border:1px solid var(--border);
+      padding:8px 10px;
+      border-radius:999px;
+      font-size:13px;
+      display:flex; gap:8px; align-items:center; white-space:nowrap;
+    }
+    .pill span{color:var(--muted)}
+    .grid{ display:grid; grid-template-columns:1fr; gap:14px; }
+    @media (min-width: 860px){ .grid{ grid-template-columns: 1.2fr .8fr; } }
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:14px;
+      box-shadow:0 18px 60px rgba(0,0,0,.35);
+      overflow:hidden;
+    }
+    .card h2{
+      margin:0 0 10px 0;
+      font-size:14px;
+      color:var(--muted);
+      font-weight:700;
+      letter-spacing:.2px;
+      text-transform:uppercase;
+    }
+    .small{ color:var(--muted); font-size:13px; line-height:1.4; }
+    .hr{ height:1px; background:rgba(255,255,255,.10); margin:10px 0; }
+
+    .arena{ display:grid; gap:12px; }
+    .vsRow{
+      display:grid;
+      grid-template-columns:1fr auto 1fr;
+      gap:10px;
+      align-items:stretch;
+    }
+    .vs{
+      display:flex; align-items:center; justify-content:center;
+      padding:0 6px;
+      font-weight:900; letter-spacing:.5px;
+      color:rgba(255,255,255,.75);
+      text-shadow:0 10px 30px rgba(0,0,0,.35);
+      user-select:none;
+    }
+    .itemBox{
+      background:rgba(0,0,0,.18);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:16px;
+      min-height:130px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      gap:10px;
+      cursor:pointer;
+      transition:transform .06s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease, opacity .15s ease;
+      user-select:none;
+    }
+    .itemBox:hover{
+      background:rgba(255,255,255,.06);
+      box-shadow:0 10px 40px rgba(0,0,0,.25);
+    }
+    .itemBox:active{ transform:translateY(1px); }
+    .itemBox.disabled{ cursor:not-allowed; opacity:.55; transform:none; box-shadow:none; }
+    .itemBox.correct{ border-color:rgba(46,229,157,.55); background:rgba(46,229,157,.10); }
+    .itemBox.wrong{ border-color:rgba(255,92,122,.55); background:rgba(255,92,122,.10); }
+    .bigLine{
+      font-size:26px;
+      font-weight:950;
+      line-height:1.1;
+      word-break:break-word;
+    }
+
+    .actions{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    button{
+      appearance:none;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.08);
+      color:var(--text);
+      padding:12px 14px;
+      border-radius:12px;
+      font-weight:800;
+      cursor:pointer;
+      transition:transform .06s ease, background .15s ease, border-color .15s ease, opacity .15s ease;
+      user-select:none;
+    }
+    button:hover{ background:rgba(255,255,255,.12) }
+    button:active{ transform:translateY(1px) }
+    button.primary{ background:rgba(122,162,255,.18); border-color:rgba(122,162,255,.35); }
+    button.bad{ background:rgba(255,92,122,.18); border-color:rgba(255,92,122,.35); }
+    button:disabled{ opacity:.45; cursor:not-allowed; transform:none; }
+
+    .feedback{
+      border-radius:14px;
+      border:1px dashed rgba(255,255,255,.18);
+      padding:12px;
+      background:rgba(0,0,0,.14);
+      display:grid;
+      gap:6px;
+      min-height:80px;
+    }
+    .feedback .line1{ font-weight:900; font-size:16px; }
+    .feedback .line2{ color:var(--muted); font-size:13px; line-height:1.35; }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:13px;
+      overflow:hidden;
+      border-radius:12px;
+    }
+    th, td{
+      padding:10px 10px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      text-align:left;
+      vertical-align:top;
+    }
+    th{
+      color:var(--muted);
+      font-weight:800;
+      font-size:12px;
+      letter-spacing:.2px;
+      text-transform:uppercase;
+      background:rgba(255,255,255,.05);
+    }
+    tr:last-child td{border-bottom:none}
+    .rightActions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
+    .note{ color:var(--muted); font-size:12px; margin-top:8px; }
+    .error{ color:var(--bad); font-weight:800; }
+    .ok{ color:var(--good); font-weight:800; }
   </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="card">
-    <h1>Mass Compare <span class="pill">2×–3× spacing</span></h1>
-    <p class="muted">
-      Load a CSV with columns <code>item</code> and <code>weight_kg</code> (optional <code>weight_lbs</code>).
-      Each question picks 3 items whose weights are far apart (2×–3× between adjacent choices).
-    </p>
-
-    <div class="row">
-      <div class="col">
-        <h2>1) Load your items CSV</h2>
-        <div class="controls">
-          <input id="fileInput" type="file" accept=".csv" />
-          <button id="useDemoBtn" type="button">Use Demo List</button>
-        </div>
-        <p class="small muted">Tip: your file like <code>common_items_optionA_450.csv</code> works.</p>
-        <div id="loadMsg" class="warn small" style="display:none;"></div>
+  <div class="app">
+    <div class="header">
+      <div>
+        <h1 class="title">Heavier or Lighter?</h1>
+        <p class="subtitle">Click on which side is heavier. Quantities can be huge (e.g., 1,000,000 ants).</p>
       </div>
-
-      <div class="col">
-        <h2>2) Game options</h2>
-        <div class="controls">
-          <label class="small muted">Ask for:</label>
-          <select id="modeSelect">
-            <option value="heaviest" selected>Heaviest</option>
-            <option value="lightest">Lightest</option>
-          </select>
-
-          <label class="small muted">Show weights after guess:</label>
-          <select id="revealSelect">
-            <option value="yes" selected>Yes</option>
-            <option value="no">No</option>
-          </select>
-        </div>
-
-        <div class="stats" style="margin-top: 10px;">
-          <div class="stat"><div class="small muted">Loaded items</div><div id="countStat">0</div></div>
-          <div class="stat"><div class="small muted">Score</div><div id="scoreStat">0</div></div>
-          <div class="stat"><div class="small muted">Streak</div><div id="streakStat">0</div></div>
-        </div>
+      <div class="stats">
+        <div class="pill"><span>Score</span><strong id="scorePill">0</strong></div>
+        <div class="pill"><span>Unit</span><strong id="unitPill">—</strong></div>
+        <div class="pill"><span>Items loaded</span><strong id="countPill">0</strong></div>
       </div>
     </div>
 
-    <hr style="border:none;border-top:1px solid #e5e7eb; margin: 16px 0;">
+    <div class="grid">
+      <div class="card">
+        <h2>Game</h2>
+        <div class="arena">
 
-    <div class="row">
-      <div class="col">
-        <h2 id="prompt">Load a CSV to start</h2>
-        <div id="choices" class="grid"></div>
-        <p id="feedback" style="margin-top: 10px;"></p>
+          <!-- Setup -->
+          <div id="setup">
+            <div class="small">
+              Reads from <strong>common_items_1000_unique_natural.csv</strong> in the same folder.
+              Choose a unit once per run. Each round compares multiples of items. No ties.
+            </div>
+            <div class="hr"></div>
+            <div class="small" style="margin-bottom:8px;"><strong>Before you start:</strong> Do you want to guess in kilograms or pounds?</div>
+            <div class="actions">
+              <button class="primary" id="chooseKg">Kilograms (kg)</button>
+              <button class="primary" id="chooseLbs">Pounds (lbs)</button>
+            </div>
+            <div class="note" id="loadStatus">Loading list…</div>
+            <div class="note error" id="loadError" style="display:none;"></div>
+          </div>
 
-        <div class="controls" style="margin-top: 12px;">
-          <button id="nextBtn" type="button" disabled>Next</button>
-          <button id="resetBtn" type="button" disabled style="background:#6b7280;">Reset Score</button>
+          <!-- Round -->
+          <div id="round" style="display:none;">
+            <div class="vsRow">
+              <div class="itemBox" id="leftBox" role="button" tabindex="0" aria-label="Left side">
+                <div class="bigLine" id="leftText">—</div>
+              </div>
+
+              <div class="vs">VS</div>
+
+              <div class="itemBox" id="rightBox" role="button" tabindex="0" aria-label="Right side">
+                <div class="bigLine" id="rightText">—</div>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button id="btnNext" class="primary" disabled>Next</button>
+            </div>
+
+            <div class="feedback" aria-live="polite">
+              <div class="line1" id="feedbackLine1">Click the heavier side.</div>
+              <div class="line2" id="feedbackLine2">You’ll see the totals after you choose.</div>
+            </div>
+          </div>
+
+          <!-- Game over -->
+          <div id="gameover" style="display:none;">
+            <div class="feedback" style="border-style:solid;">
+              <div class="line1" id="overLine1">Game Over</div>
+              <div class="line2" id="overLine2">—</div>
+            </div>
+            <div class="rightActions">
+              <button class="primary" id="btnRestart">Play again</button>
+              <button id="btnChangeUnit">Change unit</button>
+            </div>
+            <div class="note">Top 5 highscores are saved locally on this device.</div>
+          </div>
         </div>
-
-        <p class="small muted" style="margin-top: 10px;">
-          Pluralization: adds <code>s</code> to the last word (no special cases).
-        </p>
       </div>
 
-      <div class="col">
-        <h2>Spacing rules</h2>
-        <p class="small">
-          For the 3 items (sorted by weight):<br>
-          <code>2.0 ≤ w2/w1 ≤ 3.0</code> and <code>2.0 ≤ w3/w2 ≤ 3.0</code><br>
-          So the biggest is <code>4×–9×</code> heavier than the smallest.
-        </p>
-        <p class="small muted">
-          If your dataset doesn’t have enough “spread” to find triples, you’ll get a warning.
-          In that case: add more items, or broaden the ratio range in the code.
-        </p>
+      <div class="card">
+        <h2>High Scores (Top 5)</h2>
+        <div class="small">Rounds passed = points. Saved with local date/time.</div>
+        <div class="hr"></div>
+        <div id="hsWrap"></div>
+        <div class="rightActions">
+          <button id="btnClearHS" class="bad">Clear highscores</button>
+        </div>
+        <div class="note">Tip: host with a local server or GitHub Pages so CSV loading works reliably.</div>
       </div>
     </div>
   </div>
-</div>
 
-<script>
-/* ------------------------------
-   Utilities
---------------------------------- */
+  <script>
+    // ======== CONFIG ========
+    const CSV_FILE = "common_items_1000_unique_natural.csv";
+    const HS_KEY = "heavierGame_top5_multiples_v2";
 
-// Simple CSV parser (handles quoted commas reasonably)
-function parseCSV(text) {
-  const rows = [];
-  let row = [], cur = "", inQuotes = false;
+    // "Loose" closeness band: heavier side typically ~2x–4x the other (may drift slightly due to rounding; never >=5x).
+    const LOOSE_MIN_RATIO = 2.0;
+    const LOOSE_MAX_RATIO = 4.0;
 
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    const next = text[i + 1];
+    // cap for readability (allows 1,000,000)
+    const MAX_COUNT = 1_000_000;
 
-    if (ch === '"' && inQuotes && next === '"') { // escaped quote
-      cur += '"'; i++;
-    } else if (ch === '"') {
-      inQuotes = !inQuotes;
-    } else if (ch === ',' && !inQuotes) {
-      row.push(cur); cur = "";
-    } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
-      if (ch === '\r' && next === '\n') i++;
-      row.push(cur); cur = "";
-      if (row.length > 1 || row.some(v => v.trim() !== "")) rows.push(row);
-      row = [];
-    } else {
-      cur += ch;
+    // ======== STATE ========
+    let items = []; // { item, weight_kg, weight_lbs }
+    let unit = null; // "kg" or "lbs"
+    let score = 0;
+
+    let roundData = null; // { left: {count,name,total}, right:{...}, heavier: "left"|"right" }
+    let answered = false;
+    let isGameOver = false;
+
+    // ======== DOM ========
+    const scorePill = document.getElementById("scorePill");
+    const unitPill = document.getElementById("unitPill");
+    const countPill = document.getElementById("countPill");
+
+    const setup = document.getElementById("setup");
+    const round = document.getElementById("round");
+    const gameover = document.getElementById("gameover");
+
+    const chooseKg = document.getElementById("chooseKg");
+    const chooseLbs = document.getElementById("chooseLbs");
+    const loadStatus = document.getElementById("loadStatus");
+    const loadError = document.getElementById("loadError");
+
+    const leftBox = document.getElementById("leftBox");
+    const rightBox = document.getElementById("rightBox");
+    const leftText = document.getElementById("leftText");
+    const rightText = document.getElementById("rightText");
+
+    const btnNext = document.getElementById("btnNext");
+
+    const feedbackLine1 = document.getElementById("feedbackLine1");
+    const feedbackLine2 = document.getElementById("feedbackLine2");
+
+    const overLine1 = document.getElementById("overLine1");
+    const overLine2 = document.getElementById("overLine2");
+
+    const btnRestart = document.getElementById("btnRestart");
+    const btnChangeUnit = document.getElementById("btnChangeUnit");
+
+    const hsWrap = document.getElementById("hsWrap");
+    const btnClearHS = document.getElementById("btnClearHS");
+
+    // ======== UTIL ========
+    function setVisible(el, yes){ el.style.display = yes ? "" : "none"; }
+    function randInt(n){ return Math.floor(Math.random()*n); }
+    function clamp(x,a,b){ return Math.max(a, Math.min(b, x)); }
+    function randomBetween(a,b){ return a + Math.random() * (b-a); }
+
+    function formatNumber(n){
+      return Number(n).toLocaleString();
     }
-  }
-  row.push(cur);
-  if (row.length > 1 || row.some(v => v.trim() !== "")) rows.push(row);
-  return rows;
-}
 
-// Pluralize by adding "s" to the last word. (No special cases, as requested)
-function pluralizeSimple(phrase) {
-  const parts = phrase.trim().split(/\s+/);
-  if (parts.length === 0) return phrase;
-  const last = parts[parts.length - 1];
-  if (last.endsWith("s")) return phrase; // already plural-ish
-  parts[parts.length - 1] = last + "s";
-  return parts.join(" ");
-}
-
-function shuffle(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
-function fmtKg(x) {
-  if (!Number.isFinite(x)) return "?";
-  // Show compactly
-  if (x >= 1000) return x.toFixed(0) + " kg";
-  if (x >= 100) return x.toFixed(1) + " kg";
-  if (x >= 10) return x.toFixed(2) + " kg";
-  return x.toFixed(3) + " kg";
-}
-
-/* ------------------------------
-   Game state
---------------------------------- */
-
-let ITEMS = []; // {name, kg}
-let score = 0;
-let streak = 0;
-let currentRound = null; // {choices:[...], correctIndex:int}
-
-const fileInput = document.getElementById("fileInput");
-const useDemoBtn = document.getElementById("useDemoBtn");
-const nextBtn = document.getElementById("nextBtn");
-const resetBtn = document.getElementById("resetBtn");
-const modeSelect = document.getElementById("modeSelect");
-const revealSelect = document.getElementById("revealSelect");
-const choicesDiv = document.getElementById("choices");
-const feedbackP = document.getElementById("feedback");
-const promptH2 = document.getElementById("prompt");
-const countStat = document.getElementById("countStat");
-const scoreStat = document.getElementById("scoreStat");
-const streakStat = document.getElementById("streakStat");
-const loadMsg = document.getElementById("loadMsg");
-
-function setLoadMsg(msg) {
-  if (!msg) { loadMsg.style.display = "none"; loadMsg.textContent = ""; return; }
-  loadMsg.style.display = "block";
-  loadMsg.textContent = msg;
-}
-
-function updateStats() {
-  countStat.textContent = String(ITEMS.length);
-  scoreStat.textContent = String(score);
-  streakStat.textContent = String(streak);
-}
-
-function resetScore() {
-  score = 0;
-  streak = 0;
-  updateStats();
-  feedbackP.textContent = "";
-}
-
-/* ------------------------------
-   Loading
---------------------------------- */
-
-function loadFromCSVText(text) {
-  const rows = parseCSV(text);
-  if (rows.length < 2) throw new Error("CSV looks empty.");
-
-  const header = rows[0].map(h => h.trim().toLowerCase());
-  const itemIdx = header.indexOf("item");
-  const kgIdx = header.indexOf("weight_kg");
-
-  if (itemIdx === -1 || kgIdx === -1) {
-    throw new Error("CSV must have headers: item, weight_kg");
-  }
-
-  const parsed = [];
-  for (let i = 1; i < rows.length; i++) {
-    const r = rows[i];
-    const name = (r[itemIdx] ?? "").trim();
-    const kg = Number((r[kgIdx] ?? "").trim());
-    if (!name) continue;
-    if (!Number.isFinite(kg) || kg <= 0) continue;
-    parsed.push({ name, kg });
-  }
-
-  // Ensure uniqueness by name (keep first)
-  const seen = new Set();
-  const uniq = [];
-  for (const it of parsed) {
-    const key = it.name.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    uniq.push(it);
-  }
-
-  if (uniq.length < 30) {
-    throw new Error("Not enough valid rows parsed. Need at least ~30.");
-  }
-
-  // Sort by weight (helps fast search)
-  uniq.sort((a,b) => a.kg - b.kg);
-  return uniq;
-}
-
-fileInput.addEventListener("change", async (e) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  try {
-    const text = await file.text();
-    ITEMS = loadFromCSVText(text);
-    setLoadMsg(`Loaded ${ITEMS.length} items.`);
-    updateStats();
-    resetBtn.disabled = false;
-    startRound();
-  } catch (err) {
-    ITEMS = [];
-    updateStats();
-    resetBtn.disabled = true;
-    promptH2.textContent = "Load a CSV to start";
-    choicesDiv.innerHTML = "";
-    feedbackP.textContent = "";
-    setLoadMsg("Error: " + (err?.message ?? String(err)));
-  }
-});
-
-useDemoBtn.addEventListener("click", () => {
-  // Tiny demo with wide spread; you’ll normally load your CSV instead.
-  ITEMS = [
-    {name:"paper clip", kg:0.001},
-    {name:"apple", kg:0.2},
-    {name:"cat", kg:4},
-    {name:"dog", kg:20},
-    {name:"cow", kg:600},
-    {name:"pickup truck", kg:2500},
-    {name:"cargo ship", kg:50000},
-  ].sort((a,b)=>a.kg-b.kg);
-  setLoadMsg(`Loaded demo (${ITEMS.length} items).`);
-  score = 0; streak = 0;
-  updateStats();
-  resetBtn.disabled = false;
-  startRound();
-});
-
-/* ------------------------------
-   Round generation with 2x–3x spacing
---------------------------------- */
-
-// Find indices j,k such that 2<=w[j]/w[i]<=3 and 2<=w[k]/w[j]<=3
-// We'll attempt multiple random bases. ITEMS is sorted by kg ascending.
-function pickTriple() {
-  if (ITEMS.length < 30) return null;
-
-  const tries = 4000;
-  for (let t = 0; t < tries; t++) {
-    const i = Math.floor(Math.random() * (ITEMS.length - 2));
-    const w1 = ITEMS[i].kg;
-
-    // find candidates for mid: weights in [2w1, 3w1]
-    const min2 = 2 * w1;
-    const max2 = 3 * w1;
-
-    // binary search range for mid
-    let lo = i + 1, hi = ITEMS.length - 1;
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      if (ITEMS[mid].kg < min2) lo = mid + 1;
-      else hi = mid;
+    function pluralizeWord(word, count){
+      if(count === 1) return word;
+      const w = String(word);
+      // simple plural rules: s, x, z, ch, sh -> +es; otherwise +s
+      if(/(s|x|z|ch|sh)$/i.test(w)) return w + "es";
+      return w + "s";
     }
-    const startJ = lo;
 
-    lo = i + 1; hi = ITEMS.length - 1;
-    while (lo < hi) {
-      const mid = ((lo + hi + 1) >> 1);
-      if (ITEMS[mid].kg <= max2) lo = mid;
-      else hi = mid - 1;
+        function formatTotal(val){
+      // REQUIREMENT: round to 2 decimals at most (always show 2 for consistency)
+      return Number(val).toFixed(2) + " " + unit;
     }
-    const endJ = lo;
 
-    if (startJ > endJ || startJ >= ITEMS.length) continue;
-
-    const j = startJ + Math.floor(Math.random() * (endJ - startJ + 1));
-    const w2 = ITEMS[j].kg;
-
-    // now choose k in [2w2, 3w2]
-    const min3 = 2 * w2;
-    const max3 = 3 * w2;
-
-    lo = j + 1; hi = ITEMS.length - 1;
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      if (ITEMS[mid].kg < min3) lo = mid + 1;
-      else hi = mid;
+    function splitCSVLine(line){
+      const result = [];
+      let cur = "";
+      let inQuotes = false;
+      for(let i=0;i<line.length;i++){
+        const ch = line[i];
+        if(ch === '"'){
+          if(inQuotes && line[i+1] === '"'){ cur += '"'; i++; }
+          else inQuotes = !inQuotes;
+        } else if(ch === ',' && !inQuotes){
+          result.push(cur.trim());
+          cur = "";
+        } else {
+          cur += ch;
+        }
+      }
+      result.push(cur.trim());
+      return result.map(s => s.replace(/^"(.*)"$/, "$1"));
     }
-    const startK = lo;
 
-    lo = j + 1; hi = ITEMS.length - 1;
-    while (lo < hi) {
-      const mid = ((lo + hi + 1) >> 1);
-      if (ITEMS[mid].kg <= max3) lo = mid;
-      else hi = mid - 1;
+    function parseCSV(text){
+      const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+      if(lines.length < 2) return [];
+      const out = [];
+      for(let i=1;i<lines.length;i++){
+        const fields = splitCSVLine(lines[i]);
+        if(fields.length < 3) continue;
+        const obj = {
+          item: fields[0],
+          weight_kg: Number(fields[1]),
+          weight_lbs: Number(fields[2])
+        };
+        if(!obj.item || !isFinite(obj.weight_kg) || !isFinite(obj.weight_lbs)) continue;
+        out.push(obj);
+      }
+      return out;
     }
-    const endK = lo;
 
-    if (startK > endK || startK >= ITEMS.length) continue;
+    function updatePills(){
+      scorePill.textContent = String(score);
+      unitPill.textContent = unit ? unit : "—";
+      countPill.textContent = String(items.length);
+    }
 
-    const k = startK + Math.floor(Math.random() * (endK - startK + 1));
+    function setBoxesEnabled(enabled){
+      const cls = "disabled";
+      if(enabled){
+        leftBox.classList.remove(cls);
+        rightBox.classList.remove(cls);
+        leftBox.setAttribute("tabindex","0");
+        rightBox.setAttribute("tabindex","0");
+      }else{
+        leftBox.classList.add(cls);
+        rightBox.classList.add(cls);
+        leftBox.setAttribute("tabindex","-1");
+        rightBox.setAttribute("tabindex","-1");
+      }
+    }
 
-    // Ensure names are distinct (they should be, but just in case)
-    const a = ITEMS[i], b = ITEMS[j], c = ITEMS[k];
-    const names = new Set([a.name.toLowerCase(), b.name.toLowerCase(), c.name.toLowerCase()]);
-    if (names.size !== 3) continue;
+    function clearBoxStates(){
+      leftBox.classList.remove("correct","wrong");
+      rightBox.classList.remove("correct","wrong");
+    }
 
-    return [a,b,c]; // already in ascending weight
-  }
-  return null;
-}
+    // ======== HIGHSCORES ========
+    function loadHighscores(){
+      try{
+        const raw = localStorage.getItem(HS_KEY);
+        if(!raw) return [];
+        const arr = JSON.parse(raw);
+        if(!Array.isArray(arr)) return [];
+        return arr
+          .filter(x => x && typeof x.score === "number" && typeof x.when === "string")
+          .sort((a,b) => b.score - a.score)
+          .slice(0,5);
+      }catch(e){ return []; }
+    }
+    function saveHighscores(arr){
+      localStorage.setItem(HS_KEY, JSON.stringify(arr.slice(0,5)));
+    }
+    function addHighscore(newScore){
+      const arr = loadHighscores();
+      arr.push({ score: newScore, when: new Date().toLocaleString() });
+      arr.sort((a,b) => b.score - a.score);
+      saveHighscores(arr);
+    }
+    function escapeHtml(s){
+      return String(s)
+        .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+    }
+    function renderHighscores(){
+      const hs = loadHighscores();
+      if(hs.length === 0){
+        hsWrap.innerHTML = `<div class="small">No highscores yet. Play a run!</div>`;
+        return;
+      }
+      let html = `<table>
+        <thead><tr><th>#</th><th>Rounds</th><th>Date/Time</th></tr></thead><tbody>`;
+      hs.forEach((h, idx) => {
+        html += `<tr><td>${idx+1}</td><td><strong>${h.score}</strong></td><td>${escapeHtml(h.when)}</td></tr>`;
+      });
+      html += `</tbody></table>`;
+      hsWrap.innerHTML = html;
+    }
 
-function startRound() {
-  feedbackP.textContent = "";
-  nextBtn.disabled = true;
+    // ======== ROUND GENERATION (MULTIPLES) ========
+    function getUnitWeight(it){
+      return unit === "kg" ? it.weight_kg : it.weight_lbs;
+    }
 
-  const triple = pickTriple();
-  if (!triple) {
-    promptH2.textContent = "Couldn’t find a 2×–3× triple";
-    choicesDiv.innerHTML = "";
-    setLoadMsg("Warning: Your dataset may not have enough spread to form triples with the strict 2×–3× rule. Add more items or broaden the ratio in the code.");
-    return;
-  } else {
-    setLoadMsg(""); // clear warning
-  }
+    function pickTwoDistinctItems(){
+      if(items.length < 2) return null;
+      let a=null, b=null;
+      for(let tries=0; tries<2000; tries++){
+        a = items[randInt(items.length)];
+        b = items[randInt(items.length)];
+        if(a !== b) return [a,b];
+      }
+      return null;
+    }
 
-  // Decide correct based on mode
-  const mode = modeSelect.value; // heaviest/lightest
-  const ascending = triple; // [light, mid, heavy]
-  const correctObj = (mode === "heaviest") ? ascending[2] : ascending[0];
+    function chooseCountForWeight(w){
+      if(w <= 0) return 1;
 
-  // shuffle display order
-  const display = shuffle([...ascending]);
-  const correctIndex = display.findIndex(x => x === correctObj);
+      let target;
+      if(w < 0.01) target = randomBetween(50, 5000);
+      else if(w < 0.1) target = randomBetween(5, 500);
+      else if(w < 1) target = randomBetween(10, 2000);
+      else if(w < 10) target = randomBetween(10, 3000);
+      else if(w < 200) target = randomBetween(100, 15000);
+      else target = randomBetween(500, 50000);
 
-  currentRound = { choices: display, correctIndex, revealed: false };
+      let count = Math.round(target / w);
+      count = clamp(count, 1, MAX_COUNT);
 
-  promptH2.textContent = (mode === "heaviest")
-    ? "Which is heaviest?"
-    : "Which is lightest?";
+      if(w < 0.005 && Math.random() < 0.35){
+        count = clamp(count * (10 ** randInt(3)), 1, MAX_COUNT);
+      }
+      return count;
+    }
 
-  renderChoices(false);
-}
+    function makeMultiplesRound(){
+      for(let attempt=0; attempt<3000; attempt++){
+        const pair = pickTwoDistinctItems();
+        if(!pair) return null;
+        const [A, B] = pair;
 
-function renderChoices(disableAll) {
-  choicesDiv.innerHTML = "";
-  const reveal = (revealSelect.value === "yes");
+        const wA = getUnitWeight(A);
+        const wB = getUnitWeight(B);
+        if(!(wA > 0) || !(wB > 0)) continue;
 
-  currentRound.choices.forEach((obj, idx) => {
-    const btn = document.createElement("button");
-    btn.className = "choiceBtn";
-    btn.disabled = disableAll;
-    btn.type = "button";
+        const nA = chooseCountForWeight(wA);
+        const totalA = nA * wA;
 
-    // pluralize for display
-    const label = pluralizeSimple(obj.name);
+        const R = randomBetween(LOOSE_MIN_RATIO, LOOSE_MAX_RATIO);
+        const heavierIsLeft = Math.random() < 0.5;
 
-    btn.textContent = label;
+        const targetTotalB = heavierIsLeft ? (totalA / R) : (totalA * R);
+        let nB = Math.round(targetTotalB / wB);
+        nB = clamp(nB, 1, MAX_COUNT);
 
-    btn.addEventListener("click", () => onChoose(idx), { once: true });
-    choicesDiv.appendChild(btn);
-  });
-}
+        const totalB = nB * wB;
 
-function onChoose(idx) {
-  // lock buttons
-  Array.from(choicesDiv.querySelectorAll("button")).forEach(b => b.disabled = true);
+        if(totalA === totalB) continue; // no ties
 
-  const correct = (idx === currentRound.correctIndex);
-  if (correct) {
-    score += 1;
-    streak += 1;
-    feedbackP.innerHTML = `<span class="ok">Correct!</span>`;
-  } else {
-    streak = 0;
-    feedbackP.innerHTML = `<span class="bad">Not quite.</span>`;
-  }
+        const actualHeavier = (totalA > totalB) ? "left" : "right";
+        if(heavierIsLeft && actualHeavier !== "left") continue;
+        if(!heavierIsLeft && actualHeavier !== "right") continue;
 
-  // Reveal weights if enabled
-  if (revealSelect.value === "yes") {
-    const mode = modeSelect.value;
-    const choices = currentRound.choices;
+        const heavierTotal = Math.max(totalA, totalB);
+        const lighterTotal = Math.min(totalA, totalB);
+        const ratio = heavierTotal / lighterTotal;
+        if(ratio < 2.0 || ratio >= 5.0) continue;
 
-    // sort for explanation
-    const sorted = [...choices].sort((a,b)=>a.kg-b.kg);
-    const w1=sorted[0].kg, w2=sorted[1].kg, w3=sorted[2].kg;
-    const r21=(w2/w1), r32=(w3/w2);
+        if(nA === 1 && nB === 1) continue;
 
-    const lines = choices.map((c, i) => {
-      const mark = (i === currentRound.correctIndex) ? "✅" : "•";
-      return `${mark} ${pluralizeSimple(c.name)} — ${fmtKg(c.kg)}`;
+        return {
+          left: { count: nA, name: A.item, total: totalA },
+          right: { count: nB, name: B.item, total: totalB },
+          heavier: actualHeavier,
+          ratio
+        };
+      }
+      return null;
+    }
+
+    function displayRound(r){
+      roundData = r;
+      leftText.textContent = `${formatNumber(r.left.count)} ${pluralizeWord(r.left.name, r.left.count)}`;
+      rightText.textContent = `${formatNumber(r.right.count)} ${pluralizeWord(r.right.name, r.right.count)}`;
+    }
+
+    // ======== GAME FLOW ========
+    function setUnit(newUnit){
+      unit = newUnit;
+      updatePills();
+    }
+
+    function startRun(){
+      score = 0;
+      answered = false;
+      isGameOver = false;
+      updatePills();
+
+      setVisible(setup, false);
+      setVisible(gameover, false);
+      setVisible(round, true);
+
+      nextRound(true);
+    }
+
+    function nextRound(isFirst=false){
+      answered = false;
+      btnNext.disabled = true;
+
+      clearBoxStates();
+      setBoxesEnabled(true);
+
+      const r = makeMultiplesRound();
+      if(!r){
+        endGame("Couldn’t generate a good comparison round. (Try refreshing or check the CSV.)");
+        return;
+      }
+      displayRound(r);
+
+      feedbackLine1.textContent = isFirst ? "Click the heavier side." : "Next: click the heavier side.";
+      feedbackLine1.style.color = "var(--text)";
+      feedbackLine2.textContent = "You’ll see the totals after you choose.";
+    }
+
+    function handlePick(side){
+      if(answered || isGameOver) return;
+      answered = true;
+
+      setBoxesEnabled(false);
+
+      const correct = (side === roundData.heavier);
+
+      const totalL = roundData.left.total;
+      const totalR = roundData.right.total;
+
+      // REQUIREMENT: show how much each side weighs in chosen units, rounded to 2 decimals.
+      const msgTotals =
+        `${formatNumber(roundData.left.count)} ${pluralizeWord(roundData.left.name, roundData.left.count)} = ${formatTotal(totalL)}  •  ` +
+        `${formatNumber(roundData.right.count)} ${pluralizeWord(roundData.right.name, roundData.right.count)} = ${formatTotal(totalR)}`;
+
+      if(correct){
+        score += 1;
+        updatePills();
+        feedbackLine1.textContent = "Correct!";
+        feedbackLine1.style.color = "var(--good)";
+        feedbackLine2.textContent = msgTotals;
+
+        (roundData.heavier === "left" ? leftBox : rightBox).classList.add("correct");
+        (roundData.heavier === "left" ? rightBox : leftBox).classList.add("wrong");
+
+        btnNext.disabled = false;
+      }else{
+        feedbackLine1.textContent = "Wrong — Game Over!";
+        feedbackLine1.style.color = "var(--bad)";
+        feedbackLine2.textContent = msgTotals;
+
+        (roundData.heavier === "left" ? leftBox : rightBox).classList.add("correct");
+        (side === "left" ? leftBox : rightBox).classList.add("wrong");
+
+        endGame();
+      }
+    }
+
+    function endGame(customMessage){
+      isGameOver = true;
+
+      addHighscore(score);
+      renderHighscores();
+
+      setVisible(round, false);
+      setVisible(gameover, true);
+
+      const msg = customMessage
+        ? customMessage
+        : `You passed <strong>${score}</strong> round${score===1?"":"s"}.`;
+      overLine1.textContent = "Game Over";
+      overLine2.innerHTML = msg + " (Saved to highscores if it’s in the top 5.)";
+    }
+
+    function resetToSetup(){
+      setVisible(round, false);
+      setVisible(gameover, false);
+      setVisible(setup, true);
+      unit = null;
+      updatePills();
+    }
+
+    // ======== LOAD CSV ========
+    async function loadCSV(){
+      loadStatus.textContent = `Loading list from ${CSV_FILE}…`;
+      loadError.style.display = "none";
+      try{
+        const res = await fetch(CSV_FILE, { cache: "no-store" });
+        if(!res.ok){
+          throw new Error(`Fetch failed (${res.status}). Make sure the CSV is in the same folder and served over http(s).`);
+        }
+        const text = await res.text();
+        const parsed = parseCSV(text);
+
+        const map = new Map();
+        for(const it of parsed){
+          if(!map.has(it.item)) map.set(it.item, it);
+        }
+        items = Array.from(map.values());
+
+        countPill.textContent = String(items.length);
+        loadStatus.innerHTML = `<span class="ok">Loaded ${items.length} items.</span> Choose a unit to start.`;
+      }catch(err){
+        loadError.style.display = "block";
+        loadError.textContent = String(err.message || err);
+        loadStatus.textContent = "Couldn’t load the CSV.";
+      }
+      updatePills();
+    }
+
+    // ======== EVENTS ========
+    chooseKg.addEventListener("click", () => {
+      if(items.length < 2) return;
+      setUnit("kg");
+      startRun();
+    });
+    chooseLbs.addEventListener("click", () => {
+      if(items.length < 2) return;
+      setUnit("lbs");
+      startRun();
     });
 
-    feedbackP.innerHTML += `<div class="small muted" style="margin-top:8px; white-space:pre-line;">${lines.join("\n")}</div>`;
-    feedbackP.innerHTML += `<div class="small muted" style="margin-top:8px;">Ratios (sorted): w2/w1 = ${r21.toFixed(2)}×, w3/w2 = ${r32.toFixed(2)}×</div>`;
-  }
+    leftBox.addEventListener("click", () => handlePick("left"));
+    rightBox.addEventListener("click", () => handlePick("right"));
 
-  updateStats();
-  nextBtn.disabled = false;
-}
+    leftBox.addEventListener("keydown", (e) => {
+      if(e.key === "Enter" || e.key === " "){ e.preventDefault(); handlePick("left"); }
+    });
+    rightBox.addEventListener("keydown", (e) => {
+      if(e.key === "Enter" || e.key === " "){ e.preventDefault(); handlePick("right"); }
+    });
 
-nextBtn.addEventListener("click", startRound);
-resetBtn.addEventListener("click", () => {
-  resetScore();
-  if (ITEMS.length) startRound();
-});
+    btnNext.addEventListener("click", () => {
+      if(isGameOver) return;
+      nextRound(false);
+    });
 
-// If user changes mode, just start a new round (if loaded)
-modeSelect.addEventListener("change", () => {
-  if (ITEMS.length) startRound();
-});
+    btnRestart.addEventListener("click", () => {
+      if(!unit){ resetToSetup(); return; }
+      score = 0;
+      isGameOver = false;
+      setVisible(gameover, false);
+      setVisible(round, true);
+      updatePills();
+      nextRound(true);
+    });
 
-revealSelect.addEventListener("change", () => {
-  // no-op; affects only future reveals
-});
+    btnChangeUnit.addEventListener("click", () => resetToSetup());
 
-// initial stats
-updateStats();
-</script>
+    btnClearHS.addEventListener("click", () => {
+      localStorage.removeItem(HS_KEY);
+      renderHighscores();
+    });
+
+    // ======== INIT ========
+    renderHighscores();
+    updatePills();
+    loadCSV();
+  </script>
 </body>
 </html>
