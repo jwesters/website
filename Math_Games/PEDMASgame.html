@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>PEMDAS Dice Optimizer</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --card1:#16214a;
+      --card2:#101735;
+      --card3:#0f1633cc;
+      --border:#2a3a7a;
+      --txt:#e9ecff;
+      --muted:#c7d1ff;
+      --muted2:#9fb0ff;
+      --good:#4ee6a6;
+      --bad:#ff6b6b;
+      --warn:#ffd166;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:
+        radial-gradient(1200px 800px at 30% 20%, #1b2b7a33, transparent),
+        radial-gradient(900px 700px at 80% 40%, #7a1b5f22, transparent),
+        var(--bg);
+      color:var(--txt);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+    }
+    .wrap{width:min(1040px,100%)}
+
+    .panel{
+      background:linear-gradient(180deg,var(--card1),var(--card2));
+      border:1px solid var(--border);
+      border-radius:18px;
+      padding:16px 18px;
+      box-shadow:0 10px 30px #00000055;
+    }
+    .screen{display:none}
+    .screen.active{display:block}
+
+    .top{
+      display:flex;
+      gap:14px;
+      flex-wrap:wrap;
+      align-items:stretch;
+      justify-content:space-between;
+    }
+    .leftPane{flex:1 1 320px; min-width:320px}
+    .rightPane{flex:1 1 520px; min-width:320px}
+
+    .title{margin:0 0 6px 0; font-size:18px; font-weight:900; letter-spacing:.2px}
+    .sub{margin:0; color:var(--muted); font-size:13px; line-height:1.35}
+
+    .stats{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top:10px;
+      font-size:13px;
+      color:#dfe6ff;
+    }
+    .badge{
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      padding:6px 10px;
+      border-radius:999px;
+      background:var(--card3);
+      border:1px solid var(--border);
+      white-space:nowrap;
+    }
+    .badge b{font-weight:900}
+
+    .btnrow{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:12px;
+    }
+    button{
+      appearance:none;
+      border:none;
+      cursor:pointer;
+      padding:10px 14px;
+      border-radius:12px;
+      font-weight:850;
+      color:var(--txt);
+      background:linear-gradient(180deg,#2a44ff,#1a2bb8);
+      box-shadow:0 8px 18px #00000055;
+    }
+    button.secondary{
+      background:linear-gradient(180deg,#2a355f,#1b2447);
+      border:1px solid #33407a;
+      box-shadow:none;
+    }
+    button:disabled{opacity:.55; cursor:not-allowed;}
+
+    /* Start screen */
+    .modeGrid{
+      margin-top:14px;
+      display:grid;
+      gap:12px;
+      grid-template-columns:1fr;
+    }
+    @media (min-width: 860px){
+      .modeGrid{grid-template-columns:repeat(3, 1fr)}
+    }
+    .modeBtn{
+      text-align:left;
+      padding:14px 14px;
+      border-radius:16px;
+      border:1px solid #33407a;
+      background:linear-gradient(180deg,#2a355f,#1b2447);
+      box-shadow:none;
+      cursor:pointer;
+      color:var(--txt);
+    }
+    .modeBtn:hover{filter:brightness(1.08)}
+    .modeBtn .mTitle{margin:0 0 4px 0; font-weight:950; font-size:16px}
+    .modeBtn .mSub{margin:0; color:var(--muted); font-size:13px; line-height:1.35}
+
+    .toggleRow{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top:12px;
+    }
+    .toggleRow .label{
+      color:var(--muted);
+      font-size:13px;
+      font-weight:800;
+    }
+    .pill{
+      padding:9px 12px;
+      border-radius:999px;
+      border:1px solid #33407a;
+      background:linear-gradient(180deg,#2a355f,#1b2447);
+      box-shadow:none;
+      font-weight:900;
+      color:var(--txt);
+    }
+    .pill.active{
+      background:linear-gradient(180deg,#2a44ff,#1a2bb8);
+      border-color:#2a44ff;
+    }
+
+    /* Right panel */
+    .roundHeader{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-bottom:10px;
+    }
+    .roundHeader h2{
+      margin:0;
+      font-size:16px;
+      font-weight:900;
+    }
+
+    .goalWrap{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+      color:var(--muted);
+      font-size:13px;
+    }
+    .goalBig{
+      display:inline-block;
+      font-size:26px;
+      font-weight:950;
+      color:var(--txt);
+      padding:6px 12px;
+      border-radius:14px;
+      background:#0c1230;
+      border:1px solid var(--border);
+      letter-spacing:.2px;
+    }
+
+    .diceRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom:12px;
+    }
+    .diceGrid{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .die{
+      width:52px;
+      height:52px;
+      border-radius:16px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:22px;
+      font-weight:950;
+      background:linear-gradient(180deg,#1c2a5a,#121a33);
+      border:1px solid var(--border);
+      box-shadow: inset 0 0 0 1px #00000055;
+      transition:opacity .15s ease, transform .15s ease;
+      user-select:none;
+    }
+    .die.used{opacity:.22; transform:scale(.985);}
+
+    .hint{
+      margin-left:auto;
+      color:var(--muted);
+      font-size:13px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:flex-end;
+    }
+    .hint code{
+      background:#0c1230;
+      border:1px solid var(--border);
+      padding:3px 8px;
+      border-radius:12px;
+      color:#dfe6ff;
+      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      font-size:12px;
+      white-space:nowrap;
+    }
+
+    .eqCard{
+      border:1px solid var(--border);
+      background:var(--card3);
+      border-radius:18px;
+      padding:14px;
+    }
+
+    /* One line, no scroll; sizes are applied dynamically via inline CSS vars */
+    .eqLine{
+      --gap:12px;
+      --slotW:58px;
+      --slotF:20px;
+      --opF:34px;
+      --opDivF:36px;
+      --parF:26px;
+
+      display:flex;
+      flex-wrap:nowrap;
+      align-items:center;
+      gap:var(--gap);
+      white-space:nowrap;
+      overflow:hidden;
+      transform-origin:left center;
+      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      justify-content:flex-start;
+    }
+
+    .slot{display:inline-flex; align-items:center}
+    .slot input{
+      width:var(--slotW);
+      padding:10px 10px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background:#0b1025;
+      color:var(--txt);
+      font-size:var(--slotF);
+      font-weight:950;
+      text-align:center;
+      outline:none;
+      transition:border-color .12s ease, box-shadow .12s ease, transform .12s ease;
+    }
+    .slot input:focus{
+      border-color:#6a7cff;
+      box-shadow:0 0 0 3px #2a44ff33;
+    }
+    .slot input.invalid{
+      border-color: var(--bad);
+      box-shadow: 0 0 0 3px #ff6b6b33;
+      animation: shake .18s linear 0s 1;
+    }
+    @keyframes shake{
+      0%{transform:translateX(0)}
+      25%{transform:translateX(-2px)}
+      50%{transform:translateX(2px)}
+      75%{transform:translateX(-1px)}
+      100%{transform:translateX(0)}
+    }
+
+    .op{
+      font-size:var(--opF);
+      font-weight:1000;
+      line-height:1;
+      color:#ffffff;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:0 2px;
+      user-select:none;
+    }
+    .op.div{font-size:var(--opDivF); letter-spacing:1px;}
+    .paren{
+      font-size:var(--parF);
+      font-weight:950;
+      color:#ffffff;
+      opacity:.95;
+      user-select:none;
+    }
+
+    .msg{
+      margin-top:12px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background:var(--card3);
+      color:#dfe6ff;
+      font-size:14px;
+      line-height:1.35;
+      display:none;
+      white-space:pre-wrap;
+    }
+    .msg.good{border-color:#2fd29a55; background:#103326cc; color:#dfffee;}
+    .msg.bad{border-color:#ff6b6b55; background:#331010cc; color:#ffe3e3;}
+    .msg.warn{border-color:#ffd16655; background:#332810cc; color:#fff4d7;}
+
+    .results{
+      margin-top:14px;
+      display:grid;
+      grid-template-columns:1fr;
+      gap:12px;
+    }
+    @media (min-width: 860px){
+      .results{grid-template-columns:1fr 1fr;}
+    }
+    .resBox{
+      border:1px solid var(--border);
+      background:var(--card3);
+      border-radius:16px;
+      padding:12px 14px;
+    }
+    .resBox h3{
+      margin:0 0 8px 0;
+      font-size:14px;
+      color:var(--muted);
+      font-weight:900;
+      letter-spacing:.2px;
+    }
+    .mono{
+      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      font-size:14px;
+      color:var(--txt);
+      line-height:1.5;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+
+    .footerNote{
+      margin-top:12px;
+      color:var(--muted2);
+      font-size:12px;
+      line-height:1.35;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+
+    <!-- START SCREEN -->
+    <div id="startScreen" class="panel screen active">
+      <h1 class="title" style="font-size:20px;">Choose a mode</h1>
+      <p class="sub">
+        Pick how many digits (dice) you want each round. Parentheses are locked to the difficulty preset. Goal (Largest/Smallest) is randomized each round.
+      </p>
+
+      <div class="toggleRow" aria-label="Grade parentheses rules">
+        <span class="label">Grade:</span>
+        <button id="grade34" class="pill active" type="button">Easy</button>
+        <button id="grade56" class="pill" type="button">Medium</button>
+        <button id="grade7p" class="pill" type="button">Hard</button>
+      </div>
+<div class="modeGrid">
+        <button class="modeBtn" data-n="3" type="button">
+          <p class="mTitle">3 dice</p>
+          <p class="mSub">3 blanks, 2 operators</p>
+        </button>
+        <button class="modeBtn" data-n="4" type="button">
+          <p class="mTitle">4 dice</p>
+          <p class="mSub">4 blanks, 3 operators</p>
+        </button>
+        <button class="modeBtn" data-n="5" type="button">
+          <p class="mTitle">5 dice</p>
+          <p class="mSub">5 blanks, 4 operators</p>
+        </button>
+      </div>
+
+      <div class="footerNote" style="margin-top:14px;">
+        Digits are 0–9 and each must be used exactly once.
+      </div>
+    </div>
+
+    <!-- GAME -->
+    <div id="gameRoot" class="screen">
+      <div class="top">
+        <div class="panel leftPane">
+          <h1 class="title">PEMDAS Dice Optimizer</h1>
+          <p class="sub">
+            Use the rolled digits <b>exactly once</b> to make the round’s <b>best</b> value.
+          </p>
+
+          <div class="stats">
+            <div class="badge">Correct: <b id="correctCt">0</b></div>
+            <div class="badge">Total: <b id="totalCt">0</b></div>
+            <div class="badge">Streak: <b id="streakCt">0</b></div>
+            <div class="badge">Mode: <b id="modeCt">—</b></div>
+          </div>
+
+          <div class="btnrow">
+            <button id="submitBtn">Submit</button>
+            <button id="newBtn" class="secondary">New Round</button>
+            <button id="changeModeBtn" class="secondary">Change Mode</button>
+          </div>
+        </div>
+
+        <div class="panel rightPane">
+          <div class="roundHeader">
+            <h2>This Round</h2>
+            <div class="goalWrap">
+              <span><b>Goal:</b></span>
+              <span id="goalBig" class="goalBig">—</span>
+            </div>
+          </div>
+
+          <div class="diceRow">
+            <div id="diceGrid" class="diceGrid"></div>
+            <div class="hint">
+              <span>Rolled: <code id="rolledCode">—</code></span>
+              <span>Ops: <code id="opsCode">—</code></span>
+            </div>
+          </div>
+
+          <div class="eqCard">
+            <div id="eqLine" class="eqLine"></div>
+            <div id="msgBox" class="msg"></div>
+
+            <div id="results" class="results" style="display:none;">
+              <div class="resBox">
+                <h3>Your result</h3>
+                <div class="mono" id="yourRes">—</div>
+              </div>
+              <div class="resBox">
+                <h3>Best possible</h3>
+                <div class="mono" id="bestRes">—</div>
+              </div>
+            </div>
+
+            <div class="footerNote">
+              Values shown to <b>3 decimals</b>. If your placement divides by 0, you must change it.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  const OPS = ['+','-','*','/'];
+  const opDispChar = (op) => (op === '*') ? '×' : (op === '/') ? '÷' : op;
+  const opClass = (op) => (op === '/') ? 'op div' : 'op';
+  const round3 = (x) => {
+    const r = Math.round((x + Number.EPSILON) * 1000) / 1000;
+    return (Object.is(r, -0) ? 0 : r).toFixed(3);
+  };
+
+  // Parentheses rules locked by grade preset (global until changing mode)
+// - Gr 3–4: always paren-lite (one grouping)
+// - Gr 5–6: mix of full vs lite
+// - Gr 7+: always full grouping
+let gradePreset = '34'; // '34' | '56' | '7p'
+const GRADE_CFG = {
+  '34': { name:'Gr 3–4', fullProb: 0.00, forceGrouping:true }, // always lite
+  '56': { name:'Gr 5–6', fullProb: 0.55, forceGrouping:true }, // ~half full, half lite
+  '7p': { name:'Gr 7+',  fullProb: 1.00, forceGrouping:true }, // always full
+};
+const getCfg = () => GRADE_CFG[gradePreset] || GRADE_CFG['56'];
+
+  // State
+  let N = 4;
+  let dice = [];
+  let opsArr = [];
+  let goal = 'max';
+  let structureTokens = [];
+  let structureMode = 'lite'; // 'lite' | 'full'
+  let submitted = false;
+  let stats = { correct:0, total:0, streak:0 };
+
+  // DOM
+  const startScreen = $('startScreen');
+  const gameRoot = $('gameRoot');
+  const grade34Btn = $('grade34');
+  const grade56Btn = $('grade56');
+  const grade7pBtn = $('grade7p');
+
+  const diceGrid = $('diceGrid');
+  const rolledCode = $('rolledCode');
+  const opsCode = $('opsCode');
+  const goalBig = $('goalBig');
+  const modeCt = $('modeCt');
+
+  const eqLine = $('eqLine');
+  const msgBox = $('msgBox');
+  const results = $('results');
+  const yourRes = $('yourRes');
+  const bestRes = $('bestRes');
+
+  const correctCt = $('correctCt');
+  const totalCt = $('totalCt');
+  const streakCt = $('streakCt');
+
+  const submitBtn = $('submitBtn');
+  const newBtn = $('newBtn');
+  const changeModeBtn = $('changeModeBtn');
+
+  function setMsg(text, kind) {
+    msgBox.style.display = text ? 'block' : 'none';
+    msgBox.className = 'msg' + (kind ? (' ' + kind) : '');
+    msgBox.textContent = text || '';
+  }
+  function setStatsUI() {
+    correctCt.textContent = String(stats.correct);
+    totalCt.textContent = String(stats.total);
+    streakCt.textContent = String(stats.streak);
+  }
+  function flashInvalid(inp) {
+    inp.classList.add('invalid');
+    setTimeout(() => inp.classList.remove('invalid'), 220);
+  }
+function setGradePreset(preset) {
+  gradePreset = preset;
+  grade34Btn.classList.toggle('active', preset === '34');
+  grade56Btn.classList.toggle('active', preset === '56');
+  grade7pBtn.classList.toggle('active', preset === '7p');
+}
+
+  // Random helpers
+  const rollDie = () => Math.floor(Math.random() * 10);
+  const chooseGoal = () => (Math.random() < 0.5 ? 'max' : 'min');
+  const chooseOpsArr = (n) => {
+  // For 3-dice rounds, avoid trivial always-correct cases where both ops are + or both are *.
+  // (With three digits used exactly once, +/+ or */* makes the outcome invariant to placement.)
+  if (n === 3) {
+    let tries = 0;
+    while (tries < 200) {
+      const a = OPS[Math.floor(Math.random()*OPS.length)];
+      const b = OPS[Math.floor(Math.random()*OPS.length)];
+      if (!((a === '+' && b === '+') || (a === '*' && b === '*'))) return [a, b];
+      tries++;
+    }
+    // fallback: force mixed ops if randomness failed
+    return ['+','-'];
+  }
+  return Array.from({length:n-1}, () => OPS[Math.floor(Math.random()*OPS.length)]);
+};
+
+  function rollDiceChecked(n) {
+    let tries = 0;
+    while (tries < 200) {
+      const arr = Array.from({length:n}, rollDie);
+      if (!arr.every(v => v === 0)) return arr;
+      tries++;
+    }
+    // fallback: ensure not all zero
+    const arr = Array.from({length:n}, () => 0);
+    arr[Math.floor(Math.random()*n)] = 1;
+    return arr;
+  }
+
+  // Unique permutations for multiset
+  function uniquePermutations(arr) {
+    const counts = new Map();
+    for (const v of arr) counts.set(v, (counts.get(v) || 0) + 1);
+    const uniq = Array.from(counts.keys()).sort((a,b)=>a-b);
+    const res = [];
+    const path = [];
+    const n = arr.length;
+
+    function backtrack() {
+      if (path.length === n) { res.push(path.slice()); return; }
+      for (const v of uniq) {
+        const c = counts.get(v) || 0;
+        if (c <= 0) continue;
+        counts.set(v, c - 1);
+        path.push(v);
+        backtrack();
+        path.pop();
+        counts.set(v, c);
+      }
+    }
+    backtrack();
+    return res;
+  }
+
+  // Evaluation
+  function safeDiv(a, b) {
+    if (b === 0) return { ok:false, err:'DIV0' };
+    return { ok:true, val: a / b };
+  }
+  function evalTokens(tokens) {
+    const output = [];
+    const stack = [];
+    const prec = { '+':1, '-':1, '*':2, '/':2 };
+    const isOp = (t) => t in prec;
+
+    for (const t of tokens) {
+      if (typeof t === 'number') {
+        output.push(t);
+      } else if (isOp(t)) {
+        while (stack.length) {
+          const top = stack[stack.length - 1];
+          if (isOp(top) && prec[top] >= prec[t]) output.push(stack.pop());
+          else break;
+        }
+        stack.push(t);
+      } else if (t === '(') {
+        stack.push(t);
+      } else if (t === ')') {
+        while (stack.length && stack[stack.length - 1] !== '(') output.push(stack.pop());
+        if (!stack.length) return { ok:false, err:'BAD' };
+        stack.pop();
+      } else {
+        return { ok:false, err:'BAD' };
+      }
+    }
+    while (stack.length) {
+      const top = stack.pop();
+      if (top === '(' || top === ')') return { ok:false, err:'BAD' };
+      output.push(top);
+    }
+
+    const st = [];
+    for (const t of output) {
+      if (typeof t === 'number') st.push(t);
+      else {
+        if (st.length < 2) return { ok:false, err:'BAD' };
+        const b = st.pop();
+        const a = st.pop();
+        if (t === '+') st.push(a + b);
+        else if (t === '-') st.push(a - b);
+        else if (t === '*') st.push(a * b);
+        else if (t === '/') {
+          const dv = safeDiv(a, b);
+          if (!dv.ok) return { ok:false, err:'DIV0' };
+          st.push(dv.val);
+        }
+      }
+    }
+    if (st.length !== 1) return { ok:false, err:'BAD' };
+    return { ok:true, val: st[0] };
+  }
+
+  // Parentheses Option A (tree-driven only)
+  function buildGroupingTree(l, r) {
+    if (l === r) return { type:'leaf', slot:l };
+    const k = l + Math.floor(Math.random() * (r - l));
+    return { type:'op', split:k, left: buildGroupingTree(l, k), right: buildGroupingTree(k+1, r) };
+  }
+  function treeToTokens_OptionA(node, opsArr, isRoot=false) {
+    if (node.type === 'leaf') return [ {slot: node.slot} ];
+    const leftT = treeToTokens_OptionA(node.left, opsArr, false);
+    const rightT = treeToTokens_OptionA(node.right, opsArr, false);
+    const op = opsArr[node.split];
+    let t = [...leftT, op, ...rightT];
+    if (!isRoot) t = ['(', ...t, ')'];
+    return t;
+  }
+function buildStructureTokens(n, opsArr, mode) {
+  // mode: 'none' | 'lite' | 'full'
+  const flat = () => {
+    const t = [];
+    for (let i = 0; i < n; i++) {
+      t.push({slot:i});
+      if (i < n - 1) t.push(opsArr[i]);
+    }
+    return t;
+  };
+
+  if (mode === 'none') return flat();
+
+  if (mode === 'lite') {
+    // One grouping only: wrap a contiguous slice of the flat expression in parentheses.
+    // Always at least two numbers, never the entire expression.
+    if (n <= 1) return flat();
+
+    let i = 0, j = 1;
+    if (n === 3) {
+      // only two sensible options
+      if (Math.random() < 0.5) { i = 0; j = 1; } else { i = 1; j = 2; }
+    } else {
+      // pick a length 2..(n-1), then position it so we don't wrap whole expression
+      const maxLen = n - 1;
+      const len = 2 + Math.floor(Math.random() * (maxLen - 1)); // [2, maxLen]
+      const startMin = 0;
+      const startMax = n - len;
+      i = startMin + Math.floor(Math.random() * (startMax - startMin + 1));
+      j = i + len - 1;
+      // if somehow wraps whole expression, nudge
+      if (i === 0 && j === n - 1) { i = 0; j = n - 2; }
+    }
+
+    const t = [];
+    for (let k = 0; k < n; k++) {
+      if (k === i) t.push('(');
+      t.push({slot:k});
+      if (k === j) t.push(')');
+      if (k < n - 1) t.push(opsArr[k]);
+    }
+    return t;
+  }
+
+  // 'full' = tree-driven grouping
+  const tree = buildGroupingTree(0, n - 1);
+  return treeToTokens_OptionA(tree, opsArr, true);
+}
+
+  // Dice pool
+  function computeRolledCounts(arr) {
+    const m = new Map();
+    for (const v of arr) m.set(v, (m.get(v) || 0) + 1);
+    return m;
+  }
+  function computeUsedCountsFromInputs() {
+    const inputs = eqLine._inputs || [];
+    const used = new Map();
+    for (const inp of inputs) {
+      const v = inp.value.trim();
+      if (/^\d$/.test(v)) {
+        const n = Number(v);
+        used.set(n, (used.get(n) || 0) + 1);
+      }
+    }
+    return used;
+  }
+  function updateDiceAvailabilityUI() {
+    const diceEls = eqLine._diceEls || [];
+    if (!diceEls.length) return;
+
+    const usedCounts = computeUsedCountsFromInputs();
+    const usedSoFar = new Map();
+
+    for (let i = 0; i < diceEls.length; i++) {
+      const v = dice[i];
+      const u = usedCounts.get(v) || 0;
+      const already = usedSoFar.get(v) || 0;
+      const isUsed = already < u;
+      if (isUsed) usedSoFar.set(v, already + 1);
+      diceEls[i].classList.toggle('used', isUsed);
+    }
+  }
+
+  // Auto-fit sizes (no scrolling). If it can't fit at smallest size, regenerate structure with fewer parentheses.
+  const SIZE_LEVELS = [
+    {gap:12, slotW:58, slotF:20, opF:34, opDivF:36, parF:26},
+    {gap:10, slotW:54, slotF:19, opF:32, opDivF:34, parF:24},
+    {gap:8,  slotW:50, slotF:17, opF:28, opDivF:30, parF:22},
+    {gap:6,  slotW:46, slotF:16, opF:26, opDivF:28, parF:20},
+    {gap:5,  slotW:44, slotF:15, opF:24, opDivF:26, parF:18},
+    {gap:4,  slotW:42, slotF:14, opF:22, opDivF:24, parF:16},
+  ];
+  function applySize(level) {
+    const s = SIZE_LEVELS[level];
+    eqLine.style.setProperty('--gap', s.gap + 'px');
+    eqLine.style.setProperty('--slotW', s.slotW + 'px');
+    eqLine.style.setProperty('--slotF', s.slotF + 'px');
+    eqLine.style.setProperty('--opF', s.opF + 'px');
+    eqLine.style.setProperty('--opDivF', s.opDivF + 'px');
+    eqLine.style.setProperty('--parF', s.parF + 'px');
+  }
+function tryFit() {
+  const container = eqLine.parentElement;
+  if (!container) return true;
+
+  // reset any previous scaling
+  eqLine.style.transform = 'scale(1)';
+  eqLine.style.transformOrigin = 'left center';
+
+  const style = getComputedStyle(container);
+  const padL = parseFloat(style.paddingLeft) || 0;
+  const padR = parseFloat(style.paddingRight) || 0;
+  const avail = container.clientWidth - padL - padR;
+
+  for (let i = 0; i < SIZE_LEVELS.length; i++) {
+    applySize(i);
+    // If it fits at this size, keep it unscaled.
+    if (eqLine.scrollWidth <= avail + 1) {
+      eqLine.style.transform = 'scale(1)';
+      return true;
+    }
+  }
+
+  // Still too wide at smallest size:
+  // Apply a gentle scale-down (never below 0.75) to preserve at least one grouping/parentheses.
+  const needed = avail / Math.max(eqLine.scrollWidth, 1);
+  const scale = Math.max(0.75, Math.min(1, needed));
+  eqLine.style.transform = `scale(${scale})`;
+  return true; // visually fits (or is as close as we allow) without removing parentheses
+}
+
+  function renderRound() {
+    goalBig.textContent = (goal === 'max') ? 'Largest' : 'Smallest';
+    modeCt.textContent = `${N} dice`;
+
+    diceGrid.innerHTML = '';
+    const diceEls = [];
+    for (let i = 0; i < N; i++) {
+      const d = document.createElement('div');
+      d.className = 'die';
+      d.textContent = String(dice[i]);
+      diceGrid.appendChild(d);
+      diceEls.push(d);
+    }
+
+    rolledCode.textContent = dice.join(', ');
+    opsCode.textContent = opsArr.map(opDispChar).join('  ');
+
+    eqLine.innerHTML = '';
+    const inputs = Array.from({length:N}, () => {
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.inputMode = 'numeric';
+      inp.maxLength = 1;
+      inp.placeholder = '•';
+      inp.autocomplete = 'off';
+      inp.spellcheck = false;
+
+      inp.addEventListener('beforeinput', (e) => {
+        if (!e.data) return; // deletions OK
+        const ch = String(e.data);
+        if (!/^\d$/.test(ch)) { e.preventDefault(); flashInvalid(inp); return; }
+
+        const digit = Number(ch);
+        const rolledCounts = computeRolledCounts(dice);
+
+        // simulate replacing current value
+        const currentVal = inp.value.trim();
+        const nextUsed = computeUsedCountsFromInputs();
+
+        if (/^\d$/.test(currentVal)) {
+          const cv = Number(currentVal);
+          nextUsed.set(cv, (nextUsed.get(cv) || 1) - 1);
+          if (nextUsed.get(cv) <= 0) nextUsed.delete(cv);
+        }
+        nextUsed.set(digit, (nextUsed.get(digit) || 0) + 1);
+
+        const have = rolledCounts.get(digit) || 0;
+        const used = nextUsed.get(digit) || 0;
+
+        if (have === 0 || used > have) {
+          e.preventDefault();
+          flashInvalid(inp);
+          return;
+        }
+      });
+
+      inp.addEventListener('input', () => {
+        inp.value = inp.value.replace(/[^\d]/g,'').slice(0,1);
+        updateDiceAvailabilityUI();
+        if (!submitted) setMsg('', '');
+      });
+
+      inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') submitRound();
+      });
+
+      return inp;
+    });
+
+    structureTokens.forEach(tok => {
+      if (tok && typeof tok === 'object' && typeof tok.slot === 'number') {
+        const wrap = document.createElement('span');
+        wrap.className = 'slot';
+        wrap.appendChild(inputs[tok.slot]);
+        eqLine.appendChild(wrap);
+      } else if (tok === '(' || tok === ')') {
+        const span = document.createElement('span');
+        span.className = 'paren';
+        span.textContent = tok;
+        eqLine.appendChild(span);
+      } else if (OPS.includes(tok)) {
+        const span = document.createElement('span');
+        span.className = opClass(tok);
+        span.textContent = opDispChar(tok);
+        eqLine.appendChild(span);
+      }
+    });
+
+    eqLine._inputs = inputs;
+    eqLine._diceEls = diceEls;
+
+    results.style.display = 'none';
+    yourRes.textContent = '—';
+    bestRes.textContent = '—';
+    setMsg('', '');
+    submitted = false;
+    submitBtn.disabled = false;
+
+    updateDiceAvailabilityUI();
+
+// Fit (after DOM paint)
+requestAnimationFrame(() => {
+  // Always keep at least one grouping per round.
+  // If full grouping is too wide, downgrade to paren-lite first (still has one grouping),
+  // then rely on sizing/scale fallback.
+  tryFit();
+
+  // If we're in full mode, and the unscaled layout is extremely wide, try lite structure.
+  // (We detect this by checking if smallest-size still overflows before scaling.)
+  const container = eqLine.parentElement;
+  if (container && structureMode === 'full') {
+    const style = getComputedStyle(container);
+    const padL = parseFloat(style.paddingLeft) || 0;
+    const padR = parseFloat(style.paddingRight) || 0;
+    const avail = container.clientWidth - padL - padR;
+
+    applySize(SIZE_LEVELS.length - 1);
+    eqLine.style.transform = 'scale(1)';
+    if (eqLine.scrollWidth > avail + 1) {
+      // rebuild only the structure (keep the same inputs)
+      structureMode = 'lite';
+      structureTokens = buildStructureTokens(N, opsArr, 'lite');
+
+      eqLine.innerHTML = '';
+      structureTokens.forEach(tok => {
+        if (tok && typeof tok === 'object' && typeof tok.slot === 'number') {
+          const wrap = document.createElement('span');
+          wrap.className = 'slot';
+          wrap.appendChild(inputs[tok.slot]);
+          eqLine.appendChild(wrap);
+        } else if (tok === '(' || tok === ')') {
+          const span = document.createElement('span');
+          span.className = 'paren';
+          span.textContent = tok;
+          eqLine.appendChild(span);
+        } else if (OPS.includes(tok)) {
+          const span = document.createElement('span');
+          span.className = opClass(tok);
+          span.textContent = opDispChar(tok);
+          eqLine.appendChild(span);
+        }
+      });
+    }
+  }
+
+  tryFit();
+  inputs[0].focus();
+});
+  }
+
+  function tokensWithNums(numsBySlot) {
+    const evalToks = [];
+    for (const tok of structureTokens) {
+      if (tok && typeof tok === 'object' && typeof tok.slot === 'number') evalToks.push(numsBySlot[tok.slot]);
+      else evalToks.push(tok);
+    }
+    return evalToks;
+  }
+  function prettyTokensWithNums(tokens) {
+    return tokens.map(t => {
+      if (typeof t === 'number') return String(t);
+      if (t === '*') return '×';
+      if (t === '/') return '÷';
+      return String(t);
+    }).join(' ');
+  }
+
+  function getUserDigits() {
+    const inputs = eqLine._inputs || [];
+    const vals = inputs.map(inp => inp.value.trim());
+    if (vals.some(v => v === '' || !/^\d$/.test(v))) return { ok:false, err:'Fill all blanks.' };
+
+    const nums = vals.map(v => Number(v));
+    const sortedUser = nums.slice().sort((a,b)=>a-b);
+    const sortedDice = dice.slice().sort((a,b)=>a-b);
+    for (let i = 0; i < sortedDice.length; i++) {
+      if (sortedUser[i] !== sortedDice[i]) return { ok:false, err:'Use the rolled digits exactly once.' };
+    }
+    return { ok:true, nums };
+  }
+
+  function computeBest() {
+    const perms = uniquePermutations(dice);
+    let bestVal = null;
+    let bestEqTokens = null;
+
+    for (const p of perms) {
+      const t = tokensWithNums(p);
+      const ev = evalTokens(t);
+      if (!ev.ok) continue;
+      const v = ev.val;
+
+      if (bestVal === null) { bestVal = v; bestEqTokens = t; }
+      else if (goal === 'max') { if (v > bestVal + 1e-12) { bestVal = v; bestEqTokens = t; } }
+      else { if (v < bestVal - 1e-12) { bestVal = v; bestEqTokens = t; } }
+    }
+    return { bestVal, bestEqTokens };
+  }
+
+  function hasAnyValidPermutation(diceArr, structureTokensLocal, goalTmp) {
+    const perms = uniquePermutations(diceArr);
+    let best = null;
+
+    for (const p of perms) {
+      const t = structureTokensLocal.map(tok => {
+        if (tok && typeof tok === 'object' && typeof tok.slot === 'number') return p[tok.slot];
+        return tok;
+      });
+      const ev = evalTokens(t);
+      if (!ev.ok) continue;
+      const v = ev.val;
+      if (best === null) best = v;
+      else best = (goalTmp === 'max') ? Math.max(best, v) : Math.min(best, v);
+    }
+    return best !== null;
+  }
+
+  function submitRound() {
+    if (submitted) return;
+
+    const ud = getUserDigits();
+    if (!ud.ok) {
+      setMsg(ud.err, 'warn');
+      results.style.display = 'none';
+      return;
+    }
+
+    const userTokens = tokensWithNums(ud.nums);
+    const userEval = evalTokens(userTokens);
+
+    if (!userEval.ok) {
+      if (userEval.err === 'DIV0') setMsg('Cannot divide by zero', 'warn');
+      else setMsg('Invalid expression', 'warn');
+      results.style.display = 'none';
+      return;
+    }
+
+    const { bestVal, bestEqTokens } = computeBest();
+    if (bestVal === null || !bestEqTokens) {
+      startNewRound(true);
+      return;
+    }
+
+    const uv = userEval.val;
+    const isCorrect = Math.abs(uv - bestVal) <= 1e-12;
+
+    stats.total += 1;
+    if (isCorrect) { stats.correct += 1; stats.streak += 1; }
+    else { stats.streak = 0; }
+    setStatsUI();
+
+    results.style.display = 'grid';
+    yourRes.textContent = `${prettyTokensWithNums(userTokens)}\n= ${round3(uv)}`;
+    bestRes.textContent = `${prettyTokensWithNums(bestEqTokens)}\n= ${round3(bestVal)}`;
+
+    setMsg(isCorrect ? 'Correct!' : 'Incorrect.', isCorrect ? 'good' : 'bad');
+
+    submitted = true;
+    submitBtn.disabled = true;
+  }
+
+function startNewRound() {
+  // generate round; silently reroll until at least one valid permutation exists
+  let attempts = 0;
+  const cfg = getCfg();
+
+  while (attempts < 300) {
+    dice = rollDiceChecked(N);
+    opsArr = chooseOpsArr(N);
+    goal = chooseGoal();
+
+    // Force at least one grouping per round (grade-locked).
+    // Gr 3–4: always lite. Gr 5–6: mix. Gr 7+: always full.
+    structureMode = (Math.random() < cfg.fullProb) ? 'full' : 'lite';
+    structureTokens = buildStructureTokens(N, opsArr, structureMode);
+
+    if (hasAnyValidPermutation(dice, structureTokens, goal)) break;
+    attempts++;
+  }
+  renderRound();
+}
+
+function showStart() {
+
+    gameRoot.classList.remove('active');
+    startScreen.classList.add('active');
+  }
+  function showGame() {
+    startScreen.classList.remove('active');
+    gameRoot.classList.add('active');
+  }
+  function setMode(n) {
+    N = n;
+    stats = { correct:0, total:0, streak:0 };
+    setStatsUI();
+    showGame();
+    startNewRound();
+  }
+
+  // Wire up
+  grade34Btn.addEventListener('click', () => setGradePreset('34'));
+  grade56Btn.addEventListener('click', () => setGradePreset('56'));
+  grade7pBtn.addEventListener('click', () => setGradePreset('7p'));
+
+  document.querySelectorAll('.modeBtn').forEach(btn => {
+    btn.addEventListener('click', () => setMode(Number(btn.getAttribute('data-n'))));
+  });
+
+  submitBtn.addEventListener('click', submitRound);
+  newBtn.addEventListener('click', startNewRound);
+  changeModeBtn.addEventListener('click', showStart);
+
+  // Refit on resize
+  window.addEventListener('resize', () => {
+    if (!startScreen.classList.contains('active')) {
+      requestAnimationFrame(() => { tryFit(); });
+    }
+  });
+
+  // Default
+  setGradePreset('34');
+  setStatsUI();
+  showStart();
+})();
+</script>
+</body>
+</html>
