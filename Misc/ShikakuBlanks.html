@@ -1,0 +1,1140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Shikaku 15×15 (with blanks)</title>
+<style>
+  :root{
+    --cell: 28px; /* set by JS */
+    --bg: #f6f7fb;
+    --panel: #ffffff;
+    --text: #111827;
+    --muted: #6b7280;
+    --line: #d1d5db;
+    --line2:#e5e7eb;
+    --accent:#2563eb;
+    --bad:#dc2626;
+    --good:#059669;
+    --shadow: 0 10px 30px rgba(0,0,0,.10);
+    --radius: 16px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    color:var(--text);
+    background: var(--bg);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:14px;
+  }
+
+  .app{
+    width:min(1180px, 100%);
+    display:grid;
+    gap:12px;
+  }
+
+  .header{
+    background: var(--panel);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding:12px 14px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .header h1{
+    margin:0;
+    font-size:16px;
+    letter-spacing:.2px;
+  }
+  .sub{
+    color:var(--muted);
+    font-size:13px;
+  }
+  .spacer{ flex:1; }
+
+  .controls{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:flex-end;
+  }
+  button{
+    appearance:none;
+    border:1px solid var(--line);
+    background:#fff;
+    color:var(--text);
+    padding:9px 11px;
+    border-radius: 12px;
+    cursor:pointer;
+    font-weight:650;
+    font-size:13px;
+    transition: transform .06s ease, background .15s ease, border-color .15s ease;
+    user-select:none;
+  }
+  button:hover{ background:#f9fafb; border-color:#cbd5e1; }
+  button:active{ transform: translateY(1px); }
+  button.primary{
+    border-color: rgba(37,99,235,.35);
+    background: rgba(37,99,235,.10);
+  }
+  button.danger{
+    border-color: rgba(220,38,38,.35);
+    background: rgba(220,38,38,.08);
+  }
+
+  .main{
+    display:grid;
+    grid-template-columns: 1fr 320px;
+    gap:12px;
+    align-items:start;
+  }
+  @media (max-width: 980px){
+    .main{ grid-template-columns: 1fr; }
+  }
+
+  .boardCard{
+    background: var(--panel);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding:12px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+
+  .boardTop{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  .status{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .dot{
+    width:10px; height:10px; border-radius:999px;
+    background:#9ca3af;
+    box-shadow: 0 0 0 3px rgba(156,163,175,.25);
+  }
+  .dot.good{ background: var(--good); box-shadow: 0 0 0 3px rgba(5,150,105,.18); }
+  .dot.bad{ background: var(--bad); box-shadow: 0 0 0 3px rgba(220,38,38,.18); }
+  .hint{
+    color:var(--muted);
+    font-size:13px;
+  }
+
+  .boardShell{
+    display:grid;
+    place-items:center;
+    padding:6px;
+    background:#f9fafb;
+    border:1px solid var(--line2);
+    border-radius: 14px;
+    overflow:hidden;
+  }
+
+  .board{
+    width: calc(var(--cell) * var(--N));
+    height: calc(var(--cell) * var(--N));
+    background:
+      /* base */
+      linear-gradient(#ffffff, #ffffff),
+      /* vertical grid lines */
+      repeating-linear-gradient(
+        to right,
+        transparent 0,
+        transparent calc(var(--cell) - 1px),
+        var(--line2) calc(var(--cell) - 1px),
+        var(--line2) var(--cell)
+      ),
+      /* horizontal grid lines */
+      repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent calc(var(--cell) - 1px),
+        var(--line2) calc(var(--cell) - 1px),
+        var(--line2) var(--cell)
+      );
+    background-blend-mode: normal;
+    border:1px solid var(--line);
+    border-radius: 12px;
+    overflow:hidden;
+    position:relative;
+    touch-action:none;
+  }
+
+  .grid, .overlay, .solutionLayer{
+    position:absolute; inset:0;
+    display:grid;
+    pointer-events:auto;
+  }
+
+  .cell{
+    padding:6px 6px 0 6px;
+    user-select:none;
+    position:relative;
+    background: transparent;
+  }
+
+  .cell.blank{
+    background:
+      repeating-linear-gradient(45deg,
+        rgba(17,24,39,.10) 0 6px,
+        rgba(17,24,39,.05) 6px 12px);
+  }
+
+  .num{
+    font-weight:850;
+    font-size: calc(max(11px, var(--cell) * 0.28));
+    line-height:1;
+    color:#111827;
+  }
+  .cell.clue::after{
+    content:"";
+    position:absolute;
+    top:5px; right:5px;
+    width:8px; height:8px;
+    border-radius:999px;
+    background: rgba(37,99,235,.45);
+  }
+
+  .overlay, .solutionLayer{ pointer-events:none; }
+
+  .rect{
+    margin:0;
+    border-radius: 10px;
+    border: 2px solid rgba(17,24,39,.20);
+    background: rgba(17,24,39,.04);
+  }
+  .rect.preview{
+    border-style:dashed;
+    border-color: rgba(37,99,235,.80);
+    background: rgba(37,99,235,.10);
+  }
+  .rect.conflict{
+    border-color: rgba(220,38,38,.95);
+    background: rgba(220,38,38,.12);
+  }
+  .rect.user.bad{
+    border-color: rgba(220,38,38,.95) !important;
+    box-shadow: 0 0 0 2px rgba(220,38,38,.20);
+  }
+  .rect.user.good{
+    border-color: rgba(5,150,105,.85) !important;
+    box-shadow: 0 0 0 2px rgba(5,150,105,.18);
+  }
+
+  .rect.solution{
+    border:2px dashed rgba(17,24,39,.35);
+    background: transparent;
+    opacity:0;
+    transition: opacity .15s ease;
+  }
+  .showSolution .rect.solution{ opacity:1; }
+  .showSolution .rect.user{ opacity:.35; }
+  .showSolution .rect.preview{ display:none; }
+
+  .side{
+    background: var(--panel);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding:12px 14px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .side h2{
+    margin:0 0 4px 0;
+    font-size:13px;
+    letter-spacing:.25px;
+  }
+  .side p, .side li{
+    color:var(--muted);
+    font-size:13px;
+    line-height:1.35;
+    margin:0;
+  }
+  .side ul{ margin:0; padding-left:18px; }
+
+  .msg{
+    display:none;
+    border:1px solid var(--line2);
+    background:#f9fafb;
+    border-radius:12px;
+    padding:10px 12px;
+    color:var(--muted);
+    font-size:13px;
+  }
+  .msg strong{ color:var(--text); }
+
+  .footer{
+    color:var(--muted);
+    font-size:12px;
+    text-align:center;
+    padding:4px 6px;
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <h1>Shikaku (15×15) with blanks</h1>
+      <div class="sub">Drag to draw rectangles • Illegal rectangles (wrong area / includes blanks / overlaps) won’t place • Auto-detects solved</div>
+      <div class="spacer"></div>
+      <div class="controls">
+        <button id="btnNew" class="primary">New Puzzle</button>
+        <button id="btnUndo">Undo</button>
+        <button id="btnClear" class="danger">Clear</button>
+        <button id="btnSolution">Show Solution</button>
+        <button id="btnCheck" class="primary">Check</button>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="boardCard">
+        <div class="boardTop">
+          <div class="status">
+            <div id="statusDot" class="dot"></div>
+            <div id="hintText" class="hint">Cover every non-blank cell. Each rectangle must contain exactly one number and match its area.</div>
+          </div>
+        </div>
+
+        <div class="boardShell" id="boardShell">
+          <div id="board" class="board" aria-label="Shikaku board">
+            <div id="grid" class="grid"></div>
+            <div id="overlay" class="overlay"></div>
+            <div id="solutionLayer" class="solutionLayer"></div>
+          </div>
+        </div>
+
+        <div id="message" class="msg" role="status" aria-live="polite"></div>
+      </div>
+
+      <div class="side">
+        <div>
+          <h2>Rules</h2>
+          <ul>
+            <li>Some cells are <b>blank</b> (blocked). They don’t need coverage.</li>
+            <li>Rectangles are axis-aligned and can’t include blank cells.</li>
+            <li>Rectangles can’t overlap.</li>
+            <li>Each rectangle contains exactly <b>one</b> clue.</li>
+            <li>Rectangle area equals its clue number (counts only cells inside the rectangle).</li>
+          </ul>
+        </div>
+        <div>
+          <h2>Controls</h2>
+          <p><b>Drag</b> on the grid to place a rectangle.</p>
+          <p><b>Click inside</b> a rectangle to delete it.</p>
+          <p><b>Undo</b> removes only your most recent rectangle.</p>
+          <p><b>Show Solution</b> outlines the true partition (drawing disabled while shown).</p>
+        </div>
+        <div>
+          <h2>Blanks</h2>
+          <p>Each puzzle uses 5–15% blanks with a mix of scattered cells and chunkier blocks. Regions may be disconnected.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">Generator verifies the solution has no overlaps and covers every playable cell exactly once.</div>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+
+  const N = 15;
+  document.documentElement.style.setProperty("--N", N);
+
+  const gridEl = document.getElementById("grid");
+  const overlayEl = document.getElementById("overlay");
+  const solutionEl = document.getElementById("solutionLayer");
+  const boardEl = document.getElementById("board");
+  const boardShell = document.getElementById("boardShell");
+  const msgEl = document.getElementById("message");
+  const statusDot = document.getElementById("statusDot");
+  const hintText = document.getElementById("hintText");
+
+  const btnNew = document.getElementById("btnNew");
+  const btnUndo = document.getElementById("btnUndo");
+  const btnClear = document.getElementById("btnClear");
+  const btnSolution = document.getElementById("btnSolution");
+  const btnCheck = document.getElementById("btnCheck");
+
+  // --- Fit-to-screen sizing (pixel-perfect) ---
+  function updateCellSize(){
+    const shellRect = boardShell.getBoundingClientRect();
+    const pad = 18;
+    const maxW = Math.max(240, shellRect.width - pad);
+
+    const headerH = document.querySelector(".header").getBoundingClientRect().height;
+    const topPad = 14 * 2;
+    const other = headerH + 140;
+    const maxH = Math.max(240, window.innerHeight - other - topPad);
+
+    const cell = Math.floor(Math.min(maxW / N, maxH / N));
+    const clamped = Math.max(18, Math.min(48, cell));
+    document.documentElement.style.setProperty("--cell", clamped + "px");
+  }
+  window.addEventListener("resize", updateCellSize, {passive:true});
+
+  function make2D(fillVal){
+    return Array.from({length:N}, () => Array.from({length:N}, () => fillVal));
+  }
+
+  function rectArea(r1,c1,r2,c2){
+    return (r2-r1+1)*(c2-c1+1);
+  }
+
+  function rectCells(r1,c1,r2,c2){
+    const cells = [];
+    for(let r=r1; r<=r2; r++){
+      for(let c=c1; c<=c2; c++){
+        cells.push([r,c]);
+      }
+    }
+    return cells;
+  }
+
+  // Game state
+  let puzzle = null;               // { rects: [...], clues: 2D, playable: 2D boolean }
+  let userRects = [];              // [{r1,c1,r2,c2, color}]
+  let userOcc = make2D(false);      // occupancy for overlaps (only playable cells)
+  let showSolution = false;
+
+  // Drag state
+  let isDragging = false;
+  let dragStart = null;
+  let previewRectEl = null;
+
+  function setMessage(type, title, body){
+    msgEl.style.display = "block";
+    msgEl.innerHTML = `<strong>${escapeHtml(title)}</strong><div>${escapeHtml(body)}</div>`;
+    statusDot.classList.remove("good","bad");
+    if(type === "good") statusDot.classList.add("good");
+    else if(type === "bad") statusDot.classList.add("bad");
+  }
+
+  function clearMessage(){
+    msgEl.style.display = "none";
+    msgEl.innerHTML = "";
+    statusDot.classList.remove("good","bad");
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, ch => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[ch]));
+  }
+
+  // ---------- Rendering ----------
+  function setGridTemplates(){
+    const tmpl = `repeat(${N}, var(--cell))`;
+    for(const el of [gridEl, overlayEl, solutionEl]){
+      el.style.gridTemplateColumns = tmpl;
+      el.style.gridTemplateRows = tmpl;
+    }
+  }
+
+  function buildGrid(){
+    gridEl.innerHTML = "";
+    for(let r=0;r<N;r++){
+      for(let c=0;c<N;c++){
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.dataset.r = String(r);
+        cell.dataset.c = String(c);
+        cell.innerHTML = `<div class="num"></div>`;
+        gridEl.appendChild(cell);
+      }
+    }
+  }
+
+  function renderPlayableAndClues(){
+    const cells = gridEl.querySelectorAll(".cell");
+    cells.forEach(cell => {
+      const r = Number(cell.dataset.r);
+      const c = Number(cell.dataset.c);
+      const playable = puzzle.playable[r][c];
+      const v = puzzle.clues[r][c];
+      const numEl = cell.querySelector(".num");
+
+      cell.classList.toggle("blank", !playable);
+
+      if(playable && v != null){
+        numEl.textContent = String(v);
+        cell.classList.add("clue");
+      } else {
+        numEl.textContent = "";
+        cell.classList.remove("clue");
+      }
+    });
+  }
+
+  function renderUserRects(badSet = new Set(), goodSet = new Set()){
+    const keepPreview = previewRectEl;
+    overlayEl.innerHTML = "";
+    previewRectEl = keepPreview;
+
+    for(let i=0;i<userRects.length;i++){
+      const r = userRects[i];
+      const el = document.createElement("div");
+      el.className = "rect user";
+      el.style.gridRow = `${r.r1+1} / ${r.r2+2}`;
+      el.style.gridColumn = `${r.c1+1} / ${r.c2+2}`;
+      el.style.borderColor = r.color.border;
+      el.style.background = r.color.fill;
+      if(badSet.has(i)) el.classList.add("bad");
+      if(goodSet.has(i)) el.classList.add("good");
+      overlayEl.appendChild(el);
+    }
+    if(previewRectEl) overlayEl.appendChild(previewRectEl);
+  }
+
+  function renderSolution(){
+    solutionEl.innerHTML = "";
+    for(const r of puzzle.rects){
+      const el = document.createElement("div");
+      el.className = "rect solution";
+      el.style.gridRow = `${r.r1+1} / ${r.r2+2}`;
+      el.style.gridColumn = `${r.c1+1} / ${r.c2+2}`;
+      solutionEl.appendChild(el);
+    }
+  }
+
+  function setSolutionVisible(on){
+    showSolution = on;
+    boardEl.classList.toggle("showSolution", on);
+    btnSolution.textContent = on ? "Hide Solution" : "Show Solution";
+    hintText.textContent = on
+      ? "Solution outline shown (drawing disabled)."
+      : "Cover every non-blank cell. Each rectangle must contain exactly one number and match its area.";
+  }
+
+  // ---------- Blanks (5–15%, mix) ----------
+  function randInt(lo, hi){
+    return Math.floor(Math.random() * (hi - lo + 1)) + lo;
+  }
+  function inBounds(r,c){ return r>=0 && c>=0 && r<N && c<N; }
+
+  function generatePlayableMask(){
+    // Start fully playable
+    const playable = make2D(true);
+
+    const total = N*N;
+    const pct = randInt(5, 15) / 100;
+    const targetBlanks = Math.max(1, Math.round(total * pct));
+
+    // We'll place ~60% as chunky blocks, ~40% scattered
+    const blockTarget = Math.round(targetBlanks * 0.60);
+    const scatterTarget = targetBlanks - blockTarget;
+
+    let blanks = 0;
+
+    // Place blocks using random walks / blobs
+    let tries = 0;
+    while(blanks < blockTarget && tries < 2000){
+      tries++;
+      const startR = randInt(0, N-1);
+      const startC = randInt(0, N-1);
+      if(!playable[startR][startC]) continue;
+
+      const blobSize = randInt(3, 9); // small-ish blobs
+      let r = startR, c = startC;
+      for(let k=0; k<blobSize && blanks < blockTarget; k++){
+        if(inBounds(r,c) && playable[r][c]){
+          playable[r][c] = false;
+          blanks++;
+        }
+        const dir = randInt(0,3);
+        if(dir===0) r++;
+        if(dir===1) r--;
+        if(dir===2) c++;
+        if(dir===3) c--;
+        r = Math.max(0, Math.min(N-1, r));
+        c = Math.max(0, Math.min(N-1, c));
+      }
+    }
+
+    // Scatter the rest
+    tries = 0;
+    while(blanks < targetBlanks && tries < 5000){
+      tries++;
+      const r = randInt(0,N-1), c = randInt(0,N-1);
+      if(playable[r][c]){
+        playable[r][c] = false;
+        blanks++;
+      }
+    }
+
+    // Ensure at least some playable cells remain
+    let playableCount = 0;
+    for(let r=0;r<N;r++) for(let c=0;c<N;c++) if(playable[r][c]) playableCount++;
+    if(playableCount < Math.round(total * 0.70)){
+      // Too many blanks due to rounding/placement; retry once by trimming random blanks.
+      let need = Math.round(total * 0.70) - playableCount;
+      for(let t=0; t<20000 && need>0; t++){
+        const r = randInt(0,N-1), c = randInt(0,N-1);
+        if(!playable[r][c]){
+          playable[r][c] = true;
+          need--;
+        }
+      }
+    }
+
+    return playable;
+  }
+
+  // ---------- Puzzle generator (verified, for playable cells only) ----------
+  // Mid-sized bias: avoid huge rectangles; allow variety needed for 15x15.
+  const allowedAreas = [2,3,4,5,6,8,9,10,12,14,15,16,18,20,21,24,25,28,30];
+  const areaWeights = new Map([
+    [2,1.2],[3,1.3],[4,2.8],[5,2.2],[6,3.0],
+    [8,2.7],[9,2.6],[10,2.2],[12,2.6],[14,2.0],[15,2.0],
+    [16,2.4],[18,2.4],[20,2.2],[21,2.0],[24,2.2],
+    [25,1.6],[28,1.5],[30,1.3]
+  ]);
+
+  function weightedShuffle(items, weightFn){
+    return items
+      .map(x => ({x, k: Math.random() ** (1 / Math.max(.001, weightFn(x)))}))
+      .sort((a,b) => b.k - a.k)
+      .map(o => o.x);
+  }
+
+  function findFirstUncovered(playable, occ){
+    for(let r=0;r<N;r++){
+      for(let c=0;c<N;c++){
+        if(playable[r][c] && !occ[r][c]) return {r,c};
+      }
+    }
+    return null;
+  }
+
+  function rectFitsPlayable(playable, occ, r1,c1,r2,c2){
+    for(let r=r1; r<=r2; r++){
+      for(let c=c1; c<=c2; c++){
+        if(!playable[r][c]) return false;
+        if(occ[r][c]) return false;
+      }
+    }
+    return true;
+  }
+
+  function genChoicesAnchored(playable, occ, r, c){
+    const choices = [];
+    for(const area of allowedAreas){
+      const w = areaWeights.get(area) ?? 1;
+      for(let h=1; h<=N; h++){
+        if(area % h !== 0) continue;
+        const wdt = area / h;
+        if(wdt < 1 || wdt > N) continue;
+
+        const r2 = r + h - 1;
+        const c2 = c + wdt - 1;
+        if(r2 >= N || c2 >= N) continue;
+
+        if(!rectFitsPlayable(playable, occ, r, c, r2, c2)) continue;
+
+        const minSide = Math.min(h, wdt);
+        const skinnyPenalty = (minSide === 1) ? 0.55 : 1.0;
+        choices.push({r1:r,c1:c,r2,c2, area, weight:w*skinnyPenalty});
+      }
+    }
+    // Extra: occasionally allow an irregular fill by permitting slightly larger areas if still mid-sized
+    return weightedShuffle(choices, ch => ch.weight);
+  }
+
+  function partitionPlayable(playable){
+    const occ = make2D(false);
+    const rects = [];
+
+    // Greedy with restarts: fast and stable; verified later
+    for(let attempt=0; attempt<900; attempt++){
+      // reset
+      for(let r=0;r<N;r++) for(let c=0;c<N;c++) occ[r][c] = false;
+      rects.length = 0;
+
+      let ok = true;
+      while(true){
+        const p = findFirstUncovered(playable, occ);
+        if(!p) break;
+        const choices = genChoicesAnchored(playable, occ, p.r, p.c);
+        if(choices.length === 0){ ok = false; break; }
+        const ch = choices[0];
+
+        for(let r=ch.r1; r<=ch.r2; r++){
+          for(let c=ch.c1; c<=ch.c2; c++){
+            occ[r][c] = true;
+          }
+        }
+        rects.push({r1:ch.r1,c1:ch.c1,r2:ch.r2,c2:ch.c2, area:ch.area});
+      }
+      if(ok){
+        // quick cover count: all playable should be covered
+        let coveredPlayable = 0, totalPlayable = 0;
+        for(let r=0;r<N;r++){
+          for(let c=0;c<N;c++){
+            if(playable[r][c]){
+              totalPlayable++;
+              if(occ[r][c]) coveredPlayable++;
+            }
+          }
+        }
+        if(coveredPlayable === totalPlayable && totalPlayable > 0){
+          return rects.slice();
+        }
+      }
+    }
+    return null;
+  }
+
+  function verifyPartition(rects, playable){
+    const cover = make2D(0);
+    for(const r of rects){
+      if(r.r1<0||r.c1<0||r.r2>=N||r.c2>=N||r.r1>r.r2||r.c1>r.c2){
+        return {ok:false, reason:"out of bounds"};
+      }
+      const a = rectArea(r.r1,r.c1,r.r2,r.c2);
+      if(a !== r.area) return {ok:false, reason:"area mismatch"};
+
+      for(let rr=r.r1; rr<=r.r2; rr++){
+        for(let cc=r.c1; cc<=r.c2; cc++){
+          if(!playable[rr][cc]) return {ok:false, reason:"rectangle includes blank"};
+          cover[rr][cc]++;
+          if(cover[rr][cc] > 1) return {ok:false, reason:"overlap in solution"};
+        }
+      }
+    }
+    for(let rr=0; rr<N; rr++){
+      for(let cc=0; cc<N; cc++){
+        if(playable[rr][cc]){
+          if(cover[rr][cc] !== 1) return {ok:false, reason:"solution does not cover all playable"};
+        } else {
+          if(cover[rr][cc] !== 0) return {ok:false, reason:"solution covers blank"};
+        }
+      }
+    }
+    return {ok:true, reason:""};
+  }
+
+  function generatePuzzle(){
+    for(let attempt=0; attempt<300; attempt++){
+      const playable = generatePlayableMask();
+      const rects = partitionPlayable(playable);
+      if(!rects) continue;
+
+      const v = verifyPartition(rects, playable);
+      if(!v.ok) continue;
+
+      // Place clues: one per rectangle, number = area
+      const clues = make2D(null);
+      for(const r of rects){
+        const cells = rectCells(r.r1,r.c1,r.r2,r.c2);
+        const pick = cells[Math.floor(Math.random()*cells.length)];
+        clues[pick[0]][pick[1]] = r.area;
+      }
+
+      // Verify clue placement: exactly 1 clue per rect and clue == area; and no clue on blank
+      let good = true;
+      for(const r of rects){
+        let cc = 0, val = null;
+        for(let rr=r.r1; rr<=r.r2; rr++){
+          for(let c=r.c1; c<=r.c2; c++){
+            const v = clues[rr][c];
+            if(v != null){ cc++; val = v; }
+          }
+        }
+        if(cc !== 1 || val !== r.area){ good = false; break; }
+      }
+      if(!good) continue;
+      for(let rr=0; rr<N; rr++){
+        for(let cc=0; cc<N; cc++){
+          if(!playable[rr][cc] && clues[rr][cc] != null){ good = false; break; }
+        }
+        if(!good) break;
+      }
+      if(!good) continue;
+
+      return { rects, clues, playable };
+    }
+
+    // Hard fallback: no blanks and simple rows (guaranteed valid)
+    const playable = make2D(true);
+    const rects = [];
+    for(let r=0;r<N;r++){
+      rects.push({r1:r,c1:0,r2:r,c2:N-1, area:N});
+    }
+    const clues = make2D(null);
+    for(let r=0;r<N;r++){
+      const c = Math.floor(Math.random()*N);
+      clues[r][c] = N;
+    }
+    return { rects, clues, playable };
+  }
+
+  // ---------- User rectangles + constraints ----------
+  function overlapWithUser(r1,c1,r2,c2){
+    for(let r=r1; r<=r2; r++){
+      for(let c=c1; c<=c2; c++){
+        if(userOcc[r][c]) return true;
+      }
+    }
+    return false;
+  }
+
+  function markOcc(r1,c1,r2,c2, val){
+    for(let r=r1; r<=r2; r++){
+      for(let c=c1; c<=c2; c++){
+        userOcc[r][c] = val;
+      }
+    }
+  }
+
+  function findUserRectIndexAtCell(r, c){
+    for(let i=0;i<userRects.length;i++){
+      const rr = userRects[i];
+      if(r >= rr.r1 && r <= rr.r2 && c >= rr.c1 && c <= rr.c2) return i;
+    }
+    return -1;
+  }
+
+  function removeUserRectAtIndex(i){
+    if(i < 0 || i >= userRects.length) return;
+    userRects.splice(i, 1);
+    userOcc = make2D(false);
+    for(const r of userRects) markOcc(r.r1, r.c1, r.r2, r.c2, true);
+    renderUserRects();
+    isSolvedAndHighlight();
+  }
+
+  function rectIsPlayableOnly(r1,c1,r2,c2){
+    for(let r=r1; r<=r2; r++){
+      for(let c=c1; c<=c2; c++){
+        if(!puzzle.playable[r][c]) return false;
+      }
+    }
+    return true;
+  }
+
+  function rectIsValidForPuzzle(r1,c1,r2,c2){
+    // Must not include blanks
+    if(!rectIsPlayableOnly(r1,c1,r2,c2)){
+      return {ok:false, reason:"Rectangle includes blank cells."};
+    }
+    // Must contain exactly one clue and match its area
+    const area = rectArea(r1,c1,r2,c2);
+    let clueCount = 0;
+    let clueVal = null;
+    for(let r=r1; r<=r2; r++){
+      for(let c=c1; c<=c2; c++){
+        const v = puzzle.clues[r][c];
+        if(v != null){
+          clueCount++;
+          clueVal = v;
+          if(clueCount > 1) return {ok:false, reason:"Rectangle must contain exactly one number."};
+        }
+      }
+    }
+    if(clueCount !== 1) return {ok:false, reason:"Rectangle must contain exactly one number."};
+    if(area !== clueVal) return {ok:false, reason:`Area must be ${clueVal} (you drew ${area}).`};
+    return {ok:true, reason:""};
+  }
+
+  // ---------- Auto-solve check ----------
+  function isSolvedAndHighlight(){
+    const bad = new Set();
+    const good = new Set();
+
+    let uncovered = 0;
+    for(let r=0;r<N;r++){
+      for(let c=0;c<N;c++){
+        if(puzzle.playable[r][c] && !userOcc[r][c]) uncovered++;
+      }
+    }
+
+    const clueCountCovered = make2D(0);
+
+    for(let i=0; i<userRects.length; i++){
+      const ur = userRects[i];
+      const cells = rectCells(ur.r1,ur.c1,ur.r2,ur.c2);
+      const clueCells = [];
+      for(const [r,c] of cells){
+        if(puzzle.clues[r][c] != null) clueCells.push([r,c]);
+      }
+      const area = rectArea(ur.r1,ur.c1,ur.r2,ur.c2);
+
+      let ok = true;
+      if(!rectIsPlayableOnly(ur.r1,ur.c1,ur.r2,ur.c2)) ok = false;
+      if(clueCells.length !== 1){
+        ok = false;
+      } else {
+        const [cr, cc] = clueCells[0];
+        const target = puzzle.clues[cr][cc];
+        if(area !== target) ok = false;
+        clueCountCovered[cr][cc]++;
+      }
+
+      if(ok) good.add(i);
+      else bad.add(i);
+    }
+
+    // Any clue not covered exactly once is an issue
+    let clueIssues = 0;
+    for(let r=0;r<N;r++){
+      for(let c=0;c<N;c++){
+        if(puzzle.clues[r][c] != null){
+          if(clueCountCovered[r][c] !== 1) clueIssues++;
+        }
+      }
+    }
+
+    const solved = (uncovered === 0) && (bad.size === 0) && (clueIssues === 0);
+    renderUserRects(bad, solved ? good : new Set());
+
+    if(solved){
+      setMessage("good", "Solved!", "You’ve correctly covered every non-blank cell.");
+    }
+    return solved;
+  }
+
+  // ---------- Colors ----------
+  const palette = [
+    {fill:"rgba(37,99,235,.10)", border:"rgba(37,99,235,.55)"},
+    {fill:"rgba(5,150,105,.10)", border:"rgba(5,150,105,.55)"},
+    {fill:"rgba(217,119,6,.10)", border:"rgba(217,119,6,.55)"},
+    {fill:"rgba(168,85,247,.10)", border:"rgba(168,85,247,.55)"},
+    {fill:"rgba(14,165,233,.10)", border:"rgba(14,165,233,.55)"},
+    {fill:"rgba(244,63,94,.08)", border:"rgba(244,63,94,.50)"},
+  ];
+  let paletteIx = 0;
+  function nextColor(){
+    const c = palette[paletteIx % palette.length];
+    paletteIx++;
+    return c;
+  }
+
+  // ---------- Interaction: click-drag rectangles ----------
+  function getCellFromPoint(x, y){
+    const el = document.elementFromPoint(x, y);
+    if(!el) return null;
+    const cell = el.closest?.(".cell");
+    if(!cell) return null;
+    if(cell.classList.contains("blank")) return null; // cannot start/end on blanks
+    const r = Number(cell.dataset.r);
+    const c = Number(cell.dataset.c);
+    if(Number.isFinite(r) && Number.isFinite(c)) return {r,c, el: cell};
+    return null;
+  }
+
+  function ensurePreview(){
+    if(!previewRectEl){
+      previewRectEl = document.createElement("div");
+      previewRectEl.className = "rect preview";
+    }
+  }
+
+  function updatePreview(r1,c1,r2,c2, conflict=false){
+    ensurePreview();
+    previewRectEl.style.gridRow = `${r1+1} / ${r2+2}`;
+    previewRectEl.style.gridColumn = `${c1+1} / ${c2+2}`;
+    previewRectEl.classList.toggle("conflict", conflict);
+    if(!overlayEl.contains(previewRectEl)){
+      overlayEl.appendChild(previewRectEl);
+    }
+  }
+
+  function clearPreview(){
+    if(previewRectEl && overlayEl.contains(previewRectEl)){
+      overlayEl.removeChild(previewRectEl);
+    }
+    previewRectEl = null;
+  }
+
+  function pointerDown(e){
+    if(showSolution) return;
+    const info = getCellFromPoint(e.clientX, e.clientY);
+    if(!info) return;
+
+    // Click-to-delete if inside existing rect
+    const hitIx = findUserRectIndexAtCell(info.r, info.c);
+    if(hitIx !== -1){
+      clearMessage();
+      removeUserRectAtIndex(hitIx);
+      e.preventDefault();
+      return;
+    }
+
+    clearMessage();
+    isDragging = true;
+    dragStart = {r: info.r, c: info.c};
+    try { gridEl.setPointerCapture(e.pointerId); } catch {}
+    updatePreview(info.r, info.c, info.r, info.c, false);
+    e.preventDefault();
+  }
+
+  function pointerMove(e){
+    if(!isDragging || !dragStart) return;
+    const info = getCellFromPoint(e.clientX, e.clientY);
+    if(!info) return;
+
+    const r1 = Math.min(dragStart.r, info.r);
+    const c1 = Math.min(dragStart.c, info.c);
+    const r2 = Math.max(dragStart.r, info.r);
+    const c2 = Math.max(dragStart.c, info.c);
+
+    // Show conflict if includes blank or overlaps
+    const includesBlank = !rectIsPlayableOnly(r1,c1,r2,c2);
+    const overlap = overlapWithUser(r1,c1,r2,c2);
+    updatePreview(r1,c1,r2,c2, includesBlank || overlap);
+    e.preventDefault();
+  }
+
+  function pointerUp(e){
+    if(!isDragging || !dragStart) return;
+    isDragging = false;
+    try { gridEl.releasePointerCapture(e.pointerId); } catch {}
+
+    const info = getCellFromPoint(e.clientX, e.clientY);
+    if(!info){ dragStart = null; clearPreview(); return; }
+
+    const r1 = Math.min(dragStart.r, info.r);
+    const c1 = Math.min(dragStart.c, info.c);
+    const r2 = Math.max(dragStart.r, info.r);
+    const c2 = Math.max(dragStart.c, info.c);
+
+    // Block if includes blanks
+    if(!rectIsPlayableOnly(r1,c1,r2,c2)){
+      updatePreview(r1,c1,r2,c2, true);
+      setMessage("bad", "Not allowed", "That rectangle includes blank cells.");
+      setTimeout(() => { clearPreview(); }, 220);
+      dragStart = null;
+      return;
+    }
+
+    // Block overlaps
+    if(overlapWithUser(r1,c1,r2,c2)){
+      updatePreview(r1,c1,r2,c2, true);
+      setMessage("bad", "Overlap blocked", "That rectangle overlaps an existing one.");
+      setTimeout(() => { clearPreview(); }, 220);
+      dragStart = null;
+      return;
+    }
+
+    // Enforce puzzle-valid rectangles
+    const v = rectIsValidForPuzzle(r1,c1,r2,c2);
+    if(!v.ok){
+      updatePreview(r1,c1,r2,c2, true);
+      setMessage("bad", "Not allowed", v.reason);
+      setTimeout(() => { clearPreview(); }, 240);
+      dragStart = null;
+      return;
+    }
+
+    const color = nextColor();
+    userRects.push({r1,c1,r2,c2, color});
+    markOcc(r1,c1,r2,c2, true);
+    dragStart = null;
+    clearPreview();
+    renderUserRects();
+    isSolvedAndHighlight();
+  }
+
+  // ---------- Manual validation (Check button) ----------
+  function validate(){
+    if(isSolvedAndHighlight()) return;
+
+    // Provide a short summary if not solved
+    let uncovered = 0;
+    for(let r=0;r<N;r++){
+      for(let c=0;c<N;c++){
+        if(puzzle.playable[r][c] && !userOcc[r][c]) uncovered++;
+      }
+    }
+    setMessage("bad", "Not solved yet", `${uncovered} playable cell${uncovered===1?"":"s"} still uncovered (and/or incorrect rectangles highlighted).`);
+  }
+
+  // ---------- Buttons ----------
+  function newPuzzle(){
+    puzzle = generatePuzzle();
+    userRects = [];
+    userOcc = make2D(false);
+    paletteIx = 0;
+    clearMessage();
+    setSolutionVisible(false);
+
+    renderPlayableAndClues();
+    renderUserRects();
+    renderSolution();
+  }
+
+  function undo(){
+    if(userRects.length === 0) return;
+    clearMessage();
+    userRects.pop();
+    userOcc = make2D(false);
+    for(const r of userRects) markOcc(r.r1,r.c1,r.r2,r.c2, true);
+    renderUserRects();
+    isSolvedAndHighlight();
+  }
+
+  function clearAll(){
+    clearMessage();
+    userRects = [];
+    userOcc = make2D(false);
+    renderUserRects();
+    isSolvedAndHighlight();
+  }
+
+  function toggleSolution(){
+    setSolutionVisible(!showSolution);
+    clearMessage();
+  }
+
+  function wire(){
+    gridEl.addEventListener("pointerdown", pointerDown);
+    gridEl.addEventListener("pointermove", pointerMove);
+    gridEl.addEventListener("pointerup", pointerUp, {passive:false});
+    gridEl.addEventListener("pointercancel", pointerUp, {passive:false});
+
+    btnNew.addEventListener("click", newPuzzle);
+    btnUndo.addEventListener("click", undo);
+    btnClear.addEventListener("click", clearAll);
+    btnSolution.addEventListener("click", toggleSolution);
+    btnCheck.addEventListener("click", validate);
+
+    window.addEventListener("keydown", (e) => {
+      if(e.key === "Escape"){
+        if(isDragging){
+          isDragging = false;
+          dragStart = null;
+          clearPreview();
+        }
+      } else if(e.key.toLowerCase() === "z" && (e.ctrlKey || e.metaKey)){
+        e.preventDefault();
+        undo();
+      }
+    });
+  }
+
+  // Init
+  buildGrid();
+  setGridTemplates();
+  updateCellSize();
+  wire();
+  newPuzzle();
+})();
+</script>
+</body>
+</html>
