@@ -148,25 +148,7 @@
   .board{
     width: calc(var(--cell) * var(--N));
     height: calc(var(--cell) * var(--N));
-    background:
-      /* base */
-      linear-gradient(#ffffff, #ffffff),
-      /* vertical grid lines */
-      repeating-linear-gradient(
-        to right,
-        transparent 0,
-        transparent calc(var(--cell) - 1px),
-        var(--line2) calc(var(--cell) - 1px),
-        var(--line2) var(--cell)
-      ),
-      /* horizontal grid lines */
-      repeating-linear-gradient(
-        to bottom,
-        transparent 0,
-        transparent calc(var(--cell) - 1px),
-        var(--line2) calc(var(--cell) - 1px),
-        var(--line2) var(--cell)
-      );
+    background:#ffffff;
     background-blend-mode: normal;
     border:1px solid var(--line);
     border-radius: 12px;
@@ -186,6 +168,8 @@
     user-select:none;
     position:relative;
     background: transparent;
+    border-right:1px solid var(--line2);
+    border-bottom:1px solid var(--line2);
   }
 
   .cell.blank{
@@ -269,14 +253,26 @@
   .side ul{ margin:0; padding-left:18px; }
 
   .msg{
-    display:none;
+    /* Always reserve space to avoid screen "jerk" when messages appear */
+    display:block;
+    min-height:56px;
     border:1px solid var(--line2);
     background:#f9fafb;
     border-radius:12px;
     padding:10px 12px;
     color:var(--muted);
     font-size:13px;
+    opacity:0;
+    transform: translateY(-2px);
+    pointer-events:none;
+    transition: opacity .14s ease, transform .14s ease;
   }
+  .msg.visible{
+    opacity:1;
+    transform: translateY(0);
+    pointer-events:auto;
+  }
+  .msg strong{ color:var(--text); }
   .msg strong{ color:var(--text); }
 
   .footer{
@@ -285,6 +281,12 @@
     text-align:center;
     padding:4px 6px;
   }
+
+  /* Grid guide lines (every 5 cells) */
+  .cell.thickC{ border-right:2px solid var(--line); }
+  .cell.thickR{ border-bottom:2px solid var(--line); }
+  .cell.lastC{ border-right:none; }
+  .cell.lastR{ border-bottom:none; }
 </style>
 </head>
 <body>
@@ -419,7 +421,7 @@
   let previewRectEl = null;
 
   function setMessage(type, title, body){
-    msgEl.style.display = "block";
+    msgEl.classList.add("visible");
     msgEl.innerHTML = `<strong>${escapeHtml(title)}</strong><div>${escapeHtml(body)}</div>`;
     statusDot.classList.remove("good","bad");
     if(type === "good") statusDot.classList.add("good");
@@ -427,7 +429,7 @@
   }
 
   function clearMessage(){
-    msgEl.style.display = "none";
+    msgEl.classList.remove("visible");
     msgEl.innerHTML = "";
     statusDot.classList.remove("good","bad");
   }
@@ -453,6 +455,12 @@
       for(let c=0;c<N;c++){
         const cell = document.createElement("div");
         cell.className = "cell";
+        // guide lines every 5 cells (but not on the outer edge)
+        if((c+1) % 5 === 0 && c !== N-1) cell.classList.add("thickC");
+        if((r+1) % 5 === 0 && r !== N-1) cell.classList.add("thickR");
+        if(c === N-1) cell.classList.add("lastC");
+        if(r === N-1) cell.classList.add("lastR");
+
         cell.dataset.r = String(r);
         cell.dataset.c = String(c);
         cell.innerHTML = `<div class="num"></div>`;

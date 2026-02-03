@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>4 Dice Roller</title>
+  <style>
+    :root{
+      --bg1:#0b0f17;
+      --bg2:#10162a;
+      --panel: rgba(255,255,255,.06);
+      --line: rgba(255,255,255,.14);
+      --text: #eef2ff;
+      --muted:#b9c2dd;
+
+      /* Readability / contrast */
+      --die:#ffffff;
+      --dieEdge:#d7deea;
+      --dieInk:#0b0f17;
+
+      --focus:#7aa7ff;
+      --shadow: 0 18px 36px rgba(0,0,0,.42);
+      --radius: 18px;
+    }
+
+    html, body { height: 100%; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background:
+        radial-gradient(1200px 820px at 20% 12%, rgba(122,167,255,.25), transparent 55%),
+        radial-gradient(900px 650px at 85% 28%, rgba(167,139,250,.22), transparent 60%),
+        linear-gradient(180deg, var(--bg2), var(--bg1));
+      color: var(--text);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+    }
+
+    .app{
+      width: min(1100px, 100%);
+      border-radius: 24px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    header{
+      padding: 18px 18px 12px;
+      border-bottom: 1px solid var(--line);
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      align-items:baseline;
+    }
+    header h1{
+      margin:0;
+      font-size: 18px;
+      font-weight: 850;
+      letter-spacing:.2px;
+    }
+    header .sub{
+      margin:0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .content{ padding: 16px 18px 18px; display:flex; flex-direction:column; gap: 14px; }
+
+    .diceRow{
+      display:grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .slot{
+      background: rgba(16,24,38,.62);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+      min-height: 208px;
+    }
+
+    .slotTop{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+    }
+    .slotLabel{
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      user-select:none;
+      white-space:nowrap;
+    }
+
+    /* Easier-to-read dropdowns */
+    select{
+      width: 190px;
+      max-width: 100%;
+      background: rgba(255,255,255,.92);
+      color: #0b0f17;
+      border: 2px solid rgba(255,255,255,.40);
+      border-radius: 14px;
+      padding: 10px 12px;
+      font-size: 14px;
+      font-weight: 700;
+      outline: none;
+      box-shadow: 0 8px 18px rgba(0,0,0,.20);
+    }
+    select:focus{
+      border-color: rgba(122,167,255,.95);
+      box-shadow: 0 0 0 4px rgba(122,167,255,.22), 0 10px 18px rgba(0,0,0,.22);
+    }
+
+    .dieWrap{ flex:1; display:flex; align-items:center; justify-content:center; }
+
+    .dieBtn{
+      appearance:none;
+      border:none;
+      background:transparent;
+      cursor:pointer;
+      padding:0;
+      width: 126px;
+      height: 126px;
+      border-radius: 24px;
+      outline:none;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .dieBtn:focus-visible{
+      box-shadow: 0 0 0 4px rgba(122,167,255,.22);
+    }
+
+    /* White dice / black numbers */
+    .dieFace{
+      width:100%;
+      height:100%;
+      border-radius: 24px;
+      background: linear-gradient(180deg, var(--die), #f3f6fb);
+      border: 2px solid var(--dieEdge);
+      box-shadow: 0 16px 24px rgba(0,0,0,.35);
+      position: relative;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+      transform: translateZ(0);
+    }
+    .dieFace::before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background:
+        radial-gradient(140px 110px at 25% 18%, rgba(255,255,255,.90), transparent 58%),
+        radial-gradient(120px 100px at 80% 80%, rgba(122,167,255,.18), transparent 60%);
+      pointer-events:none;
+      mix-blend-mode: normal;
+    }
+    .dieFace::after{
+      content:"";
+      position:absolute;
+      inset: 10px;
+      border-radius: 18px;
+      box-shadow: inset 0 0 0 1px rgba(11,15,23,.08);
+      pointer-events:none;
+    }
+
+    .faceValue{
+      font-weight: 950;
+      font-size: 54px;
+      line-height: 1;
+      letter-spacing: -0.02em;
+      color: var(--dieInk);
+      text-shadow: 0 10px 18px rgba(0,0,0,.08);
+      transform: translateZ(0);
+    }
+    .opValue{ font-size: 66px; letter-spacing:.02em; }
+
+    .hint{
+      font-size: 12px;
+      color: var(--muted);
+      text-align:center;
+      user-select:none;
+      margin-top: 4px;
+    }
+
+    /* More exciting roll animation (longer, with tumble + bounce) */
+    .rolling .dieFace{
+      animation: tumble 0.95s cubic-bezier(.2,.8,.2,1) both;
+    }
+    .rolling .faceValue{
+      animation: blurPop 0.95s cubic-bezier(.2,.8,.2,1) both;
+    }
+
+    @keyframes tumble{
+      0%   { transform: translate(0,0) rotate(0deg) scale(1); }
+      18%  { transform: translate(-6px, 4px) rotate(-9deg) scale(1.05); }
+      35%  { transform: translate(7px, -5px) rotate(10deg) scale(1.07); }
+      52%  { transform: translate(-6px, 6px) rotate(-12deg) scale(1.06); }
+      70%  { transform: translate(5px, -4px) rotate(8deg) scale(1.03); }
+      84%  { transform: translate(-2px, 2px) rotate(-3deg) scale(1.01); }
+      100% { transform: translate(0,0) rotate(0deg) scale(1); }
+    }
+
+    @keyframes blurPop{
+      0%   { filter: blur(0px); opacity:1; transform: scale(1); }
+      20%  { filter: blur(2.2px); opacity:.78; transform: scale(1.06); }
+      45%  { filter: blur(1.8px); opacity:.84; transform: scale(1.05); }
+      70%  { filter: blur(0.9px); opacity:.92; transform: scale(1.02); }
+      100% { filter: blur(0px); opacity:1; transform: scale(1); }
+    }
+
+    .note{
+      background: rgba(16,24,38,.50);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      color: var(--text);
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.14);
+      padding: 2px 6px;
+      border-radius: 8px;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 780px){
+      .diceRow{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      select{ width: 100%; }
+    }
+    @media (max-width: 420px){
+      .dieBtn{ width: 112px; height: 112px; }
+      .faceValue{ font-size: 50px; }
+      .opValue{ font-size: 62px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <h1>4 Dice Roller</h1>
+        <p class="sub">Choose a die type for each slot, then click a die to roll it.</p>
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="diceRow" id="diceRow"></div>
+
+      <div class="note">
+        <div>
+          <span class="kbd">d4</span> numeric is 1–4 •
+          <span class="kbd">d10</span> is 0–9 •
+          <span class="kbd">Op d4</span> is + − × ÷
+        </div>
+        <div>Click a die to roll only that die.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DICE_TYPES = [
+      { id: "op4",  label: "Op d4 (+ − × ÷)", kind: "op", sides: 4 },
+      { id: "d4",   label: "d4 (1–4)", kind: "num", min: 1, max: 4 },
+      { id: "d6",   label: "d6 (1–6)", kind: "num", min: 1, max: 6 },
+      { id: "d8",   label: "d8 (1–8)", kind: "num", min: 1, max: 8 },
+      { id: "d10",  label: "d10 (0–9)", kind: "num", min: 0, max: 9 },
+      { id: "d12",  label: "d12 (1–12)", kind: "num", min: 1, max: 12 },
+      { id: "d20",  label: "d20 (1–20)", kind: "num", min: 1, max: 20 },
+    ];
+
+    const OPS = ["+", "−", "×", "÷"];
+
+    // 4 slots
+    const state = Array.from({length: 4}, () => ({
+      typeId: "d6",
+      value: 1,
+      rolling: false
+    }));
+
+    // Helpful defaults
+    state[0].typeId = "op4";  state[0].value = "+";
+    state[1].typeId = "d6";   state[1].value = 1;
+    state[2].typeId = "d10";  state[2].value = 0;
+    state[3].typeId = "d20";  state[3].value = 1;
+
+    const diceRow = document.getElementById("diceRow");
+
+    function getType(typeId){
+      return DICE_TYPES.find(t => t.id === typeId) || DICE_TYPES[1];
+    }
+    function randInt(min, max){
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+    function rollValueForType(type){
+      if (type.kind === "op") return OPS[randInt(0, OPS.length - 1)];
+      return randInt(type.min, type.max);
+    }
+
+    function render(){
+      diceRow.innerHTML = "";
+      state.forEach((slot, idx) => {
+        const type = getType(slot.typeId);
+
+        const card = document.createElement("div");
+        card.className = "slot";
+
+        const top = document.createElement("div");
+        top.className = "slotTop";
+
+        const label = document.createElement("div");
+        label.className = "slotLabel";
+        label.textContent = `Slot ${idx + 1}`;
+
+        const sel = document.createElement("select");
+        sel.setAttribute("aria-label", `Select die type for slot ${idx+1}`);
+        for (const t of DICE_TYPES){
+          const opt = document.createElement("option");
+          opt.value = t.id;
+          opt.textContent = t.label;
+          if (t.id === slot.typeId) opt.selected = true;
+          sel.appendChild(opt);
+        }
+
+        sel.addEventListener("change", () => {
+          slot.typeId = sel.value;
+          const newType = getType(slot.typeId);
+          slot.value = rollValueForType(newType);
+          render();
+        });
+
+        top.appendChild(label);
+        top.appendChild(sel);
+
+        const wrap = document.createElement("div");
+        wrap.className = "dieWrap";
+
+        const btn = document.createElement("button");
+        btn.className = "dieBtn" + (slot.rolling ? " rolling" : "");
+        btn.type = "button";
+        btn.title = "Click to roll";
+        btn.setAttribute("aria-label", `Roll slot ${idx+1}`);
+
+        const face = document.createElement("div");
+        face.className = "dieFace";
+
+        const val = document.createElement("div");
+        val.className = "faceValue" + (type.kind === "op" ? " opValue" : "");
+        val.textContent = String(slot.value);
+
+        face.appendChild(val);
+        btn.appendChild(face);
+        wrap.appendChild(btn);
+
+        const hint = document.createElement("div");
+        hint.className = "hint";
+        hint.textContent = type.kind === "op" ? "Operation die" : "Numeric die";
+
+        btn.addEventListener("click", () => rollDie(idx));
+
+        card.appendChild(top);
+        card.appendChild(wrap);
+        card.appendChild(hint);
+
+        diceRow.appendChild(card);
+      });
+    }
+
+    function rollDie(idx){
+      const slot = state[idx];
+      if (slot.rolling) return;
+
+      const type = getType(slot.typeId);
+      slot.rolling = true;
+      render();
+
+      const duration = 950;   // longer animation
+      const tickEvery = 70;   // flip value while rolling
+      const start = performance.now();
+      let lastTick = 0;
+
+      function step(now){
+        const elapsed = now - start;
+        if (now - lastTick >= tickEvery){
+          lastTick = now;
+          slot.value = rollValueForType(type);
+
+          // Update only the face value quickly
+          const card = diceRow.children[idx];
+          const valEl = card && card.querySelector(".faceValue");
+          if (valEl) valEl.textContent = String(slot.value);
+        }
+
+        if (elapsed < duration){
+          requestAnimationFrame(step);
+        } else {
+          // Final settle
+          slot.value = rollValueForType(type);
+          slot.rolling = false;
+          render();
+        }
+      }
+      requestAnimationFrame(step);
+    }
+
+    render();
+  </script>
+</body>
+</html>
