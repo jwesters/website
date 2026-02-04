@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Knight's Tour (Blocked Squares)</title>
   <style>
     :root{
@@ -37,6 +37,7 @@
       display:flex;
       justify-content:center;
       align-items:stretch;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     }
 
     .wrap{
@@ -45,8 +46,14 @@
       display:grid;
       grid-template-columns: 360px 1fr;
       gap:16px;
+      align-content:start;
     }
-    @media (max-width: 980px){ .wrap{grid-template-columns:1fr;} }
+    @media (max-width: 980px){
+      .wrap{grid-template-columns:1fr;}
+    }
+    @media (max-width: 420px){
+      .wrap{padding:12px 6px 18px; gap:12px;}
+    }
 
     .card{
       background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
@@ -64,7 +71,18 @@
     .card .bd{ padding:14px; }
 
     .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
-    .row.nowrap{ flex-wrap: nowrap; }
+
+    /* Keep main controls on one line; allow horizontal scroll on small screens */
+    .row.controls{
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 2px;
+    }
+    .row.controls::-webkit-scrollbar{ height: 6px; }
+    .row.controls::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.14); border-radius: 999px; }
+    .row.controls::-webkit-scrollbar-track{ background: transparent; }
+
     .btn{
       cursor:pointer;
       border:1px solid rgba(255,255,255,0.14);
@@ -78,6 +96,7 @@
       user-select:none;
       white-space:nowrap;
       flex: 0 0 auto;
+      touch-action: manipulation;
     }
     .btn:hover{ background: rgba(255,255,255,0.09); border-color: rgba(255,255,255,0.22); }
     .btn:active{ transform: translateY(1px); }
@@ -103,6 +122,9 @@
       gap:10px;
       margin-top:10px;
     }
+    @media (max-width: 420px){
+      .kpi{ grid-template-columns: 1fr; }
+    }
     .pill{
       background: rgba(255,255,255,0.05);
       border:1px solid rgba(255,255,255,0.08);
@@ -118,6 +140,9 @@
       grid-template-columns: 1fr 1fr;
       gap:8px;
       margin-top:12px;
+    }
+    @media (max-width: 420px){
+      .legend{ grid-template-columns: 1fr; }
     }
     .leg{ display:flex; align-items:center; gap:8px; color:var(--muted); font-size:12px; }
     .sw{ width:16px; height:16px; border-radius:4px; border:1px solid rgba(255,255,255,0.12); }
@@ -175,7 +200,7 @@
     .badge.danger .dot{ background: rgba(251,113,133,0.92); box-shadow: 0 0 0 3px rgba(251,113,133,0.14); }
 
     .boardOuter{
-      width: min(76vmin, 680px);
+      width: min(92vw, 680px);
       margin: 0 auto;
       border-radius: 18px;
       background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0.22));
@@ -183,6 +208,10 @@
       padding: 10px;
       box-shadow: 0 18px 50px rgba(0,0,0,0.45);
     }
+    @media (max-width: 420px){
+      .boardOuter{ padding: 8px; border-radius: 16px; }
+    }
+
     .board{
       width: 100%;
       aspect-ratio: 1 / 1;
@@ -205,6 +234,7 @@
       font-variant-numeric: tabular-nums;
       letter-spacing:0.2px;
       transition: filter .12s ease, transform .05s ease;
+      touch-action: manipulation;
     }
     .cell.light{ background: var(--light); }
     .cell.dark{ background: var(--dark); }
@@ -219,7 +249,10 @@
       font-weight:900;
       color: rgba(0,0,0,0.90);
       pointer-events:none;
-      text-shadow: none;
+      text-shadow:none;
+    }
+    @media (max-width: 420px){
+      .coord{ top:4px; left:4px; font-size:10px; }
     }
 
     .num{
@@ -243,10 +276,13 @@
     .knight{
       position:absolute;
       bottom:6px; right:6px;
-      font-size: clamp(22px, 3.5vmin, 34px);
+      font-size: clamp(22px, 3.8vmin, 36px);
       line-height: 1;
       pointer-events:none;
       filter: drop-shadow(0 2px 2px rgba(0,0,0,0.35));
+    }
+    @media (max-width: 420px){
+      .knight{ bottom:4px; right:4px; }
     }
 
     .cell.blocked::after,
@@ -316,6 +352,7 @@
       align-items:center;
       justify-content:space-between;
       gap:10px;
+      flex-wrap:wrap;
     }
     .modalCard .mh h2{ margin:0; font-size:16px; }
     .modalCard .mb{ padding:14px; color:var(--muted); font-size:13px; line-height:1.45; }
@@ -327,6 +364,11 @@
       justify-content:flex-end;
       flex-wrap:wrap;
     }
+
+    /* Respect reduced motion */
+    @media (prefers-reduced-motion: reduce){
+      *{ transition:none !important; scroll-behavior:auto !important; }
+    }
   </style>
 </head>
 <body>
@@ -334,7 +376,7 @@
     <section class="card">
       <div class="hd"><h1>Knight’s Tour — Blocked Squares</h1></div>
       <div class="bd">
-        <div class="row nowrap">
+        <div class="row controls">
           <button class="btn primary" id="btnNew">New board</button>
           <button class="btn" id="btnRestart">Restart</button>
           <button class="btn" id="btnLoadSeed">Load seed</button>
@@ -361,8 +403,7 @@
           Legal moves are highlighted. Squares can only be used once.
           <br><br>
           <b>Game Over:</b> Clicking a blocked square ends the game immediately.
-          <br><br>
-                  </div>
+        </div>
 
         <div class="msg" id="msgBox"><small>Tip:</small> Click a starting square.</div>
 
@@ -370,6 +411,7 @@
           <button class="btn" id="btnCopySeed">Copy seed</button>
           <input class="inp" id="seedUrlBox" readonly style="flex:1 1 auto; min-width: 220px; width:auto;" />
         </div>
+
         <div class="footerNote">High scores stored locally in your browser (per seed).</div>
       </div>
     </section>
@@ -527,6 +569,12 @@
     return Math.floor(rng() * (max - min + 1)) + min;
   }
 
+  function updateSeedUrlBox(){
+    const url = new URL(window.location.href);
+    if (seed) url.searchParams.set('seed', seed);
+    seedUrlBox.value = url.toString();
+  }
+
   function openSeedModal(prefill=''){
     seedModalInput.value = prefill;
     seedModal.classList.add('show');
@@ -542,6 +590,17 @@
   seedModalInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') seedOpen.click();
     if (e.key === 'Escape') closeSeedModal();
+  });
+
+  btnCopySeed.addEventListener('click', async () => {
+    try{
+      await navigator.clipboard.writeText(seedUrlBox.value);
+      setMsg(`<small>Copied:</small> Seed link copied to clipboard.`);
+    }catch{
+      seedUrlBox.focus();
+      seedUrlBox.select();
+      setMsg(`<small>Copy:</small> Press Ctrl+C to copy the selected URL.`);
+    }
   });
 
   function buildBoardUI(){
@@ -825,13 +884,6 @@
     setTimeout(computeAndDisplayMax, 0);
   }
 
-  function updateSeedUrlBox(){
-    const url = new URL(window.location.href);
-    // ensure seed param matches current seed
-    if (seed) url.searchParams.set('seed', seed);
-    seedUrlBox.value = url.toString();
-  }
-
   function applySeedToUrl(s){
     const url = new URL(window.location.href);
     url.searchParams.set('seed', s);
@@ -845,7 +897,7 @@
     setSeed(s);
   }
 
-  // Modal
+  // Game Over modal
   function closeGameOver(){ modal.classList.remove('show'); }
   mClose.addEventListener('click', closeGameOver);
   modal.addEventListener('click', (e) => { if (e.target === modal) closeGameOver(); });
@@ -858,17 +910,6 @@
     const url = new URL(window.location.href);
     const s = (url.searchParams.get('seed') || '').trim();
     openSeedModal(s);
-  });
-
-  btnCopySeed.addEventListener('click', async () => {
-    try{
-      await navigator.clipboard.writeText(seedUrlBox.value);
-      setMsg(`<small>Copied:</small> Seed link copied to clipboard.`);
-    }catch{
-      seedUrlBox.focus();
-      seedUrlBox.select();
-      setMsg(`<small>Copy:</small> Press Ctrl+C to copy the selected URL.`);
-    }
   });
 
   seedOpen.addEventListener('click', () => {
