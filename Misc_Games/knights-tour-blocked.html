@@ -1,0 +1,901 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Knight's Tour (Blocked Squares)</title>
+  <style>
+    :root{
+      --bg:#0b0f16;
+      --text:#eef2ff;
+      --muted:#b7c3da;
+
+      /* Traditional board colors */
+      --light:#f0d9b5;
+      --dark:#b58863;
+
+      --shadow: rgba(0,0,0,0.45);
+      --uiBorder: rgba(255,255,255,0.10);
+
+      /* Uniform blocked color */
+      --blockedSolid:#6f0f1e;
+
+      /* Visited tint */
+      --visitedA: rgba(31,111,74,0.72);
+      --visitedB: rgba(24,88,59,0.72);
+
+      --playableGlow: rgba(43,117,255,0.35);
+      --currentGlow: rgba(27,217,106,0.35);
+    }
+
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background: radial-gradient(1200px 700px at 20% 0%, #142444 0%, var(--bg) 55%, #070a10 100%);
+      color:var(--text);
+      display:flex;
+      justify-content:center;
+      align-items:stretch;
+    }
+
+    .wrap{
+      width:min(1100px, 96vw);
+      padding:18px 10px 24px;
+      display:grid;
+      grid-template-columns: 360px 1fr;
+      gap:16px;
+    }
+    @media (max-width: 980px){ .wrap{grid-template-columns:1fr;} }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      border:1px solid var(--uiBorder);
+      border-radius:16px;
+      box-shadow: 0 16px 40px var(--shadow);
+      overflow:hidden;
+    }
+    .card .hd{
+      padding:14px 14px 10px;
+      background: rgba(255,255,255,0.03);
+      border-bottom:1px solid rgba(255,255,255,0.07);
+    }
+    .card .hd h1{ margin:0; font-size:18px; letter-spacing:0.2px; }
+    .card .bd{ padding:14px; }
+
+    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+    .row.nowrap{ flex-wrap: nowrap; }
+    .btn{
+      cursor:pointer;
+      border:1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      font-weight:800;
+      letter-spacing:0.2px;
+      transition: transform .05s ease, background .15s ease, border-color .15s ease;
+      user-select:none;
+      white-space:nowrap;
+      flex: 0 0 auto;
+    }
+    .btn:hover{ background: rgba(255,255,255,0.09); border-color: rgba(255,255,255,0.22); }
+    .btn:active{ transform: translateY(1px); }
+    .btn.primary{
+      background: rgba(43,117,255,0.16);
+      border-color: rgba(43,117,255,0.35);
+    }
+    .inp{
+      background: rgba(0,0,0,0.28);
+      border:1px solid rgba(255,255,255,0.16);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      outline:none;
+      width: 170px;
+      font-weight:800;
+    }
+    .inp::placeholder{ color: rgba(238,242,255,0.50); font-weight:700; }
+
+    .kpi{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+      margin-top:10px;
+    }
+    .pill{
+      background: rgba(255,255,255,0.05);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:14px;
+      padding:10px 10px;
+      min-height:54px;
+    }
+    .pill .label{ font-size:12px; color:var(--muted); margin-bottom:4px; }
+    .pill .value{ font-size:16px; font-weight:900; letter-spacing:0.2px; word-break:break-word; }
+
+    .legend{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:8px;
+      margin-top:12px;
+    }
+    .leg{ display:flex; align-items:center; gap:8px; color:var(--muted); font-size:12px; }
+    .sw{ width:16px; height:16px; border-radius:4px; border:1px solid rgba(255,255,255,0.12); }
+
+    .help{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+      margin-top:10px;
+    }
+
+    .msg{
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius:12px;
+      background: rgba(0,0,0,0.24);
+      border:1px solid rgba(255,255,255,0.10);
+      color: var(--text);
+      font-size:13px;
+      line-height:1.35;
+      min-height: 44px;
+    }
+    .msg small{ color: var(--muted); }
+    .footerNote{ margin-top:10px; color: rgba(238,242,255,0.45); font-size:12px; line-height:1.3; }
+
+    /* Board */
+    .boardWrap{ padding:14px; display:flex; flex-direction:column; gap:10px; }
+    .boardTop{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      color:var(--muted);
+      font-size:13px;
+    }
+    .boardTop b{ color: var(--text); }
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.12);
+      background: rgba(0,0,0,0.22);
+      color: var(--muted);
+      font-size:12px;
+    }
+    .badge .dot{
+      width:10px; height:10px; border-radius:999px;
+      background: rgba(43,117,255,0.92);
+      box-shadow: 0 0 0 3px rgba(43,117,255,0.14);
+    }
+    .badge.good .dot{ background: rgba(27,217,106,0.92); box-shadow: 0 0 0 3px rgba(27,217,106,0.14); }
+    .badge.danger .dot{ background: rgba(251,113,133,0.92); box-shadow: 0 0 0 3px rgba(251,113,133,0.14); }
+
+    .boardOuter{
+      width: min(76vmin, 680px);
+      margin: 0 auto;
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0.22));
+      border: 1px solid rgba(255,255,255,0.10);
+      padding: 10px;
+      box-shadow: 0 18px 50px rgba(0,0,0,0.45);
+    }
+    .board{
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      display:grid;
+      grid-template-columns: repeat(8, 1fr);
+      border-radius: 12px;
+      overflow:hidden;
+      box-shadow: inset 0 0 0 2px rgba(0,0,0,0.25);
+    }
+
+    .cell{
+      position:relative;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      user-select:none;
+      min-width: 0;
+      min-height: 0;
+      font-variant-numeric: tabular-nums;
+      letter-spacing:0.2px;
+      transition: filter .12s ease, transform .05s ease;
+    }
+    .cell.light{ background: var(--light); }
+    .cell.dark{ background: var(--dark); }
+    .cell:hover{ filter: brightness(1.06); }
+    .cell:active{ transform: translateY(1px); }
+
+    /* Coordinates: all same dark black */
+    .coord{
+      position:absolute;
+      top:6px; left:6px;
+      font-size:11px;
+      font-weight:900;
+      color: rgba(0,0,0,0.90);
+      pointer-events:none;
+      text-shadow: none;
+    }
+
+    .num{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight: 950;
+      font-size: clamp(14px, 2.4vmin, 24px);
+      color: rgba(0,0,0,0.70);
+      text-shadow: 0 1px 0 rgba(255,255,255,0.22);
+      pointer-events:none;
+    }
+    .cell.dark .num{
+      color: rgba(255,255,255,0.85);
+      text-shadow: 0 1px 0 rgba(0,0,0,0.35);
+    }
+
+    /* Larger knight piece */
+    .knight{
+      position:absolute;
+      bottom:6px; right:6px;
+      font-size: clamp(22px, 3.5vmin, 34px);
+      line-height: 1;
+      pointer-events:none;
+      filter: drop-shadow(0 2px 2px rgba(0,0,0,0.35));
+    }
+
+    .cell.blocked::after,
+    .cell.visited::after,
+    .cell.playable::after,
+    .cell.current::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+    }
+
+    /* Blocked: uniform solid color */
+    .cell.blocked.light,
+    .cell.blocked.dark{
+      background: var(--blockedSolid) !important;
+    }
+    .cell.blocked::after{
+      box-shadow: inset 0 0 0 4px rgba(0,0,0,0.25);
+    }
+    /* Blocked always wins */
+    .cell.blocked.visited,
+    .cell.blocked.playable,
+    .cell.blocked.current{
+      background: var(--blockedSolid) !important;
+    }
+
+    .cell.visited.light{ background: linear-gradient(0deg, var(--visitedA), var(--visitedA)), var(--light) !important; }
+    .cell.visited.dark{  background: linear-gradient(0deg, var(--visitedB), var(--visitedB)), var(--dark) !important; }
+
+    .cell.playable::after{
+      outline: 3px solid rgba(43,117,255,0.90);
+      outline-offset:-3px;
+      filter: drop-shadow(0 0 10px var(--playableGlow));
+    }
+
+    .cell.current::after{
+      outline: 3px solid rgba(27,217,106,0.95);
+      outline-offset:-3px;
+      filter: drop-shadow(0 0 10px var(--currentGlow));
+    }
+
+    /* Modal */
+    .modal{
+      position:fixed;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+      background: rgba(0,0,0,0.6);
+      z-index:50;
+    }
+    .modal.show{ display:flex; }
+    .modalCard{
+      width:min(560px, 96vw);
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,0.12);
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0.18)), #0c121d;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.55);
+      overflow:hidden;
+    }
+    .modalCard .mh{
+      padding:14px 14px 10px;
+      border-bottom:1px solid rgba(255,255,255,0.10);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .modalCard .mh h2{ margin:0; font-size:16px; }
+    .modalCard .mb{ padding:14px; color:var(--muted); font-size:13px; line-height:1.45; }
+    .modalCard .ma{
+      padding:14px;
+      border-top:1px solid rgba(255,255,255,0.10);
+      display:flex;
+      gap:10px;
+      justify-content:flex-end;
+      flex-wrap:wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="card">
+      <div class="hd"><h1>Knight’s Tour — Blocked Squares</h1></div>
+      <div class="bd">
+        <div class="row nowrap">
+          <button class="btn primary" id="btnNew">New board</button>
+          <button class="btn" id="btnRestart">Restart</button>
+          <button class="btn" id="btnLoadSeed">Load seed</button>
+        </div>
+
+        <div class="kpi">
+          <div class="pill"><div class="label">Seed</div><div class="value" id="seedLabel">—</div></div>
+          <div class="pill"><div class="label">Blocked squares</div><div class="value" id="blockedLabel">—</div></div>
+          <div class="pill"><div class="label">Moves this run</div><div class="value" id="movesLabel">0</div></div>
+          <div class="pill"><div class="label">High score (this seed)</div><div class="value" id="hiLabel">0</div></div>
+          <div class="pill"><div class="label">Max possible (upper bound)</div><div class="value" id="maxLabel">—</div></div>
+          <div class="pill"><div class="label">Max found (quick estimate)</div><div class="value" id="estLabel">—</div></div>
+        </div>
+
+        <div class="legend">
+          <div class="leg"><span class="sw" style="background: rgba(43,117,255,0.85)"></span>Playable move</div>
+          <div class="leg"><span class="sw" style="background: rgba(31,111,74,0.85)"></span>Visited</div>
+          <div class="leg"><span class="sw" style="background: var(--blockedSolid)"></span>Blocked</div>
+          <div class="leg"><span class="sw" style="outline:3px solid rgba(27,217,106,0.95); background: transparent; border-color: transparent;"></span>Current</div>
+        </div>
+
+        <div class="help">
+          Click any <b>non-blocked</b> square to start. Then move like a knight.
+          Legal moves are highlighted. Squares can only be used once.
+          <br><br>
+          <b>Game Over:</b> Clicking a blocked square ends the game immediately.
+          <br><br>
+                  </div>
+
+        <div class="msg" id="msgBox"><small>Tip:</small> Click a starting square.</div>
+
+        <div class="row" style="margin-top:10px;">
+          <button class="btn" id="btnCopySeed">Copy seed</button>
+          <input class="inp" id="seedUrlBox" readonly style="flex:1 1 auto; min-width: 220px; width:auto;" />
+        </div>
+        <div class="footerNote">High scores stored locally in your browser (per seed).</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="boardWrap">
+        <div class="boardTop">
+          <div class="badge" id="stateBadge"><span class="dot"></span><span id="stateText">Choose a start square</span></div>
+          <div><b id="legalCount">0</b> legal moves highlighted</div>
+        </div>
+        <div class="boardOuter">
+          <div class="board" id="board" aria-label="8 by 8 board"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Game Over modal -->
+  <div class="modal" id="modal">
+    <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+      <div class="mh">
+        <h2 id="mTitle">Game Over</h2>
+        <span class="badge danger"><span class="dot"></span><span id="mSub">—</span></span>
+      </div>
+      <div class="mb" id="mBody"></div>
+      <div class="ma">
+        <button class="btn primary" id="mRestart">Restart</button>
+        <button class="btn" id="mClose">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load Seed modal -->
+  <div class="modal" id="seedModal">
+    <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="sTitle">
+      <div class="mh">
+        <h2 id="sTitle">Load seed</h2>
+        <span class="badge"><span class="dot"></span><span>Enter a seed</span></span>
+      </div>
+      <div class="mb">
+        <div style="margin-bottom:10px;">Paste or type a seed to open the same board.</div>
+        <input class="inp" id="seedModalInput" placeholder="Seed…" style="width:100%; max-width:100%;" />
+      </div>
+      <div class="ma">
+        <button class="btn" id="seedCancel">Cancel</button>
+        <button class="btn primary" id="seedOpen">Load</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const N = 8;
+  const MIN_BLOCK = 5, MAX_BLOCK = 12;
+
+  const boardEl = document.getElementById('board');
+  const seedLabel = document.getElementById('seedLabel');
+  const blockedLabel = document.getElementById('blockedLabel');
+  const movesLabel = document.getElementById('movesLabel');
+  const hiLabel = document.getElementById('hiLabel');
+  const maxLabel = document.getElementById('maxLabel');
+  const estLabel = document.getElementById('estLabel');
+  const legalCount = document.getElementById('legalCount');
+  const msgBox = document.getElementById('msgBox');
+  const stateBadge = document.getElementById('stateBadge');
+  const stateText = document.getElementById('stateText');
+
+  const btnNew = document.getElementById('btnNew');
+  const btnRestart = document.getElementById('btnRestart');
+  const btnLoadSeed = document.getElementById('btnLoadSeed');
+  const btnCopySeed = document.getElementById('btnCopySeed');
+  const seedUrlBox = document.getElementById('seedUrlBox');
+
+  const modal = document.getElementById('modal');
+  const mSub = document.getElementById('mSub');
+  const mBody = document.getElementById('mBody');
+  const mRestart = document.getElementById('mRestart');
+  const mClose = document.getElementById('mClose');
+
+  const seedModal = document.getElementById('seedModal');
+  const seedModalInput = document.getElementById('seedModalInput');
+  const seedCancel = document.getElementById('seedCancel');
+  const seedOpen = document.getElementById('seedOpen');
+
+  const knightDeltas = [
+    [ 1, 2],[ 2, 1],[ 2,-1],[ 1,-2],
+    [-1,-2],[-2,-1],[-2, 1],[-1, 2]
+  ];
+
+  let seed = '';
+  let rng = null;
+
+  let blocked = new Set();          // key "r,c"
+  let visited = new Map();          // key -> moveIndex (1-based)
+  let current = null;               // {r,c} or null
+  let playable = new Set();         // keys
+  let gameOver = false;
+
+  const keyOf = (r,c) => `${r},${c}`;
+  const inBounds = (r,c) => r>=0 && r<N && c>=0 && c<N;
+
+  function knightMovesFrom(r,c){
+    const out = [];
+    for (const [dr,dc] of knightDeltas){
+      const nr = r+dr, nc = c+dc;
+      if (inBounds(nr,nc)) out.push({r:nr,c:nc});
+    }
+    return out;
+  }
+
+  function setBadge(type, text){
+    stateBadge.classList.remove('danger','good');
+    if (type) stateBadge.classList.add(type);
+    stateText.textContent = text;
+  }
+  function setMsg(html){ msgBox.innerHTML = html; }
+
+  function hiKeyForSeed(seedStr){ return `knightTourBlocked:hi:${seedStr}`; }
+  function getHi(seedStr){
+    const v = localStorage.getItem(hiKeyForSeed(seedStr));
+    return v ? Number(v) : 0;
+  }
+  function setHi(seedStr, val){ localStorage.setItem(hiKeyForSeed(seedStr), String(val)); }
+
+  // RNG (seeded): xmur3 + sfc32
+  function xmur3(str) {
+    for (var i = 0, h = 1779033703 ^ str.length; i < str.length; i++) {
+      h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+      h = (h << 13) | (h >>> 19);
+    }
+    return function() {
+      h = Math.imul(h ^ (h >>> 16), 2246822507);
+      h = Math.imul(h ^ (h >>> 13), 3266489909);
+      return (h ^= (h >>> 16)) >>> 0;
+    }
+  }
+  function sfc32(a, b, c, d) {
+    return function() {
+      a >>>= 0; b >>>= 0; c >>>= 0; d >>>= 0;
+      var t = (a + b) | 0;
+      a = b ^ (b >>> 9);
+      b = (c + (c << 3)) | 0;
+      c = (c << 21) | (c >>> 11);
+      d = (d + 1) | 0;
+      t = (t + d) | 0;
+      c = (c + t) | 0;
+      return (t >>> 0) / 4294967296;
+    }
+  }
+  function makeRng(seedStr){
+    const h = xmur3(seedStr);
+    return sfc32(h(), h(), h(), h());
+  }
+  function randInt(min, max){
+    return Math.floor(rng() * (max - min + 1)) + min;
+  }
+
+  function openSeedModal(prefill=''){
+    seedModalInput.value = prefill;
+    seedModal.classList.add('show');
+    setTimeout(() => {
+      seedModalInput.focus();
+      seedModalInput.select();
+    }, 0);
+  }
+  function closeSeedModal(){ seedModal.classList.remove('show'); }
+
+  seedCancel.addEventListener('click', closeSeedModal);
+  seedModal.addEventListener('click', (e) => { if (e.target === seedModal) closeSeedModal(); });
+  seedModalInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') seedOpen.click();
+    if (e.key === 'Escape') closeSeedModal();
+  });
+
+  function buildBoardUI(){
+    boardEl.innerHTML = '';
+    for (let r=0;r<N;r++){
+      for (let c=0;c<N;c++){
+        const cell = document.createElement('div');
+        cell.className = 'cell ' + (((r+c)%2===0) ? 'light' : 'dark');
+        cell.dataset.r = String(r);
+        cell.dataset.c = String(c);
+
+        const coord = document.createElement('div');
+        coord.className = 'coord';
+        coord.textContent = String.fromCharCode(65+c) + (N-r);
+        cell.appendChild(coord);
+
+        const num = document.createElement('div');
+        num.className = 'num';
+        cell.appendChild(num);
+
+        const knight = document.createElement('div');
+        knight.className = 'knight';
+        cell.appendChild(knight);
+
+        cell.addEventListener('click', onCellClick);
+        boardEl.appendChild(cell);
+      }
+    }
+    refreshUI();
+  }
+
+  function refreshUI(){
+    const children = boardEl.children;
+    for (let i=0;i<children.length;i++){
+      const cell = children[i];
+      const r = Number(cell.dataset.r), c = Number(cell.dataset.c);
+      const k = keyOf(r,c);
+
+      cell.classList.toggle('blocked', blocked.has(k));
+      cell.classList.toggle('visited', visited.has(k));
+      cell.classList.toggle('current', current && current.r===r && current.c===c);
+      cell.classList.toggle('playable', playable.has(k));
+
+      const numEl = cell.querySelector('.num');
+      const knightEl = cell.querySelector('.knight');
+      numEl.textContent = visited.get(k) ? String(visited.get(k)) : '';
+      knightEl.textContent = (current && current.r===r && current.c===c) ? '♞' : '';
+    }
+
+    movesLabel.textContent = String(visited.size ? (visited.size - 1) : 0);
+    legalCount.textContent = String(playable.size);
+  }
+
+  function computePlayable(){
+    playable = new Set();
+    if (!current || gameOver) return;
+    for (const m of knightMovesFrom(current.r, current.c)){
+      const k = keyOf(m.r, m.c);
+      if (blocked.has(k)) continue;
+      if (visited.has(k)) continue;
+      playable.add(k);
+    }
+  }
+
+  function endGame(reason){
+    gameOver = true;
+    playable = new Set();
+    refreshUI();
+
+    const score = visited.size ? (visited.size - 1) : 0;
+    const hi = getHi(seed);
+    if (score > hi){ setHi(seed, score); hiLabel.textContent = String(score); }
+    else { hiLabel.textContent = String(hi); }
+
+    setBadge('danger', 'Game Over');
+    mSub.textContent = `Score: ${score} move${score===1?'':'s'}`;
+    mBody.innerHTML = `
+      <div style="color: rgba(238,242,255,0.92); font-weight:900; margin-bottom:6px;">${reason}</div>
+      <div>Seed: <b style="color: rgba(238,242,255,0.92)">${seed}</b></div>
+      <div style="margin-top:6px;">High score for this seed: <b style="color: rgba(238,242,255,0.92)">${getHi(seed)}</b></div>
+      <div style="margin-top:10px;">
+        <div>Max possible (upper bound): <b style="color: rgba(238,242,255,0.92)">${maxLabel.textContent}</b></div>
+        <div>Max found (quick estimate): <b style="color: rgba(238,242,255,0.92)">${estLabel.textContent}</b></div>
+      </div>
+      <div style="margin-top:10px; font-size:12px; color: rgba(238,242,255,0.55);">
+        Note: “Max possible” is an upper bound from connectivity; the true maximum can be lower.
+      </div>
+    `;
+    modal.classList.add('show');
+  }
+
+  function showNoMoves(){
+    gameOver = true;
+    playable = new Set();
+    refreshUI();
+
+    const score = visited.size ? (visited.size - 1) : 0;
+    const hi = getHi(seed);
+    if (score > hi){ setHi(seed, score); hiLabel.textContent = String(score); }
+    else { hiLabel.textContent = String(hi); }
+
+    setBadge('good', 'No legal moves left');
+    mSub.textContent = `Score: ${score} move${score===1?'':'s'}`;
+    mBody.innerHTML = `
+      <div style="color: rgba(238,242,255,0.92); font-weight:900; margin-bottom:6px;">No legal moves remain.</div>
+      <div>Seed: <b style="color: rgba(238,242,255,0.92)">${seed}</b></div>
+      <div style="margin-top:6px;">High score for this seed: <b style="color: rgba(238,242,255,0.92)">${getHi(seed)}</b></div>
+      <div style="margin-top:10px;">
+        <div>Max possible (upper bound): <b style="color: rgba(238,242,255,0.92)">${maxLabel.textContent}</b></div>
+        <div>Max found (quick estimate): <b style="color: rgba(238,242,255,0.92)">${estLabel.textContent}</b></div>
+      </div>
+      <div style="margin-top:10px; font-size:12px; color: rgba(238,242,255,0.55);">
+        Note: “Max possible” is an upper bound from connectivity; the true maximum can be lower.
+      </div>
+    `;
+    modal.classList.add('show');
+  }
+
+  // Max computations
+  function buildKnightGraph(unblockedSet){
+    const neigh = new Map();
+    for (const k of unblockedSet){
+      const [rS,cS] = k.split(','); const r = Number(rS), c = Number(cS);
+      const n = [];
+      for (const m of knightMovesFrom(r,c)){
+        const kk = keyOf(m.r,m.c);
+        if (unblockedSet.has(kk)) n.push(kk);
+      }
+      neigh.set(k, n);
+    }
+    return neigh;
+  }
+  function largestComponentSize(neigh){
+    const seen = new Set();
+    let best = 0;
+    for (const k of neigh.keys()){
+      if (seen.has(k)) continue;
+      let q = [k];
+      seen.add(k);
+      let count = 0;
+      while (q.length){
+        const cur = q.pop();
+        count++;
+        for (const nb of neigh.get(cur)){
+          if (!seen.has(nb)){
+            seen.add(nb);
+            q.push(nb);
+          }
+        }
+      }
+      if (count > best) best = count;
+    }
+    return best;
+  }
+  function heuristicMaxMoves(neigh, unblockedSet){
+    const nodes = Array.from(unblockedSet);
+    if (!nodes.length) return 0;
+    let starts = nodes;
+    if (starts.length > 32){
+      starts = starts.slice();
+      for (let i=starts.length-1;i>0;i--){
+        const j = Math.floor(rng()*(i+1));
+        [starts[i], starts[j]] = [starts[j], starts[i]];
+      }
+      starts = starts.slice(0, 32);
+    }
+    let bestMoves = 0;
+    const tieRandom = 5;
+    for (const s of starts){
+      for (let t=0;t<tieRandom;t++){
+        const seen = new Set([s]);
+        let cur = s;
+        let steps = 0;
+        while (true){
+          const candidates = neigh.get(cur).filter(x => !seen.has(x));
+          if (!candidates.length) break;
+          let best = [];
+          let bestDeg = Infinity;
+          for (const c of candidates){
+            const deg = neigh.get(c).reduce((acc, nb) => acc + (seen.has(nb)?0:1), 0);
+            if (deg < bestDeg){ bestDeg = deg; best = [c]; }
+            else if (deg === bestDeg){ best.push(c); }
+          }
+          const pick = best[Math.floor(rng()*best.length)];
+          seen.add(pick);
+          cur = pick;
+          steps++;
+          if (steps > bestMoves) bestMoves = steps;
+          if (bestMoves >= unblockedSet.size - 1) return bestMoves;
+        }
+      }
+    }
+    return bestMoves;
+  }
+  function computeAndDisplayMax(){
+    const unblockedSet = new Set();
+    for (let r=0;r<N;r++){
+      for (let c=0;c<N;c++){
+        const k = keyOf(r,c);
+        if (!blocked.has(k)) unblockedSet.add(k);
+      }
+    }
+    const neigh = buildKnightGraph(unblockedSet);
+    maxLabel.textContent = String(Math.max(0, largestComponentSize(neigh) - 1));
+    estLabel.textContent = String(heuristicMaxMoves(neigh, unblockedSet));
+  }
+
+  // Moves
+  function onCellClick(e){
+    const cell = e.currentTarget;
+    const r = Number(cell.dataset.r), c = Number(cell.dataset.c);
+    const k = keyOf(r,c);
+
+    if (gameOver) return;
+
+    if (blocked.has(k)){ endGame('You clicked a blocked square.'); return; }
+
+    if (!current){
+      current = {r,c};
+      visited.set(k, 1);
+      computePlayable();
+      refreshUI();
+      setBadge(null, 'Playing');
+      hiLabel.textContent = String(getHi(seed));
+      setMsg(`<small>Now playing:</small> Start placed. Follow the highlighted moves.`);
+      if (playable.size === 0) showNoMoves();
+      return;
+    }
+
+    if (visited.has(k)){ setMsg(`<small>Not allowed:</small> You already used that square.`); return; }
+    if (!playable.has(k)){ setMsg(`<small>Not allowed:</small> That square isn’t a legal knight move right now.`); return; }
+
+    visited.set(k, visited.size + 1);
+    current = {r,c};
+    computePlayable();
+    refreshUI();
+
+    const score = visited.size - 1;
+    const hi = getHi(seed);
+    if (score > hi){
+      setHi(seed, score);
+      hiLabel.textContent = String(score);
+      setMsg(`<small>New high score for this seed!</small> Moves: <b>${score}</b>`);
+    } else {
+      hiLabel.textContent = String(hi);
+      setMsg(`<small>Moves:</small> <b>${score}</b>`);
+    }
+
+    if (playable.size === 0) showNoMoves();
+  }
+
+  // Seed / reset
+  function resetRunOnly(){
+    visited = new Map();
+    current = null;
+    playable = new Set();
+    gameOver = false;
+    setBadge(null, 'Choose a start square');
+    setMsg(`<small>Tip:</small> Click a starting square.`);
+    refreshUI();
+  }
+
+  function setSeed(newSeed){
+    seed = String(newSeed);
+    rng = makeRng(seed);
+    seedLabel.textContent = seed;
+
+    blocked = new Set();
+    const blockCount = randInt(MIN_BLOCK, MAX_BLOCK);
+    while (blocked.size < blockCount){
+      blocked.add(keyOf(randInt(0,N-1), randInt(0,N-1)));
+    }
+    blockedLabel.textContent = String(blocked.size);
+
+    hiLabel.textContent = String(getHi(seed));
+    maxLabel.textContent = '…';
+    estLabel.textContent = '…';
+
+    updateSeedUrlBox();
+    resetRunOnly();
+    setTimeout(computeAndDisplayMax, 0);
+  }
+
+  function updateSeedUrlBox(){
+    const url = new URL(window.location.href);
+    // ensure seed param matches current seed
+    if (seed) url.searchParams.set('seed', seed);
+    seedUrlBox.value = url.toString();
+  }
+
+  function applySeedToUrl(s){
+    const url = new URL(window.location.href);
+    url.searchParams.set('seed', s);
+    history.replaceState(null, '', url.toString());
+    updateSeedUrlBox();
+  }
+
+  function newRandomSeed(){
+    const s = Math.random().toString(36).slice(2, 10) + '-' + Date.now().toString(36).slice(-6);
+    applySeedToUrl(s);
+    setSeed(s);
+  }
+
+  // Modal
+  function closeGameOver(){ modal.classList.remove('show'); }
+  mClose.addEventListener('click', closeGameOver);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeGameOver(); });
+  mRestart.addEventListener('click', () => { closeGameOver(); setSeed(seed); });
+
+  // Buttons
+  btnNew.addEventListener('click', () => newRandomSeed());
+  btnRestart.addEventListener('click', () => setSeed(seed));
+  btnLoadSeed.addEventListener('click', () => {
+    const url = new URL(window.location.href);
+    const s = (url.searchParams.get('seed') || '').trim();
+    openSeedModal(s);
+  });
+
+  btnCopySeed.addEventListener('click', async () => {
+    try{
+      await navigator.clipboard.writeText(seedUrlBox.value);
+      setMsg(`<small>Copied:</small> Seed link copied to clipboard.`);
+    }catch{
+      seedUrlBox.focus();
+      seedUrlBox.select();
+      setMsg(`<small>Copy:</small> Press Ctrl+C to copy the selected URL.`);
+    }
+  });
+
+  seedOpen.addEventListener('click', () => {
+    const s = (seedModalInput.value || '').trim();
+    if (!s){
+      setMsg(`<small>Enter a seed</small> or press Cancel.`);
+      return;
+    }
+    applySeedToUrl(s);
+    closeSeedModal();
+    setSeed(s);
+  });
+
+  // Init from URL (?seed=...)
+  function initFromUrl(){
+    const url = new URL(window.location.href);
+    const s = (url.searchParams.get('seed') || '').trim();
+    buildBoardUI();
+    updateSeedUrlBox();
+    if (s){
+      setSeed(s);
+    } else {
+      newRandomSeed();
+    }
+  }
+  initFromUrl();
+})();
+</script>
+</body>
+</html>
