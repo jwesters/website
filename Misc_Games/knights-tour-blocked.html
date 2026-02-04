@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=yes, maximum-scale=5" />
-  <title>Knight's Tour (Blocked Squares)</title>
+  <title>Knight’s Tour (Blocked Squares)</title>
   <style>
     :root{
       --bg:#0b0f16;
@@ -28,48 +28,35 @@
       --currentGlow: rgba(27,217,106,0.35);
     }
 
-    html,body{
-      touch-action: pan-x pan-y;
-height:100%}
+    html,body{ margin:0; padding:0; }
     body{
-      touch-action: pan-x pan-y;
-
-      margin:0;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
       background: radial-gradient(1200px 700px at 20% 0%, #142444 0%, var(--bg) 55%, #070a10 100%);
       color:var(--text);
-      display:flex;
-      justify-content:center;
-      align-items:stretch;
+      -webkit-overflow-scrolling: touch;
       padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     }
 
     .wrap{
       width:min(1100px, 96vw);
-      padding:18px 10px 24px;
+      margin: 0 auto;
+      padding: 14px 10px 24px;
       display:grid;
       grid-template-columns: 360px 1fr;
       gap:16px;
-      align-content:start;
-    }
-    @media (max-width: 980px){
-      .wrap{grid-template-columns:1fr;}
+      align-items:start;
     }
 
+    /* MOBILE: board on top, controls underneath */
     @media (max-width: 980px){
-      /* Stack with board first on mobile */
       .wrap{
         display:flex;
         flex-direction:column;
-        align-items:stretch;
+        gap:12px;
+        padding: 10px 8px 18px;
       }
-      .boardCard{ order: 1; }
-      .sideCard{ order: 2; }
-      /* Make sure content can scroll below the board */
-      .boardOuter{ width: min(96vw, 640px); }
-    }
-    @media (max-width: 420px){
-      .wrap{padding:12px 6px 18px; gap:12px;}
+      .boardCard{ order:1; }
+      .sideCard{ order:2; }
     }
 
     .card{
@@ -79,17 +66,22 @@ height:100%}
       box-shadow: 0 16px 40px var(--shadow);
       overflow:hidden;
     }
-    .card .hd{
+    /* IMPORTANT: never clip the board on mobile */
+    @media (max-width: 980px){
+      .boardCard{ overflow: visible; }
+    }
+
+    .hd{
       padding:14px 14px 10px;
       background: rgba(255,255,255,0.03);
       border-bottom:1px solid rgba(255,255,255,0.07);
     }
-    .card .hd h1{ margin:0; font-size:18px; letter-spacing:0.2px; }
-    .card .bd{ padding:14px; }
+    .hd h1{ margin:0; font-size:18px; letter-spacing:0.2px; }
+    .bd{ padding:14px; }
 
     .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
 
-    /* Keep main controls on one line; allow horizontal scroll on small screens */
+    /* Controls: single line with horizontal scroll if needed */
     .row.controls{
       flex-wrap: nowrap;
       overflow-x: auto;
@@ -113,6 +105,7 @@ height:100%}
       user-select:none;
       white-space:nowrap;
       flex: 0 0 auto;
+      touch-action: manipulation;
     }
     .btn:hover{ background: rgba(255,255,255,0.09); border-color: rgba(255,255,255,0.22); }
     .btn:active{ transform: translateY(1px); }
@@ -169,7 +162,6 @@ height:100%}
       line-height:1.35;
       margin-top:10px;
     }
-
     .msg{
       margin-top:10px;
       padding:10px 12px;
@@ -216,28 +208,32 @@ height:100%}
     .badge.danger .dot{ background: rgba(251,113,133,0.92); box-shadow: 0 0 0 3px rgba(251,113,133,0.14); }
 
     .boardOuter{
-      width: min(96vw, 680px);
       margin: 0 auto;
       border-radius: 18px;
       background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0.22));
       border: 1px solid rgba(255,255,255,0.10);
       padding: 10px;
       box-shadow: 0 18px 50px rgba(0,0,0,0.45);
+      width: min(92vw, 680px);
     }
-    @media (max-width: 420px){
-      .boardOuter{ padding: 8px; border-radius: 16px; }
+
+    /* Mobile: force board to FIT the viewport so all squares are reachable without scrolling/zooming */
+    @media (max-width: 980px){
+      .boardOuter{
+        width: min(96vw, 72vh);
+        padding: 8px;
+      }
     }
 
     .board{
-      touch-action: auto;
-
       width: 100%;
-      aspect-ratio: 1 / 1;
       display:grid;
       grid-template-columns: repeat(8, 1fr);
       border-radius: 12px;
       overflow:hidden;
       box-shadow: inset 0 0 0 2px rgba(0,0,0,0.25);
+      background: #0000;
+      /* height is set via JS to be perfectly square on iOS */
     }
 
     .cell{
@@ -246,20 +242,20 @@ height:100%}
       align-items:center;
       justify-content:center;
       cursor:pointer;
-      touch-action: auto;
       user-select:none;
       min-width: 0;
       min-height: 0;
       font-variant-numeric: tabular-nums;
       letter-spacing:0.2px;
       transition: filter .12s ease, transform .05s ease;
+      /* Don't block page scrolling on iOS */
+      touch-action: auto;
     }
     .cell.light{ background: var(--light); }
     .cell.dark{ background: var(--dark); }
     .cell:hover{ filter: brightness(1.06); }
     .cell:active{ transform: translateY(1px); }
 
-    /* Coordinates: all same dark black */
     .coord{
       position:absolute;
       top:6px; left:6px;
@@ -267,7 +263,6 @@ height:100%}
       font-weight:900;
       color: rgba(0,0,0,0.90);
       pointer-events:none;
-      text-shadow:none;
     }
     @media (max-width: 420px){
       .coord{ top:4px; left:4px; font-size:10px; }
@@ -290,7 +285,6 @@ height:100%}
       text-shadow: 0 1px 0 rgba(0,0,0,0.35);
     }
 
-    /* Larger knight piece */
     .knight{
       position:absolute;
       bottom:6px; right:6px;
@@ -313,19 +307,12 @@ height:100%}
       pointer-events:none;
     }
 
-    /* Blocked: uniform solid color */
     .cell.blocked.light,
     .cell.blocked.dark{
       background: var(--blockedSolid) !important;
     }
     .cell.blocked::after{
       box-shadow: inset 0 0 0 4px rgba(0,0,0,0.25);
-    }
-    /* Blocked always wins */
-    .cell.blocked.visited,
-    .cell.blocked.playable,
-    .cell.blocked.current{
-      background: var(--blockedSolid) !important;
     }
 
     .cell.visited.light{ background: linear-gradient(0deg, var(--visitedA), var(--visitedA)), var(--light) !important; }
@@ -336,7 +323,6 @@ height:100%}
       outline-offset:-3px;
       filter: drop-shadow(0 0 10px var(--playableGlow));
     }
-
     .cell.current::after{
       outline: 3px solid rgba(27,217,106,0.95);
       outline-offset:-3px;
@@ -382,11 +368,6 @@ height:100%}
       justify-content:flex-end;
       flex-wrap:wrap;
     }
-
-    /* Respect reduced motion */
-    @media (prefers-reduced-motion: reduce){
-      *{ transition:none !important; scroll-behavior:auto !important; }
-    }
   </style>
 </head>
 <body>
@@ -417,13 +398,13 @@ height:100%}
         </div>
 
         <div class="help">
-          Click any <b>non-blocked</b> square to start. Then move like a knight.
+          Tap any <b>non-blocked</b> square to start. Then move like a knight.
           Legal moves are highlighted. Squares can only be used once.
           <br><br>
-          <b>Game Over:</b> Clicking a blocked square ends the game immediately.
+          <b>Game Over:</b> Tapping a blocked square ends the game immediately.
         </div>
 
-        <div class="msg" id="msgBox"><small>Tip:</small> Click a starting square.</div>
+        <div class="msg" id="msgBox"><small>Tip:</small> Choose a start square.</div>
 
         <div class="row" style="margin-top:10px;">
           <button class="btn" id="btnCopySeed">Copy seed</button>
@@ -647,8 +628,18 @@ height:100%}
         boardEl.appendChild(cell);
       }
     }
+    resizeBoardSquare();
     refreshUI();
   }
+
+  // Avoid iOS aspect-ratio quirks: force exact square height = width.
+  function resizeBoardSquare(){
+    const w = boardEl.getBoundingClientRect().width;
+    if (w > 0) boardEl.style.height = Math.round(w) + 'px';
+  }
+  window.addEventListener('resize', () => {
+    resizeBoardSquare();
+  });
 
   function refreshUI(){
     const children = boardEl.children;
@@ -704,7 +695,7 @@ height:100%}
         <div>Max found (quick estimate): <b style="color: rgba(238,242,255,0.92)">${estLabel.textContent}</b></div>
       </div>
       <div style="margin-top:10px; font-size:12px; color: rgba(238,242,255,0.55);">
-        Note: “Max possible” is an upper bound from connectivity; the true maximum can be lower.
+        Note: “Max possible” is an upper bound; the true maximum can be lower.
       </div>
     `;
     modal.classList.add('show');
@@ -731,7 +722,7 @@ height:100%}
         <div>Max found (quick estimate): <b style="color: rgba(238,242,255,0.92)">${estLabel.textContent}</b></div>
       </div>
       <div style="margin-top:10px; font-size:12px; color: rgba(238,242,255,0.55);">
-        Note: “Max possible” is an upper bound from connectivity; the true maximum can be lower.
+        Note: “Max possible” is an upper bound; the true maximum can be lower.
       </div>
     `;
     modal.classList.add('show');
@@ -877,7 +868,7 @@ height:100%}
     playable = new Set();
     gameOver = false;
     setBadge(null, 'Choose a start square');
-    setMsg(`<small>Tip:</small> Click a starting square.`);
+    setMsg(`<small>Tip:</small> Choose a start square.`);
     refreshUI();
   }
 
@@ -899,7 +890,7 @@ height:100%}
 
     updateSeedUrlBox();
     resetRunOnly();
-    setTimeout(computeAndDisplayMax, 0);
+    setTimeout(() => { resizeBoardSquare(); computeAndDisplayMax(); }, 0);
   }
 
   function applySeedToUrl(s){
@@ -915,13 +906,12 @@ height:100%}
     setSeed(s);
   }
 
-  // Game Over modal
+  // Modals
   function closeGameOver(){ modal.classList.remove('show'); }
   mClose.addEventListener('click', closeGameOver);
   modal.addEventListener('click', (e) => { if (e.target === modal) closeGameOver(); });
   mRestart.addEventListener('click', () => { closeGameOver(); setSeed(seed); });
 
-  // Buttons
   btnNew.addEventListener('click', () => newRandomSeed());
   btnRestart.addEventListener('click', () => setSeed(seed));
   btnLoadSeed.addEventListener('click', () => {
