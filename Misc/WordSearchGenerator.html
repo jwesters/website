@@ -246,6 +246,22 @@
       background:rgba(0,0,0,.18);
       color:var(--text);
     }
+  
+    /* Solve mode selection */
+    .cell.sel{
+      outline: 2px solid rgba(var(--hl-r),var(--hl-g),var(--hl-b),0.85);
+      outline-offset: -2px;
+      box-shadow: inset 0 0 0 9999px rgba(var(--hl-r),var(--hl-g),var(--hl-b),0.15);
+    }
+    .cell.startSel{
+      outline: 3px solid rgba(var(--hl-r),var(--hl-g),var(--hl-b),0.95);
+      outline-offset: -3px;
+    }
+    .tag.found{
+      opacity: .65;
+      text-decoration: line-through;
+    }
+
   </style>
 </head>
 <body>
@@ -269,7 +285,12 @@ winter
 snowman
 icicle
 blizzard
-aurora"></textarea>
+aurora">POLAR
+WINTER
+SNOWMAN
+ICICLE
+BLIZZARD
+AURORA</textarea>
         <div id="wordsInlineError" class="inlineError"></div>
 
         <div class="fieldgrid">
@@ -315,6 +336,8 @@ aurora"></textarea>
             <span class="pill" id="metaPill">No puzzle yet</span>
             <button id="viewPuzzleBtn" disabled>View Puzzle</button>
             <button id="viewAnswerBtn" disabled>View Answer</button>
+            <button id="solveBtn" disabled>Solve Online</button>
+            <button id="copyLinkBtn" disabled>Copy Share Link</button>
           </div>
         </div>
 
@@ -337,10 +360,63 @@ aurora"></textarea>
   <script>
     "use strict";
 
-    // ---------- Utilities ----------
+const DEFAULT_EXAMPLE = `POLAR\nWINTER\nSNOWMAN\nICICLE\nBLIZZARD\nAURORA`;
+
+    
+    // Restore default example words when empty (and not loading from a share link)
+    (function(){
+      const params = new URLSearchParams(window.location.search);
+      const ta = document.getElementById("words");
+      if (ta && !params.has("seed") && !ta.value.trim()){
+        ta.value = DEFAULT_EXAMPLE;
+      }
+    })();
+
+// ---------- Utilities ----------
     const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    const randInt = (n) => Math.floor(Math.random() * n);
+
+    // ---------- Seeded RNG (for shareable links) ----------
+    // Mulberry32 PRNG (fast, deterministic for a given 32-bit seed)
+    function mulberry32(seed){
+      let t = seed >>> 0;
+      return function(){
+        t += 0x6D2B79F5;
+        let x = Math.imul(t ^ (t >>> 15), 1 | t);
+        x ^= x + Math.imul(x ^ (x >>> 7), 61 | x);
+        return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    let _rng = Math.random;
+    function setSeed(seed){
+      // seed can be any number/string; coerce to 32-bit
+      const s = (typeof seed === "string") ? hashSeedString(seed) : (seed >>> 0);
+      _rng = mulberry32(s >>> 0);
+      return s >>> 0;
+    }
+    function hashSeedString(str){
+      // FNV-1a 32-bit
+      let h = 2166136261 >>> 0;
+      for(let i=0;i<str.length;i++){
+        h ^= str.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return h >>> 0;
+    }
+    function rand(){ return _rng(); }
+    const randInt = (n) => Math.floor(rand() * n);
+
     const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+    function randomSeed32(){
+      try{
+        const a = new Uint32Array(1);
+        crypto.getRandomValues(a);
+        return a[0] >>> 0;
+      }catch(_e){
+        return (Math.floor(Math.random() * 4294967296) >>> 0);
+      }
+    }
 
     const MAX_WORD_LEN = 14; // 15-letter words NOT allowed
     const MAX_TITLE_LEN = 50;
@@ -499,8 +575,10 @@ aurora"></textarea>
     const elViewPuzzleBtn = document.getElementById("viewPuzzleBtn");
     const elViewAnswerBtn = document.getElementById("viewAnswerBtn");
     const elWordsInlineError = document.getElementById("wordsInlineError");
+    const elSolveBtn = document.getElementById("solveBtn");
+    const elCopyLinkBtn = document.getElementById("copyLinkBtn");
 
-    let state = { grid:null, placed:null, rows:0, cols:0, view:"puzzle", words:[], title:"Word Search" };
+    let state = { grid:null, placed:null, rows:0, cols:0, view:"puzzle", words:[], title:"Word Search", seed:null, foundWords:new Set(), foundCells:new Set(), solveStart:null };
 
     function setStatus(msg, kind){
       elStatus.textContent = msg || "";
@@ -558,6 +636,7 @@ aurora"></textarea>
       for(const w of words){
         const tag = document.createElement("div");
         tag.className = "tag";
+        tag.dataset.word = w;
         const sw = document.createElement("span");
         sw.className = "swatch";
         const txt = document.createElement("span");
@@ -584,10 +663,19 @@ aurora"></textarea>
 
       for(let r=0;r<rows;r++){
         for(let c=0;c<cols;c++){
+          const key = `${r},${c}`;
           const d = document.createElement("div");
           d.className = "cell";
           d.textContent = grid[r][c];
-          if(view === "answer" && hi.has(`${r},${c}`)) d.classList.add("hl");
+          d.dataset.r = String(r);
+          d.dataset.c = String(c);
+
+          if(view === "answer" && hi.has(key)) d.classList.add("hl");
+          if(view === "solve" && state.foundCells.has(key)) d.classList.add("hl");
+          if(view === "solve" && state.solveStart && state.solveStart.r === r && state.solveStart.c === c){
+            d.classList.add("startSel");
+          }
+
           elBoard.appendChild(d);
         }
       }
@@ -598,15 +686,129 @@ aurora"></textarea>
         elMetaPill.textContent = "No puzzle yet";
         return;
       }
-      elMetaPill.textContent = `${state.rows}×${state.cols} • ${state.words.length} words • view: ${state.view}`;
+      const seedTxt = (state.seed !== null && state.seed !== undefined) ? ` • seed: ${state.seed}` : "";
+      const solveTxt = (state.view === "solve") ? ` • found: ${state.foundWords.size}/${state.words.length}` : "";
+      elMetaPill.textContent = `${state.rows}×${state.cols} • ${state.words.length} words • view: ${state.view}${solveTxt}${seedTxt}`;
     }
 
     function setView(v){
       if(!state.grid) return;
+      if(v === "solve"){
+        resetSolveState();
+        setStatus("Tap a start cell, then tap an end cell to select a word.", "");
+      }
       state.view = v;
       renderBoard(state.grid, state.placed, state.view);
       updateMeta();
     }
+
+    // ---------- Solve Online ----------
+    function resetSolveState(){
+      state.foundWords = new Set();
+      state.foundCells = new Set();
+      state.solveStart = null;
+      // clear found styling in word bank
+      for(const el of elWordBank.querySelectorAll(".tag")){
+        el.classList.remove("found");
+      }
+    }
+
+    function normalizeDir(dr, dc){
+      const sdr = Math.sign(dr);
+      const sdc = Math.sign(dc);
+      if(dr === 0 && dc === 0) return null;
+      // straight or diagonal
+      if(dr === 0 || dc === 0 || Math.abs(dr) === Math.abs(dc)){
+        return { dy:sdr, dx:sdc, steps: Math.max(Math.abs(dr), Math.abs(dc)) };
+      }
+      return null;
+    }
+
+    function lineCells(r0,c0,dy,dx,steps){
+      const out = [];
+      for(let i=0;i<=steps;i++){
+        out.push({r:r0 + dy*i, c:c0 + dx*i});
+      }
+      return out;
+    }
+
+    function cellsToWord(cells){
+      let s = "";
+      for(const cell of cells){
+        s += state.grid[cell.r][cell.c];
+      }
+      return s;
+    }
+
+    function markFound(word, cells){
+      state.foundWords.add(word);
+      for(const cell of cells){
+        state.foundCells.add(`${cell.r},${cell.c}`);
+      }
+      // mark in word bank
+      for(const t of elWordBank.querySelectorAll(".tag")){
+        if(t.dataset.word === word){ t.classList.add("found"); break; }
+      }
+
+      renderBoard(state.grid, state.placed, "solve");
+
+      // solved?
+      if(state.foundWords.size === state.words.length){
+        setStatus("Solved! All words found.", "good");
+      }
+    }
+
+    // Tap start, then tap end
+    elBoard.addEventListener("click", (e) => {
+      if(state.view !== "solve") return;
+      const cell = e.target.closest(".cell");
+      if(!cell) return;
+
+      const r = Number(cell.dataset.r);
+      const c = Number(cell.dataset.c);
+
+      if(!state.solveStart){
+        state.solveStart = {r, c};
+        setStatus("Select an end cell in a straight line (horizontal/vertical/diagonal).", "");
+        renderBoard(state.grid, state.placed, "solve");
+        return;
+      }
+
+      const r0 = state.solveStart.r, c0 = state.solveStart.c;
+      const dr = r - r0, dc = c - c0;
+      const nd = normalizeDir(dr, dc);
+      state.solveStart = null;
+
+      if(!nd){
+        setStatus("Not a straight line. Try again: tap a start cell, then an end cell.", "bad");
+        renderBoard(state.grid, state.placed, "solve");
+        return;
+      }
+
+      const cells = lineCells(r0, c0, nd.dy, nd.dx, nd.steps);
+      const forward = cellsToWord(cells);
+      const backward = forward.split("").reverse().join("");
+
+      let matched = null;
+      if(state.words.includes(forward)) matched = forward;
+      else if(state.words.includes(backward)) matched = backward;
+
+      if(!matched){
+        setStatus(`No match: ${forward}`, "bad");
+        renderBoard(state.grid, state.placed, "solve");
+        return;
+      }
+
+      if(state.foundWords.has(matched)){
+        setStatus(`Already found: ${matched}`, "");
+        renderBoard(state.grid, state.placed, "solve");
+        return;
+      }
+
+      markFound(matched, cells);
+      setStatus(`Found: ${matched}`, "good");
+    });
+
 
     // ---------- PDF Export ----------
     function exportPdf(){
@@ -753,6 +955,10 @@ aurora"></textarea>
       elPdfBtn.disabled = true;
       elViewPuzzleBtn.disabled = true;
       elViewAnswerBtn.disabled = true;
+      elSolveBtn.disabled = true;
+      elCopyLinkBtn.disabled = true;
+      elSolveBtn.disabled = true;
+      elCopyLinkBtn.disabled = true;
 
       updateTitleCount();
       state.title = titleText();
@@ -782,7 +988,12 @@ aurora"></textarea>
         elRows.value = rows;
       }
 
-      const result = generateWordSearch(words, rows, cols);
+      // Make generation deterministic for share links
+      const seed = randomSeed32();
+      state.seed = setSeed(seed);
+      const wordsForGen = words.slice().sort((a,b)=>a.localeCompare(b));
+      const result = generateWordSearch(wordsForGen, rows, cols);
+
       if(!result){
         setStatus("Could not fit the words even after resizing up to 25×25. Try fewer/shorter words.", "bad");
         return;
@@ -792,7 +1003,7 @@ aurora"></textarea>
       state.placed = result.placed;
       state.rows = result.rows;
       state.cols = result.cols;
-      state.words = words.slice().sort((a,b)=>a.localeCompare(b));
+      state.words = wordsForGen.slice();
       state.view = "puzzle";
 
       elRows.value = state.rows;
@@ -804,6 +1015,8 @@ aurora"></textarea>
       elPdfBtn.disabled = false;
       elViewPuzzleBtn.disabled = false;
       elViewAnswerBtn.disabled = false;
+      elSolveBtn.disabled = false;
+      elCopyLinkBtn.disabled = false;
 
       updateMeta();
       setStatus(`Generated successfully: ${state.rows}×${state.cols}.`, "good");
@@ -818,7 +1031,7 @@ aurora"></textarea>
       elWords.value = "";
       setInlineWordsError("");
 
-      state = { grid:null, placed:null, rows:0, cols:0, view:"puzzle", words:[], title:"Word Search" };
+      state = { grid:null, placed:null, rows:0, cols:0, view:"puzzle", words:[], title:"Word Search", seed:null, foundWords:new Set(), foundCells:new Set(), solveStart:null };
       elBoard.innerHTML = "";
       elWordBank.innerHTML = "";
       elPdfBtn.disabled = true;
@@ -832,9 +1045,98 @@ aurora"></textarea>
     elViewPuzzleBtn.addEventListener("click", () => setView("puzzle"));
     elViewAnswerBtn.addEventListener("click", () => setView("answer"));
 
+    elSolveBtn.addEventListener("click", () => setView("solve"));
+
+    function buildShareLink(){
+      if(!state.grid) return "";
+      const base = location.origin + location.pathname;
+      const p = new URLSearchParams();
+      p.set("seed", String(state.seed ?? ""));
+      p.set("rows", String(state.rows));
+      p.set("cols", String(state.cols));
+      p.set("title", state.title || "Word Search");
+      p.set("words", state.words.join(","));
+      return base + "?" + p.toString();
+    }
+
+    elCopyLinkBtn.addEventListener("click", async () => {
+      if(!state.grid) return;
+      const link = buildShareLink();
+      try{
+        await navigator.clipboard.writeText(link);
+        setStatus("Share link copied to clipboard.", "good");
+      }catch(_e){
+        // Fallback prompt
+        window.prompt("Copy this link:", link);
+      }
+    });
+
     // Init
+    function loadFromUrl(){
+      const qs = new URLSearchParams(location.search);
+      if(!qs.has("seed") || !qs.has("words")) return false;
+
+      const seedRaw = qs.get("seed") || "";
+      const rowsRaw = qs.get("rows");
+      const colsRaw = qs.get("cols");
+      const titleRaw = qs.get("title");
+
+      const wordsRaw = qs.get("words") || "";
+      const wordsList = wordsRaw.split(",").map(w => cleanWord(w)).filter(Boolean);
+      const unique = uniq(wordsList);
+      const tooLong = unique.filter(w => w.length > MAX_WORD_LEN);
+      if(unique.length < 5 || unique.length > 20 || tooLong.length){
+        setStatus("This share link is invalid (word count/length).", "bad");
+        return false;
+      }
+
+      // Apply UI
+      if(titleRaw) elTitle.value = String(titleRaw).slice(0, MAX_TITLE_LEN);
+      elWords.value = unique.join("\n");
+
+      let cols = clamp(parseInt(colsRaw || "10",10), 7, 25);
+      let rows = clamp(parseInt(rowsRaw || "12",10), 7, 25);
+      if(rows <= cols) rows = clamp(cols + 1, 7, 25);
+      elRows.value = rows;
+      elCols.value = cols;
+      updateTitleCount();
+      validateWordsLive();
+
+      // Deterministic generation
+      state.title = titleText();
+      state.seed = setSeed(seedRaw);
+      const wordsForGen = unique.slice().sort((a,b)=>a.localeCompare(b));
+      const result = generateWordSearch(wordsForGen, rows, cols);
+      if(!result){
+        setStatus("Could not generate puzzle from this share link.", "bad");
+        return false;
+      }
+
+      state.grid = result.grid;
+      state.placed = result.placed;
+      state.rows = result.rows;
+      state.cols = result.cols;
+      state.words = wordsForGen.slice();
+      state.view = "solve"; // shared puzzles open directly in Solve mode
+
+      buildWordBank(state.words);
+      resetSolveState();
+      renderBoard(state.grid, state.placed, state.view);
+
+      elPdfBtn.disabled = false;
+      elViewPuzzleBtn.disabled = false;
+      elViewAnswerBtn.disabled = false;
+      elSolveBtn.disabled = false;
+      elCopyLinkBtn.disabled = false;
+
+      updateMeta();
+      setStatus("Puzzle loaded from share link. Start solving!", "good");
+      return true;
+    }
+
+    const loaded = loadFromUrl();
     updateTitleCount();
-    if(!elWords.value.trim()){
+    if(!loaded && !elWords.value.trim()){
       elWords.value = ["polar","winter","snowman","icicle","blizzard","aurora","frost","glove"].join("\n");
       validateWordsLive();
     }

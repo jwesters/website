@@ -1,0 +1,934 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ghost Hunter (Pac-Man CPU)</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --text:#e9ecff;
+      --muted:#aab1d6;
+      --danger:#ff6b6b;
+      --good:#74f7b6;
+    }
+    html,body{height:100%; margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
+    .wrap{max-width:1020px; margin:0 auto; padding:14px;}
+    .top{
+      display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:16px;
+      padding:12px 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    .title{display:flex; align-items:baseline; gap:10px}
+    .title h1{font-size:18px; margin:0; letter-spacing:.3px}
+    .title .hint{font-size:12px; color:var(--muted)}
+    .stats{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+    .chip{
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:999px;
+      padding:6px 10px;
+      font-size:12px;
+      white-space:nowrap;
+    }
+    .chip strong{font-weight:800}
+    .chip .pill{padding:2px 7px; border-radius:999px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05); margin-left:8px; font-weight:800}
+    .btns{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+    button{
+      appearance:none; border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.07);
+      color:var(--text);
+      border-radius:12px;
+      padding:8px 10px;
+      font-weight:700;
+      cursor:pointer;
+      transition:transform .05s ease, background .15s ease, border-color .15s ease;
+      user-select:none;
+    }
+    button:hover{background:rgba(255,255,255,.10); border-color:rgba(255,255,255,.18)}
+    button:active{transform:translateY(1px)}
+    .main{margin-top:12px; display:grid; grid-template-columns: 1fr 320px; gap:12px;}
+    @media (max-width: 980px){ .main{grid-template-columns:1fr;} }
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:16px;
+      padding:12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    .canvasWrap{display:flex; align-items:center; justify-content:center; padding:10px;}
+    canvas{
+      width:min(760px, 100%);
+      height:auto;
+      image-rendering: pixelated;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.12);
+      background:#050814;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+      touch-action:none;
+    }
+    .side h2{margin:2px 0 8px; font-size:14px; letter-spacing:.2px}
+    .side p{margin:0 0 10px; font-size:12px; color:var(--muted); line-height:1.35}
+    .kbd{display:inline-flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:6px;}
+    .key{font-size:11px; padding:4px 8px; border-radius:10px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10);}
+    .small{font-size:11px; color:var(--muted)}
+    .good{color:var(--good)}
+    .danger{color:var(--danger)}
+    .overlay{
+      position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+      background:rgba(0,0,0,.55); padding:16px; z-index:10;
+    }
+    .modal{
+      width:min(560px, 100%);
+      background:linear-gradient(180deg, rgba(18,26,51,.96), rgba(12,16,32,.96));
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:18px;
+      padding:14px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+    }
+    .modal h3{margin:0 0 6px; font-size:16px}
+    .modal p{margin:0 0 10px; font-size:13px; color:var(--muted); line-height:1.35}
+    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    .row .grow{flex:1}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="title">
+      <h1>Ghost Hunter</h1>
+      <div class="hint">You control a ghost • Tab = switch • Arrows/WASD • Space = Pause • R = Restart</div>
+    </div>
+    <div class="stats" aria-live="polite">
+      <div class="chip">Time: <strong id="time">0.00</strong>s <span class="pill" title="Fastest win (local)">Best: <span id="best">—</span></span></div>
+      <div class="chip">Pac‑Lives: <strong id="lives">3</strong></div>
+      <div class="chip">Level: <strong id="level">1</strong></div>
+      <div class="chip">Controlled: <strong id="controlled">—</strong></div>
+      <div class="chip">Power: <strong id="power">0.0</strong>s</div>
+      <div class="chip">Ghosts alive: <strong id="alive">4</strong></div>
+    </div>
+    <div class="btns">
+      <button id="btnPause" title="Space">Pause</button>
+      <button id="btnRestart" title="R">Restart</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="card canvasWrap">
+      <canvas id="game" width="672" height="744" aria-label="Ghost Hunter canvas"></canvas>
+    </div>
+
+    <div class="card side">
+      <h2>Objective</h2>
+      <p>Catch the CPU Pac‑Man <b>3 times</b> as fast as possible.</p>
+      <p><b>Rule:</b> When you control a ghost, all other ghosts move at <b>½ speed</b>. Your controlled ghost stays at normal speed.</p>
+      <p>If Pac‑Man has power, he can eat ghosts. In this mode, eaten ghosts are <b>dead for the rest of the game</b>.</p>
+      <p class="small">Pac‑Man AI has been upgraded (short lookahead pathing + anti-looping).</p>
+      <div class="kbd" aria-hidden="true">
+        <span class="key">↑</span><span class="key">↓</span><span class="key">←</span><span class="key">→</span>
+        <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span>
+        <span class="key">Tab</span><span class="key">Space</span><span class="key">R</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="ovTitle">
+  <div class="modal">
+    <h3 id="ovTitle">Paused</h3>
+    <p id="ovBody">Press Space to continue.</p>
+    <div class="row">
+      <div class="grow"></div>
+      <button id="ovBtn">Continue</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const TILE = 24, COLS = 28, ROWS = 31;
+  const W = COLS*TILE, H = ROWS*TILE;
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  canvas.width = W; canvas.height = H;
+
+  const elTime = document.getElementById('time');
+  const elBest = document.getElementById('best');
+  const elLives = document.getElementById('lives');
+  const elLevel = document.getElementById('level');
+  const elControlled = document.getElementById('controlled');
+  const elPower = document.getElementById('power');
+  const elAlive = document.getElementById('alive');
+  const btnPause = document.getElementById('btnPause');
+  const btnRestart = document.getElementById('btnRestart');
+  const overlay = document.getElementById('overlay');
+  const ovTitle = document.getElementById('ovTitle');
+  const ovBody  = document.getElementById('ovBody');
+  const ovBtn   = document.getElementById('ovBtn');
+
+  // 0 empty, 1 wall, 2 pellet, 3 power, 4 gate (visual; Pac cannot pass, ghosts can)
+  // Updated ghost house: wider interior + cleaner gate + less cramped spawns.
+  const BASE_MAP = [
+    "1111111111111111111111111111",
+    "1222222222222112222222222221",
+    "1211112111112112111112111121",
+    "1311112111112112111112111131",
+    "1211112111112112111112111121",
+    "1222222222222222222222222221",
+    "1211112112111111112112111121",
+    "1222222112222112222112222221",
+    "1111112111112112111112111111",
+    "0000012111112112111112110000",
+    "1111112112111111112112111111",
+    "1222222222111111112222222221",
+    "1211112112100000012112111121",
+    "1222222112144444411222222221",
+    "1211112112100000012112111121",
+    "0000012112222112222112110000",
+    "1111112111112112111112111111",
+    "1222222222222222222222222221",
+    "1211112111112112111112111121",
+    "1312222222222112222222222131",
+    "1211112111112112111112111121",
+    "1222222222222222222222222221",
+    "1211112112111111112112111121",
+    "1222222112222112222112222221",
+    "1111112111112112111112111111",
+    "1222222222222112222222222221",
+    "1211111111112112111111111121",
+    "1222222222222222222222222221",
+    "1211112112111111112112111121",
+    "1222222112222112222112222221",
+    "1111111111111111111111111111",
+  ];
+
+  const TUNNEL_ROWS = new Set([9, 15]);
+
+  function mapCharToCell(ch){
+    if (ch === '1') return 1;
+    if (ch === '2') return 2;
+    if (ch === '3') return 3;
+    if (ch === '4') return 4;
+    return 0;
+  }
+  function cloneMap(){
+    return BASE_MAP.map(r => r.split('').map(mapCharToCell));
+  }
+
+  let grid;
+  let pelletsLeft = 0;
+
+  let pacLives = 3;
+  let level = 1;
+
+  let paused = false;
+  let gameWon = false;
+
+  let lastTime = 0;
+  let elapsed = 0;
+  let powerTimer = 0;
+
+  const DIRS = {
+    left:{x:-1,y:0}, right:{x:1,y:0}, up:{x:0,y:-1}, down:{x:0,y:1}, none:{x:0,y:0}
+  };
+  function opposite(dir){
+    if (dir==='left') return 'right';
+    if (dir==='right') return 'left';
+    if (dir==='up') return 'down';
+    if (dir==='down') return 'up';
+    return 'none';
+  }
+  function isBlockedPac(v){ return v===1 || v===4; }
+  function isBlockedGhost(v){ return v===1; }
+
+  function align(ent){
+    ent.x = (ent.tx + 0.5) * TILE;
+    ent.y = (ent.ty + 0.5) * TILE;
+  }
+
+  function makeEntity(tx, ty, speed){
+    return { tx, ty, x:(tx+0.5)*TILE, y:(ty+0.5)*TILE, dir:'left', nextDir:'left', speed, radius:TILE*0.42 };
+  }
+
+  const pac = makeEntity(13, 23, 112);
+  pac.dir='left'; pac.nextDir='left';
+  let pacMouth = 0;
+
+  function makeGhost(name, tx, ty, color){
+    const g = makeEntity(tx, ty, 98);
+    g.name = name;
+    g.color = color;
+    g.controlled = false;
+    g.dead = false;
+    return g;
+  }
+
+  const ghosts = [
+    makeGhost('Blinky', 12, 12, '#ff3b3b'),
+    makeGhost('Pinky',  13, 12, '#ff77c8'),
+    makeGhost('Inky',   14, 12, '#48e3ff'),
+    makeGhost('Clyde',  15, 12, '#ffb84d'),
+  ];
+
+  let controlledIndex = 0;
+
+  const BEST_KEY = "ghost_hunter_best_time_v3";
+  function loadBest(){
+    const v = localStorage.getItem(BEST_KEY);
+    if (!v) { elBest.textContent="—"; return null; }
+    const n = Number(v);
+    if (!Number.isFinite(n) || n<=0) { elBest.textContent="—"; return null; }
+    elBest.textContent = n.toFixed(2) + "s";
+    return n;
+  }
+  function setBest(t){
+    localStorage.setItem(BEST_KEY, String(t));
+    loadBest();
+  }
+
+  function aliveCount(){
+    return ghosts.reduce((a,g)=>a + (g.dead?0:1), 0);
+  }
+
+  function nextAliveIndex(from){
+    if (aliveCount() === 0) return -1;
+    for (let k=1;k<=ghosts.length;k++){
+      const i = (from + k) % ghosts.length;
+      if (!ghosts[i].dead) return i;
+    }
+    return -1;
+  }
+
+  function setControlled(i){
+    let idx = ((i%ghosts.length)+ghosts.length)%ghosts.length;
+    if (ghosts[idx].dead){
+      const na = nextAliveIndex(idx);
+      if (na !== -1) idx = na;
+    }
+    controlledIndex = idx;
+    ghosts.forEach((g,j)=>g.controlled = (j===controlledIndex && !g.dead));
+    elControlled.textContent = ghosts[controlledIndex].dead ? "—" : ghosts[controlledIndex].name;
+  }
+
+  function countPellets(){
+    pelletsLeft = 0;
+    for (let y=0;y<ROWS;y++){
+      for (let x=0;x<COLS;x++){
+        const v=grid[y][x];
+        if (v===2 || v===3) pelletsLeft++;
+      }
+    }
+  }
+
+  function resetRoundPositions(){
+    pac.tx=13; pac.ty=23; align(pac);
+    pac.dir='left'; pac.nextDir='left';
+
+    // Wider, cleaner house spawns (inside row 12 / 14 interior)
+    ghosts[0].tx=12; ghosts[0].ty=12;
+    ghosts[1].tx=13; ghosts[1].ty=12;
+    ghosts[2].tx=14; ghosts[2].ty=12;
+    ghosts[3].tx=15; ghosts[3].ty=12;
+
+    for (const g of ghosts){
+      if (g.dead) continue;
+      align(g);
+      g.dir='right';
+      g.nextDir='right';
+    }
+    powerTimer = 0;
+
+    // reset pac history to reduce instant loop penalties after resets
+    pacHistory.length = 0;
+    pacHistory.push(pac.ty*COLS + pac.tx);
+  }
+
+  function resetGame(){
+    grid = cloneMap();
+    countPellets();
+
+    pacLives = 3;
+    level = 1;
+    elapsed = 0;
+    powerTimer = 0;
+    paused = false;
+    gameWon = false;
+
+    for (const g of ghosts){
+      g.dead = false;
+      g.controlled = false;
+    }
+
+    hideOverlay();
+    btnPause.textContent='Pause';
+    resetRoundPositions();
+    setControlled(0);
+    updateHUD();
+
+    lastTime = performance.now();
+  }
+
+  function updateHUD(){
+    elLives.textContent = String(pacLives);
+    elLevel.textContent = String(level);
+    elTime.textContent = elapsed.toFixed(2);
+    elPower.textContent = Math.max(0, powerTimer).toFixed(1);
+    elAlive.textContent = String(aliveCount());
+  }
+
+  function atCenter(ent){
+    const cx=(ent.tx+0.5)*TILE, cy=(ent.ty+0.5)*TILE;
+    return Math.abs(ent.x-cx)<0.8 && Math.abs(ent.y-cy)<0.8;
+  }
+
+  function tryTurn(ent, dir, blockedFn){
+    if (dir==='none') return false;
+    const d=DIRS[dir];
+    let nx=ent.tx+d.x, ny=ent.ty+d.y;
+    if (TUNNEL_ROWS.has(ent.ty) && (nx<0||nx>=COLS)) return true;
+    if (ny<0||ny>=ROWS||nx<0||nx>=COLS) return false;
+    const cell=grid[ny][nx];
+    if (!blockedFn(cell)){ ent.dir=dir; return true; }
+    return false;
+  }
+
+  function step(ent, dt, blockedFn){
+    if (atCenter(ent)){
+      align(ent);
+      tryTurn(ent, ent.nextDir, blockedFn);
+      const dcur=DIRS[ent.dir]||DIRS.none;
+      let nx=ent.tx+dcur.x, ny=ent.ty+dcur.y;
+      if (!(TUNNEL_ROWS.has(ent.ty) && (nx<0||nx>=COLS))){
+        const front=(ny<0||ny>=ROWS||nx<0||nx>=COLS)?1:grid[ny][nx];
+        if (blockedFn(front)) return;
+      }
+    }
+
+    const d=DIRS[ent.dir]||DIRS.none;
+    ent.x += d.x * ent.speed * dt;
+    ent.y += d.y * ent.speed * dt;
+
+    let ntx=Math.floor(ent.x/TILE);
+    let nty=Math.floor(ent.y/TILE);
+
+    if (TUNNEL_ROWS.has(nty)){
+      if (ent.x < -TILE*0.2) ent.x = W + TILE*0.2;
+      if (ent.x > W + TILE*0.2) ent.x = -TILE*0.2;
+      ntx = ((Math.floor(ent.x / TILE) % COLS) + COLS) % COLS;
+    }
+
+    ent.tx = Math.max(0, Math.min(COLS-1, ntx));
+    ent.ty = Math.max(0, Math.min(ROWS-1, nty));
+  }
+
+  function dist2(ax,ay,bx,by){ const dx=ax-bx, dy=ay-by; return dx*dx+dy*dy; }
+  function collide(a,b){ const r=a.radius+b.radius; return dist2(a.x,a.y,b.x,b.y) <= r*r; }
+
+  function legalDirs(ent, blockedFn){
+    const out=[];
+    for (const dir of ['left','right','up','down']){
+      const d=DIRS[dir];
+      let nx=ent.tx+d.x, ny=ent.ty+d.y;
+      if (TUNNEL_ROWS.has(ent.ty) && (nx<0||nx>=COLS)){ out.push(dir); continue; }
+      if (ny<0||ny>=ROWS||nx<0||nx>=COLS) continue;
+      const cell=grid[ny][nx];
+      if (!blockedFn(cell)) out.push(dir);
+    }
+    return out;
+  }
+
+  // ===== Smarter Pac AI =====
+  // - evaluates each candidate direction using a short BFS lookahead
+  // - balances safety (distance to ghosts), food (distance to pellets/power), and anti-looping
+  const PAC_LOOKAHEAD = 14;      // BFS depth limit (tiles)
+  const PAC_HISTORY_N = 12;      // recent tiles to discourage revisits
+  const pacHistory = [];
+
+  function bfsScoreFrom(startTx, startTy){
+    // BFS over walkable for Pac
+    const q = [];
+    const seen = new Uint8Array(COLS*ROWS);
+    const dist = new Uint8Array(COLS*ROWS);
+    const idx0 = startTy*COLS + startTx;
+    q.push(idx0);
+    seen[idx0]=1;
+    dist[idx0]=0;
+
+    // targets
+    let nearestPellet = Infinity;
+    let nearestPower  = Infinity;
+    let nearestGhost  = Infinity;
+
+    const aliveGhosts = ghosts.filter(g=>!g.dead);
+    const ghostPos = aliveGhosts.map(g=>g.ty*COLS + g.tx);
+
+    while (q.length){
+      const cur = q.shift();
+      const dcur = dist[cur];
+
+      const ty = (cur / COLS) | 0;
+      const tx = cur - ty*COLS;
+
+      // evaluate tile content
+      const cell = grid[ty][tx];
+      if (cell === 2) nearestPellet = Math.min(nearestPellet, dcur);
+      else if (cell === 3) nearestPower = Math.min(nearestPower, dcur);
+
+      // ghost distance (in tile steps, path-aware)
+      for (let i=0;i<ghostPos.length;i++){
+        if (cur === ghostPos[i]){
+          nearestGhost = Math.min(nearestGhost, dcur);
+        }
+      }
+
+      if (dcur >= PAC_LOOKAHEAD) continue;
+
+      // neighbors
+      // wrap tunnels for pac
+      const neigh = [
+        {dx:-1,dy:0},{dx:1,dy:0},{dx:0,dy:-1},{dx:0,dy:1}
+      ];
+      for (const n of neigh){
+        let nx = tx + n.dx;
+        let ny = ty + n.dy;
+
+        if (TUNNEL_ROWS.has(ty) && (nx < 0 || nx >= COLS)){
+          nx = (nx < 0) ? (COLS-1) : 0;
+        }
+        if (ny<0||ny>=ROWS||nx<0||nx>=COLS) continue;
+
+        const cell2 = grid[ny][nx];
+        if (isBlockedPac(cell2)) continue;
+
+        const ii = ny*COLS + nx;
+        if (seen[ii]) continue;
+        seen[ii]=1;
+        dist[ii]=dcur+1;
+        q.push(ii);
+      }
+    }
+
+    // If we never saw ghosts in BFS region, approximate by Manhattan to nearest ghost
+    if (nearestGhost === Infinity){
+      if (aliveGhosts.length === 0) nearestGhost = 99;
+      else {
+        let best = Infinity;
+        for (const g of aliveGhosts){
+          const md = Math.abs(startTx - g.tx) + Math.abs(startTy - g.ty);
+          best = Math.min(best, md);
+        }
+        nearestGhost = best;
+      }
+    }
+
+    if (nearestPellet === Infinity) nearestPellet = PAC_LOOKAHEAD + 2;
+    if (nearestPower === Infinity) nearestPower = PAC_LOOKAHEAD + 3;
+
+    return {nearestPellet, nearestPower, nearestGhost};
+  }
+
+  function choosePacDir(){
+    const dirs = legalDirs(pac, isBlockedPac);
+    if (dirs.length===0) return pac.dir;
+
+    const opp = opposite(pac.dir);
+    const options = dirs.length>1 ? dirs.filter(d=>d!==opp) : dirs;
+
+    // If powered, reduce fear (but still not suicidal).
+    const powered = powerTimer > 0;
+
+    let best = options[0];
+    let bestScore = -Infinity;
+
+    for (const dname of options){
+      const d = DIRS[dname];
+      let nx = pac.tx + d.x;
+      let ny = pac.ty + d.y;
+
+      if (TUNNEL_ROWS.has(pac.ty) && (nx<0||nx>=COLS)){
+        nx = (nx<0) ? (COLS-1) : 0;
+      }
+      if (ny<0||ny>=ROWS||nx<0||nx>=COLS) continue;
+      if (isBlockedPac(grid[ny][nx])) continue;
+
+      const metrics = bfsScoreFrom(nx, ny);
+
+      // anti-loop: penalize revisiting recent tiles
+      const tileId = ny*COLS + nx;
+      let loopPenalty = 0;
+      for (let i=pacHistory.length-1, k=0; i>=0 && k<PAC_HISTORY_N; i--,k++){
+        if (pacHistory[i] === tileId){
+          loopPenalty = 2.6 - (k*0.15); // more recent => larger penalty
+          break;
+        }
+      }
+      loopPenalty = Math.max(0, loopPenalty);
+
+      // weights
+      const ghostW = powered ? 0.85 : 1.25;
+      const pelletW = 0.55;
+      const powerW  = powered ? 0.15 : 0.45;
+
+      // Convert distances to scores:
+      // - want large ghost distance
+      // - want small pellet/power distances
+      const safetyScore = metrics.nearestGhost * ghostW;
+      const foodScore   = (PAC_LOOKAHEAD + 2 - metrics.nearestPellet) * pelletW;
+      const powerScore  = (PAC_LOOKAHEAD + 3 - metrics.nearestPower)  * powerW;
+
+      // small bias to keep direction
+      const straight = (dname === pac.dir) ? 0.25 : 0;
+
+      const score = safetyScore + foodScore + powerScore + straight - loopPenalty;
+
+      // tiny randomness to prevent deterministic stuck patterns
+      const jitter = (Math.random() - 0.5) * 0.06;
+
+      if (score + jitter > bestScore){
+        bestScore = score + jitter;
+        best = dname;
+      }
+    }
+
+    return best;
+  }
+
+  // Ghost AI: chase pac
+  function chooseGhostDir(g){
+    const dirs=legalDirs(g, isBlockedGhost);
+    if (dirs.length===0) return g.dir;
+    const opp=opposite(g.dir);
+    const options=dirs.length>1 ? dirs.filter(d=>d!==opp) : dirs;
+
+    let best=options[0], bestScore=Infinity;
+    for (const dname of options){
+      const d=DIRS[dname];
+      let nx=g.tx+d.x, ny=g.ty+d.y;
+      if (TUNNEL_ROWS.has(g.ty) && (nx<0||nx>=COLS)) nx = (nx<0)?(COLS-1):0;
+      const s = (nx-pac.tx)*(nx-pac.tx) + (ny-pac.ty)*(ny-pac.ty);
+      if (s < bestScore){ bestScore=s; best=dname; }
+    }
+    if (Math.random() < 0.04) return options[(Math.random()*options.length)|0];
+    return best;
+  }
+
+  function eatPelletsAndPower(){
+    const cell = grid[pac.ty][pac.tx];
+    if (cell === 2){
+      grid[pac.ty][pac.tx] = 0; pelletsLeft--;
+    } else if (cell === 3){
+      grid[pac.ty][pac.tx] = 0; pelletsLeft--;
+      powerTimer = 7.5;
+    }
+    if (pelletsLeft <= 0){
+      level++;
+      grid = cloneMap();
+      countPellets();
+      pac.speed = 112 + (level-1)*4;
+      resetRoundPositions();
+      setControlled(controlledIndex);
+    }
+  }
+
+  function killGhost(g){
+    g.dead = true;
+    g.controlled = false;
+  }
+
+  function onPacCaught(){
+    pacLives--;
+    updateHUD();
+
+    if (pacLives <= 0){
+      gameWon = true;
+      paused = true;
+      showOverlay('You Win!', `Time: <b class="good">${elapsed.toFixed(2)}s</b><br>Press <b>R</b> to restart.`, false, true);
+      const best = loadBest();
+      if (best === null || elapsed < best) setBest(elapsed);
+      btnPause.textContent = 'Pause';
+      return;
+    }
+
+    paused = true;
+    showOverlay('Caught!', `Pac‑Man escaped… lives left: <b>${pacLives}</b><br>Press <b>Space</b> to continue.`, false, false);
+    btnPause.textContent = 'Resume';
+    resetRoundPositions();
+  }
+
+  function showOverlay(title, body, danger=false, win=false){
+    ovTitle.textContent = title;
+    ovTitle.style.color = win ? 'var(--good)' : (danger ? 'var(--danger)' : 'var(--text)');
+    ovBody.innerHTML = body;
+    overlay.style.display = 'flex';
+  }
+  function hideOverlay(){ overlay.style.display='none'; }
+
+  function togglePause(){
+    if (gameWon) return;
+    paused = !paused;
+    if (paused){
+      showOverlay('Paused','Press <b>Space</b> or click Continue to resume.');
+      btnPause.textContent='Resume';
+    } else {
+      hideOverlay();
+      btnPause.textContent='Pause';
+      lastTime = performance.now();
+    }
+  }
+
+  function keyToDir(k){
+    if (k==='ArrowLeft'||k==='a'||k==='A') return 'left';
+    if (k==='ArrowRight'||k==='d'||k==='D') return 'right';
+    if (k==='ArrowUp'||k==='w'||k==='W') return 'up';
+    if (k==='ArrowDown'||k==='s'||k==='S') return 'down';
+    return null;
+  }
+
+  window.addEventListener('keydown',(e)=>{
+    if (e.key===' '){ e.preventDefault(); togglePause(); return; }
+    if (e.key==='r'||e.key==='R'){ e.preventDefault(); resetGame(); return; }
+    if (e.key==='Tab'){
+      e.preventDefault();
+      const ni = nextAliveIndex(controlledIndex);
+      if (ni !== -1) setControlled(ni);
+      return;
+    }
+    const d = keyToDir(e.key);
+    if (d){
+      e.preventDefault();
+      if (!ghosts[controlledIndex].dead) ghosts[controlledIndex].nextDir = d;
+    }
+  }, {passive:false});
+
+  btnPause.addEventListener('click', togglePause);
+  btnRestart.addEventListener('click', resetGame);
+  ovBtn.addEventListener('click', ()=>{ if (paused) togglePause(); });
+
+  let touchStart=null;
+  canvas.addEventListener('pointerdown',(e)=>{
+    canvas.setPointerCapture(e.pointerId);
+    touchStart={x:e.clientX,y:e.clientY};
+  });
+  canvas.addEventListener('pointerup',(e)=>{
+    if (!touchStart) return;
+    const dx=e.clientX-touchStart.x, dy=e.clientY-touchStart.y;
+    touchStart=null;
+    const ax=Math.abs(dx), ay=Math.abs(dy);
+    if (Math.max(ax,ay)<18) return;
+    const dir = (ax>ay) ? (dx<0?'left':'right') : (dy<0?'up':'down');
+    if (!ghosts[controlledIndex].dead) ghosts[controlledIndex].nextDir = dir;
+  });
+
+  function drawMaze(){
+    ctx.fillStyle='#0a0f24';
+    ctx.fillRect(0,0,W,H);
+
+    for (let y=0;y<ROWS;y++){
+      for (let x=0;x<COLS;x++){
+        const v=grid[y][x];
+        const px=x*TILE, py=y*TILE;
+        if (v===1){
+          ctx.fillStyle='#1d5bff';
+          ctx.fillRect(px,py,TILE,TILE);
+          ctx.fillStyle='rgba(0,0,0,.28)';
+          ctx.fillRect(px+2,py+2,TILE-4,TILE-4);
+        } else if (v===4){
+          ctx.fillStyle='#9aa3d6';
+          ctx.fillRect(px, py + TILE*0.45, TILE, TILE*0.10);
+        } else if (v===2){
+          ctx.fillStyle='#f7f2c8';
+          ctx.beginPath();
+          ctx.arc(px+TILE/2, py+TILE/2, TILE*0.10, 0, Math.PI*2);
+          ctx.fill();
+        } else if (v===3){
+          ctx.fillStyle='#f7f2c8';
+          ctx.beginPath();
+          ctx.arc(px+TILE/2, py+TILE/2, TILE*0.22, 0, Math.PI*2);
+          ctx.fill();
+        }
+      }
+    }
+  }
+
+  function drawPac(){
+    const t=performance.now()/1000;
+    pacMouth=(Math.sin(t*9)+1)/2;
+    const mouth=0.20+0.35*pacMouth;
+
+    let angle=0;
+    if (pac.dir==='right') angle=0;
+    if (pac.dir==='left') angle=Math.PI;
+    if (pac.dir==='up') angle=-Math.PI/2;
+    if (pac.dir==='down') angle=Math.PI/2;
+
+    const powered = powerTimer>0;
+
+    ctx.fillStyle = powered ? '#74f7b6' : '#ffd54a';
+    ctx.beginPath();
+    ctx.moveTo(pac.x,pac.y);
+    ctx.arc(pac.x,pac.y,pac.radius, angle+mouth, angle+Math.PI*2-mouth);
+    ctx.closePath();
+    ctx.fill();
+
+    const ex = pac.x + Math.cos(angle - 0.75) * pac.radius*0.35;
+    const ey = pac.y + Math.sin(angle - 0.75) * pac.radius*0.35;
+    ctx.fillStyle='#1b1b1b';
+    ctx.beginPath();
+    ctx.arc(ex,ey,pac.radius*0.10,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  function drawGhost(g){
+    if (g.dead) return;
+
+    const r=g.radius, x=g.x, y=g.y;
+    const isCtrl=g.controlled;
+
+    ctx.fillStyle=g.color;
+    ctx.beginPath();
+    ctx.arc(x,y,r,Math.PI,0);
+    ctx.lineTo(x+r,y+r);
+    const steps=6;
+    for (let i=0;i<=steps;i++){
+      const px=x+r-(i*(2*r/steps));
+      const py=y+r+(i%2===0?0:r*0.18);
+      ctx.lineTo(px,py);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    const eyeOffX=r*0.35, eyeOffY=r*0.05;
+    ctx.fillStyle='#fff';
+    ctx.beginPath();
+    ctx.ellipse(x-eyeOffX,y-eyeOffY,r*0.22,r*0.28,0,0,Math.PI*2);
+    ctx.ellipse(x+eyeOffX,y-eyeOffY,r*0.22,r*0.28,0,0,Math.PI*2);
+    ctx.fill();
+
+    const dd=DIRS[g.dir]||DIRS.none;
+    const px=dd.x*r*0.08, py=dd.y*r*0.08;
+    ctx.fillStyle='#1b2a7a';
+    ctx.beginPath();
+    ctx.arc(x-eyeOffX+px,y-eyeOffY+py,r*0.10,0,Math.PI*2);
+    ctx.arc(x+eyeOffX+px,y-eyeOffY+py,r*0.10,0,Math.PI*2);
+    ctx.fill();
+
+    if (isCtrl){
+      ctx.strokeStyle='rgba(255,255,255,.85)';
+      ctx.lineWidth=2;
+      ctx.beginPath();
+      ctx.arc(x,y,r*1.18,0,Math.PI*2);
+      ctx.stroke();
+    } else {
+      ctx.strokeStyle='rgba(255,255,255,.18)';
+      ctx.lineWidth=1;
+      ctx.beginPath();
+      ctx.arc(x,y,r*1.16,0,Math.PI*2);
+      ctx.stroke();
+    }
+  }
+
+  function drawCenterText(txt){
+    ctx.fillStyle='rgba(255,255,255,.9)';
+    ctx.font='800 18px system-ui, sans-serif';
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText(txt, W/2, H/2);
+  }
+
+  function render(){
+    drawMaze();
+    drawPac();
+    for (const g of ghosts) drawGhost(g);
+
+    if (paused && !gameWon){
+      ctx.fillStyle='rgba(0,0,0,.30)';
+      ctx.fillRect(0,0,W,H);
+      drawCenterText('Paused');
+    }
+    if (gameWon){
+      ctx.fillStyle='rgba(0,0,0,.45)';
+      ctx.fillRect(0,0,W,H);
+      drawCenterText('You Win!');
+    }
+  }
+
+  function tick(ts){
+    requestAnimationFrame(tick);
+    if (paused){ render(); return; }
+    if (gameWon){ render(); return; }
+
+    const now = ts || performance.now();
+    const dt = Math.min(0.033, (now-lastTime)/1000 || 0);
+    lastTime = now;
+
+    elapsed += dt;
+    if (powerTimer > 0) powerTimer = Math.max(0, powerTimer - dt);
+
+    // Pac AI decides only at centers
+    if (atCenter(pac)){
+      align(pac);
+      pac.nextDir = choosePacDir();
+    }
+    step(pac, dt, isBlockedPac);
+
+    // record history only at centers to reduce noise
+    if (atCenter(pac)){
+      const id = pac.ty*COLS + pac.tx;
+      if (pacHistory.length === 0 || pacHistory[pacHistory.length-1] !== id) pacHistory.push(id);
+      if (pacHistory.length > 40) pacHistory.splice(0, pacHistory.length-40);
+    }
+
+    eatPelletsAndPower();
+
+    const baseGhostSpeed = 98 + (level-1)*5;
+
+    for (const g of ghosts){
+      if (g.dead) continue;
+
+      if (atCenter(g)){
+        align(g);
+        if (!g.controlled){
+          g.nextDir = chooseGhostDir(g);
+        }
+        tryTurn(g, g.nextDir, isBlockedGhost);
+      }
+
+      g.speed = g.controlled ? baseGhostSpeed : baseGhostSpeed * 0.5;
+      step(g, dt, isBlockedGhost);
+    }
+
+    for (const g of ghosts){
+      if (g.dead) continue;
+      if (collide(pac, g)){
+        if (powerTimer > 0){
+          const wasControlled = g.controlled;
+          killGhost(g);
+          updateHUD();
+          if (wasControlled){
+            const ni = nextAliveIndex(controlledIndex);
+            if (ni !== -1) setControlled(ni);
+            else elControlled.textContent = "—";
+          }
+        } else {
+          onPacCaught();
+        }
+        break;
+      }
+    }
+
+    updateHUD();
+    render();
+  }
+
+  loadBest();
+  setControlled(0);
+  resetGame();
+  requestAnimationFrame((t)=>{ lastTime=t; requestAnimationFrame(tick); });
+})();
+</script>
+</body>
+</html>
