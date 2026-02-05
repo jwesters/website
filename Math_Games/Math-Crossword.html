@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Math Crossword (Digits 1–9)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --cell: 46px; --bg:#f6f7fb; --ink:#111; --accent:#4f46e5; --muted:#6b7280; }
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);}
+  header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 16px;background:#fff;box-shadow:0 1px 8px rgba(0,0,0,.08);position:sticky;top:0;z-index:10;}
+  .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+  button,select,input[type="text"]{
+    padding:8px 12px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;font:inherit;
+  }
+  button{cursor:pointer;}
+  button.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+  button.ghost{background:#fff;border-color:#111;}
+  .seedbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+  .seedbar input{width:140px;}
+  .wrap{display:grid;grid-template-columns:1fr;gap:12px;padding:16px;}
+  .board-wrap{display:grid;place-items:center;gap:10px;}
+  .crossword{display:grid;background:#111;border:3px solid #111;}
+  .cell{
+    width:var(--cell);height:var(--cell);
+    background:#fff;border:1px solid #111;
+    display:grid;place-items:center;position:relative;
+    font-weight:800;font-size:18px;box-sizing:border-box;
+  }
+  .block{background:#111;}
+  .op{background:#eef2ff;font-weight:900;}
+  .eq{background:#ecfeff;font-weight:900;}
+  .cell input{
+    width:100%;height:100%;
+    border:none;outline:none;
+    text-align:center;font-size:20px;font-weight:900;
+    background:transparent;
+  }
+  .cell:focus-within{ box-shadow: inset 0 0 0 3px #c7d2fe; }
+  .given{ background:#fff7ed; }
+  .given-badge{ position:absolute; top:3px; left:4px; font-size:10px; font-weight:800; color:#6b7280; }
+
+  .wrong{ background:#fee2e2 !important; box-shadow: inset 0 0 0 3px #ef4444 !important; }
+
+  .digits{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+  .digit{width:36px;height:36px;border-radius:6px;display:grid;place-items:center;background:#fff;border:2px solid #111;font-weight:900;}
+  .digit.used{background:#e5e7eb;color:#9ca3af;text-decoration:line-through;border-color:#9ca3af;}
+  .status{display:flex;gap:12px;align-items:center;justify-content:center;color:#374151;}
+  #answerPanel{display:none;padding:0 16px 16px;text-align:center;}
+  .footer{text-align:center;color:var(--muted);font-size:12px;padding-bottom:16px;}
+
+  .banner{
+    width:min(900px, 96vw);
+    margin:0 auto;
+    padding:10px 12px;
+    border-radius:12px;
+    background:#fff;
+    border:1px solid #e5e7eb;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    font-weight:800;
+  }
+  .banner.ok{ border-color:#10b981; background:#ecfdf5; color:#065f46; }
+  .banner.bad{ border-color:#ef4444; background:#fef2f2; color:#7f1d1d; }
+  .banner.note{ border-color:#111; background:#fff; color:#111; }
+  .banner span.small{ font-weight:700; opacity:.9; }
+</style>
+</head>
+<body>
+<header>
+  <div class="controls">
+    <select id="mode" title="Difficulty">
+      <option value="easy">Easy</option>
+      <option value="hard">Hard</option>
+    </select>
+    <button class="primary" id="newBtn">New Puzzle</button>
+    <button id="showBtn">Show Solution</button>
+    <button class="ghost" id="printBtn">Print</button>
+    <button class="ghost" id="pdfBtn">Save to PDF</button>
+  </div>
+
+  <div class="seedbar">
+    <span style="font-weight:800;">Seed</span>
+    <input id="seedInput" type="text" placeholder="e.g. abc123" maxlength="40" />
+    <button id="loadSeedBtn">Load</button>
+    <button id="copyLinkBtn">Copy Link</button>
+  </div>
+
+  <div class="status">
+    <div>Time: <span id="timer">00:00</span></div>
+    <div>Current: <span id="seedLabel"></span></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="bannerWrap" style="display:none;"></div>
+
+  <div class="board-wrap">
+    <div style="text-align:center;font-size:20px;font-weight:900;margin:10px 0 14px;">Math Crossword</div>
+    <div id="board" class="crossword"></div>
+    <div class="digits" id="digits"></div>
+  </div>
+</div>
+
+<div id="answerPanel">
+  <div style="text-align:center;font-size:20px;font-weight:900;margin:10px 0 14px;">Answer Key</div>
+  <div class="board-wrap">
+    <div id="answerBoard" class="crossword"></div>
+  </div>
+</div>
+
+<div class="footer">Connected Math Crossword — digits 1–9 at most once (with a few givens)</div>
+
+<script>
+// ---------- PDF export (binary-safe, embeds JPEG images) ----------
+function b64ToBytes(b64){
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) out[i]=bin.charCodeAt(i);
+  return out;
+}
+function strBytes(s){ return new TextEncoder().encode(s); }
+
+function buildPDF(pages){ // pages: [{jpegBytes, w, h}]
+  // Simple PDF with DCTDecode images, 1 image per page.
+  // Objects:
+  // 1 Catalog, 2 Pages, then per page: Image, Content, Page
+  let chunks=[];
+  let length=0;
+  const offsets=[]; // 0..N-1, we'll store by object number
+  function pushBytes(u8){ chunks.push(u8); length+=u8.length; }
+  function pushStr(s){ pushBytes(strBytes(s)); }
+
+  function markOffset(objNum){
+    offsets[objNum]=length;
+  }
+
+  pushStr('%PDF-1.3\n%\xE2\xE3\xCF\xD3\n');
+
+  // 1: Catalog
+  markOffset(1);
+  pushStr('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+
+  // 2: Pages (Kids filled later) - placeholder, we'll write after we know page object numbers, but easier: build list now.
+  const firstObj = 3;
+  const pageCount = pages.length;
+  // Compute object numbers deterministically
+  // For page i (0-based):
+  // img = 3 + i*3
+  // contents = 4 + i*3
+  // page = 5 + i*3
+  const kids = [];
+  for(let i=0;i<pageCount;i++){
+    kids.push((5 + i*3) + ' 0 R');
+  }
+  markOffset(2);
+  pushStr(`2 0 obj\n<< /Type /Pages /Kids [${kids.join(' ')}] /Count ${pageCount} >>\nendobj\n`);
+
+  for(let i=0;i<pageCount;i++){
+    const imgObj = 3 + i*3;
+    const contObj = 4 + i*3;
+    const pageObj = 5 + i*3;
+    const {jpegBytes,w,h} = pages[i];
+
+    // Image object
+    markOffset(imgObj);
+    pushStr(`${imgObj} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpegBytes.length} >>\nstream\n`);
+    pushBytes(jpegBytes);
+    pushStr('\nendstream\nendobj\n');
+
+    // Content stream: draw image to fill page
+    const content = `q ${w} 0 0 ${h} 0 0 cm /Im0 Do Q\n`;
+    markOffset(contObj);
+    pushStr(`${contObj} 0 obj\n<< /Length ${content.length} >>\nstream\n${content}endstream\nendobj\n`);
+
+    // Page object
+    markOffset(pageObj);
+    pushStr(`${pageObj} 0 obj\n<< /Type /Page /Parent 2 0 R /Resources << /XObject << /Im0 ${imgObj} 0 R >> >> /MediaBox [0 0 ${w} ${h}] /Contents ${contObj} 0 R >>\nendobj\n`);
+  }
+
+  const maxObj = 2 + pageCount*3;
+  const xrefPos = length;
+
+  pushStr(`xref\n0 ${maxObj+1}\n`);
+  pushStr(`0000000000 65535 f \n`);
+  for(let n=1;n<=maxObj;n++){
+    const off = offsets[n] ?? 0;
+    const line = String(off).padStart(10,'0') + ' 00000 n \n';
+    pushStr(line);
+  }
+  pushStr(`trailer\n<< /Size ${maxObj+1} /Root 1 0 R >>\nstartxref\n${xrefPos}\n%%EOF`);
+
+  return new Blob(chunks, {type:'application/pdf'});
+}
+
+function captureBoardAsJPEG(boardEl, titleText){
+  const scale = 2;
+  const er = boardEl.getBoundingClientRect();
+  const padTop = 44; // title area
+  const w = Math.max(1, Math.round(er.width*scale));
+  const h = Math.max(1, Math.round((er.height + padTop)*scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+
+  // Work in CSS pixels (scale at end)
+  ctx.scale(scale, scale);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0,0, er.width, er.height + padTop);
+
+  // Title
+  ctx.fillStyle='#000';
+  ctx.font='20px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+  ctx.textAlign='left';
+  ctx.textBaseline='top';
+  ctx.fillText(titleText, 10, 10);
+
+  // Draw cells
+  const root = boardEl.getBoundingClientRect();
+  const cells = boardEl.querySelectorAll('.cell');
+  cells.forEach(cell=>{
+    const r = cell.getBoundingClientRect();
+    const x = r.left - root.left;
+    const y = (r.top - root.top) + padTop;
+    const cw = r.width, ch = r.height;
+
+    // background
+    if(cell.classList.contains('block')){
+      ctx.fillStyle='#111';
+      ctx.fillRect(x,y,cw,ch);
+    } else {
+      if(cell.classList.contains('op')) ctx.fillStyle='#eef2ff';
+      else if(cell.classList.contains('eq')) ctx.fillStyle='#ecfeff';
+      else if(cell.classList.contains('given')) ctx.fillStyle='#fff7ed';
+      else ctx.fillStyle='#fff';
+      ctx.fillRect(x,y,cw,ch);
+
+      // text
+      let text='';
+      const inp = cell.querySelector('input');
+      if(inp) text = inp.value || '';
+      else text = (cell.textContent||'').trim();
+      if(text){
+        ctx.fillStyle='#000';
+        ctx.font='20px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+        ctx.textAlign='center';
+        ctx.textBaseline='middle';
+        ctx.fillText(text, x+cw/2, y+ch/2);
+      }
+    }
+    // border
+    ctx.strokeStyle='#000';
+    ctx.lineWidth=1;
+    ctx.strokeRect(x,y,cw,ch);
+  });
+
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  const b64 = dataUrl.split(',')[1];
+  return {jpegBytes: b64ToBytes(b64), w: canvas.width, h: canvas.height};
+}
+
+async function exportPDF(){
+  // Ensure answer key exists in layout for sizing
+  const ap = document.getElementById('answerPanel');
+  const wasHidden = (getComputedStyle(ap).display === 'none');
+  ap.style.display='block';
+
+  // wait a frame so layout updates and bounding boxes are non-zero
+  await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+
+  const p1 = captureBoardAsJPEG(document.getElementById('board'), 'Math Crossword');
+  const p2 = captureBoardAsJPEG(document.getElementById('answerBoard'), 'Answer Key');
+
+  // restore visibility (keep shown if user had it open)
+  if(wasHidden) ap.style.display='none';
+
+  const blob = buildPDF([p1, p2]);
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='math-crossword.pdf';
+  a.click();
+}
+
+// ---------- Game logic ----------
+function mulberry32(a){return function(){var t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294964296;}}
+</script>
+<script>
+// Fix mulberry32 typo by redefining correctly in this script block
+function mulberry32(a){return function(){var t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296;}}
+function hashSeed(str){let h=2166136261>>>0;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+
+let timerInt=null,startTime=null;
+function startTimer(){if(timerInt)clearInterval(timerInt);startTime=Date.now();timerInt=setInterval(()=>{const s=Math.floor((Date.now()-startTime)/1000);const m=Math.floor(s/60);const ss=String(s%60).padStart(2,'0');document.getElementById('timer').textContent=String(m).padStart(2,'0')+':'+ss;},500);}
+
+function validEquation(a,op,b,c){
+  if(op==='+') return a+b===c;
+  if(op==='-') return a-b===c;
+  if(op==='×') return a*b===c;
+  if(op==='÷') return b!==0 && a/b===c && Number.isInteger(a/b);
+  return false;
+}
+
+const templates = [
+  [
+    "N O N E N",
+    "O # O # #",
+    "N O N E N",
+    "E # E # #",
+    "N O N E N"
+  ],
+  [
+    "# N O N E N",
+    "N O N E N #",
+    "# # O # # #",
+    "# N O N E N",
+    "# O # O # #",
+    "# N # N # #"
+  ]
+];
+
+function pickOp(rng, mode){
+  const easyBag=['+','+','+','-','-','×','÷'];
+  const hardBag=['+','-','×','×','÷','÷','-','+'];
+  const bag = mode==='easy' ? easyBag : hardBag;
+  return bag[Math.floor(rng()*bag.length)];
+}
+
+function buildFromTemplate(tpl,rng,mode){
+  const grid=tpl.map(r=>r.split(' '));
+  const H=grid.length,W=grid[0].length;
+  for(const row of grid) if(row.length!==W) return null;
+
+  const values=Array.from({length:H},()=>Array(W).fill(null));
+  for(let r=0;r<H;r++)for(let c=0;c<W;c++){
+    if(grid[r][c]==='O') values[r][c]=pickOp(rng,mode);
+    if(grid[r][c]==='E') values[r][c]='=';
+  }
+
+  const numPos=[];
+  for(let r=0;r<H;r++)for(let c=0;c<W;c++) if(grid[r][c]==='N') numPos.push([r,c]);
+  if(numPos.length>9) return null;
+
+  const equations=[];
+  for(let r=0;r<H;r++) for(let c=0;c<=W-5;c++){
+    if(grid[r][c]==='N'&&grid[r][c+1]==='O'&&grid[r][c+2]==='N'&&grid[r][c+3]==='E'&&grid[r][c+4]==='N')
+      equations.push([[r,c],[r,c+1],[r,c+2],[r,c+4]]);
+  }
+  for(let c=0;c<W;c++) for(let r=0;r<=H-5;r++){
+    if(grid[r][c]==='N'&&grid[r+1][c]==='O'&&grid[r+2][c]==='N'&&grid[r+3][c]==='E'&&grid[r+4][c]==='N')
+      equations.push([[r,c],[r+1,c],[r+2,c],[r+4,c]]);
+  }
+
+  const digits=[1,2,3,4,5,6,7,8,9];
+  const used=new Set();
+
+  function checkPartial(){
+    for(const eq of equations){
+      const [aP,opP,bP,cP]=eq;
+      const a=values[aP[0]][aP[1]];
+      const op=values[opP[0]][opP[1]];
+      const b=values[bP[0]][bP[1]];
+      const c=values[cP[0]][cP[1]];
+      if(a!=null&&b!=null&&c!=null){
+        if(op==='-' && a-b<0) return false;
+        if(!validEquation(a,op,b,c)) return false;
+      }
+    }
+    return true;
+  }
+
+  function shuffledDigits(){
+    const arr=digits.slice();
+    for(let k=arr.length-1;k>0;k--){
+      const j=Math.floor(rng()*(k+1));
+      [arr[k],arr[j]]=[arr[j],arr[k]];
+    }
+    return arr;
+  }
+
+  function dfs(i){
+    if(i>=numPos.length) return true;
+    const [r,c]=numPos[i];
+    for(const d of shuffledDigits()){
+      if(used.has(d)) continue;
+      values[r][c]=d; used.add(d);
+      if(checkPartial() && dfs(i+1)) return true;
+      used.delete(d); values[r][c]=null;
+    }
+    return false;
+  }
+
+  if(!dfs(0)) return null;
+  return {grid, values};
+}
+
+function chooseGivens(puzzle, rng, mode){
+  const want = (mode==='hard') ? 2 : 3;
+  const {grid, values} = puzzle;
+  const numCells=[];
+  for(let r=0;r<grid.length;r++) for(let c=0;c<grid[0].length;c++){
+    if(grid[r][c]==='N') numCells.push([r,c]);
+  }
+  for(let i=numCells.length-1;i>0;i--){
+    const j=Math.floor(rng()*(i+1));
+    [numCells[i],numCells[j]]=[numCells[j],numCells[i]];
+  }
+  const givens = new Map();
+  for(let i=0;i<Math.min(want, numCells.length);i++){
+    const [r,c]=numCells[i];
+    givens.set(r+','+c, values[r][c]);
+  }
+  return givens;
+}
+
+function render(container,puzzle,inputs=true,givens=null){
+  const {grid,values}=puzzle;
+  const H=grid.length,W=grid[0].length;
+  container.style.gridTemplateColumns=`repeat(${W}, var(--cell))`;
+  container.innerHTML='';
+  for(let r=0;r<H;r++)for(let c=0;c<W;c++){
+    const t=grid[r][c];
+    const cell=document.createElement('div');
+    if(t==='#'){ cell.className='cell block'; container.appendChild(cell); continue; }
+    cell.className='cell';
+    if(t==='O'){ cell.classList.add('op'); cell.textContent=values[r][c]; }
+    else if(t==='E'){ cell.classList.add('eq'); cell.textContent='='; }
+    else if(t==='N'){
+      const key=r+','+c;
+      const isGiven = givens && givens.has(key);
+      if(inputs){
+        const inp=document.createElement('input');
+        inp.maxLength=1; inp.inputMode='numeric'; inp.pattern='[1-9]';
+        inp.dataset.r=r; inp.dataset.c=c;
+        inp.addEventListener('input',onInput);
+        inp.addEventListener('keydown',onNav);
+        if(isGiven){
+          inp.value = String(givens.get(key));
+          inp.disabled = true;
+          cell.classList.add('given');
+          const badge=document.createElement('div');
+          badge.className='given-badge';
+          badge.textContent='G';
+          cell.appendChild(badge);
+        }
+        cell.appendChild(inp);
+      } else {
+        cell.textContent=values[r][c];
+      }
+    }
+    container.appendChild(cell);
+  }
+}
+
+function banner(kind, text, sub=''){
+  const wrap=document.getElementById('bannerWrap');
+  wrap.style.display='block';
+  wrap.innerHTML='';
+  const div=document.createElement('div');
+  div.className='banner ' + kind;
+  div.innerHTML = `<div>${text}</div>` + (sub?` <span class="small">${sub}</span>`:'');
+  wrap.appendChild(div);
+}
+function clearBanner(){ const w=document.getElementById('bannerWrap'); w.style.display='none'; w.innerHTML=''; }
+
+function renderDigits(){
+  const wrap=document.getElementById('digits'); wrap.innerHTML='';
+  const usedNow=new Set();
+  document.querySelectorAll('#board .cell input').forEach(i=>{ if(i.value) usedNow.add(parseInt(i.value,10)); });
+  for(let d=1;d<=9;d++){
+    const el=document.createElement('div'); el.className='digit'; el.textContent=d;
+    if(usedNow.has(d)) el.classList.add('used');
+    wrap.appendChild(el);
+  }
+}
+
+function clearWrongHighlights(){ document.querySelectorAll('#board .cell').forEach(cell=>cell.classList.remove('wrong')); }
+
+function checkIfCompleteAndValidate(){
+  if(!currentPuzzle) return;
+  const inputs=[...document.querySelectorAll('#board .cell input')];
+  const allFilled = inputs.every(i=>i.value && /^[1-9]$/.test(i.value));
+  if(!allFilled){ clearBanner(); clearWrongHighlights(); return; }
+
+  const grid = currentPuzzle.grid;
+  const sol = currentPuzzle.values;
+
+  const user = Array.from({length:grid.length},()=>Array(grid[0].length).fill(null));
+  inputs.forEach(inp=>{
+    const r=+inp.dataset.r, c=+inp.dataset.c;
+    user[r][c]=parseInt(inp.value,10);
+  });
+
+  const wrongCells = new Set();
+
+  for(let r=0;r<grid.length;r++){
+    for(let c=0;c<=grid[0].length-5;c++){
+      if(grid[r][c]==='N'&&grid[r][c+1]==='O'&&grid[r][c+2]==='N'&&grid[r][c+3]==='E'&&grid[r][c+4]==='N'){
+        const a=user[r][c], op=sol[r][c+1], b=user[r][c+2], cc=user[r][c+4];
+        if(op==='-' && a-b<0){ wrongCells.add(r+','+c); wrongCells.add(r+','+(c+2)); wrongCells.add(r+','+(c+4)); continue; }
+        if(!validEquation(a,op,b,cc)){
+          wrongCells.add(r+','+c); wrongCells.add(r+','+(c+2)); wrongCells.add(r+','+(c+4));
+        }
+      }
+    }
+  }
+  for(let c=0;c<grid[0].length;c++){
+    for(let r=0;r<=grid.length-5;r++){
+      if(grid[r][c]==='N'&&grid[r+1][c]==='O'&&grid[r+2][c]==='N'&&grid[r+3][c]==='E'&&grid[r+4][c]==='N'){
+        const a=user[r][c], op=sol[r+1][c], b=user[r+2][c], cc=user[r+4][c];
+        if(op==='-' && a-b<0){ wrongCells.add(r+','+c); wrongCells.add((r+2)+','+c); wrongCells.add((r+4)+','+c); continue; }
+        if(!validEquation(a,op,b,cc)){
+          wrongCells.add(r+','+c); wrongCells.add((r+2)+','+c); wrongCells.add((r+4)+','+c);
+        }
+      }
+    }
+  }
+
+  clearWrongHighlights();
+  if(wrongCells.size===0){
+    banner('ok', '✅ Correct!', 'Nice work.');
+  } else {
+    banner('bad', '❌ Not quite.', 'Highlighted cells are part of an incorrect equation.');
+    document.querySelectorAll('#board .cell input').forEach(inp=>{
+      const key = inp.dataset.r+','+inp.dataset.c;
+      if(wrongCells.has(key)) inp.parentElement.classList.add('wrong');
+    });
+  }
+}
+
+function onInput(e){
+  const v=e.target.value;
+  if(!/^[1-9]$/.test(v)) e.target.value='';
+  const all=[...document.querySelectorAll('#board .cell input')];
+  const counts={};
+  all.forEach(i=>{ if(i.value) counts[i.value]=(counts[i.value]||0)+1; });
+  for(const k in counts){
+    if(counts[k]>1){ e.target.value=''; break; }
+  }
+  renderDigits();
+  checkIfCompleteAndValidate();
+}
+
+function onNav(e){
+  const key=e.key;
+  if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(key)) return;
+  e.preventDefault();
+  const inp=e.target;
+  const r=parseInt(inp.dataset.r,10), c=parseInt(inp.dataset.c,10);
+  let dr=0,dc=0;
+  if(key==='ArrowUp') dr=-1;
+  if(key==='ArrowDown') dr=1;
+  if(key==='ArrowLeft') dc=-1;
+  if(key==='ArrowRight') dc=1;
+
+  const all=[...document.querySelectorAll('#board .cell input')];
+  const map=new Map();
+  all.forEach(i=>map.set(i.dataset.r+','+i.dataset.c, i));
+
+  let rr=r+dr, cc=c+dc;
+  for(let steps=0; steps<60; steps++){
+    const t = map.get(rr+','+cc);
+    if(t){ t.focus(); return; }
+    rr+=dr; cc+=dc;
+  }
+}
+
+function randomSeed(){ return Math.random().toString(36).slice(2,10); }
+
+let currentPuzzle=null,currentSeed=null;
+
+function tryMakePuzzleForSeed(seed, mode){
+  const rng=mulberry32(hashSeed(seed+'|'+mode));
+  for(let tries=0; tries<700; tries++){
+    const tpl=templates[Math.floor(rng()*templates.length)];
+    const p=buildFromTemplate(tpl, rng, mode);
+    if(p){
+      const givens = chooseGivens(p, rng, mode);
+      return {p, givens};
+    }
+  }
+  return null;
+}
+
+function setPuzzle(puzzle, givens, seed){
+  currentPuzzle=puzzle;
+  currentSeed=seed;
+  document.getElementById('seedLabel').textContent=seed;
+  document.getElementById('seedInput').value=seed;
+
+  clearBanner();
+  render(document.getElementById('board'), puzzle, true, givens);
+  renderDigits();
+  render(document.getElementById('answerBoard'), puzzle, false, null);
+  document.getElementById('answerPanel').style.display='none';
+  clearWrongHighlights();
+
+  const mode=document.getElementById('mode').value;
+  const url=new URL(window.location);
+  url.searchParams.set('seed', seed);
+  url.searchParams.set('mode', mode);
+  history.replaceState(null,'',url.toString());
+
+  startTimer();
+}
+
+function newPuzzle(preferredSeed){
+  const mode=document.getElementById('mode').value;
+  const seedsToTry = [];
+  if(preferredSeed) seedsToTry.push(preferredSeed);
+  for(let i=0;i<80;i++) seedsToTry.push(randomSeed());
+  if(preferredSeed) for(let k=1;k<=40;k++) seedsToTry.push(preferredSeed+'-'+k);
+
+  for(const seed of seedsToTry){
+    const got = tryMakePuzzleForSeed(seed, mode);
+    if(got){ setPuzzle(got.p, got.givens, seed); return; }
+  }
+  while(true){
+    const seed=randomSeed();
+    const got=tryMakePuzzleForSeed(seed, mode);
+    if(got){ setPuzzle(got.p, got.givens, seed); return; }
+  }
+}
+
+function copyLink(){
+  const url = new URL(window.location);
+  url.searchParams.set('seed', currentSeed || '');
+  url.searchParams.set('mode', document.getElementById('mode').value);
+  navigator.clipboard?.writeText(url.toString()).then(()=>{
+    banner('note', '🔗 Link copied!', url.toString());
+    setTimeout(()=>{ clearBanner(); }, 1800);
+  }).catch(()=>{
+    banner('note', 'Copy this link:', url.toString());
+  });
+}
+
+document.getElementById('newBtn').addEventListener('click',()=>newPuzzle());
+document.getElementById('showBtn').addEventListener('click',()=>{
+  if(!currentPuzzle) return;
+  document.getElementById('answerPanel').style.display='block';
+  document.getElementById('answerPanel').scrollIntoView({behavior:'smooth', block:'start'});
+});
+document.getElementById('printBtn').addEventListener('click',()=>window.print());
+document.getElementById('pdfBtn').addEventListener('click',exportPDF);
+document.getElementById('copyLinkBtn').addEventListener('click',copyLink);
+
+document.getElementById('loadSeedBtn').addEventListener('click',()=>{
+  const s = (document.getElementById('seedInput').value || '').trim();
+  if(!s) return;
+  newPuzzle(s);
+});
+document.getElementById('seedInput').addEventListener('keydown',(e)=>{
+  if(e.key==='Enter'){
+    const s=(e.target.value||'').trim();
+    if(s) newPuzzle(s);
+  }
+});
+document.getElementById('mode').addEventListener('change',()=>{
+  const s = (document.getElementById('seedInput').value || currentSeed || '').trim();
+  newPuzzle(s || undefined);
+});
+
+(function init(){
+  const params=new URLSearchParams(window.location.search);
+  const seed=params.get('seed');
+  const mode=params.get('mode');
+  if(mode) document.getElementById('mode').value=mode;
+  newPuzzle(seed||undefined);
+})();
+</script>
+</body>
+</html>
