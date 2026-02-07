@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Expandable Tic Tac Toe (4-in-a-row)</title>
+  <style>
+    :root{
+      --cell: 58px;
+      --gap: 8px;
+
+      --bg: #0b0f17;
+      --panel: rgba(255,255,255,0.08);
+      --panel2: rgba(255,255,255,0.06);
+      --border: rgba(255,255,255,0.14);
+
+      --text: rgba(255,255,255,0.92);
+      --muted: rgba(255,255,255,0.68);
+
+      --shadow: 0 12px 30px rgba(0,0,0,0.40);
+      --radius: 16px;
+
+      --macroStep: calc(3 * var(--cell) + 3 * var(--gap));
+      --macroSize: calc(3 * var(--cell) + 2 * var(--gap));
+    }
+
+    *{ box-sizing: border-box; }
+    body{
+      margin: 18px;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 800px at 20% -10%, rgba(99,102,241,0.22), transparent 55%),
+        radial-gradient(900px 700px at 110% 10%, rgba(16,185,129,0.18), transparent 60%),
+        radial-gradient(800px 600px at 20% 120%, rgba(236,72,153,0.12), transparent 55%),
+        var(--bg);
+      min-height: 100vh;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      margin: 0 auto 14px;
+      max-width: 980px;
+    }
+    h1{
+      font-size: 18px;
+      font-weight: 650;
+      margin: 0;
+      letter-spacing: 0.2px;
+    }
+
+    .controls{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    label{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    select, button{
+      font: inherit;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+      padding: 10px 12px;
+      outline: none;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+    }
+    select{ padding-right: 34px; }
+    button{
+      cursor:pointer;
+      transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+    }
+    button:hover{
+      transform: translateY(-1px);
+      background: rgba(255,255,255,0.10);
+      border-color: rgba(255,255,255,0.22);
+    }
+    button:active{ transform: translateY(0px); }
+    button:disabled{ cursor: default; opacity: 0.65; transform: none; }
+
+    .statusWrap{
+      max-width: 980px;
+      margin: 0 auto 14px;
+      display:flex;
+      justify-content:center;
+    }
+    #status{
+      width: fit-content;
+      min-width: 280px;
+      text-align:center;
+      font-weight: 800;
+      font-size: 16px;
+      letter-spacing: 0.3px;
+      padding: 12px 14px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.06));
+      border: 1px solid rgba(255,255,255,0.18);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .turnBadge{
+      display:inline-grid;
+      place-items:center;
+      width: 28px;
+      height: 28px;
+      border-radius: 10px;
+      margin-left: 10px;
+      font-weight: 900;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.18);
+    }
+
+    .boardWrap{ display:flex; justify-content:center; }
+    .boardShell{
+      padding: 16px;
+      border-radius: var(--radius);
+      background: var(--panel2);
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .boardContainer{
+      position: relative;
+      width: calc(9 * var(--cell) + 8 * var(--gap));
+      height: calc(9 * var(--cell) + 8 * var(--gap));
+    }
+
+    .macroOverlayLayer{
+      position:absolute;
+      inset: 0;
+      pointer-events:none;
+      z-index: 1;
+    }
+    .macroOverlay{
+      position:absolute;
+      width: var(--macroSize);
+      height: var(--macroSize);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.03);
+      border: 2px solid rgba(255,255,255,0.10);
+      box-shadow:
+        inset 0 0 0 1px rgba(0,0,0,0.30),
+        0 12px 26px rgba(0,0,0,0.22);
+      transition: transform 120ms ease, background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+    }
+    .macroOverlay.active{
+      background: rgba(255,255,255,0.07);
+      border-color: rgba(255,255,255,0.22);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,0.06),
+        0 16px 34px rgba(0,0,0,0.32);
+    }
+    .macroOverlay.initial{
+      background: linear-gradient(180deg, rgba(99,102,241,0.18), rgba(99,102,241,0.06));
+      border-color: rgba(99,102,241,0.40);
+    }
+    .macroOverlay.target{
+      background: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08));
+      border-color: rgba(255,255,255,0.40);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,0.12),
+        0 22px 40px rgba(0,0,0,0.36);
+    }
+    @keyframes tilePulse{
+      0%{ transform: scale(1); }
+      50%{ transform: scale(1.02); }
+      100%{ transform: scale(1); }
+    }
+    .macroOverlay.pulse{ animation: tilePulse 0.9s ease-in-out infinite; }
+
+    .board{
+      position:absolute;
+      inset:0;
+      z-index: 2;
+      display:grid;
+      grid-template-columns: repeat(9, var(--cell));
+      grid-template-rows: repeat(9, var(--cell));
+      gap: var(--gap);
+      user-select:none;
+      touch-action: manipulation;
+    }
+
+    .cell{
+      width: var(--cell);
+      height: var(--cell);
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.92);
+      display:grid;
+      place-items:center;
+      font-size: 26px;
+      font-weight: 900;
+      cursor:pointer;
+      padding: 0;
+      transition: transform 120ms ease, background 120ms ease, border-color 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+      box-shadow: 0 10px 18px rgba(0,0,0,0.25);
+      outline:none;
+    }
+    .cell:hover{
+      transform: translateY(-1px);
+      background: rgba(255,255,255,0.10);
+      border-color: rgba(255,255,255,0.24);
+    }
+    .cell:active{ transform: translateY(0px); }
+    .cell:focus-visible{
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.32), 0 10px 18px rgba(0,0,0,0.25);
+      border-color: rgba(255,255,255,0.34);
+    }
+
+    /* Unavailable area: hide it, not grey blocks */
+    .inactive{
+      opacity: 0;
+      pointer-events: none;
+      box-shadow: none;
+      transform: none !important;
+    }
+
+    /* During extend: cells become subtle “click anywhere” */
+    .extendable{
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.26);
+      box-shadow: 0 10px 18px rgba(0,0,0,0.25);
+      opacity: 1;
+    }
+
+    .lastMove{
+      border-color: rgba(255,255,255,0.42);
+      background: rgba(255,255,255,0.13);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.30), 0 16px 28px rgba(0,0,0,0.40);
+      opacity: 1;
+    }
+
+    .win{
+      background: rgba(255,255,255,0.16);
+      border-color: rgba(255,255,255,0.44);
+      box-shadow: 0 18px 30px rgba(0,0,0,0.42);
+      outline: 2px solid rgba(255,255,255,0.22);
+      outline-offset: 2px;
+      opacity: 1;
+    }
+
+    /* Make disabled feel normal (but clickable still handled by JS) */
+    .cell:disabled{ cursor: default; transform:none; }
+
+    .note{
+      max-width: 980px;
+      margin: 10px auto 0;
+      color: rgba(255,255,255,0.62);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    /* Game over modal */
+    .overlay{
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 50;
+    }
+    .modal{
+      background: rgba(20,24,36,0.92);
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 18px;
+      padding: 16px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 30px 70px rgba(0,0,0,0.55);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .modal h2{ font-size: 16px; margin: 0 0 10px; letter-spacing: 0.3px; }
+    .modal p{ margin: 0 0 12px; color: rgba(255,255,255,0.80); }
+    .modal .actions{ display:flex; gap:10px; flex-wrap:wrap; }
+
+    @media (max-width: 520px) {
+      :root { --cell: 46px; --gap: 7px; }
+      .cell { font-size: 24px; }
+    }
+    @media (max-width: 380px) {
+      :root { --cell: 40px; --gap: 6px; }
+      .cell { font-size: 22px; }
+      #status { min-width: 240px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>Expandable Tic Tac Toe (4-in-a-row)</h1>
+
+    <div class="controls">
+      <div class="pill">
+        <label>
+          Mode
+          <select id="mode">
+            <option value="pvp">Player vs Player</option>
+            <option value="cpu">Player vs CPU</option>
+          </select>
+        </label>
+        <button id="newGame" type="button">New game</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="statusWrap">
+    <div id="status">Turn <span class="turnBadge" id="turnBadge">X</span></div>
+  </div>
+
+  <div class="boardWrap">
+    <div class="boardShell">
+      <div class="boardContainer">
+        <div class="macroOverlayLayer" id="macroLayer"></div>
+        <div class="board" id="board" aria-label="Expandable Tic Tac Toe Board"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">Win with 4 in a row. When the active cells fill, click a highlighted board region to extend (only around the initial board).</div>
+
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <h2 id="modalTitle">Game Over</h2>
+      <p id="modalMsg"></p>
+      <div class="actions">
+        <button id="viewBoard" type="button">View board</button>
+        <button id="playAgain" type="button">New game</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const macroLayer = document.getElementById('macroLayer');
+  const boardEl = document.getElementById('board');
+
+  const statusEl = document.getElementById('status');
+  const turnBadgeEl = document.getElementById('turnBadge');
+  const modeEl = document.getElementById('mode');
+  const newGameBtn = document.getElementById('newGame');
+
+  const overlay = document.getElementById('overlay');
+  const modalMsg = document.getElementById('modalMsg');
+  const playAgainBtn = document.getElementById('playAgain');
+  const viewBoardBtn = document.getElementById('viewBoard');
+
+  const N = 9;
+  const K = 4;
+
+  let cells = [];
+  let overlays = new Map(); // mk -> div
+  let state = Array.from({length: N}, () => Array(N).fill(null));
+  let activeMacro = new Set(); // "mx,my"
+  let turn = 'X';
+  let locked = false;
+  let gameOver = false;
+
+  let extensionNeeded = false;
+  let extender = null;
+  let lastMover = null;
+
+  let hoverMacroKey = null;
+  let lastMoveCell = null;
+
+  function key(mx,my){ return `${mx},${my}`; }
+  function other(m){ return m === 'X' ? 'O' : 'X'; }
+
+  function macroOfCell(r,c){
+    const mx = Math.floor(c/3) - 1;
+    const my = Math.floor(r/3) - 1;
+    return {mx,my};
+  }
+  function isMacroActive(mx,my){ return activeMacro.has(key(mx,my)); }
+  function isCellActive(r,c){
+    const {mx,my} = macroOfCell(r,c);
+    return isMacroActive(mx,my);
+  }
+  function isExtendableMacro(mx,my){
+    if (mx===0 && my===0) return false;
+    if (Math.abs(mx)>1 || Math.abs(my)>1) return false;
+    return !activeMacro.has(key(mx,my));
+  }
+  function availableExtensions(){
+    const out = [];
+    for (let my=-1; my<=1; my++){
+      for (let mx=-1; mx<=1; mx++){
+        if (mx===0 && my===0) continue;
+        const mk = key(mx,my);
+        if (!activeMacro.has(mk)) out.push({mx,my});
+      }
+    }
+    return out;
+  }
+
+  function setStatus(text, badge){
+    statusEl.firstChild && (statusEl.firstChild.nodeValue = text + " ");
+    if (badge) turnBadgeEl.textContent = badge;
+  }
+  function setTurn(next){
+    turn = next;
+    if (extensionNeeded) setStatus("Extend board —", extender);
+    else if (!gameOver) setStatus("Turn", turn);
+  }
+
+  function showModal(){ overlay.style.display = 'flex'; }
+  function hideModal(){ overlay.style.display = 'none'; }
+
+  function currentMode(){ return modeEl.value; }
+  function isCpuPlayer(mark){ return currentMode() === 'cpu' && mark === 'O'; }
+
+  function cellEl(r,c){ return cells[r*N + c]; }
+
+  function focusCell(r,c){
+    const el = cellEl(r,c);
+    if (el) el.focus({preventScroll:true});
+  }
+
+  function buildOverlays(){
+    macroLayer.innerHTML = '';
+    overlays = new Map();
+    // 9 overlays positioned by macroStep/macroSize
+    for (let my=-1; my<=1; my++){
+      for (let mx=-1; mx<=1; mx++){
+        const mk = key(mx,my);
+        const div = document.createElement('div');
+        div.className = 'macroOverlay';
+        div.style.left = `calc(${mx+1} * var(--macroStep))`;
+        div.style.top  = `calc(${my+1} * var(--macroStep))`;
+        macroLayer.appendChild(div);
+        overlays.set(mk, div);
+      }
+    }
+  }
+
+  function buildCells(){
+    boardEl.innerHTML = '';
+    cells = [];
+    for (let r=0; r<N; r++){
+      for (let c=0; c<N; c++){
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'cell';
+        b.addEventListener('click', () => onCellClick(r,c));
+        b.addEventListener('mouseenter', () => onHover(r,c,true));
+        b.addEventListener('mouseleave', () => onHover(r,c,false));
+        boardEl.appendChild(b);
+        cells[r*N + c] = b;
+      }
+    }
+  }
+
+  function updateOverlayClasses(){
+    for (let my=-1; my<=1; my++){
+      for (let mx=-1; mx<=1; mx++){
+        const mk = key(mx,my);
+        const ov = overlays.get(mk);
+        if (!ov) continue;
+        ov.classList.remove('active','initial','target','pulse');
+
+        const active = activeMacro.has(mk);
+        if (active) ov.classList.add('active');
+        if (mx===0 && my===0) ov.classList.add('initial');
+
+        if (extensionNeeded && !active && isExtendableMacro(mx,my)) ov.classList.add('target');
+        if (extensionNeeded && hoverMacroKey === mk) ov.classList.add('pulse');
+      }
+    }
+  }
+
+  function render(){
+    updateOverlayClasses();
+
+    for (let r=0; r<N; r++){
+      for (let c=0; c<N; c++){
+        const el = cellEl(r,c);
+        const v = state[r][c];
+        el.textContent = v ? v : '';
+        el.classList.remove('inactive','extendable','win','lastMove');
+
+        const {mx,my} = macroOfCell(r,c);
+        const macroActive = isMacroActive(mx,my);
+
+        if (lastMoveCell && lastMoveCell.r===r && lastMoveCell.c===c) el.classList.add('lastMove');
+
+        // lock disables everything but we DO NOT show any grey "targets"
+        if (gameOver || locked){
+          el.disabled = true;
+          if (v === null) el.classList.add('inactive');
+          continue;
+        }
+
+        if (extensionNeeded){
+          // in extension mode, you can click any cell inside a target macro
+          if (macroActive){
+            el.disabled = true;
+            if (v === null) el.classList.add('inactive');
+          } else if (isExtendableMacro(mx,my)){
+            el.disabled = false;
+            el.classList.add('extendable');
+          } else {
+            el.disabled = true;
+            el.classList.add('inactive');
+          }
+          continue;
+        }
+
+        if (!macroActive){
+          el.disabled = true;
+          el.classList.add('inactive');
+        } else {
+          el.disabled = (v !== null);
+          // empty playable stays visible naturally
+        }
+      }
+    }
+  }
+
+  function onHover(r,c,enter){
+    if (!extensionNeeded || locked || gameOver) return;
+    const {mx,my} = macroOfCell(r,c);
+    if (!isExtendableMacro(mx,my)) return;
+    hoverMacroKey = enter ? key(mx,my) : null;
+    updateOverlayClasses();
+  }
+
+  function onCellClick(r,c){
+    if (locked || gameOver) return;
+
+    const {mx,my} = macroOfCell(r,c);
+
+    if (extensionNeeded){
+      if (isExtendableMacro(mx,my)){
+        activeMacro.add(key(mx,my));
+        extensionNeeded = false;
+        hoverMacroKey = null;
+        // extender placed the board, OTHER player plays next
+        setTurn(other(extender));
+        render();
+        maybeCpu();
+      }
+      return;
+    }
+
+    if (!isCellActive(r,c)) return;
+    if (state[r][c] !== null) return;
+    if (currentMode()==='cpu' && turn==='O') return;
+
+    state[r][c] = turn;
+    lastMover = turn;
+    lastMoveCell = {r,c};
+    render();
+    focusCell(r,c);
+    afterMove();
+  }
+
+  function checkWinner(){
+    const dirs = [
+      {dr:0, dc:1}, {dr:1, dc:0}, {dr:1, dc:1}, {dr:1, dc:-1}
+    ];
+    for (let r=0; r<N; r++){
+      for (let c=0; c<N; c++){
+        const mark = state[r][c];
+        if (!mark) continue;
+        for (const {dr,dc} of dirs){
+          const rEnd = r + dr*(K-1);
+          const cEnd = c + dc*(K-1);
+          if (rEnd<0 || rEnd>=N || cEnd<0 || cEnd>=N) continue;
+          let ok = true;
+          const line = [[r,c]];
+          for (let k=1; k<K; k++){
+            const rr = r + dr*k;
+            const cc = c + dc*k;
+            if (state[rr][cc] !== mark){ ok=false; break; }
+            line.push([rr,cc]);
+          }
+          if (ok) return {winner: mark, line};
+        }
+      }
+    }
+    return null;
+  }
+
+  function anyPlayable(){
+    for (let r=0;r<N;r++){
+      for (let c=0;c<N;c++){
+        if (isCellActive(r,c) && state[r][c] === null) return true;
+      }
+    }
+    return false;
+  }
+
+  function afterMove(){
+    const w = checkWinner();
+    if (w){
+      for (const [r,c] of w.line) cellEl(r,c).classList.add('win');
+      gameOver = true;
+      modalMsg.textContent = `${w.winner} wins!`;
+      showModal();
+      setStatus(`${w.winner} wins`, w.winner);
+      render();
+      return;
+    }
+
+    if (!anyPlayable()){
+      const exts = availableExtensions();
+      if (exts.length){
+        extensionNeeded = true;
+        extender = lastMover; // whoever played the last tile extends
+        setStatus(`Board full — ${extender} extends`, extender);
+        render();
+        maybeCpu();
+        return;
+      } else {
+        gameOver = true;
+        modalMsg.textContent = `It's a draw.`;
+        showModal();
+        setStatus("Draw", "—");
+        render();
+        return;
+      }
+    }
+
+    setTurn(other(turn));
+    render();
+    maybeCpu();
+  }
+
+  // CPU (medium)
+  function cpuChooseMove(){
+    const empties = [];
+    for (let r=0;r<N;r++){
+      for (let c=0;c<N;c++){
+        if (isCellActive(r,c) && state[r][c] === null) empties.push([r,c]);
+      }
+    }
+
+    function wouldWin(mark, r, c){
+      state[r][c] = mark;
+      const w = checkWinner();
+      state[r][c] = null;
+      return !!(w && w.winner === mark);
+    }
+
+    for (const [r,c] of empties) if (wouldWin('O', r, c)) return [r,c];
+    for (const [r,c] of empties) if (wouldWin('X', r, c)) return [r,c];
+
+    if (isCellActive(4,4) && state[4][4] === null) return [4,4];
+    return empties[Math.floor(Math.random()*empties.length)];
+  }
+
+  function cpuChooseExtension(){
+    const exts = availableExtensions();
+    const prefs = [
+      {mx:0,my:-1},{mx:1,my:0},{mx:0,my:1},{mx:-1,my:0},
+      {mx:-1,my:-1},{mx:1,my:-1},{mx:1,my:1},{mx:-1,my:1}
+    ];
+    for (const p of prefs){
+      if (exts.some(e => e.mx===p.mx && e.my===p.my)) return p;
+    }
+    return exts[Math.floor(Math.random()*exts.length)];
+  }
+
+  function maybeCpu(){
+    if (gameOver) return;
+
+    // CPU extends if required
+    if (extensionNeeded && isCpuPlayer(extender)){
+      locked = true;
+      setStatus("CPU extends…", "O");
+      render();
+      setTimeout(() => {
+        const p = cpuChooseExtension();
+        activeMacro.add(key(p.mx,p.my));
+        extensionNeeded = false;
+        hoverMacroKey = null;
+        locked = false;
+        setTurn(other(extender)); // X plays next
+        render();
+      }, 260);
+      return;
+    }
+
+    if (currentMode() !== 'cpu' || turn !== 'O' || extensionNeeded) return;
+
+    locked = true;
+    setStatus("CPU thinking…", "O");
+    render();
+    setTimeout(() => {
+      const [r,c] = cpuChooseMove();
+      state[r][c] = 'O';
+      lastMover = 'O';
+      lastMoveCell = {r,c};
+      locked = false;
+      render();
+      focusCell(r,c);
+      afterMove();
+    }, 240);
+  }
+
+  function reset(){
+    state = Array.from({length: N}, () => Array(N).fill(null));
+    activeMacro = new Set([key(0,0)]);
+    turn = 'X';
+    locked = false;
+    gameOver = false;
+    extensionNeeded = false;
+    extender = null;
+    lastMover = null;
+    hoverMacroKey = null;
+    lastMoveCell = null;
+    hideModal();
+    setTurn('X');
+    render();
+    maybeCpu();
+  }
+
+  newGameBtn.addEventListener('click', reset);
+  playAgainBtn.addEventListener('click', reset);
+  modeEl.addEventListener('change', reset);
+  viewBoardBtn.addEventListener('click', () => hideModal());
+
+  buildOverlays();
+  buildCells();
+  reset();
+})();
+</script>
+</body>
+</html>
