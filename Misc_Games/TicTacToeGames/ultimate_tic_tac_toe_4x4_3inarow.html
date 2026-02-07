@@ -1,0 +1,845 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ultimate Tic Tac Toe 4×4 (3-in-a-row) • 2-Player Local</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --text:#e9eefc;
+      --muted:#a9b3d6;
+      --accent:#6ee7ff;
+      --warn:#ffd166;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius:16px;
+    }
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 20% 10%, #17224a 0%, var(--bg) 55%, #060912 100%);
+      color:var(--text);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+    }
+    .app{
+      width:min(1100px, 100%);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    header{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      justify-content:space-between;
+      padding:14px 16px;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.01));
+      border-bottom: 1px solid rgba(255,255,255,.10);
+    }
+    .title{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      min-width: 240px;
+    }
+    .title h1{
+      margin:0;
+      font-size:18px;
+      letter-spacing:.2px;
+      line-height:1.1;
+    }
+    .title .sub{
+      font-size:12px;
+      color:var(--muted);
+    }
+    .statusbar{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      border-radius:999px;
+      background: rgba(0,0,0,.20);
+      border:1px solid rgba(255,255,255,.10);
+      color:var(--text);
+      font-size:12px;
+      white-space:nowrap;
+    }
+    .dot{
+      width:10px;height:10px;border-radius:999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(110,231,255,.12);
+    }
+    .dot.x{ background: var(--accent); box-shadow: 0 0 0 4px rgba(110,231,255,.12); }
+    .dot.o{ background: var(--warn); box-shadow: 0 0 0 4px rgba(255,209,102,.14); }
+    button{
+      cursor:pointer;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.25);
+      color: var(--text);
+      padding:8px 10px;
+      border-radius:12px;
+      font-weight:600;
+      font-size:12px;
+      transition: transform .06s ease, background .15s ease, border-color .15s ease;
+      user-select:none;
+    }
+    button:hover{ background: rgba(0,0,0,.35); border-color: rgba(255,255,255,.18); }
+    button:active{ transform: translateY(1px); }
+    button:focus-visible{
+      outline:2px solid rgba(110,231,255,.55);
+      outline-offset:2px;
+    }
+
+    main{
+      display:grid;
+      grid-template-columns: 1fr 340px;
+      gap:14px;
+      padding:14px;
+    }
+    @media (max-width: 980px){
+      main{ grid-template-columns: 1fr; }
+      .side{ order:2; }
+    }
+
+    .boardWrap{
+      background: rgba(0,0,0,.18);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: var(--radius);
+      padding:12px;
+      position:relative;
+    }
+
+    .turnBanner{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      margin: 2px 2px 10px 2px;
+      padding:10px 12px;
+      border-radius: 14px;
+      background: rgba(0,0,0,.22);
+      border:1px solid rgba(255,255,255,.10);
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      font-weight: 900;
+      font-size: clamp(14px, 1.6vw, 18px);
+      user-select:none;
+    }
+    .turnBadge{
+      min-width: 44px;
+      height: 34px;
+      border-radius: 12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      font-size: 18px;
+      font-weight: 1000;
+      line-height: 1;
+    }
+    .turnBadge.x{ color: var(--accent); box-shadow: 0 0 0 3px rgba(110,231,255,.12) inset; }
+    .turnBadge.o{ color: var(--warn); box-shadow: 0 0 0 3px rgba(255,209,102,.12) inset; }
+
+    .bigBoard{
+      width:100%;
+      aspect-ratio: 1 / 1;
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap:10px;
+    }
+
+    .smallBoard{
+      position:relative;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,.10);
+      background:
+        radial-gradient(600px 400px at 10% 10%, rgba(110,231,255,.08) 0%, rgba(0,0,0,.18) 55%),
+        rgba(0,0,0,.20);
+      overflow:hidden;
+      box-shadow: 0 8px 20px rgba(0,0,0,.20);
+      display:grid;
+      grid-template-rows: 1fr;
+      min-width:0;
+      contain: layout paint;
+    }
+    .smallBoard::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      border-radius:14px;
+      pointer-events:none;
+      opacity:.0;
+      transition: opacity .15s ease;
+      background: radial-gradient(500px 300px at 30% 20%, rgba(110,231,255,.20), rgba(110,231,255,0));
+    }
+    .smallBoard.active{
+      border-color: rgba(110,231,255,.45);
+      box-shadow: 0 0 0 3px rgba(110,231,255,.15), 0 10px 26px rgba(0,0,0,.30);
+    }
+    .smallBoard.active::before{ opacity:1; }
+
+    .smallGrid{
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-auto-rows: 1fr;
+      gap:6px;
+      padding:10px;
+      height:100%;
+      width:100%;
+    }
+    .cell{
+      width:100%;
+      height:100%;
+      aspect-ratio: 1 / 1;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.22);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size: clamp(14px, 3.0vmin, 26px);
+      font-weight:900;
+      letter-spacing:.3px;
+      user-select:none;
+      transition: transform .06s ease, background .15s ease, border-color .15s ease;
+      line-height: 1;
+    }
+    .cell:hover{
+      background: rgba(0,0,0,.30);
+      border-color: rgba(255,255,255,.18);
+    }
+    .cell:active{ transform: translateY(1px); }
+    .cell.disabled{
+      cursor:not-allowed;
+      opacity:.55;
+    }
+    .cell.filled{ background: rgba(255,255,255,.04); }
+    .markX{ color: var(--accent); text-shadow: 0 6px 18px rgba(110,231,255,.18); }
+    .markO{ color: var(--warn); text-shadow: 0 6px 18px rgba(255,209,102,.18); }
+
+    .smallOverlay{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:1000;
+      letter-spacing:1px;
+      font-size: clamp(18px, 3.2vw, 44px);
+      background: rgba(10,14,28,.72);
+      backdrop-filter: blur(2px);
+      border-radius: 14px;
+      pointer-events:none;
+      opacity:0;
+      transform: scale(.98);
+      transition: opacity .18s ease, transform .18s ease;
+    }
+    .smallBoard.won .smallOverlay,
+    .smallBoard.drawn .smallOverlay{
+      opacity:1;
+      transform: scale(1);
+    }
+    .smallOverlay .mini{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:6px;
+    }
+    .smallOverlay .mini .cap{
+      font-size:12px;
+      color: var(--muted);
+      font-weight:700;
+      letter-spacing:.6px;
+      text-transform:uppercase;
+    }
+    .smallOverlay.x{ color: var(--accent); }
+    .smallOverlay.o{ color: var(--warn); }
+    .smallOverlay.draw{ color: rgba(233,238,252,.75); }
+
+    .side{
+      background: rgba(0,0,0,.18);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: var(--radius);
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+    .card{
+      background: rgba(0,0,0,.20);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: 14px;
+      padding:12px;
+    }
+    .card h2{
+      margin:0 0 8px 0;
+      font-size:13px;
+      letter-spacing:.2px;
+      color: var(--text);
+    }
+    .hint{
+      color: var(--muted);
+      font-size:12px;
+      line-height:1.35;
+    }
+    .bigState{
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap:8px;
+      margin-top:10px;
+    }
+    .miniSquare{
+      aspect-ratio: 1/1;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.22);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:1000;
+      font-size:16px;
+      position:relative;
+      overflow:hidden;
+    }
+    .miniSquare::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      opacity:.0;
+      background: radial-gradient(200px 120px at 30% 20%, rgba(110,231,255,.18), rgba(0,0,0,0));
+    }
+    .miniSquare.active::after{ opacity:1; }
+    .miniSquare.x{ color: var(--accent); }
+    .miniSquare.o{ color: var(--warn); }
+    .miniSquare.draw{ color: rgba(233,238,252,.55); }
+
+    .row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .row .left{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .toast{
+      position: fixed;
+      left:50%;
+      bottom:18px;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,.65);
+      border:1px solid rgba(255,255,255,.14);
+      color: var(--text);
+      padding:10px 12px;
+      border-radius: 999px;
+      font-size:12px;
+      opacity:0;
+      pointer-events:none;
+      transition: opacity .18s ease, transform .18s ease;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      max-width: min(760px, calc(100% - 30px));
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+    }
+    .toast.show{
+      opacity:1;
+      transform: translateX(-50%) translateY(-2px);
+    }
+    .modalBack{
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+    }
+    .modalBack.show{ display:flex; }
+    .modal{
+      width:min(520px, 100%);
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+      border:1px solid rgba(255,255,255,.14);
+      box-shadow: 0 18px 60px rgba(0,0,0,.45);
+      padding:14px;
+    }
+    .modal h3{
+      margin:0 0 6px 0;
+      font-size:16px;
+    }
+    .modal p{
+      margin:0 0 12px 0;
+      color: var(--muted);
+      font-size:12px;
+      line-height:1.45;
+    }
+    .modal .actions{
+      display:flex;
+      gap:10px;
+      justify-content:flex-end;
+      flex-wrap:wrap;
+    }
+    .btnPrimary{
+      background: rgba(110,231,255,.18);
+      border-color: rgba(110,231,255,.35);
+    }
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.25);
+      color: var(--text);
+      display:inline-block;
+      margin:0 2px;
+    }
+    .tiny{
+      font-size:11px;
+      color: rgba(233,238,252,.60);
+    }
+  </style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="Ultimate Tic Tac Toe 4×4 (3-in-a-row)">
+    <header>
+      <div class="title">
+        <h1>Ultimate Tic Tac Toe 4×4</h1>
+        <div class="sub">2 players • local • 16 → 16 mapping • win 3-in-a-row</div>
+      </div>
+
+      <div class="statusbar">
+        <div class="pill" aria-live="polite">
+          <span class="dot x" id="turnDot"></span>
+          <span id="turnText">Turn: X</span>
+        </div>
+        <div class="pill" aria-live="polite" title="Where the next move must be played">
+          <span class="dot" style="background:rgba(233,238,252,.6); box-shadow:none;"></span>
+          <span id="targetText">Next board: any</span>
+        </div>
+        <button id="btnNew">New Game</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="boardWrap" aria-label="Game board">
+        <div class="turnBanner" id="turnBanner" aria-live="polite">
+          <span>Current move:</span>
+          <span class="turnBadge x" id="turnBadge">X</span>
+        </div>
+        <div class="bigBoard" id="bigBoard"></div>
+      </section>
+
+      <aside class="side" aria-label="Info and controls">
+        <div class="card">
+          <h2>How it works</h2>
+          <div class="hint">
+            Click an empty cell in an allowed small board.
+            The cell you choose sends your opponent to the <b>matching-position</b> small board (16 → 16 mapping).
+            If that target board is already <b>won</b> or <b>full</b>, the opponent may play <b>anywhere</b>.
+          </div>
+          <div class="hint" style="margin-top:8px;">
+            Tip: press <span class="kbd">R</span> to reset the current game.
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row">
+            <div class="left">
+              <div class="pill">
+                <span class="dot x"></span><span><b>X</b></span>
+              </div>
+              <div class="pill">
+                <span class="dot o"></span><span><b>O</b></span>
+              </div>
+            </div>
+            <div class="tiny" id="gameStateTiny">In progress</div>
+          </div>
+
+          <h2 style="margin-top:10px;">Big board status</h2>
+          <div class="hint">Claim 3 small boards in a row to win the game.</div>
+          <div class="bigState" id="bigState"></div>
+        </div>
+
+        <div class="card">
+          <h2>Controls</h2>
+          <div class="hint">
+            <b>New Game</b> resets everything. The active board(s) glow.
+          </div>
+          <div class="hint" style="margin-top:8px;">
+            This version intentionally keeps it simple (no AI, no online).
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <div class="modalBack" id="modalBack" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <h3 id="modalTitle">Game Over</h3>
+      <p id="modalBody">—</p>
+      <div class="actions">
+        <button id="btnCloseModal">Close</button>
+        <button class="btnPrimary" id="btnPlayAgain">Play again</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const N = 4; // big board: 4×4 small boards
+  const S = 4; // small board: 4×4 cells
+  const K = 3; // 3 in a row wins (both small + big)
+
+  const BOARD_COUNT = N * N; // 16
+  const CELL_COUNT  = S * S; // 16
+
+  const bigBoards = Array.from({ length: BOARD_COUNT }, () => Array(CELL_COUNT).fill(""));
+  const smallStatus = Array(BOARD_COUNT).fill(""); // "", "X", "O", "D"
+  let currentPlayer = "X";
+  let forcedBoardIndex = null;   // 0..15, or null for any
+  let gameOver = false;
+
+  const bigBoardEl = document.getElementById("bigBoard");
+  const bigStateEl = document.getElementById("bigState");
+  const turnDotEl = document.getElementById("turnDot");
+  const turnTextEl = document.getElementById("turnText");
+  const targetTextEl = document.getElementById("targetText");
+  const gameStateTinyEl = document.getElementById("gameStateTiny");
+  const btnNew = document.getElementById("btnNew");
+
+  const turnBadgeEl = document.getElementById("turnBadge");
+  const turnBannerEl = document.getElementById("turnBanner");
+
+  const toastEl = document.getElementById("toast");
+  const modalBack = document.getElementById("modalBack");
+  const modalTitle = document.getElementById("modalTitle");
+  const modalBody = document.getElementById("modalBody");
+  const btnCloseModal = document.getElementById("btnCloseModal");
+  const btnPlayAgain = document.getElementById("btnPlayAgain");
+
+  function idx(r,c,side){ return r*side + c; }
+
+  function winnerK(cells, side, k){
+    // Scan all horizontal/vertical/diagonal segments of length k.
+    // Horizontal
+    for(let r=0; r<side; r++){
+      for(let c=0; c<=side-k; c++){
+        const v = cells[idx(r,c,side)];
+        if(!v) continue;
+        let ok = true;
+        for(let t=1;t<k;t++){
+          if(cells[idx(r,c+t,side)] !== v){ ok=false; break; }
+        }
+        if(ok) return v;
+      }
+    }
+    // Vertical
+    for(let c=0; c<side; c++){
+      for(let r=0; r<=side-k; r++){
+        const v = cells[idx(r,c,side)];
+        if(!v) continue;
+        let ok = true;
+        for(let t=1;t<k;t++){
+          if(cells[idx(r+t,c,side)] !== v){ ok=false; break; }
+        }
+        if(ok) return v;
+      }
+    }
+    // Diagonal TL->BR
+    for(let r=0; r<=side-k; r++){
+      for(let c=0; c<=side-k; c++){
+        const v = cells[idx(r,c,side)];
+        if(!v) continue;
+        let ok = true;
+        for(let t=1;t<k;t++){
+          if(cells[idx(r+t,c+t,side)] !== v){ ok=false; break; }
+        }
+        if(ok) return v;
+      }
+    }
+    // Diagonal TR->BL
+    for(let r=0; r<=side-k; r++){
+      for(let c=k-1; c<side; c++){
+        const v = cells[idx(r,c,side)];
+        if(!v) continue;
+        let ok = true;
+        for(let t=1;t<k;t++){
+          if(cells[idx(r+t,c-t,side)] !== v){ ok=false; break; }
+        }
+        if(ok) return v;
+      }
+    }
+    return "";
+  }
+
+  function isFull(cells){
+    for(let i=0;i<cells.length;i++) if(!cells[i]) return false;
+    return true;
+  }
+
+  function bigWinner(){
+    const big = smallStatus.map(s => (s === "X" || s === "O") ? s : "");
+    return winnerK(big, N, K);
+  }
+
+  function allowedBoards(){
+    if(gameOver) return new Set();
+    if(forcedBoardIndex === null) {
+      const s = new Set();
+      for(let bi=0; bi<BOARD_COUNT; bi++) if(!smallStatus[bi]) s.add(bi);
+      return s;
+    } else {
+      if(!smallStatus[forcedBoardIndex]) return new Set([forcedBoardIndex]);
+      const s = new Set();
+      for(let bi=0; bi<BOARD_COUNT; bi++) if(!smallStatus[bi]) s.add(bi);
+      return s;
+    }
+  }
+
+  function fmtBoardTarget(){
+    if(forcedBoardIndex === null) return "any";
+    const s = smallStatus[forcedBoardIndex];
+    if(!s) return `#${forcedBoardIndex + 1}`;
+    return "any";
+  }
+
+  function buildBoards(){
+    bigBoardEl.innerHTML = "";
+    for(let bi=0; bi<BOARD_COUNT; bi++){
+      const sb = document.createElement("div");
+      sb.className = "smallBoard";
+      sb.dataset.bi = String(bi);
+
+      const grid = document.createElement("div");
+      grid.className = "smallGrid";
+
+      for(let ci=0; ci<CELL_COUNT; ci++){
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.dataset.bi = String(bi);
+        cell.dataset.ci = String(ci);
+        cell.setAttribute("role","button");
+        cell.setAttribute("tabindex","0");
+        cell.setAttribute("aria-label", `Board ${bi+1}, cell ${ci+1}`);
+        cell.addEventListener("click", onCellClick);
+        cell.addEventListener("keydown", (e) => {
+          if(e.key === "Enter" || e.key === " "){
+            e.preventDefault();
+            onCellClick(e);
+          }
+        });
+        grid.appendChild(cell);
+      }
+
+      const overlay = document.createElement("div");
+      overlay.className = "smallOverlay";
+      overlay.innerHTML = `<div class="mini"><div class="cap"></div><div class="big"></div></div>`;
+
+      sb.appendChild(grid);
+      sb.appendChild(overlay);
+      bigBoardEl.appendChild(sb);
+    }
+
+    bigStateEl.innerHTML = "";
+    for(let i=0;i<BOARD_COUNT;i++){
+      const m = document.createElement("div");
+      m.className = "miniSquare";
+      m.dataset.bi = String(i);
+      bigStateEl.appendChild(m);
+    }
+  }
+
+  function render(){
+    turnTextEl.textContent = `Turn: ${currentPlayer}`;
+    turnDotEl.className = `dot ${currentPlayer.toLowerCase()}`;
+    targetTextEl.textContent = `Next board: ${fmtBoardTarget()}`;
+
+    turnBadgeEl.textContent = currentPlayer;
+    turnBadgeEl.className = `turnBadge ${currentPlayer.toLowerCase()}`;
+    turnBannerEl.setAttribute("aria-label", `Current move: ${currentPlayer}`);
+
+    const allowed = allowedBoards();
+
+    const boards = bigBoardEl.querySelectorAll(".smallBoard");
+    boards.forEach(boardEl => {
+      const bi = Number(boardEl.dataset.bi);
+      const status = smallStatus[bi];
+
+      boardEl.classList.toggle("active", allowed.has(bi));
+      boardEl.classList.toggle("won", status === "X" || status === "O");
+      boardEl.classList.toggle("drawn", status === "D");
+
+      const overlay = boardEl.querySelector(".smallOverlay");
+      const cap = overlay.querySelector(".cap");
+      const big = overlay.querySelector(".big");
+
+      overlay.classList.remove("x","o","draw");
+      if(status === "X"){
+        overlay.classList.add("x");
+        cap.textContent = "board won";
+        big.textContent = "X";
+      } else if(status === "O"){
+        overlay.classList.add("o");
+        cap.textContent = "board won";
+        big.textContent = "O";
+      } else if(status === "D"){
+        overlay.classList.add("draw");
+        cap.textContent = "board full";
+        big.textContent = "—";
+      } else {
+        cap.textContent = "";
+        big.textContent = "";
+      }
+
+      const cells = boardEl.querySelectorAll(".cell");
+      cells.forEach(cellEl => {
+        const ci = Number(cellEl.dataset.ci);
+        const v = bigBoards[bi][ci];
+        cellEl.textContent = v ? v : "";
+        cellEl.classList.toggle("filled", !!v);
+        cellEl.classList.toggle("markX", v === "X");
+        cellEl.classList.toggle("markO", v === "O");
+
+        const playable = !gameOver && allowed.has(bi) && !status && !v;
+        cellEl.classList.toggle("disabled", !playable);
+
+        const labelBase = `Board ${bi+1}, cell ${ci+1}`;
+        cellEl.setAttribute("aria-label", v ? `${labelBase}, ${v}` : `${labelBase}, empty`);
+      });
+    });
+
+    const minis = bigStateEl.querySelectorAll(".miniSquare");
+    minis.forEach(mini => {
+      const bi = Number(mini.dataset.bi);
+      const status = smallStatus[bi];
+      mini.className = "miniSquare";
+      if(status === "X"){ mini.classList.add("x"); mini.textContent = "X"; }
+      else if(status === "O"){ mini.classList.add("o"); mini.textContent = "O"; }
+      else if(status === "D"){ mini.classList.add("draw"); mini.textContent = "—"; }
+      else { mini.textContent = ""; }
+      mini.classList.toggle("active", allowed.has(bi));
+    });
+
+    gameStateTinyEl.textContent = gameOver ? "Finished" : "In progress";
+  }
+
+  function onCellClick(e){
+    if(gameOver) return;
+
+    const cell = e.currentTarget;
+    const bi = Number(cell.dataset.bi);
+    const ci = Number(cell.dataset.ci);
+
+    const allowed = allowedBoards();
+    if(!allowed.has(bi)){
+      beepToast(`Not allowed. You must play in ${fmtBoardTarget()}.`);
+      return;
+    }
+    if(smallStatus[bi]){
+      beepToast("That small board is already finished.");
+      return;
+    }
+    if(bigBoards[bi][ci]){
+      beepToast("That cell is already taken.");
+      return;
+    }
+
+    bigBoards[bi][ci] = currentPlayer;
+
+    const w = winnerK(bigBoards[bi], S, K);
+    if(w){
+      smallStatus[bi] = w;
+    } else if(isFull(bigBoards[bi])){
+      smallStatus[bi] = "D";
+    }
+
+    const bw = bigWinner();
+    if(bw){
+      endGame(`${bw} wins the big board!`);
+      render();
+      return;
+    }
+
+    if(smallStatus.every(s => s)){
+      endGame("It's a draw — all boards are complete.");
+      render();
+      return;
+    }
+
+    forcedBoardIndex = ci; // 16 -> 16 mapping
+    currentPlayer = (currentPlayer === "X") ? "O" : "X";
+    render();
+  }
+
+  let toastTimer = null;
+  function beepToast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1300);
+  }
+
+  function endGame(message){
+    gameOver = true;
+    modalTitle.textContent = "Game Over";
+    modalBody.textContent = message;
+    modalBack.classList.add("show");
+  }
+  function closeModal(){
+    modalBack.classList.remove("show");
+  }
+
+  function resetGame(){
+    for(let bi=0; bi<BOARD_COUNT; bi++){
+      bigBoards[bi].fill("");
+      smallStatus[bi] = "";
+    }
+    currentPlayer = "X";
+    forcedBoardIndex = null;
+    gameOver = false;
+    closeModal();
+    render();
+    beepToast("New game started.");
+  }
+
+  btnNew.addEventListener("click", resetGame);
+  btnCloseModal.addEventListener("click", closeModal);
+  btnPlayAgain.addEventListener("click", resetGame);
+  modalBack.addEventListener("click", (e) => {
+    if(e.target === modalBack) closeModal();
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if(e.key.toLowerCase() === "r") resetGame();
+    if(e.key === "Escape") closeModal();
+  });
+
+  buildBoards();
+  render();
+})();
+</script>
+</body>
+</html>
