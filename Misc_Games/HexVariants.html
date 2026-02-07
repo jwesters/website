@@ -1,0 +1,1001 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+  <title>Hex (PvP / PvCPU) + Seeded Random Blocks</title>
+  <style>
+    :root{
+      --bg:#0f1220;
+      --panel:#171b2e;
+      --panel2:#1d2240;
+      --text:#eef1ff;
+      --muted:#aab2d6;
+      --line:rgba(255,255,255,.12);
+      --red:#ff4d6d;
+      --blue:#4dabff;
+      --block:#2b2f4a;
+      --btn:#2a3160;
+      --btn2:#323a73;
+      --warn:#ffd166;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:linear-gradient(180deg,#0b0e1a 0%, #0f1220 60%, #0b0e1a 100%);
+      color:var(--text);
+      font:14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .wrap{
+      max-width:1200px;
+      margin:0 auto;
+      padding:14px;
+      display:grid;
+      grid-template-columns: 360px 1fr;
+      gap:14px;
+      align-items:start;
+    }
+    .card{
+      background:linear-gradient(180deg,var(--panel) 0%, var(--panel2) 100%);
+      border:1px solid var(--line);
+      border-radius:16px;
+      box-shadow:0 10px 30px rgba(0,0,0,.25);
+      overflow:hidden;
+    }
+    .card h2{
+      margin:0;
+      padding:12px 14px;
+      font-size:15px;
+      letter-spacing:.2px;
+      border-bottom:1px solid var(--line);
+    }
+    .card .content{ padding:12px 14px; }
+    .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .row + .row{ margin-top:10px; }
+    label{ color:var(--muted); font-size:12px; }
+    select, input[type="text"]{
+      width:100%;
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:#0f132a;
+      color:var(--text);
+      outline:none;
+    }
+    select option{
+      background:#0f132a;
+      color:#eef1ff;
+    }
+    input[type="checkbox"]{ transform: translateY(1px); }
+    .grid2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    .btn{
+      appearance:none;
+      border:1px solid var(--line);
+      background:linear-gradient(180deg,var(--btn) 0%, var(--btn2) 100%);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:600;
+      letter-spacing:.2px;
+      user-select:none;
+    }
+    .btn:disabled{ opacity:.5; cursor:not-allowed; }
+    .btn.secondary{
+      background:rgba(255,255,255,.06);
+      font-weight:600;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.05);
+      color:var(--text);
+      font-size:12px;
+      white-space:nowrap;
+    }
+    .dot{
+      width:10px;height:10px;border-radius:99px;display:inline-block;
+      box-shadow:0 0 0 2px rgba(0,0,0,.2) inset;
+    }
+    .dot.red{ background:var(--red); }
+    .dot.blue{ background:var(--blue); }
+    .dot.block{ background:var(--block); }
+    .status{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+      padding:12px 14px;
+      border-top:1px solid var(--line);
+      background:rgba(0,0,0,.12);
+    }
+    .hint{ color:var(--muted); font-size:12px; margin-top:8px; }
+    .warn{ color:var(--warn); }
+    .canvasWrap{
+      position:relative;
+      padding:10px;
+    }
+    canvas{
+      width:100%;
+      height:min(78vh, 820px);
+      display:block;
+      background:rgba(255,255,255,.03);
+      border:1px solid var(--line);
+      border-radius:16px;
+      touch-action: none;
+    }
+    .overlay{
+      position:absolute;
+      inset:10px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:flex-end;
+      pointer-events:none;
+      padding:10px;
+    }
+    .toast{
+      pointer-events:none;
+      background:rgba(10,12,24,.75);
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:8px 10px;
+      color:var(--text);
+      font-size:12px;
+      backdrop-filter: blur(6px);
+      max-width: 360px;
+      transition: opacity .18s ease;
+    }
+    .toast b{ font-weight:800; }
+    .kbd{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+    @media (max-width: 980px){
+      .wrap{ grid-template-columns: 1fr; }
+      canvas{ height:min(70vh, 780px); }
+    }
+  
+    .toggleRow{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.05);
+    }
+    .toggleRow input[type="checkbox"]{
+      width:18px;
+      height:18px;
+      cursor:pointer;
+    }
+    .toggleRow span{
+      font-size:13px;
+      color:var(--text);
+      user-select:none;
+    }
+
+  
+    .turnHeader{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight:800;
+      letter-spacing:.2px;
+    }
+    .turnHex{
+      width:16px;
+      height:16px;
+      display:inline-block;
+      clip-path: polygon(25% 6%, 75% 6%, 100% 50%, 75% 94%, 25% 94%, 0% 50%);
+      box-shadow: 0 0 0 2px rgba(0,0,0,.25) inset, 0 3px 10px rgba(0,0,0,.25);
+      border: 1px solid rgba(255,255,255,.18);
+    }
+    .turnHex.red{ background: var(--red); }
+    .turnHex.blue{ background: var(--blue); }
+
+      #seedControls.hidden{ display:none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h2>Game Setup</h2>
+      <div class="content">
+        <div class="grid2">
+          <div>
+            <label for="sizeSel">Board size</label>
+            <select id="sizeSel"></select>
+          </div>
+          <div>
+            <label for="modeSel">Mode</label>
+            <select id="modeSel">
+              <option value="pvp">Player vs Player</option>
+              <option value="cpu">Player vs CPU</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid2" style="margin-top:10px">
+          <div>
+            <label for="diffSel">CPU difficulty</label>
+            <select id="diffSel">
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </div>
+          <div>
+            <label>Random Blocks</label>
+            <label class="toggleRow" style="margin-top:6px">
+              <input id="randomChk" type="checkbox"/>
+              <span>Random Blocks Removed</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:12px">
+          <button class="btn" id="newBtn">New Game</button>
+          <button class="btn secondary" id="resetBtn">Reset This Game</button>
+        </div>
+
+                <div id="seedControls">
+<div class="row" style="margin-top:12px; align-items:stretch">
+          <div style="flex:1">
+            <label for="seedOut">Share Seed</label>
+            <input id="seedOut" type="text" readonly />
+            <div class="hint">Tip: you can also share a link: <span class="kbd">?seed=...</span></div>
+          </div>
+        </div>
+        <div class="row">
+          <button class="btn secondary" id="copySeedBtn">Copy Seed</button>
+          <button class="btn secondary" id="copyUrlBtn">Copy Share URL</button>
+        </div>
+
+        <div class="row" style="margin-top:12px; align-items:stretch">
+          <div style="flex:1">
+            <label for="seedIn">Load Seed</label>
+            <input id="seedIn" type="text" placeholder="Paste seed here (or open a ?seed= link)"/>
+          </div>
+        </div>
+        <div class="row">
+          <button class="btn" id="loadBtn">Load</button>
+        </div>
+        </div>
+
+
+        <div class="hint">
+          <span class="pill"><span class="dot red"></span> Red connects top ↔ bottom</span>
+          <span class="pill"><span class="dot blue"></span> Blue connects left ↔ right</span>
+        </div>
+        <div class="hint warn" id="cpuHint" style="display:none;margin-top:10px">
+          CPU is always <b>Blue</b> (second player).
+        </div>
+      </div>
+      <div class="status">
+        <span class="pill" id="turnPill"><span class="dot red"></span> Turn: <b id="turnText">Red</b></span>
+        <span class="pill" id="modePill">Mode: <b id="modeText">PvP</b></span>
+        <span class="pill" id="thinkingPill" style="display:none">CPU: <b>thinking…</b></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>
+        <div id="turnHeader" class="turnHeader">
+          <span id="turnHex" class="turnHex red"></span>
+          <span id="turnLabel">Red's Turn</span>
+        </div>
+      </h2>
+      <div class="canvasWrap">
+        <canvas id="board"></canvas>
+        <div class="overlay"><div class="toast" id="toast" style="opacity:0"></div></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  const canvas = $("board");
+  const ctx = canvas.getContext("2d");
+
+  const sizeSel = $("sizeSel");
+  const modeSel = $("modeSel");
+  const diffSel = $("diffSel");
+  const randomChk = $("randomChk");
+  const newBtn = $("newBtn");
+  const resetBtn = $("resetBtn");
+  const seedOut = $("seedOut");
+  const seedIn = $("seedIn");
+  const loadBtn = $("loadBtn");
+  const copySeedBtn = $("copySeedBtn");
+  const copyUrlBtn = $("copyUrlBtn");
+  const turnPill = $("turnPill");
+  const modePill = $("modePill");
+  const thinkingPill = $("thinkingPill");
+  const cpuHint = $("cpuHint");
+  const toast = $("toast");
+
+  for (let n = 9; n <= 21; n++) {
+    const opt = document.createElement("option");
+    opt.value = String(n);
+    opt.textContent = `${n}×${n}`;
+    sizeSel.appendChild(opt);
+  }
+  sizeSel.value = "11";
+
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function() {
+      a |= 0;
+      a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  function base64urlEncode(str) {
+    const b64 = btoa(unescape(encodeURIComponent(str)));
+    return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  }
+  function base64urlDecode(b64url) {
+    const b64 = b64url.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((b64url.length + 3) % 4);
+    const str = decodeURIComponent(escape(atob(b64)));
+    return str;
+  }
+
+  function makeSeedObj(opts) {
+    return { v:1, n:opts.n, r:opts.random?1:0, m:opts.mode, d:opts.diff, g:(opts.rngSeed>>>0) };
+  }
+  function encodeSeed(seedObj) { return base64urlEncode(JSON.stringify(seedObj)); }
+  function decodeSeed(seedStr) {
+    try{
+      const obj = JSON.parse(base64urlDecode(seedStr.trim()));
+      if (!obj || obj.v !== 1) return null;
+      if (typeof obj.n !== "number" || obj.n < 9 || obj.n > 21) return null;
+      if (!["pvp","cpu"].includes(obj.m)) return null;
+      if (!["easy","medium","hard"].includes(obj.d)) return null;
+      if (typeof obj.g !== "number") return null;
+      obj.r = obj.r ? 1 : 0;
+      return obj;
+    }catch{ return null; }
+  }
+
+  function showToast(msg, ms=1600) {
+    toast.innerHTML = msg;
+    toast.style.opacity = "1";
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.style.opacity = "0", ms);
+  }
+
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); showToast("Copied ✔"); }
+    catch{
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      showToast("Copied ✔");
+    }
+  }
+
+  function updateSeedControls(){
+    const sc = document.getElementById("seedControls");
+    if (!sc) return;
+    sc.classList.toggle("hidden", !state.random);
+  }
+
+  const EMPTY=0, RED=1, BLUE=2, BLOCK=3;
+
+  let state = {
+    n: 11,
+    mode: "pvp",
+    diff: "easy",
+    random: false,
+    rngSeed: (Math.random()*2**32)>>>0,
+    grid: [],
+    turn: RED,
+    winner: 0,
+    paths: new Map(),
+    centers: new Map(),
+  };
+
+  function neighbors(r, c) {
+    const odd = r & 1;
+    const deltas = odd
+      ? [[-1,0],[-1,1],[0,-1],[0,1],[1,0],[1,1]]
+      : [[-1,-1],[-1,0],[0,-1],[0,1],[1,-1],[1,0]];
+    return deltas.map(([dr,dc]) => [r+dr, c+dc]);
+  }
+  const keyOf = (r,c)=> r + "," + c;
+  const inBounds = (r,c,n)=> r>=0 && c>=0 && r<n && c<n;
+
+  function generateBlocked(n, rng) {
+    const total = n*n;
+    const k = Math.max(0, Math.round(total * 0.06));
+    if (k === 0) return new Set();
+    const cx = (n-1)/2, cy = (n-1)/2;
+
+    let items = [];
+    let maxd = 0;
+    for (let r=0;r<n;r++){
+      for (let c=0;c<n;c++){
+        const dx = r - cx, dy = c - cy;
+        const d = Math.sqrt(dx*dx + dy*dy);
+        if (d > maxd) maxd = d;
+        items.push({r,c,d});
+      }
+    }
+    const p = 2.2;
+    const eps = 0.05;
+    for (const it of items){
+      const t = 1 - (it.d / (maxd || 1));
+      it.w = Math.pow(Math.max(0,t), p) + eps;
+    }
+    let scored = items.map(it => {
+      const u = Math.max(1e-12, rng());
+      const key = Math.pow(u, 1/it.w);
+      return {key, r:it.r, c:it.c};
+    });
+    scored.sort((a,b)=>b.key-a.key);
+    const blocked = new Set();
+    for (let i=0;i<k && i<scored.length;i++){
+      blocked.add(keyOf(scored[i].r, scored[i].c));
+    }
+    return blocked;
+  }
+
+  function makeEmptyGrid(n){
+    const g = [];
+    for (let r=0;r<n;r++) g.push(new Array(n).fill(EMPTY));
+    return g;
+  }
+  function applyBlockedToGrid(grid, blockedSet){
+    for (const k of blockedSet){
+      const [rs, cs] = k.split(",");
+      const r = +rs, c = +cs;
+      if (inBounds(r,c,grid.length)) grid[r][c] = BLOCK;
+    }
+  }
+
+  function checkWin(grid, who){
+    const n = grid.length;
+    const seen = new Uint8Array(n*n);
+    const q = [];
+    const idx = (r,c)=> r*n + c;
+
+    if (who === RED){
+      for (let c=0;c<n;c++){
+        if (grid[0][c] === RED){
+          q.push([0,c]);
+          seen[idx(0,c)] = 1;
+        }
+      }
+      while(q.length){
+        const [r,c] = q.shift();
+        if (r === n-1) return true;
+        for (const [nr,nc] of neighbors(r,c)){
+          if (!inBounds(nr,nc,n)) continue;
+          if (seen[idx(nr,nc)]) continue;
+          if (grid[nr][nc] !== RED) continue;
+          seen[idx(nr,nc)] = 1;
+          q.push([nr,nc]);
+        }
+      }
+      return false;
+    } else {
+      for (let r=0;r<n;r++){
+        if (grid[r][0] === BLUE){
+          q.push([r,0]);
+          seen[idx(r,0)] = 1;
+        }
+      }
+      while(q.length){
+        const [r,c] = q.shift();
+        if (c === n-1) return true;
+        for (const [nr,nc] of neighbors(r,c)){
+          if (!inBounds(nr,nc,n)) continue;
+          if (seen[idx(nr,nc)]) continue;
+          if (grid[nr][nc] !== BLUE) continue;
+          seen[idx(nr,nc)] = 1;
+          q.push([nr,nc]);
+        }
+      }
+      return false;
+    }
+  }
+
+  function resizeCanvasToDisplaySize() {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const w = Math.floor(rect.width * dpr);
+    const h = Math.floor(rect.height * dpr);
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+
+  function hexPoints(cx, cy, s){
+    const pts = [];
+    for (let i=0;i<6;i++){
+      const ang = Math.PI/180 * (60*i - 30);
+      pts.push([cx + s*Math.cos(ang), cy + s*Math.sin(ang)]);
+    }
+    return pts;
+  }
+
+  function buildPaths(){
+    state.paths.clear();
+    state.centers.clear();
+    const n = state.n;
+    const rect = canvas.getBoundingClientRect();
+    const W = rect.width, H = rect.height;
+
+    const pad = 18;
+    const maxSByW = (W - 2*pad) / (Math.sqrt(3) * (n + 0.5));
+    const maxSByH = (H - 2*pad) / (1.5*(n-1) + 2);
+    const s = Math.max(8, Math.min(34, Math.min(maxSByW, maxSByH)));
+    state._hexSize = s;
+
+    const boardW = Math.sqrt(3) * s * (n + 0.5);
+    const boardH = s * (1.5*(n-1) + 2);
+
+    const ox = (W - boardW)/2 + pad*0.25;
+    const oy = (H - boardH)/2 + pad*0.25;
+
+    for (let r=0;r<n;r++){
+      for (let c=0;c<n;c++){
+        const x = ox + Math.sqrt(3)*s*(c + 0.5*(r&1));
+        const y = oy + s*(1.5*r);
+        const cx = x + Math.sqrt(3)*s/2;
+        const cy = y + s;
+        const pts = hexPoints(cx, cy, s*0.96);
+        const p = new Path2D();
+        p.moveTo(pts[0][0], pts[0][1]);
+        for (let i=1;i<6;i++) p.lineTo(pts[i][0], pts[i][1]);
+        p.closePath();
+        const k = keyOf(r,c);
+        state.paths.set(k, p);
+        state.centers.set(k, {x:cx, y:cy});
+      }
+    }
+    state._boardOrigin = {ox, oy, boardW, boardH};
+  }
+
+  function roundRect(ctx, x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y, x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x, y+h, r);
+    ctx.arcTo(x, y+h, x, y, r);
+    ctx.arcTo(x, y, x+w, y, r);
+    ctx.closePath();
+  }
+
+  function draw(){
+    resizeCanvasToDisplaySize();
+    buildPaths();
+    const rect = canvas.getBoundingClientRect();
+    const W = rect.width, H = rect.height;
+
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = "rgba(255,255,255,.02)";
+    ctx.fillRect(0,0,W,H);
+
+    const {ox, oy, boardW, boardH} = state._boardOrigin;
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.lineWidth = 6;
+    ctx.lineCap = "round";
+
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--red').trim() || "#ff4d6d";
+    ctx.beginPath(); ctx.moveTo(ox+10, oy+10); ctx.lineTo(ox+boardW-10, oy+10); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ox+10, oy+boardH-10); ctx.lineTo(ox+boardW-10, oy+boardH-10); ctx.stroke();
+
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--blue').trim() || "#4dabff";
+    ctx.beginPath(); ctx.moveTo(ox+10, oy+10); ctx.lineTo(ox+10, oy+boardH-10); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ox+boardW-10, oy+10); ctx.lineTo(ox+boardW-10, oy+boardH-10); ctx.stroke();
+
+    ctx.restore();
+
+    for (let r=0;r<state.n;r++){
+      for (let c=0;c<state.n;c++){
+        const k = keyOf(r,c);
+        const p = state.paths.get(k);
+        const v = state.grid[r][c];
+
+        if (v === EMPTY) ctx.fillStyle = "rgba(255,255,255,.045)";
+        else if (v === RED) ctx.fillStyle = "rgba(255,77,109,.92)";
+        else if (v === BLUE) ctx.fillStyle = "rgba(77,171,255,.92)";
+        else ctx.fillStyle = "rgba(43,47,74,.92)";
+
+        ctx.fill(p);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = "rgba(255,255,255,.12)";
+        ctx.stroke(p);
+
+        if (v === BLOCK){
+          const ctr = state.centers.get(k);
+          ctx.save();
+          ctx.globalAlpha = 0.7;
+          ctx.strokeStyle = "rgba(255,255,255,.22)";
+          ctx.lineWidth = 2;
+          const s = state._hexSize * 0.35;
+          ctx.beginPath();
+          ctx.moveTo(ctr.x - s, ctr.y - s);
+          ctx.lineTo(ctr.x + s, ctr.y + s);
+          ctx.moveTo(ctr.x + s, ctr.y - s);
+          ctx.lineTo(ctr.x - s, ctr.y + s);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+    }
+
+    if (state.winner){
+      const msg = state.winner === RED ? "Red wins!" : "Blue wins!";
+      ctx.save();
+      ctx.fillStyle = "rgba(10,12,24,.75)";
+      ctx.strokeStyle = "rgba(255,255,255,.18)";
+      ctx.lineWidth = 1;
+      const w = 220, h = 44;
+      const x = (W - w)/2, y = 14;
+      roundRect(ctx, x, y, w, h, 12);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#eef1ff";
+      ctx.font = "700 16px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(msg, W/2, y + h/2);
+      ctx.restore();
+    }
+  }
+
+  function updateUI(){
+    const turnLabel = document.getElementById("turnLabel");
+    const turnHex = document.getElementById("turnHex");
+    if (turnLabel) turnLabel.textContent = (state.turn === RED ? "Red's Turn" : "Blue's Turn");
+    if (turnHex){
+      turnHex.classList.toggle("red", state.turn === RED);
+      turnHex.classList.toggle("blue", state.turn === BLUE);
+    }
+
+    const isCpu = state.mode === "cpu";
+    diffSel.disabled = !isCpu;
+    cpuHint.style.display = isCpu ? "block" : "none";
+    modePill.innerHTML = `Mode: <b>${isCpu ? `PvCPU (${state.diff})` : "PvP"}</b>`;
+
+    turnPill.innerHTML = `<span class="dot ${state.turn===RED?'red':'blue'}"></span> Turn: <b>${state.turn===RED?'Red':'Blue'}</b>`;
+    thinkingPill.style.display = (state.mode==="cpu" && state.turn===BLUE && !state.winner) ? "inline-flex" : "none";
+  }
+
+  function legalMoves(grid){
+    const n = grid.length;
+    const moves = [];
+    for (let r=0;r<n;r++) for (let c=0;c<n;c++) if (grid[r][c] === EMPTY) moves.push([r,c]);
+    return moves;
+  }
+
+  function place(r,c){
+    if (state.winner) return;
+    if (!inBounds(r,c,state.n)) return;
+    if (state.grid[r][c] !== EMPTY) return;
+
+    state.grid[r][c] = state.turn;
+
+    if (checkWin(state.grid, state.turn)){
+      const turnLabel = document.getElementById("turnLabel"); if (turnLabel) turnLabel.textContent = (state.turn===RED?"Red Wins!":"Blue Wins!");
+      const turnHex = document.getElementById("turnHex"); if (turnHex){ turnHex.classList.toggle("red", state.turn===RED); turnHex.classList.toggle("blue", state.turn===BLUE); }
+      state.winner = state.turn;
+      showToast(state.winner === RED ? "<b>Red</b> connected top↔bottom!" : "<b>Blue</b> connected left↔right!", 2200);
+    } else {
+      state.turn = (state.turn === RED) ? BLUE : RED;
+    }
+
+    updateUI();
+    draw();
+    updateSeedControls();
+
+    if (!state.winner && state.mode === "cpu" && state.turn === BLUE){
+      cpuMove();
+    }
+  }
+
+  function scoreCellHeuristic(grid, who, r, c){
+    const n = grid.length;
+    const opp = (who === RED) ? BLUE : RED;
+
+    let distScore = 0;
+    if (who === BLUE){
+      const d = Math.min(c, (n-1)-c);
+      distScore = (n-1 - d);
+      const midr = (n-1)/2;
+      distScore += (n/2 - Math.abs(r - midr));
+    } else {
+      const d = Math.min(r, (n-1)-r);
+      distScore = (n-1 - d);
+      const midc = (n-1)/2;
+      distScore += (n/2 - Math.abs(c - midc));
+    }
+
+    let ownAdj = 0, oppAdj = 0;
+    for (const [nr,nc] of neighbors(r,c)){
+      if (!inBounds(nr,nc,n)) continue;
+      if (grid[nr][nc] === who) ownAdj++;
+      else if (grid[nr][nc] === opp) oppAdj++;
+    }
+    const mid = (n-1)/2;
+    const centerBias = -(Math.abs(r-mid) + Math.abs(c-mid)) * 0.15;
+
+    return distScore * 0.8 + ownAdj * 2.2 + oppAdj * 0.8 + centerBias;
+  }
+
+  function chooseEasyMove(grid, rng){
+    const moves = legalMoves(grid);
+    if (!moves.length) return null;
+    const n = grid.length;
+    const mid = (n-1)/2;
+    let best = null, bestKey = -1;
+    for (const [r,c] of moves){
+      const center = 1 / (1 + Math.abs(r-mid) + Math.abs(c-mid));
+      const key = rng() + center*0.25;
+      if (key > bestKey){ bestKey = key; best = [r,c]; }
+    }
+    return best;
+  }
+
+  function chooseMediumMove(grid, who, rng){
+    const moves = legalMoves(grid);
+    if (!moves.length) return null;
+    let bestScore = -1e9, bestMoves = [];
+    for (const [r,c] of moves){
+      const s = scoreCellHeuristic(grid, who, r, c);
+      if (s > bestScore + 1e-9){ bestScore = s; bestMoves = [[r,c]]; }
+      else if (Math.abs(s-bestScore) <= 1e-9) bestMoves.push([r,c]);
+    }
+    return bestMoves[(rng()*bestMoves.length)|0];
+  }
+
+  const cloneGrid = (g)=> g.map(row=>row.slice());
+
+  function randomPlayoutWinner(grid, turn, rng){
+    const n = grid.length;
+    let g = cloneGrid(grid);
+    let t = turn;
+    let moves = [];
+    for (let r=0;r<n;r++) for (let c=0;c<n;c++) if (g[r][c]===EMPTY) moves.push([r,c]);
+
+    while(moves.length){
+      let bestI = 0, bestK = -1e9;
+      const sampleCount = Math.min(10, moves.length);
+      for (let s=0;s<sampleCount;s++){
+        const i = (rng()*moves.length)|0;
+        const [r,c] = moves[i];
+        const k = rng() + 0.12*scoreCellHeuristic(g, t, r, c);
+        if (k > bestK){ bestK = k; bestI = i; }
+      }
+      const [r,c] = moves[bestI];
+      moves[bestI] = moves[moves.length-1];
+      moves.pop();
+
+      g[r][c] = t;
+      if (checkWin(g, t)) return t;
+      t = (t===RED)?BLUE:RED;
+    }
+    return 0;
+  }
+
+  async function chooseHardMove(grid, who, rng){
+    const moves = legalMoves(grid);
+    if (!moves.length) return null;
+
+    const scored = moves.map(([r,c]) => ({r,c, s: scoreCellHeuristic(grid, who, r, c)}));
+    scored.sort((a,b)=>b.s-a.s);
+    const n = grid.length;
+    const K = n >= 19 ? 10 : (n >= 15 ? 12 : 14);
+    const cand = scored.slice(0, Math.min(K, scored.length));
+    const sims = n >= 19 ? 18 : (n >= 15 ? 24 : 32);
+
+    let best = cand[0], bestRate = -1;
+
+    for (let i=0;i<cand.length;i++){
+      const m = cand[i];
+      let wins = 0;
+      if (i % 3 === 0) await new Promise(r => setTimeout(r, 0));
+
+      for (let s=0;s<sims;s++){
+        const g2 = cloneGrid(grid);
+        g2[m.r][m.c] = who;
+        if (checkWin(g2, who)){ wins += 1; continue; }
+        const w = randomPlayoutWinner(g2, (who===RED?BLUE:RED), rng);
+        if (w === who) wins += 1;
+      }
+      const rate = wins / sims;
+      if (rate > bestRate + 1e-9){ bestRate = rate; best = m; }
+      else if (Math.abs(rate - bestRate) <= 1e-9){
+        if (m.s > best.s + 1e-9) best = m;
+        else if (Math.abs(m.s - best.s) <= 1e-9 && rng() < 0.5) best = m;
+      }
+    }
+    return [best.r, best.c];
+  }
+
+  function positionHash(grid, turn){
+    let h = 2166136261 >>> 0;
+    h ^= turn; h = Math.imul(h, 16777619);
+    const n = grid.length;
+    for (let r=0;r<n;r++) for (let c=0;c<n;c++){ h ^= grid[r][c]; h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+
+  async function cpuMove(){
+    if (state.winner) return;
+    if (state.turn !== BLUE) return;
+    thinkingPill.style.display = "inline-flex";
+
+    const posHash = positionHash(state.grid, state.turn);
+    const rng = mulberry32((state.rngSeed ^ posHash) >>> 0);
+
+    let move = null;
+    if (state.diff === "easy"){
+      await new Promise(r => setTimeout(r, 140));
+      move = chooseEasyMove(state.grid, rng);
+    } else if (state.diff === "medium"){
+      await new Promise(r => setTimeout(r, 120));
+      move = chooseMediumMove(state.grid, BLUE, rng);
+    } else {
+      await new Promise(r => setTimeout(r, 80));
+      move = await chooseHardMove(state.grid, BLUE, rng);
+    }
+
+    thinkingPill.style.display = "none";
+    if (!move || state.winner) return;
+    place(move[0], move[1]);
+  }
+
+  function startFromOptions({n, mode, diff, random, rngSeed}, pushUrl=true){
+    state.n = n;
+    state.mode = mode;
+    state.diff = diff;
+    state.random = random;
+    state.rngSeed = rngSeed >>> 0;
+
+    state.turn = RED;
+    state.winner = 0;
+    state.grid = makeEmptyGrid(n);
+
+    if (random){
+      const rng = mulberry32(state.rngSeed);
+      const blocked = generateBlocked(n, rng);
+      applyBlockedToGrid(state.grid, blocked);
+    }
+
+    sizeSel.value = String(n);
+    modeSel.value = mode;
+    diffSel.value = diff;
+    randomChk.checked = !!random;
+
+    if (state.random){
+      const seedStr = encodeSeed(makeSeedObj(state));
+      seedOut.value = seedStr;
+
+      if (pushUrl){
+        const url = new URL(window.location.href);
+        url.searchParams.set("seed", seedStr);
+        history.replaceState(null, "", url.toString());
+      }
+    } else {
+      seedOut.value = "";
+      if (pushUrl){
+        const url = new URL(window.location.href);
+        url.searchParams.delete("seed");
+        history.replaceState(null, "", url.toString());
+      }
+    }
+
+    updateUI();
+    draw();
+    showToast("New game ready.");
+  }
+
+  function newGame(){
+    const n = +sizeSel.value;
+    const mode = modeSel.value;
+    const diff = diffSel.value;
+    const random = randomChk.checked;
+    const rngSeed = (Math.random() * 2**32) >>> 0;
+    startFromOptions({n, mode, diff, random, rngSeed}, true);
+  }
+
+  function resetGameKeepBoard(){
+    const obj = decodeSeed(seedOut.value);
+    if (!obj){ showToast("No valid current seed to reset."); return; }
+    startFromOptions({ n: obj.n, mode: obj.m, diff: obj.d, random: !!obj.r, rngSeed: obj.g }, true);
+    showToast("Game reset.");
+  }
+
+  function loadSeed(seedStr){
+    const obj = decodeSeed(seedStr);
+    if (!obj){ showToast("<span class='warn'>Invalid seed.</span>", 2200); return; }
+    startFromOptions({ n: obj.n, mode: obj.m, diff: obj.d, random: !!obj.r, rngSeed: obj.g }, true);
+    showToast("Loaded seed ✔");
+  }
+
+  function getMousePos(evt){
+    const rect = canvas.getBoundingClientRect();
+    return { x: (evt.clientX - rect.left), y: (evt.clientY - rect.top) };
+  }
+
+  function hitTest(x,y){
+    for (let r=0;r<state.n;r++){
+      for (let c=0;c<state.n;c++){
+        const p = state.paths.get(keyOf(r,c));
+        if (p && ctx.isPointInPath(p, x, y)) return [r,c];
+      }
+    }
+    return null;
+  }
+
+  canvas.addEventListener("click", (evt) => {
+    if (state.mode === "cpu" && state.turn === BLUE) return;
+    const {x,y} = getMousePos(evt);
+    const cell = hitTest(x,y);
+    if (!cell) return;
+    const [r,c] = cell;
+    if (state.grid[r][c] === BLOCK){ showToast("That hex is blocked."); return; }
+    if (state.grid[r][c] !== EMPTY){ showToast("That hex is occupied."); return; }
+    place(r,c);
+  });
+
+  window.addEventListener("resize", () => draw());
+
+  newBtn.addEventListener("click", newGame);
+  resetBtn.addEventListener("click", resetGameKeepBoard);
+
+  modeSel.addEventListener("change", () => {
+    const isCpu = modeSel.value === "cpu";
+    diffSel.disabled = !isCpu;
+    cpuHint.style.display = isCpu ? "block" : "none";
+  });
+
+  copySeedBtn.addEventListener("click", () => seedOut.value && copyText(seedOut.value));
+  copyUrlBtn.addEventListener("click", () => {
+    const seed = seedOut.value.trim();
+    if (!seed) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("seed", seed);
+    copyText(url.toString());
+  });
+
+  loadBtn.addEventListener("click", () => loadSeed(seedIn.value));
+  seedIn.addEventListener("keydown", (e) => { if (e.key === "Enter") loadBtn.click(); });
+
+  function init(){
+    const url = new URL(window.location.href);
+    const seed = url.searchParams.get("seed");
+    if (seed){
+      seedIn.value = seed;
+      const obj = decodeSeed(seed);
+      if (obj){
+        startFromOptions({ n: obj.n, mode: obj.m, diff: obj.d, random: !!obj.r, rngSeed: obj.g }, false);
+        showToast("Loaded board from URL seed.");
+        return;
+      } else {
+        showToast("<span class='warn'>URL seed invalid. Starting new game.</span>", 2200);
+      }
+    }
+    newGame();
+  }
+  init();
+})();
+</script>
+</body>
+</html>

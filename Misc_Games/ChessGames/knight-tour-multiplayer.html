@@ -1,0 +1,1083 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=yes, maximum-scale=5" />
+  <title>Knight Trail Duel (Multi-player)</title>
+  <style>
+    :root{
+      --bg:#0b0f16;
+      --text:#eef2ff;
+      --muted:#b7c3da;
+
+      --uiBorder: rgba(255,255,255,0.10);
+      --shadow: rgba(0,0,0,0.45);
+      --radius:16px;
+
+      --light:#f0d9b5;
+      --dark:#b58863;
+
+      --visited: rgba(31,111,74,0.72);
+
+      /* Legal moves (YELLOW) */
+      --playFill: rgba(255, 215, 64, 0.18);
+      --playOutline: rgba(255, 215, 64, 0.92);
+      --playGlow: rgba(255, 215, 64, 0.40);
+
+      /* Selected piece (cyan) */
+      --selOutline: rgba(56, 189, 248, 0.98);
+      --selGlow: rgba(56, 189, 248, 0.35);
+
+      /* Current player outline */
+      --curOutline: rgba(27,217,106,0.95);
+      --curGlow: rgba(27,217,106,0.35);
+
+      /* Knight sizing (computed in JS) */
+      --kBase: 40px;
+      --kBig: 48px;
+      --kSel: 56px;
+      --kPad: 6px;
+    }
+
+    html,body{ margin:0; padding:0; }
+    *{ box-sizing:border-box; }
+
+    body{
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background: radial-gradient(1200px 700px at 20% 0%, #142444 0%, var(--bg) 55%, #070a10 100%);
+      color:var(--text);
+      -webkit-overflow-scrolling: touch;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    .wrap{
+      width:min(1120px, 96vw);
+      margin: 0 auto;
+      padding: 14px 10px 24px;
+      display:grid;
+      grid-template-columns: 380px minmax(0, 1fr);
+      gap:16px;
+      align-items:start;
+    }
+    @media (max-width: 980px){
+      .wrap{ display:flex; flex-direction:column; gap:12px; padding:10px 8px 18px; }
+      .boardCard{ order:1; overflow: visible; }
+      .sideCard{ order:2; }
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      border:1px solid var(--uiBorder);
+      border-radius: var(--radius);
+      box-shadow: 0 16px 40px var(--shadow);
+      overflow:hidden;
+    }
+    .boardCard{ overflow: visible; }
+
+    .hd{
+      padding:14px 14px 10px;
+      background: rgba(255,255,255,0.03);
+      border-bottom:1px solid rgba(255,255,255,0.07);
+    }
+    .hd h1{ margin:0; font-size:18px; letter-spacing:0.2px; }
+    .hd .sub{ margin-top:6px; font-size:12px; color: var(--muted); line-height:1.25; }
+    .bd{ padding:14px; }
+
+    .controls{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
+    .btn{
+      cursor:pointer;
+      border:1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      font-weight:800;
+      letter-spacing:0.2px;
+      transition: transform .05s ease, background .15s ease, border-color .15s ease;
+      user-select:none;
+      white-space:nowrap;
+      touch-action: manipulation;
+    }
+    .btn:hover{ background: rgba(255,255,255,0.09); border-color: rgba(255,255,255,0.22); }
+    .btn:active{ transform: translateY(1px); }
+    .btn.primary{ background: rgba(43,117,255,0.16); border-color: rgba(43,117,255,0.35); }
+
+    .sel{
+      background: rgba(0,0,0,0.28);
+      border:1px solid rgba(255,255,255,0.16);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      outline:none;
+      font-weight:800;
+      min-width: 150px;
+    }
+    .sel:disabled{ opacity:.55; }
+
+    .turnLine{
+      margin-top:12px;
+      padding:10px 12px;
+      border-radius:12px;
+      background: rgba(0,0,0,0.22);
+      border:1px solid rgba(255,255,255,0.10);
+      font-weight:900;
+      letter-spacing:0.2px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .smallPill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.12);
+      background: rgba(0,0,0,0.22);
+      color: var(--muted);
+      font-size:12px;
+      white-space:nowrap;
+    }
+
+    .dot{
+      width:10px;height:10px;border-radius:999px;
+      background: rgba(242,246,255,0.98);
+      box-shadow: 0 0 0 3px rgba(242,246,255,0.14);
+    }
+    .dot.black{ background: rgba(10,14,22,0.96); box-shadow: 0 0 0 3px rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.22); }
+    .dot.red{ background: rgba(248,113,113,0.95); box-shadow: 0 0 0 3px rgba(248,113,113,0.16); }
+    .dot.blue{ background: rgba(96,165,250,0.95); box-shadow: 0 0 0 3px rgba(96,165,250,0.16); }
+
+    .help{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+      margin-top:10px;
+    }
+
+    .legend{
+      margin-top:10px;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:8px;
+      color: var(--muted);
+      font-size:12px;
+    }
+    .leg{ display:flex; align-items:center; gap:8px; }
+    .sw{ width:16px; height:16px; border-radius:4px; border:1px solid rgba(255,255,255,0.12); }
+
+    .boardWrap{ padding:14px; display:flex; flex-direction:column; gap:10px; }
+    .boardOuter{
+      margin: 0 auto;
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0.22));
+      border: 1px solid rgba(255,255,255,0.10);
+      padding: 10px;
+      box-shadow: 0 18px 50px rgba(0,0,0,0.45);
+      width: 100%;
+      max-width: 720px;
+    }
+    @media (max-width: 980px){
+      .boardOuter{ width: 100%; max-width: min(96vw, 74vh); padding: 8px; }
+    }
+
+    .board{
+      width: 100%;
+      display:grid;
+      grid-template-columns: repeat(var(--n, 8), 1fr);
+      border-radius: 12px;
+      overflow:hidden;
+      box-shadow: inset 0 0 0 2px rgba(0,0,0,0.25);
+      background: #0000;
+    }
+
+    .cell{
+      position:relative;
+      z-index:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      user-select:none;
+      min-width: 0;
+      min-height: 0;
+      touch-action: auto;
+    }
+    .cell.light{ background: var(--light); }
+    .cell.dark{ background: var(--dark); }
+
+    .cell::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      z-index:1;
+    }
+
+    .cell.visited::after{ background: var(--visited); }
+
+    .cell.playable::after{
+      background: var(--playFill);
+      outline: 3px solid var(--playOutline);
+      outline-offset:-3px;
+      filter: drop-shadow(0 0 10px var(--playGlow));
+    }
+
+    .cell.selected::after{
+      outline: 3px solid var(--selOutline);
+      outline-offset:-3px;
+      filter: drop-shadow(0 0 10px var(--selGlow));
+    }
+
+    .cell.current::after{
+      outline: 3px solid var(--curOutline);
+      outline-offset:-3px;
+      filter: drop-shadow(0 0 10px var(--curGlow));
+    }
+
+    .knight{
+      position:absolute;
+      bottom: var(--kPad, 6px);
+      right: var(--kPad, 6px);
+      z-index:2;
+      font-size: var(--kBase, 40px);
+      line-height: 1;
+      pointer-events:none;
+      filter: drop-shadow(0 2px 2px rgba(0,0,0,0.35));
+    }
+    .knight.big{ font-size: var(--kBig, 48px); }
+    .knight.selectedbig{
+      font-size: var(--kSel, 56px);
+      filter: drop-shadow(0 3px 3px rgba(0,0,0,0.45));
+      animation: pulseSel 1.1s ease-in-out infinite;
+    }
+
+    /* Piece colors */
+    .knight.white{ color: #f2f6ff; text-shadow: 0 2px 2px rgba(0,0,0,0.35), 0 0 10px rgba(0,0,0,0.18); }
+    .knight.black{ color: #0b0f16; text-shadow: 0 2px 2px rgba(255,255,255,0.22), 0 0 10px rgba(0,0,0,0.22); }
+    .knight.red{ color: #fecaca; text-shadow: 0 2px 2px rgba(0,0,0,0.35), 0 0 10px rgba(0,0,0,0.20); }
+    .knight.blue{ color: #bfdbfe; text-shadow: 0 2px 2px rgba(0,0,0,0.35), 0 0 10px rgba(0,0,0,0.20); }
+
+    @keyframes pulseSel {
+      0%   { transform: scale(1); }
+      50%  { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+
+    .toast{
+      position: fixed;
+      left: 50%;
+      top: 18px;
+      transform: translateX(-50%);
+      z-index: 60;
+      background: rgba(0,0,0,0.75);
+      border: 1px solid rgba(255,255,255,0.14);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.45);
+      display:none;
+      max-width: min(92vw, 780px);
+      text-align:center;
+    }
+    .toast.show{ display:block; }
+
+    .modal{
+      position:fixed;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+      background: rgba(0,0,0,0.6);
+      z-index:50;
+    }
+    .modal.show{ display:flex; }
+    .modalCard{
+      width:min(620px, 96vw);
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,0.12);
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0.18)), #0c121d;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.55);
+      overflow:hidden;
+    }
+    .modalCard .mh{
+      padding:14px 14px 10px;
+      border-bottom:1px solid rgba(255,255,255,0.10);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .modalCard .mh h2{ margin:0; font-size:16px; }
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.12);
+      background: rgba(0,0,0,0.22);
+      color: var(--muted);
+      font-size:12px;
+    }
+    .badge .dot{ width:10px; height:10px; border-radius:999px; background: rgba(242,246,255,0.98); box-shadow: 0 0 0 3px rgba(242,246,255,0.18); }
+    .badge.blackwin .dot{ background: rgba(10,14,22,0.96); box-shadow: 0 0 0 3px rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.22); }
+    .badge.redwin .dot{ background: rgba(248,113,113,0.95); box-shadow: 0 0 0 3px rgba(248,113,113,0.18); }
+    .badge.bluewin .dot{ background: rgba(96,165,250,0.95); box-shadow: 0 0 0 3px rgba(96,165,250,0.18); }
+
+    .modalCard .mb{ padding:14px; color:var(--muted); font-size:13px; line-height:1.45; }
+    .modalCard .ma{
+      padding:14px;
+      border-top:1px solid rgba(255,255,255,0.10);
+      display:flex;
+      gap:10px;
+      justify-content:flex-end;
+      flex-wrap:wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="card sideCard">
+      <div class="hd">
+        <h1>Knight Trail Duel</h1>
+        <div class="sub">
+          Pick one of your living knights, then move it to a highlighted square. Landing squares become visited globally.
+          At the start of a player's turn, any knights with no valid moves are eliminated automatically.
+          Last player with knights remaining wins.
+        </div>
+      </div>
+      <div class="bd">
+        <div class="controls">
+          <button class="btn primary" id="btnRestart">Restart</button>
+
+          <select class="sel" id="playersSel" aria-label="Players">
+            <option value="2" selected>Players: 2</option>
+            <option value="3">Players: 3</option>
+            <option value="4">Players: 4</option>
+          </select>
+
+          <select class="sel" id="humansSel" aria-label="Humans"></select>
+
+          <select class="sel" id="diffSel" aria-label="CPU difficulty">
+            <option value="easy">CPU: Easy</option>
+            <option value="medium" selected>CPU: Medium</option>
+            <option value="hard">CPU: Hard</option>
+          </select>
+
+          <div style="width:100%; margin-top:6px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <div class="smallPill" style="cursor:default;"><span style="opacity:.9;">Board</span> <b id="sizeLabel" style="color:var(--text);">8×8</b></div>
+            <input id="sizeSlider" type="range" min="8" max="16" step="1" value="8"
+                   style="flex:1; min-width: 180px; accent-color: rgba(255,215,64,0.92);"/>
+          </div>
+        </div>
+
+        <div class="turnLine">
+          <span id="turnText">White to move</span>
+          <span class="smallPill"><span class="dot" id="turnDot"></span><span id="aliveText">White: 3 alive</span></span>
+        </div>
+
+        <div class="help" id="modeHelp"></div>
+
+        <div class="legend">
+          <div class="leg"><span class="sw" style="background: rgba(255,215,64,0.65)"></span>Legal move</div>
+          <div class="leg"><span class="sw" style="background: rgba(31,111,74,0.72)"></span>Visited</div>
+          <div class="leg"><span class="sw" style="outline:3px solid rgba(56,189,248,0.98); background: transparent; border-color: transparent;"></span>Selected knight</div>
+          <div class="leg"><span class="sw" style="outline:3px solid rgba(27,217,106,0.95); background: transparent; border-color: transparent;"></span>Current player</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card boardCard">
+      <div class="boardWrap">
+        <div class="boardOuter">
+          <div class="board" id="board" aria-label="board"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="modal" id="modal">
+    <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+      <div class="mh">
+        <h2 id="mTitle">Game Over</h2>
+        <span class="badge" id="mBadge"><span class="dot"></span><span id="mSub">—</span></span>
+      </div>
+      <div class="mb" id="mBody"></div>
+      <div class="ma">
+        <button class="btn primary" id="mRestart">Restart</button>
+        <button class="btn" id="mClose">Close</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const boardEl = document.getElementById('board');
+  const btnRestart = document.getElementById('btnRestart');
+  const playersSel = document.getElementById('playersSel');
+  const humansSel  = document.getElementById('humansSel');
+  const diffSel    = document.getElementById('diffSel');
+  const sizeSlider = document.getElementById('sizeSlider');
+  const sizeLabel  = document.getElementById('sizeLabel');
+
+  const modeHelp   = document.getElementById('modeHelp');
+  const turnText   = document.getElementById('turnText');
+  const aliveText  = document.getElementById('aliveText');
+  const turnDot    = document.getElementById('turnDot');
+
+  const toast = document.getElementById('toast');
+  const modal = document.getElementById('modal');
+  const mBadge = document.getElementById('mBadge');
+  const mSub = document.getElementById('mSub');
+  const mBody = document.getElementById('mBody');
+  const mRestart = document.getElementById('mRestart');
+  const mClose = document.getElementById('mClose');
+
+  let N = 8; // 8..16
+
+  const knightDeltas = [[1,2],[2,1],[2,-1],[1,-2],[-1,-2],[-2,-1],[-2,1],[-1,2]];
+  const inBounds = (r,c) => r>=0 && r<N && c>=0 && c<N;
+  const keyOf = (r,c) => `${r},${c}`;
+  const idx = (r,c) => r*N + c;
+  const bit = (i) => 1n << BigInt(i);
+
+  const SIDE_DEFS_2 = [
+    { id:'W', name:'White', css:'white', dot:'', symbol:'♘' },
+    { id:'B', name:'Black', css:'black', dot:'black', symbol:'♞' }
+  ];
+  // 3-player clockwise subset: bottom-left -> bottom-right -> top-right
+  const SIDE_DEFS_3 = [
+    { id:'W', name:'White', css:'white', dot:'', symbol:'♘' },
+    { id:'R', name:'Red',   css:'red',   dot:'red', symbol:'♞' },
+    { id:'B', name:'Black', css:'black', dot:'black', symbol:'♞' }
+  ];
+
+
+  // Clockwise: bottom-left -> bottom-right -> top-right -> top-left
+  const SIDE_DEFS_4 = [
+    { id:'W', name:'White', css:'white', dot:'', symbol:'♘' },   // bottom-left
+    { id:'R', name:'Red',   css:'red',   dot:'red', symbol:'♞' }, // bottom-right
+    { id:'B', name:'Black', css:'black', dot:'black', symbol:'♞' }, // top-right
+    { id:'U', name:'Blue',  css:'blue',  dot:'blue', symbol:'♞' }  // top-left
+  ];
+
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.classList.remove('show'), 1600);
+  }
+
+  function clampBoardSize(v){
+    v = Math.max(8, Math.min(16, v|0));
+    return v;
+  }
+
+  function updateSizeLabel(){
+    sizeLabel.textContent = `${N}×${N}`;
+    boardEl.setAttribute('aria-label', `${N} by ${N} board`);
+  }
+
+  const cells = [];
+  function getCell(r,c){ return cells[r*N + c]; }
+
+  function updateKnightSizing(){
+    const bw = boardEl.getBoundingClientRect().width;
+    if(!bw) return;
+    const cell = bw / N;
+
+    const base = Math.max(14, Math.min(46, cell * 0.72));
+    const big  = Math.max(16, Math.min(56, base * 1.18));
+    const sel  = Math.max(18, Math.min(66, base * 1.35));
+    const pad  = Math.max(2,  Math.min(6,  cell * 0.12));
+
+    boardEl.style.setProperty('--kBase', `${base.toFixed(1)}px`);
+    boardEl.style.setProperty('--kBig',  `${big.toFixed(1)}px`);
+    boardEl.style.setProperty('--kSel',  `${sel.toFixed(1)}px`);
+    boardEl.style.setProperty('--kPad',  `${pad.toFixed(1)}px`);
+  }
+
+  function sizeBoardSquare(){
+    const w = boardEl.getBoundingClientRect().width;
+    boardEl.style.height = `${Math.round(w)}px`;
+    updateKnightSizing();
+  }
+  window.addEventListener('resize', () => sizeBoardSquare());
+
+  function buildBoard(){
+    boardEl.style.setProperty('--n', String(N));
+    boardEl.innerHTML = '';
+    cells.length = 0;
+    for(let r=0;r<N;r++){
+      for(let c=0;c<N;c++){
+        const cell = document.createElement('div');
+        cell.className = 'cell ' + (((r+c)%2===0) ? 'light' : 'dark');
+        cell.dataset.r = r;
+        cell.dataset.c = c;
+        cell.addEventListener('click', onCellClick);
+        boardEl.appendChild(cell);
+        cells.push(cell);
+      }
+    }
+    sizeBoardSquare();
+  }
+
+  // -------- Game state --------
+  let playerCount = 2;
+  let humanCount = 2;
+  let diff = 'medium';
+
+  let sides = [];
+  let players = [];
+  let turnIndex = 0;
+  let selectedKnightId = null;
+
+  let visited = new Set();
+  let visitedMask = 0n;
+
+  let gameOver = false;
+  let cpuBusy = false;
+
+  function setHumansOptions(){
+    humansSel.innerHTML = '';
+    for(let h=1; h<=playerCount; h++){
+      const opt = document.createElement('option');
+      opt.value = String(h);
+      opt.textContent = `Humans: ${h}`;
+      humansSel.appendChild(opt);
+    }
+    humansSel.value = String(playerCount === 2 ? 2 : 1);
+  }
+
+  function setModeHelp(){
+    const defs = (playerCount === 2) ? SIDE_DEFS_2 : (playerCount === 3 ? SIDE_DEFS_3 : SIDE_DEFS_4);
+    const humanSides = players.filter(p=>p.isHuman && !p.eliminated).map(p => defs.find(d=>d.id===p.sideId)?.name || p.sideId);
+    const cpuSides = players.filter(p=>!p.isHuman && !p.eliminated).map(p => defs.find(d=>d.id===p.sideId)?.name || p.sideId);
+
+    const hs = humanSides.length ? humanSides.join(', ') : 'None';
+    const cs = cpuSides.length ? cpuSides.join(', ') : 'None';
+
+    modeHelp.innerHTML = `<b>Humans:</b> ${hs} &nbsp;·&nbsp; <b>CPUs:</b> ${cs}<br>
+    Click one of the current player's knights (cyan outline), then click a yellow square to move.`;
+  }
+
+  function livingKnightsCount(p){ return p.knights.filter(k=>k.alive).length; }
+
+  function occupiedSet(){
+    const occ = new Set();
+    for(const p of players){
+      if(p.eliminated) continue;
+      for(const k of p.knights){
+        if(k.alive) occ.add(keyOf(k.r,k.c));
+      }
+    }
+    return occ;
+  }
+
+  function computeLegalForKnight(k, occ, vMask){
+    if(!k.alive) return [];
+    const out = [];
+    for(const [dr,dc] of knightDeltas){
+      const nr = k.r + dr, nc = k.c + dc;
+      if(!inBounds(nr,nc)) continue;
+      if((vMask & bit(idx(nr,nc))) !== 0n) continue;
+      if(occ.has(keyOf(nr,nc))) continue;
+      out.push({r:nr,c:nc});
+    }
+    return out;
+  }
+
+  function eliminateStuckAtTurnStart(p){
+    if(p.eliminated) return 0;
+    const occ = occupiedSet();
+    let eliminated = 0;
+    for(const k of p.knights){
+      if(!k.alive) continue;
+      const moves = computeLegalForKnight(k, occ, visitedMask);
+      if(moves.length === 0){
+        k.alive = false;
+        eliminated++;
+      }
+    }
+    if(eliminated){
+      showToast(`${p.name} knight eliminated (no valid moves).`);
+    }
+    if(livingKnightsCount(p) === 0){
+      p.eliminated = true;
+      showToast(`${p.name} is eliminated!`);
+    }
+    return eliminated;
+  }
+
+  function activePlayers(){ return players.filter(p => !p.eliminated); }
+
+  function setTurnUI(){
+    const p = players[turnIndex];
+    turnText.textContent = `${p.name} to move`;
+    aliveText.textContent = `${p.name}: ${livingKnightsCount(p)} alive`;
+
+    turnDot.classList.remove('black','red','blue');
+    if(p.css === 'black') turnDot.classList.add('black');
+    if(p.css === 'red') turnDot.classList.add('red');
+    if(p.css === 'blue') turnDot.classList.add('blue');
+  }
+
+  function clearBoard(){
+    for(const cell of cells){
+      cell.classList.remove('visited','playable','current','selected');
+      cell.innerHTML = '';
+    }
+  }
+
+  function render(){
+    clearBoard();
+
+    for(const k of visited){
+      const [r,c] = k.split(',').map(Number);
+      if(r>=0 && r<N && c>=0 && c<N) getCell(r,c).classList.add('visited');
+    }
+
+    const curP = players[turnIndex];
+    for(const k of curP.knights){
+      if(k.alive) getCell(k.r,k.c).classList.add('current');
+    }
+
+    const occ = occupiedSet();
+
+    if(selectedKnightId){
+      const sel = curP.knights.find(k => k.id === selectedKnightId && k.alive);
+      if(sel){
+        getCell(sel.r, sel.c).classList.add('selected');
+        const moves = computeLegalForKnight(sel, occ, visitedMask);
+        for(const m of moves){
+          getCell(m.r,m.c).classList.add('playable');
+        }
+      } else {
+        selectedKnightId = null;
+      }
+    }
+
+    for(const p of players){
+      if(p.eliminated) continue;
+      const isCur = (p === curP);
+      for(const k of p.knights){
+        if(!k.alive) continue;
+        const big = isCur ? ' big' : '';
+        const selBig = (selectedKnightId && k.id === selectedKnightId) ? ' selectedbig' : '';
+        getCell(k.r,k.c).insertAdjacentHTML('beforeend',
+          `<div class="knight ${p.css}${big}${selBig}" aria-hidden="true">${p.symbol}</div>`);
+      }
+    }
+
+    setTurnUI();
+  }
+
+  function endGame(winner){
+    gameOver = true;
+    cpuBusy = false;
+    modal.classList.add('show');
+
+    if(!winner){
+      mSub.textContent = `No winner`;
+      mBadge.classList.remove('blackwin','redwin','bluewin');
+      mBody.textContent = `All players were eliminated.`;
+      return;
+    }
+
+    mSub.textContent = `${winner.name} wins`;
+    mBadge.classList.remove('blackwin','redwin','bluewin');
+    if(winner.css === 'black') mBadge.classList.add('blackwin');
+    if(winner.css === 'red') mBadge.classList.add('redwin');
+    if(winner.css === 'green') mBadge.classList.add('bluewin');
+
+    const losers = players.filter(p => p !== winner).map(p => p.name).join(', ');
+    mBody.textContent = `${winner.name} wins. Other players eliminated: ${losers}.`;
+  }
+
+  function startTurn(){
+    if(gameOver) return;
+
+    // skip eliminated
+    if(players[turnIndex].eliminated){
+      advanceToNextPlayer();
+      return;
+    }
+
+    eliminateStuckAtTurnStart(players[turnIndex]);
+
+    const alivePlayers = activePlayers();
+    if(alivePlayers.length <= 1){
+      endGame(alivePlayers[0] || null);
+      render();
+      return;
+    }
+
+    selectedKnightId = null;
+    render();
+
+    if(!players[turnIndex].isHuman){
+      cpuMove();
+    }
+  }
+
+  function advanceToNextPlayer(){
+    if(gameOver) return;
+
+    const alivePlayers = activePlayers();
+    if(alivePlayers.length <= 1){
+      endGame(alivePlayers[0] || null);
+      return;
+    }
+
+    let tries = 0;
+    do{
+      turnIndex = (turnIndex + 1) % players.length;
+      tries++;
+      if(tries > players.length + 2) break;
+    }while(players[turnIndex].eliminated);
+
+    startTurn();
+  }
+
+  function endTurn(){
+    advanceToNextPlayer();
+  }
+
+  function onCellClick(e){
+    if(gameOver || cpuBusy) return;
+
+    const p = players[turnIndex];
+    if(!p.isHuman) return;
+
+    const r = Number(e.currentTarget.dataset.r);
+    const c = Number(e.currentTarget.dataset.c);
+
+    const k = p.knights.find(x => x.alive && x.r===r && x.c===c);
+    if(k){
+      selectedKnightId = k.id;
+      render();
+      return;
+    }
+
+    if(!selectedKnightId) return;
+
+    const sel = p.knights.find(x => x.id === selectedKnightId && x.alive);
+    if(!sel){ selectedKnightId = null; render(); return; }
+
+    const occ = occupiedSet();
+    const moves = computeLegalForKnight(sel, occ, visitedMask);
+    if(!moves.some(m => m.r===r && m.c===c)) return;
+
+    sel.r = r; sel.c = c;
+    visited.add(keyOf(r,c));
+    visitedMask |= bit(idx(r,c));
+
+    selectedKnightId = null;
+    render();
+    endTurn();
+  }
+
+  // -------- CPU --------
+  function cpuPickMove(pIndex){
+    const p = players[pIndex];
+    const occ0 = occupiedSet();
+
+    const candidates = [];
+    for(let i=0;i<p.knights.length;i++){
+      const k = p.knights[i];
+      if(!k.alive) continue;
+      const moves = computeLegalForKnight(k, occ0, visitedMask);
+      for(const m of moves){
+        candidates.push({kIndex:i, move:m});
+      }
+    }
+    if(!candidates.length) return null;
+
+    if(diff === 'easy'){
+      return candidates[(Math.random()*candidates.length)|0];
+    }
+
+    function scoreAfterMove(mv){
+      const newV = visitedMask | bit(idx(mv.move.r, mv.move.c));
+
+      // occupied after move (non-mutating)
+      const occ = new Set();
+      for(const pl of players){
+        if(pl.eliminated) continue;
+        for(const kk of pl.knights){
+          if(!kk.alive) continue;
+          if(pl === p && kk === p.knights[mv.kIndex]){
+            occ.add(keyOf(mv.move.r, mv.move.c));
+          } else {
+            occ.add(keyOf(kk.r, kk.c));
+          }
+        }
+      }
+
+      // my mobility after move
+      let myMoves = 0;
+      for(let i=0;i<p.knights.length;i++){
+        const kk = p.knights[i];
+        if(!kk.alive) continue;
+        if(i === mv.kIndex){
+          myMoves += computeLegalForKnight({r:mv.move.r,c:mv.move.c,alive:true}, occ, newV).length;
+        } else {
+          myMoves += computeLegalForKnight(kk, occ, newV).length;
+        }
+      }
+
+      // next player's mobility
+      let nextIdx = pIndex, tries = 0;
+      do{
+        nextIdx = (nextIdx + 1) % players.length;
+        tries++;
+      }while(tries <= players.length && players[nextIdx].eliminated);
+
+      const nxt = players[nextIdx];
+      let nxtMoves = 0;
+      if(nxt && !nxt.eliminated){
+        for(const kk of nxt.knights){
+          if(!kk.alive) continue;
+          nxtMoves += computeLegalForKnight(kk, occ, newV).length;
+        }
+      }
+
+      const centerR = (N-1)/2, centerC = (N-1)/2;
+      const dist = Math.abs(mv.move.r-centerR) + Math.abs(mv.move.c-centerC);
+
+      return (myMoves*10) - (nxtMoves*6) - (dist*0.3);
+    }
+
+    if(diff === 'medium'){
+      let best = candidates[0], bestS = -1e18;
+      for(const mv of candidates){
+        const s = scoreAfterMove(mv);
+        if(s > bestS){ bestS = s; best = mv; }
+      }
+      return best;
+    }
+
+    // hard: reduce next player's best response (approx)
+    function hardScore(mv){
+      const newV = visitedMask | bit(idx(mv.move.r, mv.move.c));
+      const occ = new Set();
+      for(const pl of players){
+        if(pl.eliminated) continue;
+        for(const kk of pl.knights){
+          if(!kk.alive) continue;
+          if(pl === p && kk === p.knights[mv.kIndex]) occ.add(keyOf(mv.move.r,mv.move.c));
+          else occ.add(keyOf(kk.r,kk.c));
+        }
+      }
+
+      // our mobility
+      let myMoves = 0;
+      for(let i=0;i<p.knights.length;i++){
+        const kk = p.knights[i];
+        if(!kk.alive) continue;
+        if(i === mv.kIndex) myMoves += computeLegalForKnight({r:mv.move.r,c:mv.move.c,alive:true}, occ, newV).length;
+        else myMoves += computeLegalForKnight(kk, occ, newV).length;
+      }
+
+      // next player best response
+      let nextIdx = pIndex, tries = 0;
+      do{
+        nextIdx = (nextIdx + 1) % players.length;
+        tries++;
+      }while(tries <= players.length && players[nextIdx].eliminated);
+
+      const nxt = players[nextIdx];
+      let nxtBest = -1e18;
+      if(nxt && !nxt.eliminated){
+        for(const kk of nxt.knights){
+          if(!kk.alive) continue;
+          const ms = computeLegalForKnight(kk, occ, newV);
+          if(ms.length === 0) continue;
+          for(const m2 of ms){
+            const v2 = newV | bit(idx(m2.r,m2.c));
+            const occ2 = new Set(occ);
+            occ2.delete(keyOf(kk.r,kk.c));
+            occ2.add(keyOf(m2.r,m2.c));
+
+            let nxtMoves2 = 0;
+            for(const kkk of nxt.knights){
+              if(!kkk.alive) continue;
+              if(kkk === kk) nxtMoves2 += computeLegalForKnight({r:m2.r,c:m2.c,alive:true}, occ2, v2).length;
+              else nxtMoves2 += computeLegalForKnight(kkk, occ2, v2).length;
+            }
+            let myMoves2 = 0;
+            for(let j=0;j<p.knights.length;j++){
+              const kkk = p.knights[j];
+              if(!kkk.alive) continue;
+              if(j === mv.kIndex) myMoves2 += computeLegalForKnight({r:mv.move.r,c:mv.move.c,alive:true}, occ2, v2).length;
+              else myMoves2 += computeLegalForKnight(kkk, occ2, v2).length;
+            }
+            const s2 = (nxtMoves2*10) - (myMoves2*7);
+            if(s2 > nxtBest) nxtBest = s2;
+          }
+        }
+      }
+      if(nxtBest === -1e18) nxtBest = -50;
+      return (myMoves*10) - (nxtBest*0.8);
+    }
+
+    let best = candidates[0], bestS = -1e18;
+    for(const mv of candidates){
+      const s = hardScore(mv);
+      if(s > bestS){ bestS = s; best = mv; }
+    }
+    return best;
+  }
+
+  function cpuMove(){
+    if(gameOver) return;
+    cpuBusy = true;
+
+    const pIndex = turnIndex;
+    const delay = (diff === 'easy') ? 220 : (diff === 'medium' ? 320 : 420);
+
+    setTimeout(() => {
+      if(gameOver) return;
+
+      const p = players[pIndex];
+      if(p.eliminated){ cpuBusy = false; advanceToNextPlayer(); return; }
+
+      const mv = cpuPickMove(pIndex);
+      cpuBusy = false;
+
+      if(!mv){
+        for(const k of p.knights) k.alive = false;
+        p.eliminated = true;
+        showToast(`${p.name} has no valid moves. Eliminated!`);
+        render();
+        advanceToNextPlayer();
+        return;
+      }
+
+      const k = p.knights[mv.kIndex];
+      if(!k || !k.alive){ advanceToNextPlayer(); return; }
+      k.r = mv.move.r; k.c = mv.move.c;
+
+      visited.add(keyOf(k.r,k.c));
+      visitedMask |= bit(idx(k.r,k.c));
+
+      render();
+      endTurn();
+    }, delay);
+  }
+
+  // -------- Setup --------
+  function makePlayers(){
+    const defs = (playerCount === 2) ? SIDE_DEFS_2 : (playerCount === 3 ? SIDE_DEFS_3 : SIDE_DEFS_4);
+    players = defs.map((s, i) => ({
+      sideId: s.id,
+      name: s.name,
+      css: s.css,
+      symbol: s.symbol,
+      isHuman: (i < humanCount),
+      eliminated: false,
+      knights: []
+    }));
+  }
+
+  function cornerStartsForSide(sideId){
+    // 3-knight L-shape in each corner
+    // White: bottom-left
+    if(sideId === 'W'){
+      return [{r:N-1,c:0},{r:N-2,c:0},{r:N-1,c:1}];
+    }
+    // Black: top-right
+    if(sideId === 'B'){
+      return [{r:0,c:N-1},{r:0,c:N-2},{r:1,c:N-1}];
+    }
+    // Red: bottom-right
+    if(sideId === 'R'){
+      return [{r:N-1,c:N-1},{r:N-2,c:N-1},{r:N-1,c:N-2}];
+    }
+    // Blue: top-left
+    return [{r:0,c:0},{r:0,c:1},{r:1,c:0}];
+  }
+
+  function reset(){
+    playerCount = Number(playersSel.value);
+    diff = diffSel.value;
+
+    setHumansOptions();
+    humanCount = Number(humansSel.value);
+
+    gameOver = false;
+    cpuBusy = false;
+    modal.classList.remove('show');
+
+    makePlayers();
+
+    for(const p of players){
+      const pts = cornerStartsForSide(p.sideId);
+      p.knights = pts.map((pt, i) => ({ id:`${p.sideId}${i}`, r:pt.r, c:pt.c, alive:true }));
+    }
+
+    visited = new Set();
+    visitedMask = 0n;
+    for(const p of players){
+      for(const k of p.knights){
+        visited.add(keyOf(k.r,k.c));
+        visitedMask |= bit(idx(k.r,k.c));
+      }
+    }
+
+    turnIndex = 0;
+    selectedKnightId = null;
+
+    setModeHelp();
+    render();
+    startTurn();
+  }
+
+  // -------- UI events --------
+  btnRestart.addEventListener('click', reset);
+  playersSel.addEventListener('change', () => { playerCount = Number(playersSel.value); setHumansOptions(); reset(); });
+  humansSel.addEventListener('change', reset);
+  diffSel.addEventListener('change', reset);
+
+  sizeSlider.addEventListener('input', () => {
+    const v = clampBoardSize(Number(sizeSlider.value));
+    sizeLabel.textContent = `${v}×${v}`;
+  });
+  sizeSlider.addEventListener('change', () => {
+    N = clampBoardSize(Number(sizeSlider.value));
+    updateSizeLabel();
+    buildBoard();
+    reset();
+  });
+
+  mRestart.addEventListener('click', () => { modal.classList.remove('show'); reset(); });
+  mClose.addEventListener('click', () => modal.classList.remove('show'));
+  modal.addEventListener('click', (e) => { if(e.target === modal) modal.classList.remove('show'); });
+
+  // -------- Init --------
+  sizeSlider.value = String(N);
+  updateSizeLabel();
+
+  playerCount = Number(playersSel.value);
+  setHumansOptions();
+
+  buildBoard();
+  reset();
+})();
+</script>
+</body>
+</html>

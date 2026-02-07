@@ -1,0 +1,1339 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<title>Seeded Sudoku (Multi-size)</title>
+<style>
+  :root{
+    --bg:#0b0f17;
+    --text:#e9eef7;
+    --muted:#9fb0c7;
+    --shadow: 0 10px 30px rgba(0,0,0,.35);
+    --radius: 14px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    background: radial-gradient(1200px 700px at 20% -10%, rgba(124,196,255,.16), transparent 60%),
+                radial-gradient(1000px 600px at 110% 10%, rgba(72,213,151,.12), transparent 55%),
+                var(--bg);
+    color:var(--text);
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+  }
+
+  /* --- Layout (BOARD LEFT, SIDE RIGHT) --- */
+  .wrap{
+    width:min(1180px, 96vw);
+    padding:18px 0 26px;
+    display:grid;
+    gap:14px;
+    grid-template-columns: 1fr 340px;
+    grid-template-areas:
+      "header header"
+      "board  side"
+      "keypad side";
+    align-items:start;
+  }
+  @media (max-width: 980px){
+    .wrap{
+      grid-template-columns: 1fr;
+      grid-template-areas:
+        "header"
+        "board"
+        "keypad"
+        "side";
+      padding:14px 0 20px;
+    }
+  }
+  .area-header{ grid-area: header; }
+  .area-board{ grid-area: board; }
+  .area-keypad{ grid-area: keypad; }
+  .area-side{ grid-area: side; }
+
+  .card{
+    background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+    border:1px solid rgba(124,196,255,.10);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow:hidden;
+  }
+
+  /* --- Header --- */
+  header.card{
+    padding:14px 16px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .title{ display:flex; flex-direction:column; gap:2px; }
+  .title h1{ font-size:16px; margin:0; letter-spacing:.2px; }
+  .title .sub{ font-size:12px; color:var(--muted); }
+
+  .toolbar{
+    display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:flex-end;
+  }
+  select, input[type="text"], button{ font: inherit; }
+  select, input[type="text"]{
+    background: rgba(10,14,22,.8);
+    border:1px solid rgba(159,176,199,.25);
+    color:var(--text);
+    border-radius:12px;
+    padding:9px 10px;
+    outline:none;
+  }
+  select:focus, input[type="text"]:focus{
+    border-color: rgba(124,196,255,.55);
+    box-shadow: 0 0 0 3px rgba(124,196,255,.18);
+  }
+  button{
+    background: linear-gradient(180deg, rgba(124,196,255,.18), rgba(124,196,255,.06));
+    color:var(--text);
+    border:1px solid rgba(124,196,255,.28);
+    border-radius:12px;
+    padding:9px 10px;
+    cursor:pointer;
+    transition: transform .04s ease, border-color .2s ease;
+    user-select:none;
+    white-space:nowrap;
+  }
+  button:hover{ border-color: rgba(124,196,255,.55); }
+  button:active{ transform: translateY(1px); }
+  button.secondary{
+    background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+    border-color: rgba(159,176,199,.22);
+  }
+  button.danger{
+    background: linear-gradient(180deg, rgba(255,107,107,.18), rgba(255,107,107,.06));
+    border-color: rgba(255,107,107,.28);
+  }
+  button.good{
+    background: linear-gradient(180deg, rgba(72,213,151,.18), rgba(72,213,151,.06));
+    border-color: rgba(72,213,151,.30);
+  }
+
+  /* --- Board card --- */
+  .boardCard{ padding:12px; }
+  .stats{
+    display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    font-size:12px; color:var(--muted);
+  }
+  .pill{
+    padding:6px 10px;
+    border-radius:999px;
+    background: rgba(12,18,30,.8);
+    border:1px solid rgba(159,176,199,.18);
+    display:inline-flex; gap:7px; align-items:baseline;
+  }
+  .pill b{ color:var(--text); font-weight:650; }
+
+  .boardOuter{ width:100%; display:flex; justify-content:center; }
+  .board{
+    width: min(720px, 96vw);
+    aspect-ratio: 1 / 1;
+    display:grid;
+    gap:1px;
+    background: rgba(42,58,82,.95);
+    border-radius: 14px;
+    overflow:hidden;
+    border: 1px solid rgba(124,196,255,.18);
+    box-shadow: 0 10px 40px rgba(0,0,0,.35);
+    touch-action: manipulation;
+  }
+  .cell{
+    background: linear-gradient(180deg, rgba(15,23,36,.95), rgba(12,19,32,.95));
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    cursor:pointer;
+    user-select:none;
+    font-variant-numeric: tabular-nums;
+  }
+  .cell .val{ font-weight:800; letter-spacing:.2px; }
+  .cell.given .val{ color: rgba(233,238,247,.95); }
+  .cell.entry .val{ color: rgba(124,196,255,.95); }
+  .cell.selected{
+    outline: 2px solid rgba(124,196,255,.85);
+    outline-offset: -2px;
+    z-index:2;
+  }
+  .cell.hl{ background: rgba(124,196,255,.14); }
+  .cell.hlsame{ background: rgba(124,196,255,.20); }
+  .cell.conflict{ background: rgba(255,107,107,.16); }
+  .cell.wrong{ box-shadow: inset 0 0 0 2px rgba(255,107,107,.75); }
+
+  .cell .notes{
+    position:absolute;
+    inset: 3px;
+    display:grid;
+    gap:1px;
+    pointer-events:none;
+    opacity:.95;
+  }
+  .note{
+    font-weight:700;
+    color: rgba(233,238,247,.62);
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  .settingsRow{
+    margin-top: 12px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(12,18,30,.65);
+    border: 1px solid rgba(159,176,199,.16);
+  }
+  .toggles{
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+    font-size:12px; color: var(--muted);
+  }
+  .toggle{
+    display:inline-flex; align-items:center; gap:8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(10,14,22,.55);
+    border: 1px solid rgba(159,176,199,.16);
+    cursor: pointer;
+    user-select:none;
+  }
+  .toggle input{ display:none; }
+  .switch{
+    width: 34px; height: 18px;
+    border-radius: 999px;
+    background: rgba(159,176,199,.20);
+    position:relative;
+    border: 1px solid rgba(159,176,199,.22);
+    flex: 0 0 auto;
+  }
+  .switch::after{
+    content:"";
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: rgba(233,238,247,.92);
+    position:absolute; top: 1px; left: 1px;
+    transition: left .15s ease, background .15s ease;
+  }
+  .toggle input:checked + .switch{
+    background: rgba(72,213,151,.20);
+    border-color: rgba(72,213,151,.30);
+  }
+  .toggle input:checked + .switch::after{ left: 17px; }
+  .settingsHint{ font-size:12px; color: var(--muted); }
+
+  .candidates{
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(12,18,30,.65);
+    border: 1px solid rgba(159,176,199,.16);
+  }
+  .candidatesTop{
+    display:flex; align-items:baseline; justify-content:space-between;
+    gap:10px; flex-wrap:wrap; margin-bottom:8px;
+  }
+  .candidatesTop h3{
+    margin:0; font-size:13px; letter-spacing:.2px;
+    color: rgba(233,238,247,.95);
+  }
+  .candMeta{ font-size:12px; color: var(--muted); }
+  .candGrid{ display:flex; flex-wrap:wrap; gap:8px; }
+  .chip{
+    min-width: 34px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    text-align:center;
+    font-weight: 850;
+    cursor: pointer;
+    user-select:none;
+    background: rgba(124,196,255,.10);
+    border: 1px solid rgba(124,196,255,.22);
+  }
+  .chip:hover{ border-color: rgba(124,196,255,.55); }
+  .chip:active{ transform: translateY(1px); }
+  .chip.disabled{ opacity:.35; cursor: default; }
+  .chip.current{
+    background: rgba(72,213,151,.12);
+    border-color: rgba(72,213,151,.28);
+  }
+  .chip.illegal{
+    background: rgba(255,107,107,.10);
+    border-color: rgba(255,107,107,.25);
+  }
+
+  /* --- Keypad card --- */
+  .padCard{ padding:12px; }
+  .section{
+    background: rgba(12,18,30,.65);
+    border:1px solid rgba(159,176,199,.16);
+    border-radius: 14px;
+    padding:12px;
+  }
+  .help{ font-size:12px; color:var(--muted); line-height:1.35; }
+  .kbd{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 8px;
+    background: rgba(159,176,199,.10);
+    border: 1px solid rgba(159,176,199,.18);
+    color: rgba(233,238,247,.92);
+  }
+  .keypad{ display:grid; gap:8px; }
+  .kbtn{
+    padding:10px 0;
+    border-radius:12px;
+    background: rgba(124,196,255,.10);
+    border:1px solid rgba(124,196,255,.22);
+    text-align:center;
+    font-weight:800;
+    cursor:pointer;
+    user-select:none;
+  }
+  .kbtn:hover{ border-color: rgba(124,196,255,.5); }
+  .kbtn:active{ transform: translateY(1px); }
+  .kbtn.clear{
+    background: rgba(255,255,255,.06);
+    border-color: rgba(159,176,199,.22);
+  }
+  .kbtn.note{
+    background: rgba(72,213,151,.10);
+    border-color: rgba(72,213,151,.22);
+  }
+
+  /* --- Side / leaderboard --- */
+  .side{ padding:12px; display:flex; flex-direction:column; gap:12px; }
+  .leader{
+    display:flex; flex-direction:column; gap:8px;
+    font-size:12px; color:var(--muted);
+  }
+  .leader table{
+    width:100%;
+    border-collapse: collapse;
+    overflow:hidden;
+    border-radius: 12px;
+    border: 1px solid rgba(159,176,199,.18);
+  }
+  .leader th, .leader td{
+    padding:7px 8px;
+    border-bottom: 1px solid rgba(159,176,199,.10);
+    text-align:left;
+    font-variant-numeric: tabular-nums;
+  }
+  .leader th{
+    font-size:11px; color: rgba(233,238,247,.85);
+    background: rgba(159,176,199,.06);
+  }
+  .leader tr:last-child td{ border-bottom:none; }
+
+  /* --- Toast --- */
+  .toast{
+    position: fixed;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%);
+    background: rgba(10,14,22,.92);
+    border: 1px solid rgba(124,196,255,.25);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    font-size: 13px;
+    opacity: 0;
+    pointer-events:none;
+    transition: opacity .2s ease, transform .2s ease;
+  }
+  .toast.show{
+    opacity: 1;
+    transform: translateX(-50%) translateY(-6px);
+  }
+
+  /* --- Modal --- */
+  .overlay{
+    position:fixed; inset:0;
+    background: rgba(0,0,0,.97); /* OPAQUE so board never shows through */
+    display:none;
+    align-items:center; justify-content:center;
+    padding: 18px;
+    z-index: 9999;
+  }
+  .overlay.show{ display:flex; }
+  .modal{
+    width: min(560px, 96vw);
+    background: #0b0f17;          /* opaque */
+    border: 1px solid rgba(124,196,255,.20);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    padding: 16px;
+  }
+  .modal h3{ margin:0 0 10px; font-size:16px; }
+  .modal p{
+    margin:0 0 14px;
+    color: rgba(233,238,247,.92);
+    font-size: 16px;              /* bigger text by default */
+    line-height: 1.55;
+  }
+  .modal .actions{ display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; }
+  .modal .actions button{ min-width: 120px; }
+
+  /* kill weird blue focus rectangles inside modal */
+  .overlay .modal:focus,
+  .overlay .modal *:focus{
+    outline:none !important;
+    box-shadow:none !important;
+  }
+
+  /* When modal open, disable any selection highlight underneath (belt & suspenders) */
+  body.modalOpen .cell.selected{ outline:none !important; box-shadow:none !important; }
+  body.modalOpen .cell.wrong{ box-shadow:none !important; }
+
+  .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .grow{ flex:1 1 auto; min-width: 160px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="card area-header">
+      <div class="title">
+        <h1>Seeded Sudoku <span class="sub" style="display:block">4×4 · 6×6 · 9×9 · 16×16 (Hexadoku)</span></h1>
+        <div class="sub">Hints add <b>+30s</b> penalty · Top 5 times saved locally per <b>size + difficulty</b></div>
+      </div>
+      <div class="toolbar">
+        <select id="size">
+          <option value="4">4×4</option>
+          <option value="6">6×6</option>
+          <option value="9" selected>9×9</option>
+          <option value="16">16×16</option>
+        </select>
+        <select id="diff">
+          <option value="easy">Easy</option>
+          <option value="medium">Medium</option>
+          <option value="hard">Hard</option>
+          <option value="expert">Expert</option>
+        </select>
+        <button id="newBtn">New</button>
+        <button class="secondary" id="copySeedBtn">Copy seed</button>
+        <button class="secondary" id="loadSeedBtn">Load seed</button>
+        <button class="secondary" id="checkBtn">Check</button>
+        <button class="good" id="hintBtn">Hint (+30s)</button>
+      </div>
+    </header>
+
+    <div class="card boardCard area-board">
+      <div class="stats">
+        <span class="pill">Seed: <b id="seedLbl">—</b></span>
+        <span class="pill">Size: <b id="sizeLbl">—</b></span>
+        <span class="pill">Time: <b id="timeLbl">00:00</b> <span style="color:var(--muted)" id="penLbl"></span></span>
+        <span class="pill">Mode: <b id="modeLbl">Enter</b></span>
+        <span class="pill">Filled: <b id="filledLbl">0/0</b></span>
+      </div>
+      <div style="height:10px"></div>
+      <div class="boardOuter">
+        <div id="board" class="board" aria-label="Sudoku board"></div>
+      </div>
+
+      <div class="settingsRow">
+        <div class="toggles">
+          <label class="toggle" title="Show/hide the keypad section below (useful if you prefer keyboard input).">
+            <input id="toggleKeypad" type="checkbox" checked>
+            <span class="switch" aria-hidden="true"></span>
+            <span>Keypad</span>
+          </label>
+
+          <label class="toggle" title="Show/hide the possible picks panel below.">
+            <input id="togglePicks" type="checkbox" checked>
+            <span class="switch" aria-hidden="true"></span>
+            <span>Possible picks</span>
+          </label>
+        </div>
+        <div class="settingsHint">Tip: press <span class="kbd">N</span> for notes · <span class="kbd">Backspace</span> clears</div>
+      </div>
+
+      <div class="candidates" id="candPanel">
+        <div class="candidatesTop">
+          <h3>Possible picks</h3>
+          <div class="candMeta" id="candMeta">Click a cell to see legal values.</div>
+        </div>
+        <div class="candGrid" id="candGrid"></div>
+      </div>
+    </div>
+
+    <div class="card padCard area-keypad" id="keypadCard">
+      <div class="section">
+        <div class="help" style="margin-bottom:10px">
+          Click a cell, then type symbols for this size. Use <span class="kbd">Backspace</span> to clear.
+          Toggle notes with <span class="kbd">N</span> or the <b>Notes</b> button.
+        </div>
+        <div class="keypad" id="keypad"></div>
+      </div>
+    </div>
+
+    <aside class="card side area-side">
+      <div class="section leader">
+        <div class="row" style="justify-content:space-between; align-items:baseline; margin-bottom:6px;">
+          <div style="font-size:13px; color:rgba(233,238,247,.95); font-weight:650;">Top 5 times (this device)</div>
+          <button class="danger" id="resetTimesBtn">Reset times</button>
+        </div>
+        <div class="help" style="margin-bottom:8px">Fastest <b>adjusted</b> times (including hint penalties).</div>
+        <div id="leaderWrap"></div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="overlay" id="overlay">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3 id="modalTitle">—</h3>
+      <p id="modalBody">—</p>
+      <div class="row" style="margin:10px 0 14px;">
+        <input id="seedInput" class="grow" type="text" inputmode="numeric" placeholder="Enter seed (integer)"/>
+      </div>
+      <div class="actions">
+        <button class="secondary" id="modalCancel">Cancel</button>
+        <button class="secondary" id="modalAlt" style="display:none">Alt</button>
+        <button id="modalOk">OK</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const TIMES_KEY = "seeded_sudoku_times_v3";
+  const UI_KEY = "seeded_sudoku_ui_v2";
+
+  const SIZE_CONFIG = {
+    4:  { boxR: 2, boxC: 2, symbols: "1234" },
+    6:  { boxR: 2, boxC: 3, symbols: "123456" },
+    9:  { boxR: 3, boxC: 3, symbols: "123456789" },
+    16: { boxR: 4, boxC: 4, symbols: "0123456789ABCDEF" }
+  };
+
+  const DIFF_CLUE_FRAC = { easy: 0.62, medium: 0.50, hard: 0.38, expert: 0.28 };
+  const DIFF_MIN_FRAC  = { easy: 0.45, medium: 0.33, hard: 0.25, expert: 0.20 };
+
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function() {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function shuffleInPlace(arr, rng){
+    for(let i=arr.length-1;i>0;i--){
+      const j = Math.floor(rng()*(i+1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+  function fmtTime(totalSeconds){
+    totalSeconds = Math.max(0, Math.floor(totalSeconds));
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    return String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0");
+  }
+
+  const els = {
+    size: document.getElementById("size"),
+    diff: document.getElementById("diff"),
+    newBtn: document.getElementById("newBtn"),
+    copySeedBtn: document.getElementById("copySeedBtn"),
+    loadSeedBtn: document.getElementById("loadSeedBtn"),
+    checkBtn: document.getElementById("checkBtn"),
+    hintBtn: document.getElementById("hintBtn"),
+    board: document.getElementById("board"),
+    seedLbl: document.getElementById("seedLbl"),
+    sizeLbl: document.getElementById("sizeLbl"),
+    timeLbl: document.getElementById("timeLbl"),
+    penLbl: document.getElementById("penLbl"),
+    modeLbl: document.getElementById("modeLbl"),
+    filledLbl: document.getElementById("filledLbl"),
+    keypad: document.getElementById("keypad"),
+    keypadCard: document.getElementById("keypadCard"),
+    leaderWrap: document.getElementById("leaderWrap"),
+    resetTimesBtn: document.getElementById("resetTimesBtn"),
+    toast: document.getElementById("toast"),
+    overlay: document.getElementById("overlay"),
+    modalTitle: document.getElementById("modalTitle"),
+    modalBody: document.getElementById("modalBody"),
+    seedInput: document.getElementById("seedInput"),
+    modalCancel: document.getElementById("modalCancel"),
+    modalAlt: document.getElementById("modalAlt"),
+    modalOk: document.getElementById("modalOk"),
+    candMeta: document.getElementById("candMeta"),
+    candGrid: document.getElementById("candGrid"),
+    candPanel: document.getElementById("candPanel"),
+    toggleKeypad: document.getElementById("toggleKeypad"),
+    togglePicks: document.getElementById("togglePicks"),
+  };
+
+  let ui = { showKeypad: true, showPicks: true };
+
+  let N = 9, boxR = 3, boxC = 3;
+  let SYMBOLS = [];
+  let symToVal = new Map();
+  let valToSym = (v)=>SYMBOLS[v];
+
+  let currentSeed = 0;
+  let currentDiff = "easy";
+  let solution = null;
+  let puzzle = null;
+  let entries = null;
+  let notes = null;
+  let selected = {r:0,c:0};
+  let noteMode = false;
+  let startTs = null;
+  let tickHandle = null;
+  let hintCount = 0;
+  let penaltySec = 0;
+  let completed = false;
+  let wrongCells = new Set();
+
+  function toast(msg){
+    els.toast.textContent = msg;
+    els.toast.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(()=>els.toast.classList.remove("show"), 1800);
+  }
+
+  function qs(){
+    const p = new URLSearchParams(location.search);
+    return { seed: p.get("seed"), diff: p.get("diff"), size: p.get("size") };
+  }
+  function setUrl(seed, size, diff){
+    const u = new URL(location.href);
+    u.searchParams.set("seed", String(seed));
+    u.searchParams.set("size", String(size));
+    u.searchParams.set("diff", diff);
+    history.replaceState(null, "", u.toString());
+  }
+  function parseSeed(x){
+    if(x === null || x === undefined) return null;
+    const n = Number(String(x).trim());
+    if(!Number.isFinite(n)) return null;
+    return (Math.trunc(n) >>> 0);
+  }
+  function parseSize(x){
+    const n = Number(String(x).trim());
+    if(!Number.isFinite(n)) return null;
+    const i = Math.trunc(n);
+    return SIZE_CONFIG[i] ? i : null;
+  }
+
+  function loadUI(){
+    try{
+      const raw = localStorage.getItem(UI_KEY);
+      if(!raw) return;
+      const obj = JSON.parse(raw);
+      if(obj && typeof obj === "object"){
+        ui.showKeypad = obj.showKeypad !== false;
+        ui.showPicks = obj.showPicks !== false;
+      }
+    }catch(e){}
+  }
+  function saveUI(){ localStorage.setItem(UI_KEY, JSON.stringify(ui)); }
+  function applyUI(){
+    els.toggleKeypad.checked = !!ui.showKeypad;
+    els.togglePicks.checked = !!ui.showPicks;
+    els.keypadCard.style.display = ui.showKeypad ? "" : "none";
+    els.candPanel.style.display = ui.showPicks ? "" : "none";
+  }
+
+  function loadTimes(){
+    try{
+      const raw = localStorage.getItem(TIMES_KEY);
+      if(!raw) return {};
+      const obj = JSON.parse(raw);
+      return (obj && typeof obj === "object") ? obj : {};
+    }catch(e){ return {}; }
+  }
+  function saveTimes(obj){ localStorage.setItem(TIMES_KEY, JSON.stringify(obj)); }
+  function keySD(size, diff){ return `${size}_${diff}`; }
+
+  function addTime(size, diff, timeSec, seed, hints){
+    const times = loadTimes();
+    const k = keySD(size, diff);
+    if(!Array.isArray(times[k])) times[k] = [];
+    times[k].push({ t: Math.floor(timeSec), seed: seed>>>0, hints: hints|0, ts: Date.now() });
+    times[k].sort((a,b)=>a.t-b.t);
+    times[k] = times[k].slice(0,5);
+    saveTimes(times);
+    renderTimes();
+  }
+  function renderTimes(){
+    const times = loadTimes();
+    const k = keySD(N, currentDiff);
+    const arr = Array.isArray(times[k]) ? times[k] : [];
+    const rows = arr.map((r, idx)=>`
+      <tr><td>${idx+1}</td><td><b style="color:rgba(233,238,247,.92)">${fmtTime(r.t)}</b></td><td>${r.hints}</td><td>${r.seed}</td><td>${(r.ts ? new Date(r.ts) : new Date()).toLocaleString()}</td></tr>
+    `).join("");
+    els.leaderWrap.innerHTML = `
+      <div class="help" style="margin-bottom:8px">Size: <b style="color:rgba(233,238,247,.92)">${N}×${N}</b> · Difficulty: <b style="color:rgba(233,238,247,.92)">${currentDiff}</b></div>
+      <table>
+        <thead><tr><th>#</th><th>Time</th><th>Hints</th><th>Seed</th><th>Date</th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="5" style="color:var(--muted)">No times yet. Solve one!</td></tr>`}</tbody>
+      </table>
+    `;
+  }
+
+  function configureForSize(size){
+    const cfg = SIZE_CONFIG[size];
+    N = size;
+    boxR = cfg.boxR;
+    boxC = cfg.boxC;
+    SYMBOLS = cfg.symbols.split("");
+    symToVal = new Map(SYMBOLS.map((s,i)=>[s,i]));
+    valToSym = (v)=>SYMBOLS[v];
+
+    els.size.value = String(size);
+    els.sizeLbl.textContent = `${size}×${size}`;
+    els.board.style.gridTemplateColumns = `repeat(${N}, 1fr)`;
+  }
+
+  function pattern(r, c){
+    return (boxC * (r % boxR) + Math.floor(r / boxR) + c) % N;
+  }
+
+  function buildSolution(seed){
+    const rng = mulberry32(seed);
+    const bandCount = N / boxR;
+    const stackCount = N / boxC;
+
+    const bands = [...Array(bandCount).keys()];
+    const stacks = [...Array(stackCount).keys()];
+    shuffleInPlace(bands, rng);
+    shuffleInPlace(stacks, rng);
+
+    const rows = [];
+    for(const b of bands){
+      const inside = [...Array(boxR).keys()].map(i => b*boxR + i);
+      shuffleInPlace(inside, rng);
+      rows.push(...inside);
+    }
+    const cols = [];
+    for(const s of stacks){
+      const inside = [...Array(boxC).keys()].map(i => s*boxC + i);
+      shuffleInPlace(inside, rng);
+      cols.push(...inside);
+    }
+
+    const nums = [...Array(N).keys()];
+    shuffleInPlace(nums, rng);
+
+    const grid = Array.from({length:N}, ()=>Array(N).fill(0));
+    for(let r=0;r<N;r++){
+      for(let c=0;c<N;c++){
+        grid[r][c] = nums[ pattern(rows[r], cols[c]) ];
+      }
+    }
+    return grid;
+  }
+
+  function makePuzzleFromSolution(sol, seed, diff){
+    const rng = mulberry32(seed ^ 0x9E3779B9);
+
+    const total = N*N;
+    const keepFrac = DIFF_CLUE_FRAC[diff] ?? 0.55;
+    const keep = Math.max(1, Math.min(total, Math.round(total * keepFrac)));
+    const removeCount = total - keep;
+
+    const minFrac = DIFF_MIN_FRAC[diff] ?? 0.25;
+    const minRow = Math.max(1, Math.round(N * minFrac));
+    const minCol = Math.max(1, Math.round(N * minFrac));
+    const boxSize = boxR * boxC;
+    const minBox = Math.max(1, Math.round(boxSize * minFrac));
+
+    const pz = sol.map(row => row.slice());
+    const rowClues = Array(N).fill(N);
+    const colClues = Array(N).fill(N);
+    const boxClues = Array((N/boxR)*(N/boxC)).fill(boxSize);
+
+    const positions = [];
+    for(let r=0;r<N;r++) for(let c=0;c<N;c++) positions.push([r,c]);
+    shuffleInPlace(positions, rng);
+
+    let removed = 0;
+    for(const [r,c] of positions){
+      if(removed >= removeCount) break;
+      const b = Math.floor(r/boxR)*(N/boxC) + Math.floor(c/boxC);
+      if(rowClues[r] <= minRow) continue;
+      if(colClues[c] <= minCol) continue;
+      if(boxClues[b] <= minBox) continue;
+      pz[r][c] = -1;
+      rowClues[r]--; colClues[c]--; boxClues[b]--;
+      removed++;
+    }
+    return pz;
+  }
+
+  function cellIndex(r,c){ return r*N + c; }
+  function isGiven(r,c){ return puzzle[r][c] >= 0; }
+  function getVal(r,c){ return isGiven(r,c) ? puzzle[r][c] : entries[r][c]; }
+  function filledCount(){
+    let n=0;
+    for(let r=0;r<N;r++) for(let c=0;c<N;c++) if(getVal(r,c) >= 0) n++;
+    return n;
+  }
+
+  function computeConflicts(){
+    const bad = new Set();
+    // rows
+    for(let r=0;r<N;r++){
+      const seen = new Map();
+      for(let c=0;c<N;c++){
+        const v = getVal(r,c); if(v<0) continue;
+        if(!seen.has(v)) seen.set(v, []);
+        seen.get(v).push([r,c]);
+      }
+      for(const cells of seen.values()) if(cells.length>1) for(const [rr,cc] of cells) bad.add(cellIndex(rr,cc));
+    }
+    // cols
+    for(let c=0;c<N;c++){
+      const seen = new Map();
+      for(let r=0;r<N;r++){
+        const v = getVal(r,c); if(v<0) continue;
+        if(!seen.has(v)) seen.set(v, []);
+        seen.get(v).push([r,c]);
+      }
+      for(const cells of seen.values()) if(cells.length>1) for(const [rr,cc] of cells) bad.add(cellIndex(rr,cc));
+    }
+    // boxes
+    const bandCount = N/boxR;
+    const stackCount = N/boxC;
+    for(let br=0;br<bandCount;br++){
+      for(let bc=0;bc<stackCount;bc++){
+        const seen = new Map();
+        for(let r=br*boxR;r<(br+1)*boxR;r++){
+          for(let c=bc*boxC;c<(bc+1)*boxC;c++){
+            const v = getVal(r,c); if(v<0) continue;
+            if(!seen.has(v)) seen.set(v, []);
+            seen.get(v).push([r,c]);
+          }
+        }
+        for(const cells of seen.values()) if(cells.length>1) for(const [rr,cc] of cells) bad.add(cellIndex(rr,cc));
+      }
+    }
+    return bad;
+  }
+
+  function usedInRowColBox(r,c){
+    const used = new Set();
+    for(let cc=0; cc<N; cc++){
+      if(cc===c) continue;
+      const v = getVal(r,cc);
+      if(v>=0) used.add(v);
+    }
+    for(let rr=0; rr<N; rr++){
+      if(rr===r) continue;
+      const v = getVal(rr,c);
+      if(v>=0) used.add(v);
+    }
+    const r0 = Math.floor(r/boxR)*boxR;
+    const c0 = Math.floor(c/boxC)*boxC;
+    for(let rr=r0; rr<r0+boxR; rr++){
+      for(let cc=c0; cc<c0+boxC; cc++){
+        if(rr===r && cc===c) continue;
+        const v = getVal(rr,cc);
+        if(v>=0) used.add(v);
+      }
+    }
+    return used;
+  }
+
+  function renderCandidates(){
+    if(!ui.showPicks) return;
+    const {r,c} = selected;
+    if(!puzzle || !entries) return;
+
+    const given = isGiven(r,c);
+    if(given) els.candMeta.textContent = `Cell r${r+1} c${c+1} is a given.`;
+    else if(completed) els.candMeta.textContent = `Puzzle complete.`;
+    else els.candMeta.textContent = `Cell r${r+1} c${c+1} · click a value to place it.`;
+
+    els.candGrid.innerHTML = "";
+
+    const used = usedInRowColBox(r,c);
+    const current = getVal(r,c);
+
+    for(let v=0; v<N; v++){
+      const chip = document.createElement("div");
+      chip.className = "chip";
+      chip.textContent = valToSym(v);
+
+      const legal = !used.has(v);
+      if(current === v) chip.classList.add("current");
+
+      if(!legal){
+        chip.classList.add("disabled","illegal");
+      }else{
+        if(!given && !completed){
+          chip.addEventListener("click", ()=> {
+            if(noteMode){
+              toggleNote(r,c,v);
+              renderBoard();
+              renderCandidates();
+            }else{
+              entries[r][c] = v;
+              clearNotes(r,c);
+              wrongCells = new Set();
+              renderBoard();
+              renderCandidates();
+              finishIfSolved();
+            }
+          });
+        }else chip.classList.add("disabled");
+      }
+      els.candGrid.appendChild(chip);
+    }
+
+    if(!given && !completed){
+      const clr = document.createElement("div");
+      clr.className = "chip";
+      clr.textContent = "Clear";
+      clr.style.minWidth = "72px";
+      clr.style.background = "rgba(255,255,255,.06)";
+      clr.style.borderColor = "rgba(159,176,199,.22)";
+      clr.addEventListener("click", ()=>{ clearSelected(); renderCandidates(); });
+      els.candGrid.appendChild(clr);
+    }
+  }
+
+  function renderBoard(){
+    els.board.innerHTML = "";
+    const conflicts = computeConflicts();
+    const selv = getVal(selected.r, selected.c);
+
+    const thick = "2px solid rgba(124,196,255,.22)";
+    const notesCols = boxC;
+    const notesRows = Math.ceil(N / notesCols);
+
+    const valFont = (N <= 4) ? 22 : (N <= 6) ? 20 : (N <= 9) ? 18 : 16;
+    const noteFont = (N <= 4) ? 12 : (N <= 6) ? 10 : (N <= 9) ? 9 : 8;
+
+    for(let r=0;r<N;r++){
+      for(let c=0;c<N;c++){
+        const idx = cellIndex(r,c);
+        const div = document.createElement("div");
+        div.className = "cell";
+
+        if((c+1)%boxC===0 && c !== N-1) div.style.borderRight = thick;
+        if((r+1)%boxR===0 && r !== N-1) div.style.borderBottom = thick;
+
+        const v = getVal(r,c);
+        const given = isGiven(r,c);
+
+        if(given) div.classList.add("given");
+        else if(v >= 0) div.classList.add("entry");
+
+        const inSameRow = (r === selected.r);
+        const inSameCol = (c === selected.c);
+        const inSameBox = (Math.floor(r/boxR)===Math.floor(selected.r/boxR) && Math.floor(c/boxC)===Math.floor(selected.c/boxC));
+        if(inSameRow || inSameCol || inSameBox) div.classList.add("hl");
+        if(selv >= 0 && v === selv) div.classList.add("hlsame");
+        if(conflicts.has(idx)) div.classList.add("conflict");
+        if(wrongCells.has(idx)) div.classList.add("wrong");
+        if(r===selected.r && c===selected.c) div.classList.add("selected");
+
+        const valSpan = document.createElement("div");
+        valSpan.className = "val";
+        valSpan.style.fontSize = valFont + "px";
+        valSpan.textContent = (v >= 0) ? valToSym(v) : "";
+
+        const notesDiv = document.createElement("div");
+        notesDiv.className = "notes";
+        notesDiv.style.gridTemplateColumns = `repeat(${notesCols}, 1fr)`;
+        const ns = notes.get(idx);
+
+        if(!given && v < 0){
+          for(let i=0;i<N;i++){
+            const ndiv = document.createElement("div");
+            ndiv.className = "note";
+            ndiv.style.fontSize = noteFont + "px";
+            ndiv.textContent = (ns && ns.has(i)) ? valToSym(i) : "";
+            notesDiv.appendChild(ndiv);
+          }
+          const totalSlots = notesCols * notesRows;
+          for(let i=N;i<totalSlots;i++){
+            const ndiv = document.createElement("div");
+            ndiv.className = "note";
+            ndiv.style.fontSize = noteFont + "px";
+            ndiv.textContent = "";
+            notesDiv.appendChild(ndiv);
+          }
+        }
+
+        div.appendChild(valSpan);
+        div.appendChild(notesDiv);
+        div.addEventListener("click", ()=> selectCell(r,c));
+        els.board.appendChild(div);
+      }
+    }
+
+    els.filledLbl.textContent = `${filledCount()}/${N*N}`;
+    els.modeLbl.textContent = noteMode ? "Notes" : "Enter";
+  }
+
+  function selectCell(r,c){
+    selected = {r,c};
+    renderBoard();
+    renderCandidates();
+  }
+
+  function startTimer(){
+    if(tickHandle) clearInterval(tickHandle);
+    startTs = performance.now();
+    tickHandle = setInterval(updateTimer, 250);
+    updateTimer();
+  }
+  function stopTimer(){ if(tickHandle){ clearInterval(tickHandle); tickHandle = null; } }
+  function elapsedSeconds(){ return startTs === null ? 0 : (performance.now() - startTs)/1000; }
+  function adjustedSeconds(){ return elapsedSeconds() + penaltySec; }
+  function updateTimer(){
+    els.timeLbl.textContent = fmtTime(adjustedSeconds());
+    els.penLbl.textContent = penaltySec>0 ? `(+${penaltySec}s)` : "";
+  }
+
+  function toggleNote(r,c,v){
+    if(isGiven(r,c) || completed) return;
+    const idx = cellIndex(r,c);
+    const s = notes.get(idx) || new Set();
+    if(s.has(v)) s.delete(v); else s.add(v);
+    if(s.size===0) notes.delete(idx); else notes.set(idx, s);
+  }
+  function clearNotes(r,c){ notes.delete(cellIndex(r,c)); }
+
+  function setValueFromChar(ch){
+    ch = String(ch).toUpperCase();
+    if(!symToVal.has(ch)) return;
+    const v = symToVal.get(ch);
+    const {r,c} = selected;
+    if(isGiven(r,c) || completed) return;
+
+    if(noteMode){
+      toggleNote(r,c,v);
+    }else{
+      entries[r][c] = v;
+      clearNotes(r,c);
+      wrongCells = new Set();
+    }
+    renderBoard();
+    renderCandidates();
+    finishIfSolved();
+  }
+
+  function clearSelected(){
+    const {r,c} = selected;
+    if(isGiven(r,c) || completed) return;
+    if(noteMode) clearNotes(r,c);
+    else { entries[r][c] = -1; wrongCells = new Set(); }
+    renderBoard();
+  }
+
+  function computeWrongCells(){
+    const wrong = new Set();
+    for(let r=0;r<N;r++){
+      for(let c=0;c<N;c++){
+        const v = getVal(r,c);
+        if(v < 0) continue;
+        if(v !== solution[r][c]) wrong.add(cellIndex(r,c));
+      }
+    }
+    return wrong;
+  }
+  function isComplete(){ return filledCount() === N*N; }
+
+  async function copyText(text){
+    try{
+      await navigator.clipboard.writeText(text);
+    }catch(e){
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+  }
+
+  function openModal({title, bodyHtml, mode}){
+    // mode: "loadSeed" | "solved" | "copySeed"
+    els.modalTitle.textContent = title;
+    els.modalBody.innerHTML = bodyHtml;
+
+    // reset
+    els.seedInput.style.display = "none";
+    els.modalCancel.style.display = "";
+    els.modalAlt.style.display = "none";
+    els.modalOk.style.display = "";
+    els.modalOk.textContent = "OK";
+    els.modalAlt.textContent = "Alt";
+
+    // clear previous handlers
+    els.modalOk.onclick = null;
+    els.modalAlt.onclick = null;
+
+    if(mode === "loadSeed"){
+      els.seedInput.style.display = "";
+      els.seedInput.value = "";
+      els.modalOk.textContent = "Load";
+      els.modalCancel.style.display = "";
+      els.modalAlt.style.display = "none";
+
+      els.modalOk.onclick = () => {
+        const s = parseSeed(els.seedInput.value);
+        if(s === null){ toast("Enter a valid integer seed."); return; }
+        closeModal();
+        loadPuzzle(s, parseInt(els.size.value,10), els.diff.value);
+      };
+      setTimeout(()=> els.seedInput.focus(), 0);
+    } else if(mode === "solved"){
+      // close-only
+      els.seedInput.style.display = "none";
+      els.modalCancel.style.display = "none";
+      els.modalAlt.style.display = "none";
+      els.modalOk.textContent = "Close";
+      els.modalOk.onclick = () => closeModal();
+      setTimeout(()=> els.modalOk.focus(), 0);
+    } else if(mode === "copySeed"){
+      // 3 buttons: Cancel, Copy URL (Alt), Copy Seed # (OK)
+      els.seedInput.style.display = "none";
+      els.modalCancel.style.display = "";
+      els.modalAlt.style.display = "";
+      els.modalAlt.textContent = "Copy full URL";
+      els.modalOk.textContent = "Copy seed #";
+
+      els.modalAlt.onclick = async () => {
+        const u = new URL(location.href);
+        u.searchParams.set("seed", String(currentSeed));
+        u.searchParams.set("size", String(N));
+        u.searchParams.set("diff", currentDiff);
+        await copyText(u.toString());
+        toast("URL copied.");
+        closeModal();
+      };
+      els.modalOk.onclick = async () => {
+        await copyText(String(currentSeed));
+        toast("Seed number copied.");
+        closeModal();
+      };
+      setTimeout(()=> els.modalOk.focus(), 0);
+    }
+
+    document.body.classList.add("modalOpen");
+    els.overlay.classList.add("show");
+  }
+
+  function closeModal(){
+    els.overlay.classList.remove("show");
+    document.body.classList.remove("modalOpen");
+  }
+
+  els.modalCancel.addEventListener("click", ()=> closeModal());
+  els.overlay.addEventListener("click", (e)=>{ if(e.target === els.overlay) closeModal(); });
+
+  function finishIfSolved(){
+    if(!isComplete()) return;
+    const wrong = computeWrongCells();
+    if(wrong.size === 0){
+      completed = true;
+      stopTimer();
+      renderBoard();
+      renderCandidates();
+      const finalT = adjustedSeconds();
+      addTime(N, currentDiff, finalT, currentSeed, hintCount);
+      toast("Solved! Time saved ✅");
+      openModal({
+        title: "Puzzle solved ✅",
+        bodyHtml: `Final time: <b>${fmtTime(finalT)}</b><br>Hints used: <b>${hintCount}</b> (penalty ${penaltySec}s)`,
+        mode: "solved"
+      });
+    }else{
+      wrongCells = wrong;
+      renderBoard();
+      renderCandidates();
+      toast("Not quite — incorrect cells highlighted.");
+    }
+  }
+
+  function doCheck(){
+    wrongCells = computeWrongCells();
+    renderBoard();
+    renderCandidates();
+    if(wrongCells.size===0) toast(isComplete() ? "Solved ✅" : "So far so good.");
+    else toast("Mistakes highlighted.");
+    if(isComplete()) finishIfSolved();
+  }
+
+  function doHint(){
+    if(completed) return;
+    const empties = [];
+    for(let r=0;r<N;r++) for(let c=0;c<N;c++) if(!isGiven(r,c) && entries[r][c] < 0) empties.push([r,c]);
+    if(empties.length===0){ toast("No empty cells to hint."); return; }
+    const rng = mulberry32((currentSeed ^ 0xA5A5A5A5) + hintCount*97 + (N<<8));
+    const [r,c] = empties[Math.floor(rng()*empties.length)];
+    entries[r][c] = solution[r][c];
+    clearNotes(r,c);
+    hintCount++;
+    penaltySec += 30;
+    wrongCells = new Set();
+    updateTimer();
+    renderBoard();
+    renderCandidates();
+    toast("Hint used (+30s).");
+    finishIfSolved();
+  }
+
+  function moveSel(dr, dc){
+    const nr = (selected.r + dr + N) % N;
+    const nc = (selected.c + dc + N) % N;
+    selectCell(nr,nc);
+  }
+
+  document.addEventListener("keydown", (e)=>{
+    if(els.overlay.classList.contains("show")) return;
+
+    if(e.key === "ArrowUp"){ e.preventDefault(); moveSel(-1,0); return; }
+    if(e.key === "ArrowDown"){ e.preventDefault(); moveSel(1,0); return; }
+    if(e.key === "ArrowLeft"){ e.preventDefault(); moveSel(0,-1); return; }
+    if(e.key === "ArrowRight"){ e.preventDefault(); moveSel(0,1); return; }
+    if(e.key === "Backspace" || e.key === "Delete"){ e.preventDefault(); clearSelected(); renderCandidates(); return; }
+    if(e.key.toLowerCase() === "n"){ noteMode = !noteMode; renderBoard(); renderCandidates(); toast(noteMode ? "Notes mode" : "Enter mode"); return; }
+
+    const k = e.key.toUpperCase();
+    if(symToVal.has(k)){ e.preventDefault(); setValueFromChar(k); }
+  });
+
+  function buildKeypad(){
+    els.keypad.innerHTML = "";
+    const cols = (N >= 16) ? 8 : (N === 9) ? 9 : (N === 6) ? 6 : 4;
+    els.keypad.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+    for(const s of SYMBOLS){
+      const b = document.createElement("div");
+      b.className = "kbtn";
+      b.textContent = s;
+      b.addEventListener("click", ()=> setValueFromChar(s));
+      els.keypad.appendChild(b);
+    }
+
+    const nb = document.createElement("div");
+    nb.className = "kbtn note";
+    nb.textContent = "Notes";
+    nb.style.gridColumn = "span 2";
+    nb.addEventListener("click", ()=>{ noteMode = !noteMode; renderBoard(); renderCandidates(); toast(noteMode ? "Notes mode" : "Enter mode"); });
+    els.keypad.appendChild(nb);
+
+    const cb = document.createElement("div");
+    cb.className = "kbtn clear";
+    cb.textContent = "Clear";
+    cb.style.gridColumn = "span 2";
+    cb.addEventListener("click", ()=> { clearSelected(); renderCandidates(); });
+    els.keypad.appendChild(cb);
+  }
+
+  function resetRunState(){
+    entries = Array.from({length:N}, ()=>Array(N).fill(-1));
+    notes = new Map();
+    selected = {r:0,c:0};
+    noteMode = false;
+    hintCount = 0;
+    penaltySec = 0;
+    completed = false;
+    wrongCells = new Set();
+    startTimer();
+  }
+
+  function loadPuzzle(seed, size, diff){
+    currentSeed = (seed>>>0);
+    currentDiff = diff;
+
+    configureForSize(size);
+    els.diff.value = diff;
+    els.seedLbl.textContent = String(currentSeed);
+
+    solution = buildSolution(currentSeed);
+    puzzle = makePuzzleFromSolution(solution, currentSeed, currentDiff);
+
+    setUrl(currentSeed, size, currentDiff);
+    resetRunState();
+    buildKeypad();
+    renderTimes();
+    renderBoard();
+    renderCandidates();
+    updateTimer();
+    toast("Puzzle loaded.");
+  }
+
+  function newSeed(){
+    return crypto.getRandomValues(new Uint32Array(1))[0] >>> 0;
+  }
+
+  // UI toggles
+  els.toggleKeypad.addEventListener("change", ()=>{
+    ui.showKeypad = !!els.toggleKeypad.checked;
+    applyUI(); saveUI();
+  });
+  els.togglePicks.addEventListener("change", ()=>{
+    ui.showPicks = !!els.togglePicks.checked;
+    applyUI(); saveUI();
+    if(ui.showPicks) renderCandidates();
+  });
+
+  els.newBtn.addEventListener("click", ()=> loadPuzzle(newSeed(), parseInt(els.size.value,10), els.diff.value));
+  els.size.addEventListener("change", ()=> loadPuzzle(currentSeed, parseInt(els.size.value,10), els.diff.value));
+  els.diff.addEventListener("change", ()=> loadPuzzle(currentSeed, parseInt(els.size.value,10), els.diff.value));
+  els.checkBtn.addEventListener("click", doCheck);
+  els.hintBtn.addEventListener("click", doHint);
+
+  els.copySeedBtn.addEventListener("click", ()=>{
+    openModal({
+      title: "Copy seed",
+      bodyHtml: `Choose what to copy.<br><br><b>Seed:</b> ${currentSeed}<br><b>Size:</b> ${N}×${N} · <b>Difficulty:</b> ${currentDiff}`,
+      mode: "copySeed"
+    });
+  });
+
+  els.loadSeedBtn.addEventListener("click", ()=>{
+    openModal({
+      title: "Load seed",
+      bodyHtml: `Enter a seed (integer). The same <b>size + difficulty + seed</b> always loads the same puzzle.`,
+      mode: "loadSeed"
+    });
+  });
+
+  els.resetTimesBtn.addEventListener("click", ()=>{
+    if(confirm("Reset all saved top times for ALL sizes/difficulties?")){
+      localStorage.removeItem(TIMES_KEY);
+      renderTimes();
+      toast("Times reset.");
+    }
+  });
+
+  // Init
+  loadUI();
+  applyUI();
+
+  const q = qs();
+  const initSize = parseSize(q.size) ?? 9;
+  const initDiff = (q.diff && ["easy","medium","hard","expert"].includes(q.diff)) ? q.diff : "easy";
+  const initSeed = parseSeed(q.seed) ?? newSeed();
+
+  els.size.value = String(initSize);
+  els.diff.value = initDiff;
+  loadPuzzle(initSeed, initSize, initDiff);
+})();
+</script>
+</body>
+</html>
