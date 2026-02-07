@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Which Song Is Older?</title>
+  <style>
+    :root{
+      --bg:#0b0f17;
+      --card:#111a2a;
+      --card2:#0f1626;
+      --text:#ffffff;
+      --muted:#a9b6d6;
+      --accent:#7aa2ff;
+      --good:#46d17d;
+      --bad:#ff5b6e;
+      --border:rgba(255,255,255,.10);
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(1200px 600px at 20% -10%, rgba(122,162,255,.25), transparent 60%),
+                  radial-gradient(900px 500px at 90% 0%, rgba(70,209,125,.18), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      display:flex;
+      align-items:stretch;
+      justify-content:center;
+      padding:18px;
+    }
+    .wrap{width:min(980px, 100%); display:flex; flex-direction:column; gap:14px;}
+    header{
+      display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;
+      padding:14px 16px;
+      border:1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    header .left{display:flex; flex-direction:column; gap:2px}
+    h1{font-size:18px; margin:0; letter-spacing:.2px}
+    .sub{color:var(--muted); font-size:13px}
+    .pillrow{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .pill{
+      font-size:12px;
+      color:var(--muted);
+      border:1px solid var(--border);
+      padding:7px 10px;
+      border-radius:999px;
+      background:rgba(0,0,0,.12);
+      display:flex;
+      gap:8px;
+      align-items:center;
+      user-select:none;
+    }
+    .pill b{color:var(--text); font-weight:650}
+    .btn{
+      appearance:none;
+      border:1px solid var(--border);
+      background:rgba(122,162,255,.14);
+      color:var(--text);
+      padding:9px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:650;
+      letter-spacing:.2px;
+      transition: transform .06s ease, background .12s ease, border-color .12s ease;
+      user-select:none;
+    }
+    .btn:hover{background:rgba(122,162,255,.20); border-color:rgba(255,255,255,.18)}
+    .btn:active{transform: translateY(1px)}
+    .btn.secondary{background:rgba(255,255,255,.06)}
+    .btn.secondary:hover{background:rgba(255,255,255,.09)}
+    .btn.danger{background:rgba(255,91,110,.14)}
+    .btn.danger:hover{background:rgba(255,91,110,.20)}
+    .main{
+      display:grid;
+      grid-template-columns: 1.3fr .7fr;
+      gap:14px;
+      align-items:start;
+    }
+    @media (max-width: 860px){
+      .main{grid-template-columns:1fr; }
+    }
+    .panel{
+      border:1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.025));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .panel .hd{
+      padding:12px 14px;
+      border-bottom:1px solid var(--border);
+      display:flex; gap:10px; align-items:center; justify-content:space-between;
+      background:rgba(0,0,0,.12);
+    }
+    .panel .hd .t{font-weight:750}
+    .panel .bd{padding:14px;}
+    .status{margin-top:6px; font-size:13px; color:var(--muted)}
+    .status.good{color:rgba(70,209,125,.95)}
+    .status.bad{color:rgba(255,91,110,.95)}
+    .choices{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:14px;
+      margin-top:10px;
+    }
+    @media (max-width: 560px){
+      .choices{grid-template-columns:1fr;}
+    }
+    .choice{
+      border:1px solid var(--border);
+      border-radius: 18px;
+      padding:18px;
+      background: linear-gradient(180deg, rgba(17,26,42,.95), rgba(15,22,38,.92));
+      cursor:pointer;
+      text-align:left;
+      transition: transform .06s ease, border-color .12s ease, background .12s ease;
+      min-height:120px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      position:relative;
+      overflow:hidden;
+      color:var(--text);
+    }
+    .choice:hover{border-color:rgba(255,255,255,.18); background: linear-gradient(180deg, rgba(20,32,54,.98), rgba(15,22,38,.92));}
+    .choice:active{transform: translateY(1px)}
+    .choice[disabled]{opacity:.55; cursor:not-allowed}
+    .choice .title{font-size:16px; font-weight:850; line-height:1.25; color:var(--text);}
+    .reveal{
+      margin-top:12px;
+      padding:12px 12px;
+      border-radius:16px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.14);
+      color:var(--muted);
+      font-size:13px;
+      display:none;
+    }
+    .reveal.show{display:block}
+    .reveal .ok{color:rgba(70,209,125,.95); font-weight:850}
+    .reveal .no{color:rgba(255,91,110,.95); font-weight:850}
+    .small{font-size:12px; color:var(--muted)}
+    .foot{
+      display:flex; gap:10px; flex-wrap:wrap; justify-content:space-between; align-items:center;
+      margin-top:10px;
+    }
+    .list{
+      display:flex; flex-direction:column; gap:8px;
+      margin-top:10px;
+    }
+    .rowItem{
+      display:flex; justify-content:space-between; gap:10px;
+      border:1px solid var(--border);
+      border-radius: 14px;
+      padding:10px 12px;
+      background: rgba(0,0,0,.12);
+      font-size:13px;
+      color:var(--muted);
+    }
+    .rowItem b{color:var(--text)}
+    .hidden{display:none !important;}
+    .toast{
+      position:fixed;
+      bottom:16px;
+      left:50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,.72);
+      border:1px solid rgba(255,255,255,.16);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:14px;
+      font-size:13px;
+      max-width:min(92vw, 720px);
+      box-shadow: var(--shadow);
+      display:none;
+    }
+    .toast.show{display:block}
+    code{color:var(--text)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="left">
+        <h1>Which song is older?</h1>
+        <div class="sub">Pick the song with the earlier <code>chart_week</code> date. One wrong answer ends the run.</div>
+      </div>
+      <div class="pillrow">
+        <div class="pill">Round: <b id="roundNum">0</b></div>
+        <div class="pill">Correct: <b id="scoreNum">0</b></div>
+        <button class="btn secondary" id="btnNewRound" title="Next pair">Next Pair</button>
+        <button class="btn" id="btnRestart" title="Restart (score resets)">Restart</button>
+      </div>
+    </header>
+
+    <div class="main">
+      <section class="panel">
+        <div class="hd">
+          <div class="t">Game</div>
+          <div class="small">Keyboard: <b>1</b> left, <b>2</b> right, <b>N</b> next, <b>R</b> restart</div>
+        </div>
+        <div class="bd">
+          <div class="status" id="loadStatus">Loading <code>hot-100-current.csv</code>…</div>
+
+          <div class="choices" id="choicesArea">
+            <button class="choice" id="btnA" disabled>
+              <div class="title" id="textA">—</div>
+            </button>
+            <button class="choice" id="btnB" disabled>
+              <div class="title" id="textB">—</div>
+            </button>
+          </div>
+
+          <div class="reveal" id="revealBox"></div>
+
+          <div class="foot">
+            <div class="small" id="hintLine">Loading data…</div>
+            <div class="pillrow">
+              <button class="btn danger" id="btnResetScores" title="Clear stored high scores">Reset High Scores</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="panel">
+        <div class="hd">
+          <div class="t">Top 5 High Scores</div>
+          <div class="small">Stored on this device</div>
+        </div>
+        <div class="bd">
+          <div id="hsEmpty" class="small">No scores yet. One wrong answer records your run 🙂</div>
+          <div class="list" id="hsList"></div>
+          <div class="small" style="margin-top:10px; line-height:1.4;">
+            Scores are saved with your <b>local</b> date and time.
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ---------- Config ----------
+  const CSV_URL = 'hot-100-current.csv'; // must be in the same folder as this HTML
+
+  // ---------- DOM ----------
+  const el = (id) => document.getElementById(id);
+  const roundNum = el('roundNum');
+  const scoreNum = el('scoreNum');
+
+  const loadStatus = el('loadStatus');
+  const btnA = el('btnA');
+  const btnB = el('btnB');
+  const textA = el('textA');
+  const textB = el('textB');
+  const revealBox = el('revealBox');
+  const hintLine = el('hintLine');
+
+  const btnNewRound = el('btnNewRound');
+  const btnRestart = el('btnRestart');
+  const btnResetScores = el('btnResetScores');
+
+  const hsEmpty = el('hsEmpty');
+  const hsList = el('hsList');
+  const toast = el('toast');
+
+  // ---------- State ----------
+  let songs = []; // {date: Date, title: string, performer: string}
+  let locked = false;
+  let inPlay = false;
+  let round = 0;
+  let score = 0;
+  let curA = null;
+  let curB = null;
+
+  const HS_KEY = 'olderSongGame_highscores_v2';
+  const HS_MAX = 5;
+
+  // ---------- Helpers ----------
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.classList.remove('show'), 1600);
+  }
+
+  function setStatus(msg, kind){
+    loadStatus.textContent = msg;
+    loadStatus.classList.remove('good', 'bad');
+    if(kind) loadStatus.classList.add(kind);
+  }
+
+  function parseDateStrict(s){
+    if(!s) return null;
+    const str = String(s).trim();
+    const m = str.match(/^(\d{4})[-\/](\d{2})[-\/](\d{2})/);
+    if(m){
+      const y = +m[1], mo = +m[2]-1, d = +m[3];
+      const dt = new Date(y, mo, d);
+      if(!Number.isNaN(dt.getTime())) return dt;
+    }
+    const t = Date.parse(str);
+    if(!Number.isNaN(t)) return new Date(t);
+    return null;
+  }
+
+  function escapeHtml(s){
+    return String(s ?? '').replace(/[&<>"']/g, (c) => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+    }[c]));
+  }
+
+  function detectDelimiter(text){
+    const sample = text.slice(0, 4000);
+    const lines = sample.split(/\r?\n/).filter(Boolean).slice(0, 10);
+    const counts = {',':0, '\t':0, ';':0};
+    for(const line of lines){
+      counts[','] += (line.match(/,/g)||[]).length;
+      counts['\t'] += (line.match(/\t/g)||[]).length;
+      counts[';'] += (line.match(/;/g)||[]).length;
+    }
+    let best = ',', bestN = counts[','];
+    for(const k of Object.keys(counts)){
+      if(counts[k] > bestN){ best = k; bestN = counts[k]; }
+    }
+    return bestN === 0 ? ',' : best;
+  }
+
+  function splitLine(line, delim){
+    if(delim === '\t') return line.split('\t');
+    const out = [];
+    let cur = '';
+    let inQ = false;
+    for(let i=0;i<line.length;i++){
+      const ch = line[i];
+      if(ch === '"'){
+        if(inQ && line[i+1] === '"'){ cur += '"'; i++; }
+        else inQ = !inQ;
+      } else if(ch === delim && !inQ){
+        out.push(cur);
+        cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    out.push(cur);
+    return out;
+  }
+
+  function parseCSV(text){
+    const delim = detectDelimiter(text);
+    const lines = text.split(/\r?\n/).filter(l => l.trim().length);
+    if(lines.length < 2) throw new Error('CSV has no data rows.');
+
+    const header = splitLine(lines[0], delim).map(h => h.trim());
+    const idx = {
+      chart_week: header.findIndex(h => h.toLowerCase() === 'chart_week'),
+      title: header.findIndex(h => h.toLowerCase() === 'title'),
+      performer: header.findIndex(h => h.toLowerCase() === 'performer')
+    };
+    if(idx.chart_week < 0 || idx.title < 0 || idx.performer < 0){
+      throw new Error('Missing required headers. Need: chart_week, title, performer.');
+    }
+
+    const rows = [];
+    for(let i=1;i<lines.length;i++){
+      const parts = splitLine(lines[i], delim);
+      if(parts.length < 3) continue;
+      const dt = parseDateStrict((parts[idx.chart_week] ?? '').trim());
+      if(!dt) continue;
+      const title = (parts[idx.title] ?? '').trim();
+      const performer = (parts[idx.performer] ?? '').trim();
+      if(!title || !performer) continue;
+      rows.push({ date: dt, title, performer });
+    }
+    return rows;
+  }
+
+  function fmtSong(s){
+    return `${s.performer} \u2013 ${s.title}`;
+  }
+  function fmtDate(dt){
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth()+1).padStart(2,'0');
+    const d = String(dt.getDate()).padStart(2,'0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function setHUD(){
+    roundNum.textContent = String(round);
+    scoreNum.textContent = String(score);
+  }
+
+  function enableChoices(enabled){
+    btnA.disabled = !enabled;
+    btnB.disabled = !enabled;
+  }
+
+  function pickTwo(){
+    if(songs.length < 2) return null;
+    let a, b, tries = 0;
+    do{
+      a = songs[Math.floor(Math.random() * songs.length)];
+      b = songs[Math.floor(Math.random() * songs.length)];
+      tries++;
+    } while((a === b || a.date.getTime() === b.date.getTime()) && tries < 1000);
+    if(a === b || a.date.getTime() === b.date.getTime()) return null;
+    return [a,b];
+  }
+
+  function correctIndex(){
+    return (curA.date.getTime() < curB.date.getTime()) ? 'A' : 'B';
+  }
+
+  function newRound(){
+    if(songs.length < 2) return;
+    const pair = pickTwo();
+    if(!pair){
+      setStatus('Could not pick a non-tie pair (unexpected).', 'bad');
+      return;
+    }
+    curA = pair[0]; curB = pair[1];
+    textA.textContent = fmtSong(curA);
+    textB.textContent = fmtSong(curB);
+
+    revealBox.classList.remove('show');
+    revealBox.innerHTML = '';
+    locked = false;
+    inPlay = true;
+    round++;
+    setHUD();
+    hintLine.textContent = 'Which song is older?';
+    enableChoices(true);
+  }
+
+  function restartRun(){
+    score = 0;
+    round = 0;
+    locked = false;
+    inPlay = true;
+    setHUD();
+    newRound();
+  }
+
+  // ---------- High Scores ----------
+  function loadHighScores(){
+    try{
+      const raw = localStorage.getItem(HS_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    }catch{ return []; }
+  }
+  function saveHighScores(arr){ localStorage.setItem(HS_KEY, JSON.stringify(arr)); }
+  function renderHighScores(){
+    const hs = loadHighScores();
+    hsList.innerHTML = '';
+    if(!hs.length){
+      hsEmpty.classList.remove('hidden');
+      return;
+    }
+    hsEmpty.classList.add('hidden');
+    hs.forEach((h, i) => {
+      const div = document.createElement('div');
+      div.className = 'rowItem';
+      div.innerHTML = `<span><b>#${i+1}</b> — <b>${escapeHtml(h.score)}</b></span><span>${escapeHtml(h.when)}</span>`;
+      hsList.appendChild(div);
+    });
+  }
+  function updateHighScores(scoreVal){
+    const entry = { score: scoreVal, when: new Date().toLocaleString() };
+    const hs = loadHighScores();
+    hs.push(entry);
+    hs.sort((a,b) => b.score - a.score || String(b.when).localeCompare(String(a.when)));
+    saveHighScores(hs.slice(0, HS_MAX));
+    renderHighScores();
+  }
+
+  function resetHighScores(){
+    localStorage.removeItem(HS_KEY);
+    renderHighScores();
+    showToast('High scores cleared.');
+  }
+
+  // ---------- Choice Handling ----------
+  function handleChoice(which){
+    if(locked || !inPlay || !curA || !curB) return;
+
+    const older = correctIndex();
+    const ok = (which === older);
+
+    locked = true;
+    enableChoices(false);
+
+    if(ok){
+      score++;
+      setHUD();
+      hintLine.textContent = 'Correct! Next pair…';
+      // Do not show dates on correct
+      revealBox.classList.add('show');
+      revealBox.innerHTML = `<span class="ok">Correct!</span>`;
+      setTimeout(() => newRound(), 500);
+      return;
+    }
+
+    // Wrong: show dates and older song
+    inPlay = false;
+    const aD = fmtDate(curA.date);
+    const bD = fmtDate(curB.date);
+    const olderSong = (older === 'A') ? curA : curB;
+
+    revealBox.classList.add('show');
+    revealBox.innerHTML = `
+      <div>
+        <div><span class="no">Game Over.</span></div>
+        <div class="small" style="margin-top:8px; line-height:1.55;">
+          <b style="color:var(--text)">${escapeHtml(fmtSong(curA))}</b> — ${escapeHtml(aD)}<br/>
+          <b style="color:var(--text)">${escapeHtml(fmtSong(curB))}</b> — ${escapeHtml(bD)}<br/>
+          <span style="color:var(--text)">Older was: <b>${escapeHtml(fmtSong(olderSong))}</b></span>
+        </div>
+        <div class="small" style="margin-top:10px;">Final score: <b style="color:var(--text)">${score}</b></div>
+      </div>
+    `;
+
+    hintLine.textContent = `Final score: ${score}. Press Restart to try again.`;
+    updateHighScores(score);
+    showToast('Saved to high scores (if Top 5).');
+  }
+
+  // ---------- Events ----------
+  btnA.addEventListener('click', () => handleChoice('A'));
+  btnB.addEventListener('click', () => handleChoice('B'));
+  btnNewRound.addEventListener('click', () => {
+    if(songs.length < 2) return;
+    if(!inPlay){ inPlay = true; }
+    newRound();
+  });
+  btnRestart.addEventListener('click', restartRun);
+  btnResetScores.addEventListener('click', resetHighScores);
+
+  window.addEventListener('keydown', (e) => {
+    if(e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    const k = e.key.toLowerCase();
+    if(k === '1') { if(!btnA.disabled) handleChoice('A'); }
+    if(k === '2') { if(!btnB.disabled) handleChoice('B'); }
+    if(k === 'n') { btnNewRound.click(); }
+    if(k === 'r') { btnRestart.click(); }
+  });
+
+  // ---------- Load CSV ----------
+  async function loadCsvAuto(){
+    try{
+      const res = await fetch(CSV_URL, { cache: 'no-store' });
+      if(!res.ok) throw new Error(`Could not fetch ${CSV_URL} (HTTP ${res.status})`);
+      const text = await res.text();
+      const rows = parseCSV(text);
+      if(rows.length < 2) throw new Error('Not enough valid rows (need at least 2).');
+      songs = rows;
+      setStatus(`Loaded ${CSV_URL}. Press Next Pair to start, or Restart to begin immediately.`, 'good');
+      hintLine.textContent = 'Press Restart (or Next Pair) to begin.';
+      renderHighScores();
+      enableChoices(false);
+      // Auto-start
+      restartRun();
+    }catch(err){
+      songs = [];
+      enableChoices(false);
+      setStatus(
+        `Failed to load ${CSV_URL}. Put the CSV in the same folder as this HTML and open via a local web server (not file://). Error: ${err.message}`,
+        'bad'
+      );
+      hintLine.textContent = 'Could not load the CSV.';
+      renderHighScores();
+    }
+  }
+
+  // ---------- Init ----------
+  renderHighScores();
+  setHUD();
+  loadCsvAuto();
+})();
+</script>
+</body>
+</html>
