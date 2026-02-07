@@ -261,13 +261,47 @@
       align-items:center;
       gap:var(--gap);
       white-space:nowrap;
-      overflow:hidden;
+      overflow:visible;
       transform-origin:left center;
       font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
       justify-content:flex-start;
     }
 
     .slot{display:inline-flex; align-items:center}
+
+
+
+
+/* Exponent pair: allocate extra width so the exponent box never overlaps the base box or next operator. */
+.powWrap{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  width:calc(var(--slotW) + 26px); /* room for superscript box */
+  height:calc(var(--slotF) + 28px);
+  overflow:visible;
+}
+.powWrap .baseIn{
+  width:var(--slotW);
+  display:inline-flex;
+}
+.powWrap .baseIn input{
+  width:100% !important; /* override default var(--slotW) so it fits the baseIn wrapper cleanly */
+}
+.powWrap .expIn{
+  position:absolute;
+  top:-10px;
+  left:calc(var(--slotW) + 4px); /* nudge a few px to the right for better spacing */
+  width:26px;
+  z-index:3;
+}
+.powWrap .expIn input{
+  width:100%;
+  padding:6px 6px;
+  border-radius:10px;
+  font-size:calc(var(--slotF) * 0.72);
+  line-height:1;
+}
     .slot input{
       width:var(--slotW);
       padding:10px 10px;
@@ -389,8 +423,17 @@
         <button id="grade34" class="pill active" type="button">Easy</button>
         <button id="grade56" class="pill" type="button">Medium</button>
         <button id="grade7p" class="pill" type="button">Hard</button>
+      
+</div>
+
+      <div class="toggleRow" aria-label="Exponent option">
+        <span class="label">Exponents:</span>
+        <button id="expOff" class="pill active" type="button">Off</button>
+        <button id="expOn" class="pill" type="button">On</button>
       </div>
+
 <div class="modeGrid">
+
         <button class="modeBtn" data-n="3" type="button">
           <p class="mTitle">3 dice</p>
           <p class="mSub">3 blanks, 2 operators</p>
@@ -466,7 +509,7 @@
             </div>
 
             <div class="footerNote">
-              Values shown to <b>3 decimals</b>. If your placement divides by 0, you must change it.
+              Values shown to <b>3 decimals</b>. If your placement divides by 0 (or makes 0⁰), you must change it.
             </div>
           </div>
         </div>
@@ -482,6 +525,9 @@
   const OPS = ['+','-','*','/'];
   const opDispChar = (op) => (op === '*') ? '×' : (op === '/') ? '÷' : op;
   const opClass = (op) => (op === '/') ? 'op div' : 'op';
+
+const SUP = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+const toSup = (d) => String(d).split('').map(ch => SUP[ch] || ch).join('');
   const round3 = (x) => {
     const r = Math.round((x + Number.EPSILON) * 1000) / 1000;
     return (Object.is(r, -0) ? 0 : r).toFixed(3);
@@ -506,6 +552,7 @@ const getCfg = () => GRADE_CFG[gradePreset] || GRADE_CFG['56'];
   let goal = 'max';
   let structureTokens = [];
   let structureMode = 'lite'; // 'lite' | 'full'
+  let exponentEnabled = false;
   let submitted = false;
   let stats = { correct:0, total:0, streak:0 };
 
@@ -515,6 +562,8 @@ const getCfg = () => GRADE_CFG[gradePreset] || GRADE_CFG['56'];
   const grade34Btn = $('grade34');
   const grade56Btn = $('grade56');
   const grade7pBtn = $('grade7p');
+  const expOffBtn = $('expOff');
+  const expOnBtn = $('expOn');
 
   const diceGrid = $('diceGrid');
   const rolledCode = $('rolledCode');
@@ -555,6 +604,12 @@ function setGradePreset(preset) {
   grade34Btn.classList.toggle('active', preset === '34');
   grade56Btn.classList.toggle('active', preset === '56');
   grade7pBtn.classList.toggle('active', preset === '7p');
+}
+
+function setExponentEnabled(on) {
+  exponentEnabled = !!on;
+  expOffBtn.classList.toggle('active', !exponentEnabled);
+  expOnBtn.classList.toggle('active', exponentEnabled);
 }
 
   // Random helpers
@@ -690,51 +745,94 @@ function setGradePreset(preset) {
   }
 function buildStructureTokens(n, opsArr, mode) {
   // mode: 'none' | 'lite' | 'full'
+  // Exponents (if enabled): at most ONE per round.
+  // Represented as an atom {powBase:i, powExp:i+1} consuming both digits.
+  // 0^0 is disallowed later (evaluation stage).
+
+  function makeAtoms() {
+    const joins = new Array(n).fill(false); // joins[i] => slot i is exponent attached to slot i-1
+    if (exponentEnabled && n >= 2) {
+      // Not every round: random inclusion
+      const includeChance = (n === 3) ? 0.55 : (n === 4) ? 0.65 : 0.72;
+      if (Math.random() < includeChance) {
+        // choose ONE exponent slot from 1..n-1
+        const expSlot = 1 + Math.floor(Math.random() * (n - 1));
+        joins[expSlot] = true;
+      }
+    }
+
+    const atoms = [];
+    let i = 0;
+    while (i < n) {
+      if (i + 1 < n && joins[i + 1]) {
+        atoms.push({ powBase: i, powExp: i + 1 });
+        i += 2;
+      } else {
+        atoms.push({ slot: i });
+        i += 1;
+      }
+    }
+
+    // Operators between atoms: use the operator that originally sat between endSlot and endSlot+1
+    const atomOps = [];
+    for (let a = 0; a < atoms.length - 1; a++) {
+      const left = atoms[a];
+      const endSlot = (typeof left.powExp === 'number') ? left.powExp : left.slot;
+      atomOps.push(opsArr[endSlot]);
+    }
+    return { atoms, atomOps };
+  }
+
+  const { atoms, atomOps } = makeAtoms();
+  const m = atoms.length;
+
   const flat = () => {
     const t = [];
-    for (let i = 0; i < n; i++) {
-      t.push({slot:i});
-      if (i < n - 1) t.push(opsArr[i]);
+    for (let i = 0; i < m; i++) {
+      t.push(atoms[i]);
+      if (i < m - 1) t.push(atomOps[i]);
     }
     return t;
   };
 
-  if (mode === 'none') return flat();
+  if (mode === 'none' || m <= 1) return flat();
 
   if (mode === 'lite') {
-    // One grouping only: wrap a contiguous slice of the flat expression in parentheses.
-    // Always at least two numbers, never the entire expression.
-    if (n <= 1) return flat();
-
+    // One grouping only across atoms (at least 2 atoms, never whole expression)
     let i = 0, j = 1;
-    if (n === 3) {
-      // only two sensible options
-      if (Math.random() < 0.5) { i = 0; j = 1; } else { i = 1; j = 2; }
-    } else {
-      // pick a length 2..(n-1), then position it so we don't wrap whole expression
-      const maxLen = n - 1;
+    if (m === 2) { i = 0; j = 1; }
+    else if (m === 3) { if (Math.random() < 0.5) { i = 0; j = 1; } else { i = 1; j = 2; } }
+    else {
+      const maxLen = m - 1;
       const len = 2 + Math.floor(Math.random() * (maxLen - 1)); // [2, maxLen]
-      const startMin = 0;
-      const startMax = n - len;
-      i = startMin + Math.floor(Math.random() * (startMax - startMin + 1));
+      const startMax = m - len;
+      i = Math.floor(Math.random() * (startMax + 1));
       j = i + len - 1;
-      // if somehow wraps whole expression, nudge
-      if (i === 0 && j === n - 1) { i = 0; j = n - 2; }
+      if (i === 0 && j === m - 1) { i = 0; j = m - 2; }
     }
 
     const t = [];
-    for (let k = 0; k < n; k++) {
+    for (let k = 0; k < m; k++) {
       if (k === i) t.push('(');
-      t.push({slot:k});
+      t.push(atoms[k]);
       if (k === j) t.push(')');
-      if (k < n - 1) t.push(opsArr[k]);
+      if (k < m - 1) t.push(atomOps[k]);
     }
     return t;
   }
 
-  // 'full' = tree-driven grouping
-  const tree = buildGroupingTree(0, n - 1);
-  return treeToTokens_OptionA(tree, opsArr, true);
+  // 'full' = tree-driven grouping over atoms
+  const tree = buildGroupingTree(0, m - 1);
+  function treeToTokensAtoms(node, isRoot=false) {
+    if (node.type === 'leaf') return [atoms[node.slot]];
+    const leftT = treeToTokensAtoms(node.left, false);
+    const rightT = treeToTokensAtoms(node.right, false);
+    const op = atomOps[node.split];
+    let t = [...leftT, op, ...rightT];
+    if (!isRoot) t = ['(', ...t, ')'];
+    return t;
+  }
+  return treeToTokensAtoms(tree, true);
 }
 
   // Dice pool
@@ -889,24 +987,42 @@ function tryFit() {
       return inp;
     });
 
-    structureTokens.forEach(tok => {
-      if (tok && typeof tok === 'object' && typeof tok.slot === 'number') {
-        const wrap = document.createElement('span');
-        wrap.className = 'slot';
-        wrap.appendChild(inputs[tok.slot]);
-        eqLine.appendChild(wrap);
-      } else if (tok === '(' || tok === ')') {
-        const span = document.createElement('span');
-        span.className = 'paren';
-        span.textContent = tok;
-        eqLine.appendChild(span);
-      } else if (OPS.includes(tok)) {
-        const span = document.createElement('span');
-        span.className = opClass(tok);
-        span.textContent = opDispChar(tok);
-        eqLine.appendChild(span);
-      }
-    });
+    
+structureTokens.forEach(tok => {
+  if (tok && typeof tok === 'object') {
+    if (typeof tok.slot === 'number') {
+      const wrap = document.createElement('span');
+      wrap.className = 'slot';
+      wrap.appendChild(inputs[tok.slot]);
+      eqLine.appendChild(wrap);
+    } else if (typeof tok.powBase === 'number' && typeof tok.powExp === 'number') {
+      const wrap = document.createElement('span');
+      wrap.className = 'slot powWrap';
+
+      const baseWrap = document.createElement('span');
+      baseWrap.className = 'baseIn';
+      baseWrap.appendChild(inputs[tok.powBase]);
+
+      const expWrap = document.createElement('span');
+      expWrap.className = 'expIn';
+      expWrap.appendChild(inputs[tok.powExp]);
+
+      wrap.appendChild(baseWrap);
+      wrap.appendChild(expWrap);
+      eqLine.appendChild(wrap);
+    }
+  } else if (tok === '(' || tok === ')') {
+    const span = document.createElement('span');
+    span.className = 'paren';
+    span.textContent = tok;
+    eqLine.appendChild(span);
+  } else if (OPS.includes(tok)) {
+    const span = document.createElement('span');
+    span.className = opClass(tok);
+    span.textContent = opDispChar(tok);
+    eqLine.appendChild(span);
+  }
+});
 
     eqLine._inputs = inputs;
     eqLine._diceEls = diceEls;
@@ -971,21 +1087,49 @@ requestAnimationFrame(() => {
   }
 
   function tokensWithNums(numsBySlot) {
-    const evalToks = [];
-    for (const tok of structureTokens) {
-      if (tok && typeof tok === 'object' && typeof tok.slot === 'number') evalToks.push(numsBySlot[tok.slot]);
-      else evalToks.push(tok);
+  const evalToks = [];
+  for (const tok of structureTokens) {
+    if (tok && typeof tok === 'object') {
+      if (typeof tok.slot === 'number') {
+        evalToks.push(numsBySlot[tok.slot]);
+      } else if (typeof tok.powBase === 'number' && typeof tok.powExp === 'number') {
+        const base = numsBySlot[tok.powBase];
+        const exp = numsBySlot[tok.powExp]; // digit only => non-negative
+        if (base === 0 && exp === 0) return { ok:false, err:'POW00' };
+        evalToks.push(Math.pow(base, exp));
+      } else {
+        return { ok:false, err:'BAD' };
+      }
+    } else {
+      evalToks.push(tok);
     }
-    return evalToks;
   }
-  function prettyTokensWithNums(tokens) {
-    return tokens.map(t => {
-      if (typeof t === 'number') return String(t);
-      if (t === '*') return '×';
-      if (t === '/') return '÷';
-      return String(t);
-    }).join(' ');
-  }
+  return { ok:true, tokens: evalToks };
+}
+
+function prettyFromStructure(numsBySlot) {
+  return structureTokens.map(t => {
+    if (t && typeof t === 'object') {
+      if (typeof t.slot === 'number') return String(numsBySlot[t.slot]);
+      if (typeof t.powBase === 'number' && typeof t.powExp === 'number') {
+        return String(numsBySlot[t.powBase]) + toSup(numsBySlot[t.powExp]);
+      }
+    }
+    if (t === '*') return '×';
+    if (t === '/') return '÷';
+    return String(t);
+  }).join(' ');
+}
+
+function prettyTokensWithNums(tokens) {
+  // Numeric tokens only (used for fallback)
+  return tokens.map(t => {
+    if (typeof t === 'number') return String(t);
+    if (t === '*') return '×';
+    if (t === '/') return '÷';
+    return String(t);
+  }).join(' ');
+}
 
   function getUserDigits() {
     const inputs = eqLine._inputs || [];
@@ -1005,18 +1149,21 @@ requestAnimationFrame(() => {
     const perms = uniquePermutations(dice);
     let bestVal = null;
     let bestEqTokens = null;
+    let bestNumsBySlot = null;
 
     for (const p of perms) {
-      const t = tokensWithNums(p);
+      const tw = tokensWithNums(p);
+      if (!tw.ok) continue;
+      const t = tw.tokens;
       const ev = evalTokens(t);
       if (!ev.ok) continue;
       const v = ev.val;
 
-      if (bestVal === null) { bestVal = v; bestEqTokens = t; }
-      else if (goal === 'max') { if (v > bestVal + 1e-12) { bestVal = v; bestEqTokens = t; } }
-      else { if (v < bestVal - 1e-12) { bestVal = v; bestEqTokens = t; } }
+      if (bestVal === null) { bestVal = v; bestEqTokens = t; bestNumsBySlot = p; }
+      else if (goal === 'max') { if (v > bestVal + 1e-12) { bestVal = v; bestEqTokens = t; bestNumsBySlot = p; } }
+      else { if (v < bestVal - 1e-12) { bestVal = v; bestEqTokens = t; bestNumsBySlot = p; } }
     }
-    return { bestVal, bestEqTokens };
+    return { bestVal, bestEqTokens, bestNumsBySlot };
   }
 
   function hasAnyValidPermutation(diceArr, structureTokensLocal, goalTmp) {
@@ -1024,11 +1171,21 @@ requestAnimationFrame(() => {
     let best = null;
 
     for (const p of perms) {
-      const t = structureTokensLocal.map(tok => {
-        if (tok && typeof tok === 'object' && typeof tok.slot === 'number') return p[tok.slot];
-        return tok;
-      });
-      const ev = evalTokens(t);
+
+const t = [];
+for (const tok of structureTokensLocal) {
+  if (tok && typeof tok === 'object') {
+    if (typeof tok.slot === 'number') t.push(p[tok.slot]);
+    else if (typeof tok.powBase === 'number' && typeof tok.powExp === 'number') {
+      const base = p[tok.powBase];
+      const exp = p[tok.powExp];
+      if (base === 0 && exp === 0) { t.length = 0; break; }
+      t.push(Math.pow(base, exp));
+    } else { t.length = 0; break; }
+  } else t.push(tok);
+}
+if (!t.length) continue;
+const ev = evalTokens(t);
       if (!ev.ok) continue;
       const v = ev.val;
       if (best === null) best = v;
@@ -1047,7 +1204,18 @@ requestAnimationFrame(() => {
       return;
     }
 
-    const userTokens = tokensWithNums(ud.nums);
+    const uw = tokensWithNums(ud.nums);
+    if (!uw.ok && uw.err === 'POW00') {
+      setMsg('0⁰ is not allowed. Change your digits.', 'warn');
+      results.style.display = 'none';
+      return;
+    }
+    if (!uw.ok) {
+      setMsg('Invalid expression', 'warn');
+      results.style.display = 'none';
+      return;
+    }
+    const userTokens = uw.tokens;
     const userEval = evalTokens(userTokens);
 
     if (!userEval.ok) {
@@ -1057,7 +1225,7 @@ requestAnimationFrame(() => {
       return;
     }
 
-    const { bestVal, bestEqTokens } = computeBest();
+    const { bestVal, bestEqTokens, bestNumsBySlot } = computeBest();
     if (bestVal === null || !bestEqTokens) {
       startNewRound(true);
       return;
@@ -1072,8 +1240,9 @@ requestAnimationFrame(() => {
     setStatsUI();
 
     results.style.display = 'grid';
-    yourRes.textContent = `${prettyTokensWithNums(userTokens)}\n= ${round3(uv)}`;
-    bestRes.textContent = `${prettyTokensWithNums(bestEqTokens)}\n= ${round3(bestVal)}`;
+    yourRes.textContent = `${prettyFromStructure(ud.nums)}\n= ${round3(uv)}`;
+    if (bestNumsBySlot) bestRes.textContent = `${prettyFromStructure(bestNumsBySlot)}\n= ${round3(bestVal)}`;
+    else bestRes.textContent = `${prettyTokensWithNums(bestEqTokens)}\n= ${round3(bestVal)}`;
 
     setMsg(isCorrect ? 'Correct!' : 'Incorrect.', isCorrect ? 'good' : 'bad');
 
@@ -1124,6 +1293,9 @@ function showStart() {
   grade56Btn.addEventListener('click', () => setGradePreset('56'));
   grade7pBtn.addEventListener('click', () => setGradePreset('7p'));
 
+  expOffBtn.addEventListener('click', () => setExponentEnabled(false));
+  expOnBtn.addEventListener('click', () => setExponentEnabled(true));
+
   document.querySelectorAll('.modeBtn').forEach(btn => {
     btn.addEventListener('click', () => setMode(Number(btn.getAttribute('data-n'))));
   });
@@ -1141,6 +1313,7 @@ function showStart() {
 
   // Default
   setGradePreset('34');
+  setExponentEnabled(false);
   setStatsUI();
   showStart();
 })();

@@ -1,0 +1,927 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>No-Cross Draw — Levels</title>
+  <style>
+    :root{
+      --bg:#0f1220;
+      --panel:#171a2b;
+      --ink:#e9ecff;
+      --muted:#aab0d6;
+      --accent:#7aa2ff;
+      --danger:#ff5a7a;
+      --ok:#4ce3a8;
+      --shape:#ffd36a;
+    }
+    html,body{height:100%; margin:0; background:var(--bg); color:var(--ink); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;}
+    *{box-sizing:border-box;}
+    .wrap{
+      height:100%;
+      display:flex;
+      flex-direction:column;
+      padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+      gap:12px;
+    }
+    .topbar{
+      background:var(--panel);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:14px;
+      padding:10px 12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.25);
+      flex: 0 0 auto;
+      flex-wrap:wrap;
+    }
+    .left{
+      display:flex;
+      align-items:baseline;
+      gap:14px;
+      flex-wrap:wrap;
+    }
+    .stat{
+      font-size:15px;
+      font-weight:800;
+      letter-spacing:0.2px;
+      white-space:nowrap;
+    }
+    .stat span{
+      color:var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+    .status{
+      font-size:13px;
+      color:var(--muted);
+      margin-left: 4px;
+    }
+    .btns{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex: 0 0 auto;
+      flex-wrap:wrap;
+    }
+    button{
+      appearance:none;
+      border:1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      color:var(--ink);
+      border-radius:12px;
+      padding:10px 12px;
+      font-weight:800;
+      cursor:pointer;
+    }
+    button:hover{ background: rgba(255,255,255,0.09); }
+    button:active{ transform: translateY(1px); }
+    button.primary{
+      border-color: rgba(122,162,255,0.45);
+      background: rgba(122,162,255,0.16);
+    }
+
+    .scorebar{
+      display:none;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius:14px;
+      padding:10px 12px;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 96vw;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+    }
+    .scorebarHeader{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-bottom:8px;
+    }
+    .scoreTitle{
+      font-weight:900;
+      letter-spacing:0.2px;
+    }
+    .scoreTable{
+      width:100%;
+      border-collapse:collapse;
+      font-size:13px;
+      color:var(--muted);
+    }
+    .scoreTable th, .scoreTable td{
+      text-align:left;
+      padding:6px 8px;
+      border-top:1px solid rgba(255,255,255,0.06);
+      vertical-align:top;
+    }
+    .scoreTable th{
+      color: rgba(233,236,255,0.85);
+      font-weight:900;
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:0.3px;
+    }
+    .scoreTable td b{ color: var(--ink); }
+    .scoreEmpty{
+      color: var(--muted);
+      font-size:13px;
+      padding:8px 0 2px 0;
+    }
+
+    .playArea{
+      position:relative;
+      flex: 0 0 auto;
+      width: 96vw;
+      max-width: 1400px;
+      height: 72vh;
+      min-height: 520px;
+      margin: 0 auto;
+      background: #0b0e18;
+      border: 2px solid rgba(255,255,255,0.12);
+      border-radius:18px;
+      overflow:hidden;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.35);
+      touch-action: none;
+    }
+    canvas{ width:100%; height:100%; display:block; }
+    .overlay{
+      position:absolute;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(4px);
+      padding:18px;
+    }
+    .overlay.show{ display:flex; }
+    .card{
+      width:min(560px, 92vw);
+      background:var(--panel);
+      border:1px solid rgba(255,255,255,0.10);
+      border-radius:18px;
+      padding:18px;
+      box-shadow: 0 18px 50px rgba(0,0,0,0.45);
+      text-align:center;
+    }
+    .card h1{ margin:0 0 8px 0; font-size:26px; letter-spacing:0.2px; }
+    .card p{ margin:0 0 14px 0; color:var(--muted); line-height:1.35; }
+    .pill{
+      display:inline-block;
+      padding:6px 10px;
+      border-radius:999px;
+      font-weight:900;
+      font-size:12px;
+      letter-spacing:0.35px;
+      margin-bottom:10px;
+    }
+    .pill.win{ background: rgba(76,227,168,0.16); color: var(--ok); border:1px solid rgba(76,227,168,0.35); }
+    .pill.lose{ background: rgba(255,90,122,0.14); color: var(--danger); border:1px solid rgba(255,90,122,0.35); }
+    .small{ font-size:12px; color:var(--muted); margin-top:10px; }
+    .rowBtns{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+    .kbd{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="left">
+        <div class="stat">Level: <span id="levelText">1</span></div>
+        <div class="stat">Time left: <span id="timeText">1.00</span>s</div>
+        <div class="stat">Draw left: <span id="distText">150</span>px</div>
+        <div class="status" id="statusText">Click/tap to start.</div>
+      </div>
+      <div class="btns">
+        <button id="highscoresBtn" title="Show high scores">High Scores</button>
+        <button id="restartBtn" title="Restart current level">Restart level</button>
+      </div>
+    </div>
+
+    <div class="scorebar" aria-label="High scores">
+      <div class="scorebarHeader">
+        <div class="scoreTitle">High Scores (Top 5)</div>
+        <div class="btns">
+          <button id="resetScoresBtn" title="Clear high scores">Reset scores</button>
+        </div>
+      </div>
+      <div id="scoresWrap"></div>
+    </div>
+
+    <div class="playArea" id="playArea">
+      <canvas id="c"></canvas>
+      <div class="overlay" id="overlay">
+        <div class="card">
+          <div class="pill" id="pill">RESULT</div>
+          <h1 id="headline">Level Complete!</h1>
+          <p id="message">Nice.</p>
+          <div class="rowBtns">
+            <button class="primary" id="continueBtn">Continue</button>
+            <button id="retryBtn">Restart level</button>
+            <button id="quitBtn">Quit</button>
+          </div>
+          <div class="small" id="rulesText">
+            Rules: Don’t cross your line. Don’t touch shapes. From Level 6 onward, shapes move and can hit your line.
+            Timer starts when you click/tap and counts down the whole level.
+            Required draw length: <span class="kbd">(1.5×level)×100</span> px.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // --- DOM ---
+  const canvas = document.getElementById('c');
+  const playArea = document.getElementById('playArea');
+  const ctx = canvas.getContext('2d', { alpha: false });
+
+  const levelText = document.getElementById('levelText');
+  const timeText  = document.getElementById('timeText');
+  const distText  = document.getElementById('distText');
+  const statusText = document.getElementById('statusText');
+
+  const overlay = document.getElementById('overlay');
+  const pill = document.getElementById('pill');
+  const headline = document.getElementById('headline');
+  const message = document.getElementById('message');
+
+  const restartBtn = document.getElementById('restartBtn');
+  const highscoresBtn = document.getElementById('highscoresBtn');
+  const continueBtn = document.getElementById('continueBtn');
+  const retryBtn = document.getElementById('retryBtn');
+  const quitBtn = document.getElementById('quitBtn');
+
+  const scoresWrap = document.getElementById('scoresWrap');
+  const resetScoresBtn = document.getElementById('resetScoresBtn');
+
+  // --- constants ---
+  const LINE_W = 6;
+
+  const BASE_TIME = 1.0;        // L1
+  const TIME_PER_LEVEL = 0.25;  // +0.25 each level
+  const MOVE_START_LEVEL = 6;
+
+  // Medium shapes
+  const CIRCLE_R_MIN = 24, CIRCLE_R_MAX = 40;
+  const SQUARE_HALF_MIN = 22, SQUARE_HALF_MAX = 36;
+
+  const SCORES_KEY = 'nc_draw_levels_scores_v1';
+  const MAX_SCORES = 5;
+
+  // --- game state ---
+  let level = 1;
+  let timeLeft = 1.0;
+  let requiredLen = 150;
+  let totalDrawLen = 0;
+
+  let drawing = false;
+  let gameOver = false;
+  let won = false;
+  let started = false;
+
+  // geometry
+  let segments = [];     // committed line segments
+  let strokePts = [];    // current stroke points
+
+  // shapes
+  let shapes = []; // {type:'circle'|'square', x,y, r|h, vx,vy, br}
+
+  // timing
+  let lastTs = performance.now();
+
+  // --- utils ---
+  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+  function rand(a,b){ return a + Math.random()*(b-a); }
+  function fmt2(n){ return n.toFixed(2); }
+
+  function computeRequiredLen(lv){
+    return Math.round((1.5 * lv) * 100);
+  }
+  function computeLevelTime(lv){
+    return BASE_TIME + TIME_PER_LEVEL * (lv - 1);
+  }
+  function shapeCountForLevel(lv){
+    // L1: 0, L2:1, L3:2, ...
+    return Math.max(0, lv - 1);
+  }
+
+  function updateHUD(){
+    levelText.textContent = String(level);
+    timeText.textContent = fmt2(Math.max(0, timeLeft));
+    const left = Math.max(0, Math.ceil(requiredLen - totalDrawLen));
+    distText.textContent = String(left);
+  }
+
+  // --- High Scores (localStorage) ---
+  function loadScores(){
+    try{
+      const raw = localStorage.getItem(SCORES_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter(x => x && typeof x.level === 'number' && typeof x.ts === 'string');
+    } catch {
+      return [];
+    }
+  }
+
+  function saveScores(arr){
+    try{
+      localStorage.setItem(SCORES_KEY, JSON.stringify(arr));
+    } catch {}
+  }
+
+  function formatDateTime(ts){
+    try{
+      const d = new Date(ts);
+      return d.toLocaleString();
+    } catch {
+      return ts;
+    }
+  }
+
+  function renderScores(){
+    const scores = loadScores();
+    if (!scores.length){
+      scoresWrap.innerHTML = `<div class="scoreEmpty">No scores yet. First loss will be recorded as your “furthest level reached”.</div>`;
+      return;
+    }
+    const rows = scores.map((s, idx) => `
+      <tr>
+        <td><b>#${idx+1}</b></td>
+        <td><b>Level ${s.level}</b></td>
+        <td>${formatDateTime(s.ts)}</td>
+      </tr>
+    `).join('');
+
+    scoresWrap.innerHTML = `
+      <table class="scoreTable">
+        <thead>
+          <tr><th>Rank</th><th>Furthest Level</th><th>Date / Time</th></tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  function addScore(furthestLevel){
+    const scores = loadScores();
+    scores.push({ level: furthestLevel, ts: new Date().toISOString() });
+
+    // Sort: highest level first; tie-break by most recent first
+    scores.sort((a,b) => (b.level - a.level) || (b.ts.localeCompare(a.ts)) );
+
+    const trimmed = scores.slice(0, MAX_SCORES);
+    saveScores(trimmed);
+    renderScores();
+  }
+
+  resetScoresBtn.addEventListener('click', () => {
+    try{ localStorage.removeItem(SCORES_KEY); } catch {}
+    renderScores();
+  });
+
+  // Toggle high scores visibility
+  let scoresVisible = false;
+  highscoresBtn.addEventListener('click', () => {
+    scoresVisible = !scoresVisible;
+    const bar = document.querySelector('.scorebar');
+    if (scoresVisible){
+      bar.style.display = 'block';
+      renderScores();
+      highscoresBtn.textContent = 'Hide Scores';
+    } else {
+      bar.style.display = 'none';
+      highscoresBtn.textContent = 'High Scores';
+    }
+  });
+
+  // --- canvas sizing ---
+  function resizeCanvas(){
+    const rect = playArea.getBoundingClientRect();
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    canvas.width  = Math.floor(rect.width * dpr);
+    canvas.height = Math.floor(rect.height * dpr);
+    canvas.style.width  = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    redraw();
+  }
+  window.addEventListener('resize', resizeCanvas);
+
+  // --- line intersection (crossing only; touching allowed) ---
+  function orient(ax, ay, bx, by, cx, cy) {
+    return (bx-ax)*(cy-ay) - (by-ay)*(cx-ax);
+  }
+  function boxesOverlap(a1,a2,b1,b2){
+    const lo1 = Math.min(a1,a2), hi1 = Math.max(a1,a2);
+    const lo2 = Math.min(b1,b2), hi2 = Math.max(b1,b2);
+    return hi1 >= lo2 && hi2 >= lo1;
+  }
+  function collinearOverlap(ax,ay,bx,by,cx,cy,dx,dy){
+    // positive-length overlap only (touching at a point is OK)
+    const abx = Math.abs(bx-ax), aby = Math.abs(by-ay);
+    if (abx >= aby){
+      if (!boxesOverlap(ax,bx,cx,dx)) return false;
+      const lo1 = Math.min(ax,bx), hi1 = Math.max(ax,bx);
+      const lo2 = Math.min(cx,dx), hi2 = Math.max(cx,dx);
+      return (Math.min(hi1,hi2) - Math.max(lo1,lo2)) > 0;
+    } else {
+      if (!boxesOverlap(ay,by,cy,dy)) return false;
+      const lo1 = Math.min(ay,by), hi1 = Math.max(ay,by);
+      const lo2 = Math.min(cy,dy), hi2 = Math.max(cy,dy);
+      return (Math.min(hi1,hi2) - Math.max(lo1,lo2)) > 0;
+    }
+  }
+  function properIntersect(s1, s2){
+    const ax=s1.ax, ay=s1.ay, bx=s1.bx, by=s1.by;
+    const cx=s2.ax, cy=s2.ay, dx=s2.bx, dy=s2.by;
+
+    // bbox reject
+    const minAx = Math.min(ax,bx), maxAx = Math.max(ax,bx);
+    const minAy = Math.min(ay,by), maxAy = Math.max(ay,by);
+    const minCx = Math.min(cx,dx), maxCx = Math.max(cx,dx);
+    const minCy = Math.min(cy,dy), maxCy = Math.max(cy,dy);
+    if (maxAx < minCx || maxCx < minAx || maxAy < minCy || maxCy < minAy) return false;
+
+    const o1 = orient(ax,ay,bx,by,cx,cy);
+    const o2 = orient(ax,ay,bx,by,dx,dy);
+    const o3 = orient(cx,cy,dx,dy,ax,ay);
+    const o4 = orient(cx,cy,dx,dy,bx,by);
+
+    const eps = 1e-9;
+    const z1 = Math.abs(o1) <= eps;
+    const z2 = Math.abs(o2) <= eps;
+    const z3 = Math.abs(o3) <= eps;
+    const z4 = Math.abs(o4) <= eps;
+
+    if (z1 && z2 && z3 && z4){
+      return collinearOverlap(ax,ay,bx,by,cx,cy,dx,dy);
+    }
+
+    const straddle1 = (o1 > eps && o2 < -eps) || (o1 < -eps && o2 > eps);
+    const straddle2 = (o3 > eps && o4 < -eps) || (o3 < -eps && o4 > eps);
+    if (straddle1 && straddle2) return true;
+
+    return false; // touching cases allowed
+  }
+
+  // --- segment vs circle (touching counts as hit) ---
+  function segCircleHit(ax,ay,bx,by, cx,cy, r){
+    const abx = bx-ax, aby = by-ay;
+    const acx = cx-ax, acy = cy-ay;
+    const ab2 = abx*abx + aby*aby;
+    let t = 0;
+    if (ab2 > 0) t = (acx*abx + acy*aby) / ab2;
+    t = clamp(t, 0, 1);
+    const px = ax + t*abx, py = ay + t*aby;
+    const dx = cx-px, dy = cy-py;
+    return (dx*dx + dy*dy) <= r*r;
+  }
+
+  // --- segment vs expanded AABB (touching counts) ---
+  function segAABBHit(ax,ay,bx,by, minx,miny,maxx,maxy){
+    const dx = bx-ax, dy = by-ay;
+    let t0 = 0, t1 = 1;
+
+    function clip(p, q){
+      if (p === 0) return q >= 0;
+      const t = q / p;
+      if (p < 0){
+        if (t > t1) return false;
+        if (t > t0) t0 = t;
+      } else {
+        if (t < t0) return false;
+        if (t < t1) t1 = t;
+      }
+      return true;
+    }
+
+    if (
+      clip(-dx, ax - minx) &&
+      clip( dx, maxx - ax) &&
+      clip(-dy, ay - miny) &&
+      clip( dy, maxy - ay)
+    ){
+      return t1 >= t0;
+    }
+    return false;
+  }
+
+  // --- shapes ---
+  function spawnShapes(){
+    const rect = playArea.getBoundingClientRect();
+    const w = rect.width, h = rect.height;
+    const n = shapeCountForLevel(level);
+    const moving = level >= MOVE_START_LEVEL;
+
+    shapes = [];
+
+    function overlapsAny(nx, ny, nbr){
+      for (const o of shapes){
+        const dx = nx - o.x, dy = ny - o.y;
+        const minD = nbr + o.br;
+        if ((dx*dx + dy*dy) < (minD*minD)) return true;
+      }
+      return false;
+    }
+
+    for (let i=0;i<n;i++){
+      const type = Math.random() < 0.5 ? 'circle' : 'square';
+
+      let r = 0, half = 0, br = 0;
+      if (type === 'circle'){
+        r = rand(CIRCLE_R_MIN, CIRCLE_R_MAX);
+        br = r;
+      } else {
+        half = rand(SQUARE_HALF_MIN, SQUARE_HALF_MAX);
+        br = half * Math.SQRT2;
+      }
+
+      // non-overlapping spawn position
+      let x = 0, y = 0;
+      const MAX_TRIES = 700;
+      for (let t=0;t<MAX_TRIES;t++){
+        if (type === 'circle'){
+          x = rand(r, w - r);
+          y = rand(r, h - r);
+        } else {
+          x = rand(half, w - half);
+          y = rand(half, h - half);
+        }
+        if (!overlapsAny(x, y, br)) break;
+      }
+
+      // velocity (only used once started & moving levels)
+      let vx = 0, vy = 0;
+      if (moving){
+        const ang = rand(0, Math.PI*2);
+        const speed = 70 + level * 14; // scales with level
+        vx = Math.cos(ang) * speed;
+        vy = Math.sin(ang) * speed;
+      }
+
+      shapes.push({type, x,y, r, h:half, vx,vy, br});
+    }
+  }
+
+  function resolveShapeCollisions(){
+    for (let i=0;i<shapes.length;i++){
+      for (let j=i+1;j<shapes.length;j++){
+        const a = shapes[i], b = shapes[j];
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const dist2 = dx*dx + dy*dy;
+        const minD = a.br + b.br;
+        if (dist2 > 0 && dist2 < (minD*minD)){
+          const dist = Math.sqrt(dist2);
+          const nx = dx / dist, ny = dy / dist;
+          const overlap = (minD - dist);
+
+          a.x -= nx * overlap * 0.5;
+          a.y -= ny * overlap * 0.5;
+          b.x += nx * overlap * 0.5;
+          b.y += ny * overlap * 0.5;
+
+          const va = a.vx*nx + a.vy*ny;
+          const vb = b.vx*nx + b.vy*ny;
+          const diff = vb - va;
+          a.vx += diff * nx;
+          a.vy += diff * ny;
+          b.vx -= diff * nx;
+          b.vy -= diff * ny;
+        }
+      }
+    }
+  }
+
+  function moveShapes(dt){
+    if (level < MOVE_START_LEVEL) return;
+    const rect = playArea.getBoundingClientRect();
+    const w = rect.width, h = rect.height;
+
+    for (const s of shapes){
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+
+      const br = s.br;
+      if (s.x < br){ s.x = br; s.vx *= -1; }
+      if (s.x > w - br){ s.x = w - br; s.vx *= -1; }
+      if (s.y < br){ s.y = br; s.vy *= -1; }
+      if (s.y > h - br){ s.y = h - br; s.vy *= -1; }
+    }
+    resolveShapeCollisions();
+  }
+
+  function shapeHitsAnyLine(){
+    if (segments.length === 0 && strokePts.length < 2) return false;
+
+    const allSegs = segments.slice();
+    for (let i=1;i<strokePts.length;i++){
+      const a = strokePts[i-1], b = strokePts[i];
+      allSegs.push({ax:a.x, ay:a.y, bx:b.x, by:b.y});
+    }
+
+    const pad = LINE_W/2;
+
+    for (const s of shapes){
+      for (const seg of allSegs){
+        if (s.type === 'circle'){
+          if (segCircleHit(seg.ax,seg.ay,seg.bx,seg.by, s.x,s.y, s.r + pad)) return true;
+        } else {
+          const minx = s.x - s.h - pad;
+          const maxx = s.x + s.h + pad;
+          const miny = s.y - s.h - pad;
+          const maxy = s.y + s.h + pad;
+          if (segAABBHit(seg.ax,seg.ay,seg.bx,seg.by, minx,miny,maxx,maxy)) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  function newSegmentHitsAnyShape(newSeg){
+    const pad = LINE_W/2;
+    for (const s of shapes){
+      if (s.type === 'circle'){
+        if (segCircleHit(newSeg.ax,newSeg.ay,newSeg.bx,newSeg.by, s.x,s.y, s.r + pad)) return true;
+      } else {
+        const minx = s.x - s.h - pad;
+        const maxx = s.x + s.h + pad;
+        const miny = s.y - s.h - pad;
+        const maxy = s.y + s.h + pad;
+        if (segAABBHit(newSeg.ax,newSeg.ay,newSeg.bx,newSeg.by, minx,miny,maxx,maxy)) return true;
+      }
+    }
+    return false;
+  }
+
+  // --- drawing ---
+  function redraw(){
+    const rect = playArea.getBoundingClientRect();
+    const w = rect.width, h = rect.height;
+
+    ctx.fillStyle = '#0b0e18';
+    ctx.fillRect(0,0,w,h);
+
+    // grid
+    ctx.globalAlpha = 0.10;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+    const step = 40;
+    for (let x=step; x<w; x+=step){
+      ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke();
+    }
+    for (let y=step; y<h; y+=step){
+      ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    // shapes
+    ctx.fillStyle = 'rgba(255,211,106,0.14)';
+    ctx.strokeStyle = 'rgba(255,211,106,0.55)';
+    ctx.lineWidth = 2;
+    for (const s of shapes){
+      if (s.type === 'circle'){
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+        ctx.fill(); ctx.stroke();
+      } else {
+        const x = s.x - s.h, y = s.y - s.h, sz = s.h*2;
+        ctx.beginPath();
+        ctx.rect(x,y,sz,sz);
+        ctx.fill(); ctx.stroke();
+      }
+    }
+
+    // line
+    ctx.lineWidth = LINE_W;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#e9ecff';
+
+    if (segments.length){
+      ctx.beginPath();
+      for (const s of segments){
+        ctx.moveTo(s.ax, s.ay);
+        ctx.lineTo(s.bx, s.by);
+      }
+      ctx.stroke();
+    }
+
+    if (strokePts.length >= 2){
+      ctx.beginPath();
+      ctx.moveTo(strokePts[0].x, strokePts[0].y);
+      for (let i=1;i<strokePts.length;i++) ctx.lineTo(strokePts[i].x, strokePts[i].y);
+      ctx.stroke();
+    }
+  }
+
+  function getPosFromEvent(e){
+    const rect = playArea.getBoundingClientRect();
+    const x = (e.clientX - rect.left);
+    const y = (e.clientY - rect.top);
+    return { x: clamp(x, 0, rect.width), y: clamp(y, 0, rect.height) };
+  }
+
+  function addPoint(x,y){
+    const n = strokePts.length;
+    if (n === 0){ strokePts.push({x,y}); return; }
+
+    const last = strokePts[n-1];
+    const dx = x-last.x, dy = y-last.y;
+    if ((dx*dx + dy*dy) < 1.5*1.5) return;
+
+    const newSeg = { ax:last.x, ay:last.y, bx:x, by:y };
+
+    // Shape collision — touching counts as hit
+    if (newSegmentHitsAnyShape(newSeg)){
+      lose('You touched a shape while drawing.');
+      return;
+    }
+
+    // Crossing checks (touching ok)
+    for (let i=0;i<segments.length;i++){
+      if (properIntersect(newSeg, segments[i])){
+        lose('You crossed your line.');
+        return;
+      }
+    }
+    for (let i=0;i<strokePts.length-2;i++){
+      const a = strokePts[i], b = strokePts[i+1];
+      const seg = { ax:a.x, ay:a.y, bx:b.x, by:b.y };
+      if (properIntersect(newSeg, seg)){
+        lose('You crossed your line.');
+        return;
+      }
+    }
+
+    totalDrawLen += Math.hypot(newSeg.bx - newSeg.ax, newSeg.by - newSeg.ay);
+    strokePts.push({x,y});
+    updateHUD();
+  }
+
+  function commitStroke(){
+    for (let i=1;i<strokePts.length;i++){
+      const a = strokePts[i-1], b = strokePts[i];
+      segments.push({ ax:a.x, ay:a.y, bx:b.x, by:b.y });
+    }
+    strokePts = [];
+  }
+
+  // Pointer events
+  function onDown(e){
+    if (gameOver) return;
+    if (!started) started = true;
+    drawing = true;
+    playArea.setPointerCapture?.(e.pointerId);
+    const p = getPosFromEvent(e);
+    strokePts = [];
+    addPoint(p.x, p.y);
+  }
+  function onMove(e){
+    if (!drawing || gameOver) return;
+    const p = getPosFromEvent(e);
+    addPoint(p.x, p.y);
+  }
+  function onUp(e){
+    if (!drawing) return;
+    drawing = false;
+    if (!gameOver) commitStroke();
+  }
+
+  playArea.addEventListener('pointerdown', onDown);
+  playArea.addEventListener('pointermove', onMove);
+  playArea.addEventListener('pointerup', onUp);
+  playArea.addEventListener('pointercancel', onUp);
+
+  playArea.addEventListener('pointerleave', () => {
+    if (drawing && !gameOver){
+      lose('You left the drawing area.');
+    }
+  });
+
+  // --- win/lose + level flow ---
+  function win(){
+    gameOver = true;
+    won = true;
+    setOverlay(true);
+    pill.textContent = 'LEVEL CLEAR';
+    pill.className = 'pill win';
+    headline.textContent = `Level ${level} Complete!`;
+    message.textContent = `Required draw length met (${requiredLen}px). Ready for Level ${level+1}.`;
+    statusText.innerHTML = `Result: <b style="color:var(--ok)">LEVEL COMPLETE</b>`;
+    continueBtn.style.display = '';
+    retryBtn.style.display = 'none';
+    quitBtn.style.display = 'none';
+  }
+
+  function lose(reason){
+    gameOver = true;
+    won = false;
+    setOverlay(true);
+    pill.textContent = 'LOSE';
+    pill.className = 'pill lose';
+    headline.textContent = `Run Over`;
+    message.textContent = reason || 'You lost.';
+    statusText.innerHTML = `Result: <b style="color:var(--danger)">LOSE</b>`;
+    continueBtn.style.display = 'none';
+    retryBtn.style.display = '';
+    quitBtn.style.display = '';
+
+  }
+
+  function setOverlay(show){ overlay.classList.toggle('show', !!show); }
+
+  function startLevel(lv){
+    level = lv;
+    timeLeft = computeLevelTime(level);
+    requiredLen = computeRequiredLen(level);
+    totalDrawLen = 0;
+
+    drawing = false;
+    gameOver = false;
+    won = false;
+    started = false;
+
+    // Clear line each new level
+    segments = [];
+    strokePts = [];
+
+    spawnShapes();
+
+    statusText.textContent = (level < MOVE_START_LEVEL
+      ? 'Click/tap to start. Then draw without crossing your line. Avoid shapes.'
+      : 'Click/tap to start. Shapes move now — avoid shapes and don’t let them hit your line.');
+
+    setOverlay(false);
+    // default button visibility (overlay hidden during play anyway)
+    continueBtn.style.display = '';
+    retryBtn.style.display = '';
+    quitBtn.style.display = 'none';
+    updateHUD();
+    redraw();
+  }
+
+  restartBtn.addEventListener('click', () => startLevel(level));
+  retryBtn.addEventListener('click', () => startLevel(level));
+  continueBtn.addEventListener('click', () => startLevel(level + 1));
+
+  quitBtn.addEventListener('click', () => {
+    // Record high score only when quitting from game over
+    addScore(level);
+    // Restart the run from Level 1
+    startLevel(1);
+  });
+
+  // --- main loop (timer & movement start on first click) ---
+  function tick(ts){
+    const dt = (ts - lastTs) / 1000;
+    lastTs = ts;
+
+    if (!gameOver){
+      if (!started){
+        updateHUD();
+      } else {
+        timeLeft -= dt;
+
+        if (timeLeft <= 0){
+          timeLeft = 0;
+          updateHUD();
+
+          if (shapeHitsAnyLine()){
+            lose('A shape hit your line.');
+          } else if (totalDrawLen >= requiredLen){
+            win();
+          } else {
+            lose(`You didn’t draw enough distance. Needed ${requiredLen}px.`);
+          }
+        } else {
+          moveShapes(dt);
+
+          if (shapeHitsAnyLine()){
+            lose('A shape hit your line.');
+          }
+
+          updateHUD();
+        }
+      }
+    }
+
+    redraw();
+    requestAnimationFrame(tick);
+  }
+
+  // init
+  // Start with scores hidden
+  const sb = document.querySelector('.scorebar'); if (sb) sb.style.display = 'none';
+  resizeCanvas();
+  startLevel(1);
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
