@@ -1,0 +1,828 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Hold the Line</title>
+<style>
+  :root{
+    --bg:#f5f5f7;
+    --text: rgba(0,0,0,.88);
+    --muted: rgba(0,0,0,.62);
+    --shadow: 0 14px 40px rgba(0,0,0,.16);
+    --p1:#2b7cff;
+    --p2:#ff2f92;
+    --cpu:#c88b00;
+    --accent:#2b7cff;
+    --radius:18px;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    background:
+      radial-gradient(1200px 900px at 18% 10%, rgba(0,0,0,.03), transparent 55%),
+      radial-gradient(1000px 800px at 80% 20%, rgba(0,0,0,.025), transparent 60%),
+      radial-gradient(900px 700px at 55% 90%, rgba(0,0,0,.02), transparent 55%),
+      var(--bg);
+    color: var(--text);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+  }
+  .app{
+    width:min(980px, 100%);
+    display:grid;
+    grid-template-columns: 360px 1fr;
+    gap:18px;
+  }
+  @media (max-width: 900px){
+    .app{ grid-template-columns: 1fr; }
+  }
+  .card{
+    background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(255,255,255,.92));
+    border:1px solid rgba(0,0,0,.10);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow:hidden;
+  }
+  .left{ padding:18px 18px 16px; }
+  .title{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  .logo{
+    width:42px; height:42px; border-radius:14px;
+    background: radial-gradient(circle at 35% 30%, rgba(0,0,0,.08), transparent 45%),
+                linear-gradient(135deg, rgba(43,124,255,.20), rgba(255,47,146,.18));
+    display:grid; place-items:center;
+    border:1px solid rgba(0,0,0,.10);
+  }
+  h1{ font-size:18px; margin:0; letter-spacing:.3px; }
+  .subtitle{ margin:0; font-size:12.5px; color: var(--muted); line-height:1.35; }
+  .section{ margin-top:16px; padding-top:14px; border-top:1px solid rgba(0,0,0,.10); }
+  .row{ display:flex; gap:10px; align-items:center; justify-content:space-between; margin:10px 0; }
+  label{ font-size:12.5px; color: var(--muted); }
+  select, button, input{ font: inherit; }
+  select{
+    width: 170px;
+    padding:10px 12px;
+    border-radius:14px;
+    background: rgba(255,255,255,.85);
+    border:1px solid rgba(0,0,0,.12);
+    color: var(--text);
+    outline:none;
+  }
+  select:focus{ border-color: rgba(0,0,0,.20); box-shadow: 0 0 0 3px rgba(0,0,0,.06); }
+  .btn{
+    width:100%;
+    padding:12px 14px;
+    border-radius:16px;
+    border:1px solid rgba(0,0,0,.12);
+    background: rgba(0,0,0,.045);
+    color: var(--text);
+    cursor:pointer;
+    transition: transform .08s ease, background .12s ease, border-color .12s ease;
+  }
+  .btn:hover{ background: rgba(0,0,0,.06); }
+  .btn:active{ transform: translateY(1px); }
+  .btn.primary{
+    background: linear-gradient(135deg, rgba(43,124,255,.92), rgba(255,47,146,.85));
+    border-color: rgba(0,0,0,.10);
+    color: #fff;
+  }
+  .btn.primary:hover{ filter: brightness(1.03); }
+  .hint{ font-size:12px; color: var(--muted); line-height:1.45; margin:10px 0 0; }
+  .pill{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:9px 11px;
+    border-radius:999px;
+    background: rgba(255,255,255,.78);
+    border:1px solid rgba(0,0,0,.10);
+    font-size:12.5px;
+  }
+  .dot{ width:10px; height:10px; border-radius:50%; background: rgba(0,0,0,.25); box-shadow: 0 0 0 3px rgba(0,0,0,.05); }
+  .dot.p1{ background: var(--p1); box-shadow: 0 0 0 3px rgba(43,124,255,.14); }
+  .dot.p2{ background: var(--p2); box-shadow: 0 0 0 3px rgba(255,47,146,.14); }
+  .dot.cpu{ background: var(--cpu); box-shadow: 0 0 0 3px rgba(200,139,0,.14); }
+  .status{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+
+  .boardWrap{ position:relative; padding:16px; display:flex; flex-direction:column; gap:12px; }
+  .boardHeader{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:10px 12px;
+    border-radius:16px;
+    background: rgba(255,255,255,.70);
+    border:1px solid rgba(0,0,0,.10);
+  }
+  .turn{ display:flex; align-items:center; gap:10px; font-size:14px; }
+  .turn .who{ font-weight:700; letter-spacing:.2px; }
+  .turn .sub{ font-size:12px; color: var(--muted); margin-left:6px; font-weight:500; }
+  .turnChip{ width:12px; height:12px; border-radius:4px; background: var(--accent); box-shadow: 0 0 0 4px rgba(43,124,255,.12); }
+
+  .canvasShell{
+    width:100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 22px;
+    background: radial-gradient(circle at 35% 25%, rgba(0,0,0,.03), transparent 55%),
+                rgba(255,255,255,.92);
+    border:1px solid rgba(0,0,0,.10);
+    overflow:hidden;
+    position:relative;
+  }
+  canvas{ width:100%; height:100%; display:block; }
+
+  .toast{
+    position:absolute;
+    left:14px;
+    bottom:14px;
+    padding:10px 12px;
+    border-radius:14px;
+    background: rgba(255,255,255,.86);
+    border:1px solid rgba(0,0,0,.12);
+    color: rgba(0,0,0,.78);
+    font-size:12.5px;
+    max-width: calc(100% - 28px);
+    line-height:1.35;
+    pointer-events:none;
+    opacity:0;
+    transform: translateY(6px);
+    transition: opacity .18s ease, transform .18s ease;
+  }
+  .toast.show{ opacity:1; transform: translateY(0); }
+
+  .overlay{
+    position:absolute; inset:0;
+    display:none; place-items:center;
+    padding:18px;
+    background: rgba(0,0,0,.35);
+    backdrop-filter: blur(8px);
+  }
+  .overlay.show{ display:grid; }
+  .modal{
+    width:min(520px, 100%);
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(255,255,255,.92));
+    border:1px solid rgba(0,0,0,.12);
+    box-shadow: 0 24px 70px rgba(0,0,0,.35);
+    padding:18px 18px 16px;
+  }
+  .modal h2{ margin:0 0 6px; font-size:18px; }
+  .modal p{ margin:0 0 14px; color: var(--muted); line-height:1.45; font-size:13px; }
+  .modal .btnRow{ display:flex; gap:10px; }
+  .modal .btnRow .btn{ width:50%; }
+
+  .kbd{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size:12px;
+    padding:2px 6px;
+    border-radius:8px;
+    border:1px solid rgba(0,0,0,.12);
+    background: rgba(255,255,255,.75);
+    color: rgba(0,0,0,.72);
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <div class="card left">
+      <div class="title">
+        <div class="logo" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M5 7h14M7 5v14M19 5v14M5 17h14" stroke="rgba(0,0,0,.72)" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div>
+          <h1>Hold the Line</h1>
+          <p class="subtitle">Draw a segment from the <b>current endpoint</b> to an adjacent unused dot. <b>Last legal move loses.</b></p>
+        </div>
+      </div>
+
+      <div class="status">
+        <span class="pill"><span class="dot p1"></span><span>Player 1</span></span>
+        <span class="pill"><span class="dot p2" id="p2Dot"></span><span id="p2Label">Player 2</span></span>
+      </div>
+
+      <div class="section">
+        <div class="row">
+          <label for="modeSel">Mode</label>
+          <select id="modeSel">
+            <option value="pvp">Player vs Player</option>
+            <option value="cpu">Player vs CPU</option>
+          </select>
+        </div>
+
+        <div class="row">
+          <label for="firstSel">Who starts</label>
+          <select id="firstSel">
+            <option value="p1">Player 1</option>
+            <option value="p2">Player 2</option>
+          </select>
+        </div>
+
+        <div class="row">
+          <label for="sizeSlider">Grid size</label>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <input id="sizeSlider" type="range" min="4" max="8" value="4" step="1" style="width:170px; accent-color: var(--accent);">
+            <span class="pill" style="padding:7px 10px; font-size:12.5px;"><span id="sizeVal">4×4</span></span>
+          </div>
+        </div>
+
+        <button class="btn primary" id="newBtn">New game</button>
+
+        <p class="hint">
+          Click a <span class="kbd">start</span> dot (turn 1: any dot; later: the pulsing endpoint), then an <span class="kbd">adjacent</span> unused dot.
+          Segments may not intersect (including diagonal X-crosses).
+        </p>
+      </div>
+    </div>
+
+    <div class="card boardWrap">
+      <div class="boardHeader">
+        <div class="turn">
+          <span class="turnChip" id="turnChip"></span>
+          <span class="who" id="turnText">New game</span>
+          <span class="sub" id="turnSub">Click “New game” to start.</span>
+        </div>
+        <div class="pill"><span class="dot"></span><span id="moveCount">0 moves</span></div>
+      </div>
+
+      <div class="canvasShell" id="shell">
+        <canvas id="c"></canvas>
+        <div class="toast" id="toast">...</div>
+
+        <div class="overlay" id="overlay">
+          <div class="modal">
+            <h2 id="overTitle">Game over</h2>
+            <p id="overBody">Winner: …</p>
+            <div class="btnRow">
+              <button class="btn" id="viewBtn">View board</button>
+              <button class="btn primary" id="restartBtn">Start over</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="hint" style="margin:0 2px 6px;">Tip: the current endpoint gently pulses. Only that dot can be used as the start after the first move.</p>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('c');
+  const shell  = document.getElementById('shell');
+  const ctx = canvas.getContext('2d');
+
+  const modeSel = document.getElementById('modeSel');
+  const firstSel = document.getElementById('firstSel');
+  const sizeSlider = document.getElementById('sizeSlider');
+  const sizeVal = document.getElementById('sizeVal');
+  const newBtn = document.getElementById('newBtn');
+
+  const p2Label = document.getElementById('p2Label');
+  const p2Dot = document.getElementById('p2Dot');
+
+  const turnChip = document.getElementById('turnChip');
+  const turnText = document.getElementById('turnText');
+  const turnSub  = document.getElementById('turnSub');
+  const moveCount = document.getElementById('moveCount');
+
+  const overlay = document.getElementById('overlay');
+  const overTitle = document.getElementById('overTitle');
+  const overBody  = document.getElementById('overBody');
+  const viewBtn = document.getElementById('viewBtn');
+  const restartBtn = document.getElementById('restartBtn');
+
+  const toast = document.getElementById('toast');
+
+  let N = 4; // dots per side (4..8)
+  const EPS = 1e-6;
+
+  const COLORS = {
+    p1: getComputedStyle(document.documentElement).getPropertyValue('--p1').trim() || '#2b7cff',
+    p2: getComputedStyle(document.documentElement).getPropertyValue('--p2').trim() || '#ff2f92',
+    cpu: getComputedStyle(document.documentElement).getPropertyValue('--cpu').trim() || '#c88b00',
+    usedDot: 'rgba(0,0,0,.18)',
+    freeDot: 'rgba(0,0,0,.28)',
+  };
+
+  let state = null;
+
+  function clampInt(v, lo, hi){
+    v = Math.round(Number(v));
+    if (!Number.isFinite(v)) v = lo;
+    return Math.max(lo, Math.min(hi, v));
+  }
+
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.classList.remove('show'), 1100);
+  }
+
+  function resize(){
+    const r = shell.getBoundingClientRect();
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    canvas.width = Math.floor(r.width * dpr);
+    canvas.height = Math.floor(r.height * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    draw();
+  }
+  window.addEventListener('resize', resize);
+
+  function key(r,c){ return `${r},${c}`; }
+
+  function dotPos(r,c){
+    const pad = 42;
+    const w = shell.clientWidth;
+    const h = shell.clientHeight;
+    const size = Math.min(w,h);
+    const left = (w - size)/2;
+    const top = (h - size)/2;
+    const inner = size - pad*2;
+    const step = inner/(N-1);
+    return { x: left + pad + c*step, y: top + pad + r*step };
+  }
+
+  function allDots(){
+    const arr = [];
+    for(let r=0;r<N;r++) for(let c=0;c<N;c++) arr.push({r,c});
+    return arr;
+  }
+
+  function adjacent(a,b){
+    const dr = Math.abs(a.r-b.r), dc = Math.abs(a.c-b.c);
+    return (dr<=1 && dc<=1 && (dr+dc>0));
+  }
+
+  function samePoint(p,q){ return Math.abs(p.x-q.x)<EPS && Math.abs(p.y-q.y)<EPS; }
+
+  function orient(a,b,c){
+    const v = (b.y-a.y)*(c.x-b.x) - (b.x-a.x)*(c.y-b.y);
+    if (Math.abs(v) < 1e-9) return 0;
+    return (v > 0) ? 1 : 2;
+  }
+  function onSeg(a,b,c){
+    return Math.min(a.x,c.x)-1e-9 <= b.x && b.x <= Math.max(a.x,c.x)+1e-9 &&
+           Math.min(a.y,c.y)-1e-9 <= b.y && b.y <= Math.max(a.y,c.y)+1e-9;
+  }
+  function segIntersects(p1,p2,q1,q2){
+    const o1 = orient(p1,p2,q1);
+    const o2 = orient(p1,p2,q2);
+    const o3 = orient(q1,q2,p1);
+    const o4 = orient(q1,q2,p2);
+
+    if (o1 !== o2 && o3 !== o4) return true;
+    if (o1 === 0 && onSeg(p1,q1,p2)) return true;
+    if (o2 === 0 && onSeg(p1,q2,p2)) return true;
+    if (o3 === 0 && onSeg(q1,p1,q2)) return true;
+    if (o4 === 0 && onSeg(q1,p2,q2)) return true;
+    return false;
+  }
+
+  function segmentLegal(a,b){
+    if (!adjacent(a,b)) return false;
+    if (state.used.has(key(b.r,b.c))) return false;
+
+    if (!state.started){
+      if (state.used.has(key(a.r,a.c))) return false;
+    } else {
+      if (!state.endpoint || a.r !== state.endpoint.r || a.c !== state.endpoint.c) return false;
+    }
+
+    const A = dotPos(a.r,a.c);
+    const B = dotPos(b.r,b.c);
+
+    for (const s of state.segments){
+      const Q1 = dotPos(s.a.r, s.a.c);
+      const Q2 = dotPos(s.b.r, s.b.c);
+
+      if (!segIntersects(A,B,Q1,Q2)) continue;
+
+      // Allow touching only at A if it matches an endpoint of an existing segment
+      const shareAtA = samePoint(A,Q1) || samePoint(A,Q2);
+      const shareAtB = samePoint(B,Q1) || samePoint(B,Q2);
+      if (!shareAtA || shareAtB) return false;
+
+      // forbid collinear overlap beyond A
+      const col = (orient(A,B,Q1)===0 && orient(A,B,Q2)===0);
+      if (col){
+        if (!samePoint(A,Q1) && onSeg(A,Q1,B)) return false;
+        if (!samePoint(A,Q2) && onSeg(A,Q2,B)) return false;
+      }
+    }
+
+    return true;
+  }
+
+  function legalMoves(){
+    const moves = [];
+    if (!state.started){
+      for (const a of allDots()){
+        if (state.used.has(key(a.r,a.c))) continue;
+        for (let dr=-1; dr<=1; dr++){
+          for (let dc=-1; dc<=1; dc++){
+            if (dr===0 && dc===0) continue;
+            const b = {r:a.r+dr, c:a.c+dc};
+            if (b.r<0||b.r>=N||b.c<0||b.c>=N) continue;
+            if (segmentLegal(a,b)) moves.push({a,b});
+          }
+        }
+      }
+      return moves;
+    }
+    const a = state.endpoint;
+    for (let dr=-1; dr<=1; dr++){
+      for (let dc=-1; dc<=1; dc++){
+        if (dr===0 && dc===0) continue;
+        const b = {r:a.r+dr, c:a.c+dc};
+        if (b.r<0||b.r>=N||b.c<0||b.c>=N) continue;
+        if (segmentLegal(a,b)) moves.push({a,b});
+      }
+    }
+    return moves;
+  }
+
+  function snapshot(){
+    return {
+      current: state.current,
+      started: state.started,
+      gameOver: state.gameOver,
+      used: new Set(state.used),
+      segments: state.segments.map(s => ({a:{...s.a}, b:{...s.b}, owner:s.owner})),
+      endpoint: state.endpoint ? {...state.endpoint} : null,
+      selectedStart: state.selectedStart ? {...state.selectedStart} : null,
+    };
+  }
+  function restore(snap){
+    state.current = snap.current;
+    state.started = snap.started;
+    state.gameOver = snap.gameOver;
+    state.used = new Set(snap.used);
+    state.segments = snap.segments.map(s => ({a:{...s.a}, b:{...s.b}, owner:s.owner}));
+    state.endpoint = snap.endpoint ? {...snap.endpoint} : null;
+    state.selectedStart = snap.selectedStart ? {...snap.selectedStart} : null;
+    updateTurnUI();
+    draw();
+  }
+
+  function resetGame(opts={}){
+    const mode = modeSel.value;
+    const first = firstSel.value;
+    const p2IsCPU = (mode === 'cpu');
+
+    if (opts.size != null) N = clampInt(opts.size, 4, 8);
+    sizeSlider.value = String(N);
+    sizeVal.textContent = `${N}×${N}`;
+    sizeSlider.disabled = !!opts.lockSize;
+
+    // update labels
+    p2Label.textContent = p2IsCPU ? 'CPU' : 'Player 2';
+    p2Dot.classList.toggle('p2', !p2IsCPU);
+    p2Dot.classList.toggle('cpu', p2IsCPU);
+    firstSel.options[1].textContent = p2IsCPU ? 'CPU' : 'Player 2';
+
+    state = {
+      mode,
+      p2IsCPU,
+      current: first, // 'p1' or 'p2'
+      started: false,
+      gameOver: false,
+      used: new Set(),
+      segments: [],
+      endpoint: null,
+      selectedStart: null,
+      history: [],
+    };
+
+    overlay.classList.remove('show');
+    updateTurnUI();
+    draw();
+
+    if (state.p2IsCPU && state.current === 'p2' && opts.autoCpuStart){
+      setTimeout(cpuFirstMove, 250);
+    }
+  }
+
+  function updateTurnUI(){
+    const moves = state ? state.segments.length : 0;
+    moveCount.textContent = `${moves} move${moves===1?'':'s'}`;
+
+    if (!state){
+      turnText.textContent = "New game";
+      turnSub.textContent = "Click “New game” to start.";
+      return;
+    }
+
+    if (state.gameOver){
+      turnText.textContent = "Finished";
+      turnSub.textContent = "Use the popup to view the board or start over.";
+      turnChip.style.background = 'rgba(0,0,0,.25)';
+      turnChip.style.boxShadow = '0 0 0 4px rgba(0,0,0,.06)';
+      return;
+    }
+
+    const who = (state.current === 'p1') ? 'Player 1' : (state.p2IsCPU ? 'CPU' : 'Player 2');
+    turnText.textContent = `${who}'s turn`;
+    turnSub.textContent = !state.started
+      ? "First move: choose any unused start dot, then an adjacent unused dot."
+      : "Click the pulsing endpoint, then an adjacent unused dot.";
+
+    let col = (state.current === 'p1') ? COLORS.p1 : (state.p2IsCPU ? COLORS.cpu : COLORS.p2);
+    turnChip.style.background = col;
+    turnChip.style.boxShadow = `0 0 0 4px rgba(0,0,0,.06)`;
+  }
+
+  function doMove(a,b, owner){
+    state.history.push(snapshot());
+    if (state.history.length > 80) state.history.shift();
+
+    state.segments.push({a:{...a}, b:{...b}, owner});
+    state.used.add(key(a.r,a.c));
+    state.used.add(key(b.r,b.c));
+    state.endpoint = {...b};
+    state.started = true;
+    state.selectedStart = null;
+
+    const nextMoves = legalMoves();
+    if (nextMoves.length === 0){
+      const loser = owner;
+      const winner = (loser === 'p1') ? 'p2' : 'p1';
+      endGame(winner, loser);
+      return;
+    }
+
+    state.current = (state.current === 'p1') ? 'p2' : 'p1';
+    updateTurnUI();
+    draw();
+
+    if (!state.gameOver && state.p2IsCPU && state.current === 'p2'){
+      setTimeout(cpuTurn, 260);
+    }
+  }
+
+  function endGame(winner, loser){
+    state.gameOver = true;
+    updateTurnUI();
+    draw();
+
+    const winnerName = (winner === 'p1') ? 'Player 1' : (state.p2IsCPU ? 'CPU' : 'Player 2');
+    const loserName  = (loser  === 'p1') ? 'Player 1' : (state.p2IsCPU ? 'CPU' : 'Player 2');
+
+    overTitle.textContent = "Game over";
+    overBody.innerHTML = `<b>Winner:</b> ${winnerName}<br><span style="color:rgba(0,0,0,.62)">(${loserName} made the last legal move.)</span>`;
+    overlay.classList.add('show');
+  }
+
+  function cpuChooseMove(moves){
+    const useGood = (Math.random() < 0.5);
+    if (!useGood) return moves[(Math.random()*moves.length)|0];
+
+    // heuristic: avoid immediate loss; otherwise minimize opponent options
+    let bestScore = -Infinity;
+    let best = [];
+    for (const m of moves){
+      const saved = snapshot();
+      state.segments.push({a:{...m.a}, b:{...m.b}, owner:'p2'});
+      state.used.add(key(m.a.r,m.a.c));
+      state.used.add(key(m.b.r,m.b.c));
+      state.endpoint = {...m.b};
+      state.started = true;
+
+      const next = legalMoves();
+      let score = (next.length === 0) ? -1e9 : -next.length + Math.random()*0.25;
+
+      restore(saved);
+
+      if (score > bestScore + 1e-9){ bestScore = score; best = [m]; }
+      else if (Math.abs(score - bestScore) < 1e-9){ best.push(m); }
+    }
+    return best[(Math.random()*best.length)|0];
+  }
+
+  function cpuTurn(){
+    if (state.gameOver) return;
+    const moves = legalMoves();
+    if (!moves.length){ endGame('p2','p1'); return; }
+    const m = cpuChooseMove(moves);
+    doMove(m.a, m.b, 'p2');
+  }
+
+  function cpuFirstMove(){
+    if (state.gameOver || state.started) return;
+    const moves = legalMoves();
+    if (!moves.length){ endGame('p1','p2'); return; }
+    const m = cpuChooseMove(moves);
+    doMove(m.a, m.b, 'p2');
+  }
+
+  function draw(){
+    if (!state) return;
+    const w = shell.clientWidth, h = shell.clientHeight;
+    ctx.clearRect(0,0,w,h);
+
+    // segments (colored)
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (const s of state.segments){
+      const p1 = dotPos(s.a.r,s.a.c);
+      const p2 = dotPos(s.b.r,s.b.c);
+
+      const col = (s.owner === 'p1') ? COLORS.p1 : (state.p2IsCPU ? COLORS.cpu : COLORS.p2);
+
+      // glow
+      ctx.beginPath();
+      ctx.strokeStyle = (col.startsWith('#') ? col : col);
+      ctx.globalAlpha = 0.18;
+      ctx.lineWidth = 14;
+      ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
+      ctx.stroke();
+
+      // core
+      ctx.beginPath();
+      ctx.globalAlpha = 0.95;
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 8;
+      ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // dots
+    const t = performance.now()/1000;
+    for (const d of allDots()){
+      const p = dotPos(d.r,d.c);
+      const used = state.used.has(key(d.r,d.c));
+      const isEndpoint = state.endpoint && d.r === state.endpoint.r && d.c === state.endpoint.c && state.started && !state.gameOver;
+
+      const r = 7.2;
+
+      // endpoint pulse (grayscale)
+      if (isEndpoint){
+        const pulse = (Math.sin(t*2.8)+1)/2;
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(0,0,0,${0.06 + pulse*0.06})`;
+        ctx.arc(p.x,p.y, r + 12 + pulse*4, 0, Math.PI*2);
+        ctx.fill();
+      }
+
+      // ring
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(0,0,0,.06)';
+      ctx.arc(p.x,p.y, r+4.2, 0, Math.PI*2);
+      ctx.fill();
+
+      // dot
+      ctx.beginPath();
+      ctx.fillStyle = used ? COLORS.usedDot : COLORS.freeDot;
+      ctx.arc(p.x,p.y, r, 0, Math.PI*2);
+      ctx.fill();
+
+      ctx.lineWidth = 1.4;
+      ctx.strokeStyle = 'rgba(0,0,0,.18)';
+      ctx.stroke();
+    }
+
+    // selection hints
+    if (!state.gameOver && state.selectedStart){
+      const a = state.selectedStart;
+      const pa = dotPos(a.r,a.c);
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0,0,0,.30)';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.arc(pa.x,pa.y, 22, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.restore();
+
+      // show legal ends
+      for (let dr=-1; dr<=1; dr++){
+        for (let dc=-1; dc<=1; dc++){
+          if (dr===0 && dc===0) continue;
+          const b = {r:a.r+dr, c:a.c+dc};
+          if (b.r<0||b.r>=N||b.c<0||b.c>=N) continue;
+          if (!segmentLegal(a,b)) continue;
+          const pb = dotPos(b.r,b.c);
+          ctx.save();
+          ctx.fillStyle = 'rgba(0,0,0,.06)';
+          ctx.beginPath();
+          ctx.arc(pb.x,pb.y, 18, 0, Math.PI*2);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(0,0,0,.22)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+    }
+  }
+
+  function pickDot(mx,my){
+    let best=null, bestD=1e9;
+    for (const d of allDots()){
+      const p = dotPos(d.r,d.c);
+      const dist = Math.hypot(mx-p.x, my-p.y);
+      if (dist < bestD){ bestD = dist; best = d; }
+    }
+    return (bestD <= 18) ? best : null;
+  }
+
+  function canvasPoint(ev){
+    const r = canvas.getBoundingClientRect();
+    return { x: ev.clientX - r.left, y: ev.clientY - r.top };
+  }
+
+  canvas.addEventListener('click', (ev) => {
+    if (!state || state.gameOver) return;
+    if (state.p2IsCPU && state.current === 'p2') return;
+
+    const p = canvasPoint(ev);
+    const d = pickDot(p.x,p.y);
+    if (!d) return;
+
+    if (!state.selectedStart){
+      if (!state.started){
+        if (state.used.has(key(d.r,d.c))) { showToast("Start dot is already used."); return; }
+        state.selectedStart = {...d};
+        draw();
+        showToast("Now pick an adjacent dot.");
+        return;
+      } else {
+        if (!state.endpoint || d.r !== state.endpoint.r || d.c !== state.endpoint.c){
+          showToast("You must start from the current endpoint.");
+          return;
+        }
+        state.selectedStart = {...d};
+        draw();
+        return;
+      }
+    }
+
+    const a = state.selectedStart;
+    const b = d;
+
+    if (!adjacent(a,b)){ showToast("End dot must be adjacent."); return; }
+    if (!segmentLegal(a,b)){ showToast("Illegal move (used dot or intersection)."); return; }
+
+    doMove(a,b, state.current);
+  });
+
+  canvas.addEventListener('mousemove', (ev) => {
+    if (!state || state.gameOver) return;
+    const p = canvasPoint(ev);
+    const d = pickDot(p.x,p.y);
+    shell.style.cursor = d ? 'pointer' : 'default';
+
+    if (state.selectedStart && d){
+      draw();
+      const a = state.selectedStart;
+      const b = d;
+      const legal = adjacent(a,b) && segmentLegal(a,b);
+      const pa = dotPos(a.r,a.c);
+      const pb = dotPos(b.r,b.c);
+
+      ctx.save();
+      ctx.strokeStyle = legal ? 'rgba(0,0,0,.35)' : 'rgba(0,0,0,.12)';
+      ctx.lineWidth = 5;
+      ctx.setLineDash([8,6]);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(pa.x,pa.y);
+      ctx.lineTo(pb.x,pb.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+  });
+
+  canvas.addEventListener('mouseleave', () => {
+    shell.style.cursor = 'default';
+    if (state && state.selectedStart) draw();
+  });
+
+  modeSel.addEventListener('change', () => {
+    const p2IsCPU = (modeSel.value === 'cpu');
+    firstSel.options[1].textContent = p2IsCPU ? 'CPU' : 'Player 2';
+    resetGame({size: Number(sizeSlider.value), lockSize: false});
+  });
+  firstSel.addEventListener('change', () => resetGame({size: Number(sizeSlider.value), lockSize: false}));
+
+  sizeSlider.addEventListener('input', () => {
+    resetGame({size: Number(sizeSlider.value), lockSize: false});
+  });
+
+  newBtn.addEventListener('click', () => {
+    resetGame({size: Number(sizeSlider.value), lockSize: true, autoCpuStart: true});
+  });
+
+  viewBtn.addEventListener('click', () => overlay.classList.remove('show'));
+  restartBtn.addEventListener('click', () => resetGame({size: Number(sizeSlider.value), lockSize: false, autoCpuStart: true}));
+
+  // init
+  resetGame({size: Number(sizeSlider.value), lockSize: false});
+  resize();
+})();
+</script>
+</body>
+</html>

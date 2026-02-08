@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SIM — Avoid the Triangle</title>
+<style>
+  :root{
+    --bg:#0b1020; --card:#111a33; --text:#e8ecff; --muted:#9aa6d6;
+    --line:#2a3564; --p1:#ff4d5a; --p2:#2ed6ff; --warn:#ffcc66;
+    --shadow: 0 18px 50px rgba(0,0,0,.35); --radius:18px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100svh; display:flex; align-items:center; justify-content:center; padding:18px;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    color:var(--text);
+    background:
+      radial-gradient(900px 700px at 20% 10%, rgba(46,214,255,.14), transparent 60%),
+      radial-gradient(900px 700px at 90% 20%, rgba(255,77,90,.10), transparent 55%),
+      radial-gradient(1100px 900px at 40% 110%, rgba(106,168,255,.16), transparent 60%),
+      var(--bg);
+  }
+  .app{
+    width:min(980px, 100%);
+    display:grid;
+    grid-template-columns: 1fr 320px;
+    gap:16px;
+    align-items:start;
+  }
+  @media (max-width: 860px){ .app{grid-template-columns: 1fr;} }
+  .card{
+    background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+    border:1px solid rgba(255,255,255,.09);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow:hidden;
+    backdrop-filter: blur(10px);
+  }
+  .hdr{
+    padding:14px 16px;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+  .hdr h1{ margin:0; font-size:16px; letter-spacing:.2px; }
+  .sub{ font-size:12px; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .turnPill{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 10px; border-radius:999px;
+    border:1px solid rgba(255,255,255,.12);
+    background: rgba(17,26,51,.55);
+    font-size:12px; user-select:none;
+  }
+  .dot{ width:10px; height:10px; border-radius:999px; box-shadow:0 0 0 6px rgba(255,255,255,.10); }
+  .turnPill.red .dot{ background: var(--p1); box-shadow:0 0 0 6px rgba(255,77,90,.14); }
+  .turnPill.blue .dot{ background: var(--p2); box-shadow:0 0 0 6px rgba(46,214,255,.14); }
+  .turnText{ font-weight:900; }
+  .wrap{ padding:16px; }
+  .surface{
+    background: linear-gradient(180deg, rgba(17,26,51,.55), rgba(15,23,48,.45));
+    border:1px solid rgba(255,255,255,.08);
+    border-radius: 20px;
+    padding:12px;
+    position:relative;
+    overflow:hidden;
+  }
+  .tapHelp{
+    position:absolute; top:12px; left:12px;
+    padding:7px 10px; border-radius:999px;
+    border:1px solid rgba(255,255,255,.10);
+    background: rgba(0,0,0,.18);
+    color: rgba(232,236,255,.86);
+    font-size:12px;
+    user-select:none;
+    pointer-events:none;
+  }
+  svg{ width:100%; height:auto; display:block; aspect-ratio: 600/520; touch-action: manipulation; }
+  .side{ padding:14px; }
+  .side h2{ margin:0 0 10px 0; font-size:14px; }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .btn{
+    appearance:none; cursor:pointer;
+    border:1px solid rgba(255,255,255,.14);
+    background: rgba(17,26,51,.55);
+    color: var(--text);
+    padding:10px 12px;
+    border-radius:12px;
+    font-weight:800;
+    font-size:13px;
+    transition: transform .05s ease, border-color .15s ease, background .15s ease;
+    user-select:none;
+  }
+  .btn:hover{ border-color: rgba(255,255,255,.26); background: rgba(17,26,51,.78); }
+  .btn:active{ transform: translateY(1px); }
+  .btn.primary{ border-color: rgba(106,168,255,.45); background: rgba(106,168,255,.14); }
+  .label{ font-size:12px; color:var(--muted); margin-top:12px; display:block; }
+  .select{
+    width:100%; margin-top:6px; padding:10px 12px;
+    border-radius:12px; border:1px solid rgba(255,255,255,.14);
+    background: rgba(17,26,51,.55);
+    color: var(--text);
+    font-size:13px; font-weight:800;
+    outline:none;
+  }
+  .status{
+    margin-top:12px;
+    border:1px solid rgba(255,255,255,.10);
+    background: rgba(0,0,0,.16);
+    border-radius:14px;
+    padding:10px 12px;
+    font-size:12px;
+    line-height:1.35;
+    min-height:44px;
+  }
+  .muted{ color:var(--muted); }
+  .legend{ margin-top:12px; display:grid; gap:8px; font-size:12px; color:var(--muted); }
+  .li{ display:flex; align-items:center; gap:10px; }
+  .sw{ width:14px; height:14px; border-radius:6px; border:1px solid rgba(255,255,255,.18); }
+  .sw.red{ background: var(--p1); } .sw.blue{ background: var(--p2); } .sw.neu{ background: rgba(255,255,255,.12); }
+
+  /* SVG classes */
+  .edge{ pointer-events:none; stroke: var(--line); stroke-width:4.2; stroke-linecap:round; opacity:.85; }
+  .edge.red{ stroke: var(--p1); opacity:.95; }
+  .edge.blue{ stroke: var(--p2); opacity:.95; }
+  .edge.preview{ stroke: rgba(232,236,255,.35); stroke-dasharray: 6 7; opacity:.9; }
+  .edge.losing{ stroke: var(--warn) !important; stroke-width:7.2 !important; opacity:1 !important;
+                filter: drop-shadow(0 0 10px rgba(255,204,102,.35)); }
+  .node{ pointer-events:all; fill: rgba(232,236,255,.92); stroke: rgba(0,0,0,.18); stroke-width:1.5; cursor:pointer;
+         transition: transform .08s ease, filter .08s ease; transform-origin:center; transform-box: fill-box; }
+  .node:hover{ transform: scale(1.08); filter: drop-shadow(0 0 10px rgba(106,168,255,.35)); }
+  .node.sel{ transform: scale(1.14); filter: drop-shadow(0 0 14px rgba(106,168,255,.45)); }
+  .node.lock{ cursor:not-allowed; opacity:.92; }
+
+  /* Modal */
+  .overlay{ position:fixed; inset:0; background: rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; padding:18px; z-index:50; }
+  .overlay.show{ display:flex; }
+  .modal{
+    width:min(560px, 100%);
+    border-radius: 22px;
+    border:1px solid rgba(255,255,255,.14);
+    background: linear-gradient(180deg, rgba(17,26,51,.85), rgba(15,23,48,.78));
+    box-shadow: var(--shadow);
+    overflow:hidden;
+  }
+  .mh{ padding:14px 16px; border-bottom:1px solid rgba(255,255,255,.10); display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .mh h3{ margin:0; font-size:14px; }
+  .chip{
+    display:inline-flex; align-items:center; gap:8px; font-weight:900;
+    padding:6px 10px; border-radius:999px;
+    border:1px solid rgba(255,255,255,.14);
+    background: rgba(0,0,0,.18);
+    font-size:12px;
+  }
+  .cdot{ width:10px; height:10px; border-radius:999px; }
+  .chip.red .cdot{ background: var(--p1); }
+  .chip.blue .cdot{ background: var(--p2); }
+  .mb{ padding:14px 16px; font-size:13px; line-height:1.45; color: rgba(232,236,255,.92); }
+  .big{ font-size:20px; font-weight:950; margin:0 0 8px 0; letter-spacing:.2px; }
+  .mf{ padding:14px 16px; border-top:1px solid rgba(255,255,255,.10); display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+</style>
+</head>
+<body>
+  <div class="app">
+    <div class="card">
+      <div class="hdr">
+        <div>
+          <h1>SIM</h1>
+          <div class="sub">Connect two unconnected dots. If you complete a triangle in your color, you lose.</div>
+        </div>
+        <div id="turnPill" class="turnPill red"><span class="dot"></span><span class="turnText" id="turnText">Red's turn</span></div>
+      </div>
+
+      <div class="wrap">
+        <div class="surface">
+          <div class="tapHelp" id="tapHelp">Click two dots</div>
+          <svg id="svg" viewBox="0 0 600 520" aria-label="SIM game board"></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="card side">
+      <h2>Game</h2>
+      <div class="row">
+        <button class="btn primary" id="newGame">New game</button>
+        <button class="btn" id="rematch">Rematch</button>
+      </div>
+
+      <label class="label" for="mode">Mode</label>
+      <select class="select" id="mode">
+        <option value="pvp">Player vs Player</option>
+        <option value="cpu">Player vs CPU (basic)</option>
+      </select>
+
+      <div class="legend">
+        <div class="li"><span class="sw red"></span> Red</div>
+        <div class="li"><span class="sw blue"></span> Blue</div>
+        <div class="li"><span class="sw neu"></span> Unclaimed connection</div>
+      </div>
+
+      <div class="status" id="status">
+        <b>How to play:</b> Select two dots to draw a line in your color. Avoid making a triangle of your own color.
+        <div class="muted" style="margin-top:6px;"><b>Esc</b> clears selection.</div>
+      </div>
+
+      <div class="muted" style="margin-top:10px; font-size:12px;">
+        Classic SIM on 6 dots (K<sub>6</sub>). Edges can be drawn only once total.
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="mh">
+        <h3>Game over</h3>
+        <span id="chip" class="chip blue"><span class="cdot"></span><span id="chipText">Blue wins</span></span>
+      </div>
+      <div class="mb">
+        <p class="big" id="bigText">Red made a triangle.</p>
+        <div>The highlighted edges show the losing triangle. You can view the final board.</div>
+      </div>
+      <div class="mf">
+        <button class="btn" id="view">View board</button>
+        <button class="btn" id="rematch2">Rematch</button>
+        <button class="btn primary" id="newGame2">New game</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const N = 6;
+  const center = {x: 300, y: 265};
+  const R = 190;
+
+  const svg = document.getElementById('svg');
+  const turnPill = document.getElementById('turnPill');
+  const turnText = document.getElementById('turnText');
+  const tapHelp = document.getElementById('tapHelp');
+  const status = document.getElementById('status');
+  const modeSel = document.getElementById('mode');
+  const overlay = document.getElementById('overlay');
+  const chip = document.getElementById('chip');
+  const chipText = document.getElementById('chipText');
+  const bigText = document.getElementById('bigText');
+
+  // Controls
+  const newGame = document.getElementById('newGame');
+  const rematch = document.getElementById('rematch');
+  const view = document.getElementById('view');
+  const rematch2 = document.getElementById('rematch2');
+  const newGame2 = document.getElementById('newGame2');
+
+  const edgeKey = (a,b) => (a<b) ? a+"-"+b : b+"-"+a;
+
+  const nodes = Array.from({length:N}, (_, i) => {
+    const ang = (-Math.PI/2) + i * (2*Math.PI/N);
+    return { x: center.x + R*Math.cos(ang), y: center.y + R*Math.sin(ang) };
+  });
+
+  const allEdges = [];
+  for(let i=0;i<N;i++) for(let j=i+1;j<N;j++) allEdges.push([i,j]);
+
+  const allTriangles = [];
+  for(let i=0;i<N;i++) for(let j=i+1;j<N;j++) for(let k=j+1;k<N;k++) allTriangles.push([i,j,k]);
+
+  // Build SVG once
+  const defs = document.createElementNS("http://www.w3.org/2000/svg","defs");
+  defs.innerHTML = `
+    <filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  `;
+  svg.appendChild(defs);
+
+  const edgesG = document.createElementNS("http://www.w3.org/2000/svg","g");
+  const previewG = document.createElementNS("http://www.w3.org/2000/svg","g");
+  const nodesG = document.createElementNS("http://www.w3.org/2000/svg","g");
+  svg.appendChild(edgesG);
+  svg.appendChild(previewG);
+  svg.appendChild(nodesG);
+
+  const edgeEls = new Map();
+  for(const [i,j] of allEdges){
+    const line = document.createElementNS("http://www.w3.org/2000/svg","line");
+    line.setAttribute("x1", nodes[i].x);
+    line.setAttribute("y1", nodes[i].y);
+    line.setAttribute("x2", nodes[j].x);
+    line.setAttribute("y2", nodes[j].y);
+    line.setAttribute("class", "edge");
+    line.setAttribute("pointer-events","none");
+    edgesG.appendChild(line);
+    edgeEls.set(edgeKey(i,j), line);
+  }
+
+  const previewLine = document.createElementNS("http://www.w3.org/2000/svg","line");
+  previewLine.setAttribute("class","edge preview");
+  previewLine.setAttribute("pointer-events","none");
+  previewLine.style.display = "none";
+  previewG.appendChild(previewLine);
+
+  const nodeEls = [];
+  for(let idx=0; idx<N; idx++){
+    const c = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    c.setAttribute("cx", nodes[idx].x);
+    c.setAttribute("cy", nodes[idx].y);
+    c.setAttribute("r", 13);
+    c.setAttribute("class","node");
+    c.setAttribute("pointer-events","all");
+    c.addEventListener("click", () => onNodeClick(idx));
+    c.addEventListener("mouseenter", () => { state.hover = idx; updatePreview(); });
+    c.addEventListener("mouseleave", () => { state.hover = null; updatePreview(); });
+    nodesG.appendChild(c);
+    nodeEls.push(c);
+  }
+
+  let state;
+
+  function freshState(mode){
+    const edges = new Map();
+    for(const [i,j] of allEdges) edges.set(edgeKey(i,j), null); // null, 0 red, 1 blue
+    return {
+      mode,
+      turn: 0,
+      selected: null,
+      hover: null,
+      gameOver: false,
+      losingTriangle: null,
+      edges
+    };
+  }
+
+  function setTurnUI(){
+    const isRed = state.turn === 0;
+    turnPill.classList.toggle("red", isRed);
+    turnPill.classList.toggle("blue", !isRed);
+
+    if(isRed) turnText.textContent = "Red's turn";
+    else turnText.textContent = (state.mode === "cpu" ? "CPU's turn (Blue)" : "Blue's turn");
+
+    tapHelp.textContent = state.gameOver ? "Game over" : (state.selected==null ? "Click two dots" : "Pick another dot");
+  }
+
+  function edgeOwner(i,j){ return state.edges.get(edgeKey(i,j)); }
+  function isEdgeFree(i,j){ return edgeOwner(i,j) === null; }
+  function setEdgeOwner(i,j,own){ state.edges.set(edgeKey(i,j), own); }
+
+  function checkLoss(owner){
+    for(const [i,j,k] of allTriangles){
+      if(edgeOwner(i,j)===owner && edgeOwner(i,k)===owner && edgeOwner(j,k)===owner) return [i,j,k];
+    }
+    return null;
+  }
+
+  function legalMoves(){
+    const m=[];
+    for(const [i,j] of allEdges) if(isEdgeFree(i,j)) m.push([i,j]);
+    return m;
+  }
+
+  function endGame(loser, tri){
+    state.gameOver = true;
+    state.losingTriangle = tri;
+
+    const loserName = loser===0 ? "Red" : "Blue";
+    const winnerName = loser===0 ? "Blue" : "Red";
+
+    bigText.textContent = `${loserName} made a triangle.`;
+    chipText.textContent = `${winnerName} wins`;
+    chip.classList.toggle("red", winnerName==="Red");
+    chip.classList.toggle("blue", winnerName==="Blue");
+
+    overlay.classList.add("show");
+    setTurnUI();
+    updateAll();
+  }
+
+  function tryMove(i,j, owner){
+    if(state.gameOver) return false;
+    if(i===j) return false;
+    if(!isEdgeFree(i,j)) return false;
+
+    setEdgeOwner(i,j, owner);
+
+    const tri = checkLoss(owner);
+    if(tri){ endGame(owner, tri); return true; }
+
+    state.turn = 1 - state.turn;
+    state.selected = null;
+    setTurnUI();
+    updateAll();
+
+    if(state.mode === "cpu" && state.turn === 1 && !state.gameOver){
+      cpuMove();
+    }
+    return true;
+  }
+
+  function cpuMove(){
+    const moves = legalMoves();
+    if(!moves.length){
+      overlay.classList.add("show");
+      bigText.textContent = "No more moves.";
+      chipText.textContent = "It's a draw";
+      chip.classList.remove("red"); chip.classList.add("blue");
+      state.gameOver = true;
+      setTurnUI();
+      updateAll();
+      return;
+    }
+    const safe=[];
+    for(const [i,j] of moves){
+      setEdgeOwner(i,j, 1);
+      const tri = checkLoss(1);
+      setEdgeOwner(i,j, null);
+      if(!tri) safe.push([i,j]);
+    }
+    const pickFrom = safe.length ? safe : moves;
+    const [a,b] = pickFrom[Math.floor(Math.random()*pickFrom.length)];
+    tryMove(a,b,1);
+  }
+
+  function onNodeClick(idx){
+    if(state.gameOver) return;
+    if(state.mode === "cpu" && state.turn === 1) return; // ignore during CPU turn
+
+    if(state.selected === null){
+      state.selected = idx;
+      updateAll();
+      return;
+    }
+    if(state.selected === idx){
+      state.selected = null;
+      updateAll();
+      return;
+    }
+    const a = state.selected, b = idx;
+    tryMove(a,b, state.turn);
+  }
+
+  function updatePreview(){
+    if(state.gameOver || state.selected===null || state.hover===null || state.hover===state.selected){
+      previewLine.style.display = "none";
+      return;
+    }
+    if(!isEdgeFree(state.selected, state.hover)){
+      previewLine.style.display = "none";
+      return;
+    }
+    previewLine.style.display = "";
+    previewLine.setAttribute("x1", nodes[state.selected].x);
+    previewLine.setAttribute("y1", nodes[state.selected].y);
+    previewLine.setAttribute("x2", nodes[state.hover].x);
+    previewLine.setAttribute("y2", nodes[state.hover].y);
+  }
+
+  function updateAll(){
+    // update edges
+    const losing = new Set();
+    if(state.losingTriangle){
+      const [i,j,k] = state.losingTriangle;
+      losing.add(edgeKey(i,j)); losing.add(edgeKey(i,k)); losing.add(edgeKey(j,k));
+    }
+    for(const [i,j] of allEdges){
+      const k = edgeKey(i,j);
+      const el = edgeEls.get(k);
+      const own = state.edges.get(k);
+      el.setAttribute("class",
+        "edge" +
+        (own===0 ? " red" : own===1 ? " blue" : "") +
+        (losing.has(k) ? " losing" : "")
+      );
+      if(losing.has(k)) el.setAttribute("filter","url(#softGlow)");
+      else el.removeAttribute("filter");
+    }
+
+    // update nodes
+    const lock = (state.mode==="cpu" && state.turn===1) || state.gameOver;
+    for(let i=0;i<N;i++){
+      nodeEls[i].setAttribute("class",
+        "node" +
+        (state.selected===i ? " sel" : "") +
+        (lock ? " lock" : "")
+      );
+    }
+
+    updatePreview();
+    setTurnUI();
+  }
+
+  function resetGame(keepMode){
+    const mode = keepMode ? state.mode : modeSel.value;
+    state = freshState(mode);
+    overlay.classList.remove("show");
+    setTurnUI();
+    updateAll();
+  }
+
+  // UI events
+  newGame.addEventListener("click", () => resetGame(false));
+  newGame2.addEventListener("click", () => resetGame(false));
+  rematch.addEventListener("click", () => resetGame(true));
+  rematch2.addEventListener("click", () => resetGame(true));
+  view.addEventListener("click", () => overlay.classList.remove("show"));
+
+  overlay.addEventListener("click", (e) => { if(e.target === overlay) overlay.classList.remove("show"); });
+
+  modeSel.addEventListener("change", () => {
+    // If nothing has been drawn yet, switch immediately
+    const anyClaimed = Array.from(state.edges.values()).some(v => v !== null);
+    if(!anyClaimed && !state.gameOver){
+      state.mode = modeSel.value;
+      setTurnUI();
+      updateAll();
+      if(state.mode==="cpu" && state.turn===1) cpuMove();
+    }
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if(e.key === "Escape"){
+      state.selected = null;
+      updateAll();
+    }
+  });
+
+  // Start
+  state = freshState(modeSel.value);
+  setTurnUI();
+  updateAll();
+})();
+</script>
+</body>
+</html>

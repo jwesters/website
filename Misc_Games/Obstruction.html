@@ -1,0 +1,980 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Obstruction (6×6 to 15×15) — PvP / PvC</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --panel:#111a33cc;
+      --text:#e8ecff;
+      --muted:#aeb7e6;
+      --accent:#7aa2ff;
+      --accent2:#9bffd6;
+      --danger:#ff6b6b;
+      --shadow: 0 12px 40px rgba(0,0,0,.35);
+      --radius: 16px;
+
+      --cell: 42px; /* updated dynamically */
+      --gap: 6px;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      color:var(--text);
+      background:
+        radial-gradient(1200px 800px at 20% 0%, #1a2b6a 0%, transparent 60%),
+        radial-gradient(1000px 700px at 90% 15%, #1b6a58 0%, transparent 55%),
+        radial-gradient(900px 700px at 40% 100%, #4a1a6a 0%, transparent 55%),
+        linear-gradient(180deg, #070a14, var(--bg));
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+    }
+
+    .app{
+      width:min(1100px, 100%);
+      display:grid;
+      grid-template-columns: 360px 1fr;
+      gap:16px;
+    }
+
+    @media (max-width: 920px){
+      .app{grid-template-columns: 1fr; }
+    }
+
+    .card{
+      background: linear-gradient(180deg, var(--panel), rgba(17,26,51,.55));
+      border: 1px solid rgba(122,162,255,.18);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+
+    header{
+      padding:16px 18px 10px;
+      border-bottom:1px solid rgba(122,162,255,.14);
+      background: linear-gradient(180deg, rgba(17,26,51,.75), rgba(17,26,51,.35));
+    }
+    header h1{
+      margin:0;
+      font-size:18px;
+      letter-spacing:.2px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .badge{
+      font-size:12px;
+      padding:4px 10px;
+      border-radius:999px;
+      background: rgba(122,162,255,.18);
+      border:1px solid rgba(122,162,255,.22);
+      color: var(--text);
+      white-space:nowrap;
+    }
+    .sub{
+      margin-top:8px;
+      color: var(--muted);
+      font-size:13px;
+      line-height:1.35;
+    }
+
+    .controls{
+      padding:14px 16px 16px;
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+
+    .row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
+    label{
+      font-size:12px;
+      color: var(--muted);
+    }
+
+    select, button, input[type="range"]{
+      font: inherit;
+    }
+
+    select{
+      width:100%;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(122,162,255,.22);
+      background: rgba(10,14,28,.65);
+      color: var(--text);
+      outline:none;
+    }
+    select:focus{ border-color: rgba(155,255,214,.45); box-shadow: 0 0 0 3px rgba(155,255,214,.15); }
+
+    .sliderBox{
+      width:100%;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(122,162,255,.18);
+      background: rgba(10,14,28,.45);
+    }
+    .sliderTop{
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:8px;
+    }
+    .sliderVal{
+      font-variant-numeric: tabular-nums;
+      font-size:13px;
+      color: var(--text);
+      opacity:.95;
+    }
+    input[type="range"]{
+      width:100%;
+      accent-color: var(--accent);
+    }
+
+    .toggle{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(122,162,255,.18);
+      background: rgba(10,14,28,.45);
+    }
+    .toggle input{ transform: scale(1.1); }
+
+    .btns{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    button{
+      padding:11px 12px;
+      border-radius:12px;
+      border:1px solid rgba(122,162,255,.22);
+      background: linear-gradient(180deg, rgba(122,162,255,.22), rgba(122,162,255,.12));
+      color: var(--text);
+      cursor:pointer;
+      transition: transform .08s ease, filter .08s ease, border-color .12s ease;
+    }
+    button:hover{ filter:brightness(1.08); }
+    button:active{ transform: translateY(1px); }
+    button.secondary{
+      background: rgba(10,14,28,.5);
+    }
+    button:disabled{
+      opacity:.55;
+      cursor:not-allowed;
+    }
+
+    .metaStrip{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      color: var(--muted);
+      font-size:12px;
+      padding: 0 2px;
+    }
+
+    .divider{
+      height:1px;
+      width:100%;
+      background: rgba(122,162,255,.12);
+      margin:4px 0 2px;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid rgba(122,162,255,.18);
+      background: rgba(10,14,28,.45);
+      font-size:12px;
+      color: var(--text);
+    }
+    .muted{color:var(--muted)}
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      padding:2px 6px;
+      border-radius:8px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      font-size:11px;
+    }
+
+    .boardCard{
+      display:flex;
+      flex-direction:column;
+      min-height: 420px;
+      position:relative;
+    }
+
+    .boardHeader{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .turnBig{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:10px 12px;
+      border-radius: 14px;
+      border:1px solid rgba(122,162,255,.18);
+      background: rgba(10,14,28,.35);
+    }
+
+    .turnDot{
+      width:14px;
+      height:14px;
+      border-radius:50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 5px rgba(122,162,255,.12);
+      flex:0 0 auto;
+    }
+    .turnDot.o{
+      background: var(--accent2);
+      box-shadow: 0 0 0 5px rgba(155,255,214,.12);
+    }
+
+    .turnLabel{
+      font-weight:900;
+      letter-spacing:.2px;
+      font-size: 22px;
+      line-height:1.1;
+      margin:0;
+    }
+    .turnSub{
+      margin-top:4px;
+      font-size:12px;
+      color: var(--muted);
+    }
+
+    .boardWrap{
+      padding:16px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex:1;
+    }
+
+    .board{
+      display:grid;
+      grid-template-columns: repeat(var(--w), var(--cell));
+      grid-auto-rows: var(--cell);
+      gap: var(--gap);
+      padding:14px;
+      border-radius: var(--radius);
+      background: radial-gradient(800px 450px at 20% 0%, rgba(122,162,255,.16), transparent 60%),
+                  radial-gradient(700px 450px at 80% 30%, rgba(155,255,214,.12), transparent 60%),
+                  rgba(10,14,28,.55);
+      border:1px solid rgba(122,162,255,.16);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+      max-width: 100%;
+      overflow:auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .cell{
+      width: var(--cell);
+      height: var(--cell);
+      border-radius: 12px;
+      border:1px solid rgba(122,162,255,.14);
+      background: rgba(255,255,255,.035);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      user-select:none;
+      transition: transform .08s ease, filter .10s ease, background .12s ease, border-color .12s ease;
+      position:relative;
+      font-weight:900;
+      font-size: calc(var(--cell) * .45);
+      letter-spacing: .5px;
+    }
+
+    .cell:hover{
+      transform: translateY(-1px);
+      filter: brightness(1.12);
+      border-color: rgba(155,255,214,.28);
+    }
+
+    .cell.illegal{
+      cursor:not-allowed;
+      opacity:.52;
+      filter:saturate(.8);
+    }
+    .cell.illegal:hover{
+      transform:none;
+      filter:saturate(.8);
+    }
+
+    .cell.blocked{
+      background: rgba(255,255,255,.02);
+      border-color: rgba(255,255,255,.06);
+      opacity:.28;
+    }
+
+    .cell.x{
+      background: linear-gradient(180deg, rgba(122,162,255,.20), rgba(122,162,255,.08));
+      border-color: rgba(122,162,255,.35);
+      text-shadow: 0 8px 26px rgba(122,162,255,.35);
+    }
+    .cell.o{
+      background: linear-gradient(180deg, rgba(155,255,214,.18), rgba(155,255,214,.07));
+      border-color: rgba(155,255,214,.35);
+      text-shadow: 0 8px 26px rgba(155,255,214,.25);
+    }
+
+    .cellHint{
+      position:absolute;
+      inset:0;
+      border-radius:12px;
+      pointer-events:none;
+      opacity:0;
+      transform: scale(.98);
+      transition: opacity .12s ease, transform .12s ease;
+      box-shadow: 0 0 0 2px rgba(155,255,214,.22), 0 12px 30px rgba(0,0,0,.18);
+    }
+    .cell.legal:hover .cellHint{
+      opacity:1;
+      transform: scale(1);
+    }
+
+    .footerNote{
+      padding:12px 16px 14px;
+      border-top:1px solid rgba(122,162,255,.12);
+      color: var(--muted);
+      font-size:12px;
+      line-height:1.35;
+    }
+
+    /* Game Over Modal */
+    .modalOverlay{
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+      z-index:9999;
+    }
+    .modalOverlay.show{ display:flex; }
+
+    .modal{
+      width:min(520px, 100%);
+      border-radius: 18px;
+      border:1px solid rgba(122,162,255,.22);
+      background: linear-gradient(180deg, rgba(17,26,51,.92), rgba(12,17,35,.92));
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+      overflow:hidden;
+    }
+    .modalTop{
+      padding:16px 18px 12px;
+      border-bottom:1px solid rgba(122,162,255,.12);
+    }
+    .modalTitle{
+      margin:0;
+      font-size:20px;
+      font-weight:900;
+      letter-spacing:.2px;
+    }
+    .modalBody{
+      padding:14px 18px 16px;
+      color: var(--muted);
+      line-height:1.4;
+      font-size:14px;
+    }
+    .modalBtns{
+      display:flex;
+      gap:10px;
+      padding: 0 18px 18px;
+    }
+    .modalBtns button{
+      flex:1;
+      padding:12px 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="card">
+      <header>
+        <h1>
+          Obstruction
+          <span class="badge">PvP / PvC</span>
+          <span class="badge">6×6 → 15×15</span>
+        </h1>
+        <div class="sub">
+          Place your mark on any <b>legal</b> square. That square is taken, and all <b>8 neighboring</b> squares become blocked.
+          If it’s your turn and you have <b>no legal move</b>, you lose.
+        </div>
+      </header>
+
+      <div class="controls">
+        <div>
+          <label for="mode">Mode</label>
+          <select id="mode">
+            <option value="pvp">Player vs Player</option>
+            <option value="pvc">Player vs Computer</option>
+          </select>
+        </div>
+
+        <div id="pvcOptions" style="display:none; gap:10px; flex-direction:column;">
+          <div class="toggle">
+            <input id="humanStarts" type="checkbox" checked />
+            <div>
+              <div style="font-weight:800; font-size:13px;">Human starts</div>
+              <div class="turnSub">If off, the computer makes the first move.</div>
+            </div>
+          </div>
+
+          <div class="toggle">
+            <input id="showComputerThinking" type="checkbox" checked />
+            <div>
+              <div style="font-weight:800; font-size:13px;">Show “Computer thinking…”</div>
+              <div class="turnSub">Adds a tiny delay for clarity.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="sliderBox" style="flex:1; min-width: 240px;">
+            <div class="sliderTop">
+              <label for="wRange">Width</label>
+              <div class="sliderVal"><span id="wVal">10</span></div>
+            </div>
+            <input id="wRange" type="range" min="6" max="15" value="10" />
+          </div>
+
+          <div class="sliderBox" style="flex:1; min-width: 240px;">
+            <div class="sliderTop">
+              <label for="hRange">Height</label>
+              <div class="sliderVal"><span id="hVal">10</span></div>
+            </div>
+            <input id="hRange" type="range" min="6" max="15" value="10" />
+          </div>
+        </div>
+
+        <div class="btns">
+          <button id="newGameBtn">New Game</button>
+          <button id="resetBtn" class="secondary">Reset Same Size</button>
+        </div>
+
+        <button id="undoBtn" class="secondary" title="Undo last move (PvP only)">Undo (PvP)</button>
+
+        <div class="divider"></div>
+
+        <div class="metaStrip">
+          <div id="modeText">Mode: PvP</div>
+          <div id="sizeText">Size: 10 × 10</div>
+        </div>
+
+        <div class="row" style="justify-content:space-between;">
+          <span class="pill"><span class="kbd">Click</span> a legal square</span>
+          <span class="pill muted">Blocked = unavailable</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card boardCard">
+      <header>
+        <div class="boardHeader">
+          <div class="turnBig" id="turnBig" aria-live="polite">
+            <div class="turnDot" id="turnDot"></div>
+            <div>
+              <div class="turnLabel" id="turnLabel">X’s Turn</div>
+              <div class="turnSub" id="turnSub">Click a legal square.</div>
+            </div>
+          </div>
+
+          <div class="sub" style="margin-top:2px; max-width: 420px;">
+            Squares that are blocked are shaded out. Hover a legal square to see a subtle highlight.
+          </div>
+        </div>
+      </header>
+
+      <div class="boardWrap">
+        <div class="board" id="board" aria-label="Obstruction board" role="grid"></div>
+      </div>
+
+      <div class="footerNote">
+        Medium AI heuristic: prefers moves that reduce the opponent’s future options, with a tie-breaker that keeps more options for itself.
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Over Modal -->
+  <div class="modalOverlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <div class="modalTop">
+        <h2 class="modalTitle" id="modalTitle">Game Over</h2>
+      </div>
+      <div class="modalBody" id="modalBody"></div>
+      <div class="modalBtns">
+        <button id="viewBoardBtn" class="secondary">View Board</button>
+        <button id="restartBtn">Restart</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // Cell state:
+  //  0 = empty
+  // -1 = blocked
+  //  1 = X
+  //  2 = O
+
+  const el = (id) => document.getElementById(id);
+
+  const boardEl = el("board");
+  const modeEl = el("mode");
+  const pvcOptionsEl = el("pvcOptions");
+  const humanStartsEl = el("humanStarts");
+  const showThinkingEl = el("showComputerThinking");
+
+  const wRange = el("wRange");
+  const hRange = el("hRange");
+  const wVal = el("wVal");
+  const hVal = el("hVal");
+
+  const newGameBtn = el("newGameBtn");
+  const resetBtn = el("resetBtn");
+  const undoBtn = el("undoBtn");
+
+  const modeText = el("modeText");
+  const sizeText = el("sizeText");
+
+  const turnDot = el("turnDot");
+  const turnLabel = el("turnLabel");
+  const turnSub = el("turnSub");
+
+  const modalOverlay = el("modalOverlay");
+  const modalTitle = el("modalTitle");
+  const modalBody = el("modalBody");
+  const viewBoardBtn = el("viewBoardBtn");
+  const restartBtn = el("restartBtn");
+
+  const DIR8 = [
+    [-1,-1],[-1,0],[-1,1],
+    [ 0,-1],       [ 0,1],
+    [ 1,-1],[ 1,0],[ 1,1],
+  ];
+
+  let W = +wRange.value;
+  let H = +hRange.value;
+
+  let grid = [];              // H x W
+  let current = 1;            // 1 = X, 2 = O
+  let gameOver = false;
+
+  let mode = "pvp";           // pvp | pvc
+  let humanPlayer = 1;        // in PvC: which symbol is human
+  let history = [];           // for undo (PvP only), stores snapshots
+
+  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+  function computeCellSize(){
+    const maxCell = 60;
+    const minCell = 28;
+    const maxDim = Math.max(W, H);
+    const base = 64 - (maxDim * 2.2); // 6=>~51, 15=>~31
+    const cell = clamp(Math.round(base), minCell, maxCell);
+    document.documentElement.style.setProperty("--cell", cell + "px");
+    document.documentElement.style.setProperty("--w", W);
+  }
+
+  function emptyGrid(){
+    grid = Array.from({length:H}, () => Array.from({length:W}, () => 0));
+  }
+
+  function inBounds(r,c){ return r>=0 && r<H && c>=0 && c<W; }
+
+  function isLegal(r,c){
+    return inBounds(r,c) && grid[r][c] === 0;
+  }
+
+  function legalMoves(){
+    const moves = [];
+    for(let r=0;r<H;r++){
+      for(let c=0;c<W;c++){
+        if(grid[r][c] === 0) moves.push([r,c]);
+      }
+    }
+    return moves;
+  }
+
+  function countLegal(){
+    let n = 0;
+    for(let r=0;r<H;r++){
+      for(let c=0;c<W;c++){
+        if(grid[r][c] === 0) n++;
+      }
+    }
+    return n;
+  }
+
+  function applyMove(r,c, playerSymbol){
+    grid[r][c] = playerSymbol;
+    for(const [dr,dc] of DIR8){
+      const rr = r+dr, cc = c+dc;
+      if(inBounds(rr,cc) && grid[rr][cc] === 0){
+        grid[rr][cc] = -1;
+      }
+    }
+  }
+
+  function snapshot(){
+    return {
+      grid: grid.map(row => row.slice()),
+      current,
+      gameOver
+    };
+  }
+
+  function restore(snap){
+    grid = snap.grid.map(row => row.slice());
+    current = snap.current;
+    gameOver = snap.gameOver;
+  }
+
+  function hideModal(){
+    modalOverlay.classList.remove("show");
+  }
+
+  function showModal(winnerSym, loserSym){
+    modalTitle.textContent = "Game Over";
+    modalBody.innerHTML = `<b>${winnerSym}</b> wins — <b>${loserSym}</b> has no legal move.`;
+    modalOverlay.classList.add("show");
+  }
+
+  viewBoardBtn.addEventListener("click", () => {
+    hideModal(); // simply close and leave the final board visible
+  });
+
+  restartBtn.addEventListener("click", () => {
+    hideModal();
+    startNewGame(true);
+  });
+
+  modalOverlay.addEventListener("click", (e) => {
+    // clicking outside the modal does nothing; force use of buttons
+    if(e.target === modalOverlay){
+      // no-op
+    }
+  });
+
+  function updateTurnHeader(){
+    if(gameOver){
+      turnLabel.textContent = "Game Over";
+      turnSub.textContent = "Use the buttons to view or restart.";
+      return;
+    }
+
+    const sym = (current === 1) ? "X" : "O";
+    const isHumanTurn = (mode === "pvc" && current === humanPlayer);
+    const isComputerTurn = (mode === "pvc" && current !== humanPlayer);
+
+    turnDot.className = "turnDot" + (current === 2 ? " o" : "");
+
+    if(mode === "pvp"){
+      turnLabel.textContent = `${sym}’s Turn`;
+      turnSub.textContent = "Click a legal square.";
+    } else {
+      if(isHumanTurn){
+        turnLabel.textContent = `Your Turn (${sym})`;
+        turnSub.textContent = "Click a legal square.";
+      } else if(isComputerTurn){
+        turnLabel.textContent = `Computer (${sym})`;
+        turnSub.textContent = showThinkingEl.checked ? "Thinking…" : "Playing…";
+      }
+    }
+  }
+
+  function render(){
+    computeCellSize();
+    boardEl.style.setProperty("--w", W);
+    boardEl.innerHTML = "";
+
+    for(let r=0;r<H;r++){
+      for(let c=0;c<W;c++){
+        const v = grid[r][c];
+        const d = document.createElement("div");
+        d.className = "cell";
+        d.setAttribute("role", "gridcell");
+        d.setAttribute("aria-label", `Row ${r+1}, Column ${c+1}`);
+        d.dataset.r = r;
+        d.dataset.c = c;
+
+        if(v === -1){
+          d.classList.add("blocked","illegal");
+        } else if(v === 1){
+          d.classList.add("x","illegal");
+          d.textContent = "X";
+        } else if(v === 2){
+          d.classList.add("o","illegal");
+          d.textContent = "O";
+        } else {
+          const canClick = !gameOver && (mode === "pvp" || (mode === "pvc" && current === humanPlayer));
+          if(canClick){
+            d.classList.add("legal");
+            const hint = document.createElement("div");
+            hint.className = "cellHint";
+            d.appendChild(hint);
+          } else {
+            d.classList.add("illegal");
+          }
+        }
+
+        boardEl.appendChild(d);
+      }
+    }
+
+    updateTurnHeader();
+    updateMeta();
+    updateUndo();
+  }
+
+  function updateMeta(){
+    modeText.textContent = `Mode: ${mode === "pvp" ? "PvP" : "PvC"}`;
+    sizeText.textContent = `Size: ${W} × ${H}`;
+  }
+
+  function updateUndo(){
+    undoBtn.disabled = (mode !== "pvp") || history.length === 0 || gameOver;
+  }
+
+  function endTurn(){
+    current = (current === 1) ? 2 : 1;
+    updateTurnHeader();
+    render();
+    maybeComputerMove();
+  }
+
+  function finishGame(winnerSym){
+    gameOver = true;
+    const loserSym = (winnerSym === "X") ? "O" : "X";
+    render();
+    showModal(winnerSym, loserSym);
+  }
+
+  function onCellClick(e){
+    const cell = e.target.closest(".cell");
+    if(!cell) return;
+    if(gameOver) return;
+
+    const r = +cell.dataset.r;
+    const c = +cell.dataset.c;
+
+    if(mode === "pvc" && current !== humanPlayer) return;
+    if(!isLegal(r,c)) return;
+
+    if(mode === "pvp"){
+      history.push(snapshot());
+      if(history.length > 200) history.shift();
+    }
+
+    applyMove(r,c,current);
+
+    // After placing, if no legal squares remain for the next player, current wins.
+    if(countLegal() === 0){
+      finishGame(current === 1 ? "X" : "O");
+      return;
+    }
+
+    endTurn();
+  }
+
+  boardEl.addEventListener("click", onCellClick);
+
+  function simulateMoveScore(r,c, playerSymbol){
+    const backup = grid.map(row => row.slice());
+
+    let beforeEmpty = 0;
+    for(let rr=0; rr<H; rr++){
+      for(let cc=0; cc<W; cc++){
+        if(grid[rr][cc] === 0) beforeEmpty++;
+      }
+    }
+
+    applyMove(r,c,playerSymbol);
+
+    let afterEmpty = 0;
+    for(let rr=0; rr<H; rr++){
+      for(let cc=0; cc<W; cc++){
+        if(grid[rr][cc] === 0) afterEmpty++;
+      }
+    }
+
+    const newlyBlocked = (beforeEmpty - 1) - afterEmpty;
+    const oppMoves = afterEmpty; // opponent legal moves equals remaining empties
+
+    grid = backup;
+    return { oppMoves, newlyBlocked, afterEmpty };
+  }
+
+  function pickComputerMoveMedium(){
+    const moves = legalMoves();
+    if(moves.length === 0) return null;
+
+    let best = null;
+
+    for(const [r,c] of moves){
+      const s = simulateMoveScore(r,c,current);
+
+      if(!best){
+        best = { r,c, ...s };
+        continue;
+      }
+
+      if(s.oppMoves < best.oppMoves) best = { r,c, ...s };
+      else if(s.oppMoves === best.oppMoves){
+        if(s.newlyBlocked > best.newlyBlocked) best = { r,c, ...s };
+        else if(s.newlyBlocked === best.newlyBlocked){
+          if(s.afterEmpty > best.afterEmpty) best = { r,c, ...s };
+        }
+      }
+    }
+
+    return [best.r, best.c];
+  }
+
+  function maybeComputerMove(){
+    if(gameOver) return;
+    if(mode !== "pvc") return;
+    if(current === humanPlayer) return;
+
+    updateTurnHeader();
+
+    const doMove = () => {
+      if(gameOver) return;
+
+      const mv = pickComputerMoveMedium();
+      if(!mv){
+        // Computer has no move => human wins (should be rare with our check order)
+        finishGame(humanPlayer === 1 ? "X" : "O");
+        return;
+      }
+
+      applyMove(mv[0], mv[1], current);
+
+      if(countLegal() === 0){
+        finishGame(current === 1 ? "X" : "O");
+        return;
+      }
+
+      endTurn();
+    };
+
+    if(showThinkingEl.checked){
+      setTimeout(doMove, 220);
+    } else {
+      doMove();
+    }
+  }
+
+  function undo(){
+    if(mode !== "pvp" || history.length === 0 || gameOver) return;
+    const snap = history.pop();
+    restore(snap);
+    render();
+  }
+
+  function setMode(m){
+    mode = m;
+    pvcOptionsEl.style.display = (mode === "pvc") ? "flex" : "none";
+    updateMeta();
+  }
+
+  function startNewGame(preserveSize=false){
+    if(!preserveSize){
+      W = +wRange.value;
+      H = +hRange.value;
+    }
+
+    emptyGrid();
+    history = [];
+    gameOver = false;
+
+    if(mode === "pvc"){
+      const humanStarts = !!humanStartsEl.checked;
+      humanPlayer = humanStarts ? 1 : 2;
+      current = 1; // X starts
+    } else {
+      current = 1;
+    }
+
+    hideModal();
+    render();
+    maybeComputerMove();
+  }
+
+  // UI wiring
+  modeEl.addEventListener("change", () => {
+    setMode(modeEl.value);
+    startNewGame(true);
+  });
+
+  humanStartsEl.addEventListener("change", () => {
+    if(mode === "pvc") startNewGame(true);
+  });
+
+  showThinkingEl.addEventListener("change", () => {
+    render();
+    maybeComputerMove();
+  });
+
+  wRange.addEventListener("input", () => {
+    W = +wRange.value;
+    wVal.textContent = W;
+    computeCellSize();
+    updateMeta();
+  });
+
+  hRange.addEventListener("input", () => {
+    H = +hRange.value;
+    hVal.textContent = H;
+    computeCellSize();
+    updateMeta();
+  });
+
+  newGameBtn.addEventListener("click", () => startNewGame(false));
+  resetBtn.addEventListener("click", () => startNewGame(true));
+  undoBtn.addEventListener("click", undo);
+
+  // Init
+  wVal.textContent = W;
+  hVal.textContent = H;
+
+  setMode(modeEl.value);
+  startNewGame(true);
+
+  window.addEventListener("keydown", (e) => {
+    if(e.key.toLowerCase() === "u") undo();
+    if(e.key === "Escape" && modalOverlay.classList.contains("show")){
+      // do nothing (force buttons)
+    }
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order and Chaos (6×6)</title>
+  <style>
+    :root{
+      --bg:#0b0f14;
+      --panel:#0f1722;
+      --text:#e8eef7;
+      --muted:#9fb0c6;
+      --line:rgba(255,255,255,.12);
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius:16px;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      color:var(--text);
+      background: radial-gradient(1200px 800px at 20% 10%, #132033 0%, var(--bg) 55%) fixed;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+    }
+    .app{
+      width:min(980px, 100%);
+      display:grid;
+      grid-template-columns: 1fr 360px;
+      gap:16px;
+      align-items:start;
+    }
+    @media (max-width: 940px){
+      .app{ grid-template-columns: 1fr; }
+    }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .cardHeader{
+      padding:14px 16px;
+      border-bottom:1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .title{
+      font-weight:800;
+      letter-spacing:.2px;
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+    }
+    .subtitle{
+      color:var(--muted);
+      font-weight:600;
+      font-size:12px;
+    }
+    .content{ padding:14px 16px 16px; }
+    .boardWrap{
+      display:flex;
+      justify-content:center;
+      padding:14px 16px 16px;
+    }
+    .board{
+      width:min(560px, 100%);
+      aspect-ratio: 1 / 1;
+      display:grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap:10px;
+      padding:12px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border:1px solid var(--line);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+    }
+    .cell{
+      border-radius: 14px;
+      border:0;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.16);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      display:grid;
+      place-items:center;
+      font-size:34px;
+      font-weight:900;
+      line-height:1;              /* prevent any vertical resize */
+      padding:0;
+      aspect-ratio: 1 / 1;        /* hard lock each cell square */
+      overflow:hidden;
+      cursor:pointer;
+      user-select:none;
+      transition: box-shadow .12s ease, background .12s ease; /* no transforms */
+      position:relative;
+      min-height:0;
+    }
+    /* IMPORTANT: do not change square sizes on hover/active */
+    .cell:hover{
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.26);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+    }
+    .cell.filled{
+      cursor:default;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.12);
+      background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.015));
+    }
+    .cell.filled:hover{
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.12);
+    }
+    .cell.lastMove{
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.18),
+        inset 0 0 0 3px rgba(255,255,255,.55);
+    }
+
+    .side{
+      display:flex;
+      flex-direction:column;
+      gap:16px;
+    }
+
+    .row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    label{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      font-size:12px;
+      color:var(--muted);
+      flex:1;
+      min-width: 150px;
+    }
+
+    /* Clean selects: readable text, no custom arrow overlay */
+    select, button{
+      font:inherit;
+      color:var(--text);
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(15,23,34,.92);
+      border-radius: 12px;
+      padding:10px 12px;
+      outline:none;
+      transition: border-color .12s ease, background .12s ease;
+    }
+    select option{
+      background:#0f1722;
+      color:#e8eef7;
+    }
+    select:focus, button:focus{ border-color: rgba(255,255,255,.32); }
+    select:hover, button:hover{ border-color: rgba(255,255,255,.24); background: rgba(15,23,34,.98); }
+
+    button{ cursor:pointer; font-weight:800; }
+    button.primary{
+      background: rgba(255,255,255,.14);
+      border-color: rgba(255,255,255,.20);
+    }
+    button.primary:hover{ background: rgba(255,255,255,.17); }
+    button.ghost{
+      background: transparent;
+    }
+
+    .toggleGroup{
+      display:flex;
+      gap:10px;
+      flex:1;
+      min-width: 220px;
+    }
+    .toggle{
+      flex:1;
+      text-align:center;
+      font-weight:900;
+      letter-spacing:.3px;
+      padding:10px 0;
+      border-radius: 12px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(15,23,34,.9);
+      cursor:pointer;
+      user-select:none;
+      transition: border-color .12s ease, background .12s ease;
+    }
+    .toggle:hover{ border-color: rgba(255,255,255,.24); background: rgba(15,23,34,1); }
+    .toggle.active{
+      background: rgba(255,255,255,.16);
+      border-color: rgba(255,255,255,.30);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.05);
+    }
+
+    .turnBox{
+      border-radius: 16px;
+      border:1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    }
+    .turnTop{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .turnLabel{
+      font-size:14px;
+      font-weight:900;
+      letter-spacing:.2px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .pill{
+      font-size:12px;
+      font-weight:900;
+      color: rgba(255,255,255,.92);
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      padding:6px 10px;
+      border-radius: 999px;
+      white-space:nowrap;
+    }
+    .hint{
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.35;
+      margin:0;
+    }
+    .rules{
+      margin:0;
+      color: var(--muted);
+      font-size:12px;
+      line-height:1.5;
+    }
+    .rules strong{ color: rgba(255,255,255,.88); font-weight:900; }
+    .divider{
+      height:1px;
+      background: var(--line);
+      margin:10px 0;
+    }
+
+    /* Modal */
+    .modalBackdrop{
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,.62);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index:50;
+    }
+    .modalBackdrop.show{ display:flex; }
+    .modal{
+      width:min(520px, 100%);
+      background: #0f1722;
+      border:1px solid rgba(255,255,255,.14);
+      border-radius: 18px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+      overflow:hidden;
+    }
+    .modalHeader{
+      padding:14px 16px;
+      border-bottom:1px solid rgba(255,255,255,.12);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .modalTitle{
+      font-weight:900;
+      letter-spacing:.2px;
+      font-size:16px;
+    }
+    .modalBody{
+      padding:16px;
+      color: rgba(255,255,255,.92);
+      font-size:18px;
+      font-weight:900;
+      line-height:1.25;
+    }
+    .modalActions{
+      padding:14px 16px 16px;
+      display:flex;
+      gap:10px;
+      justify-content:flex-end;
+      flex-wrap:wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="card">
+      <div class="cardHeader">
+        <div class="title">
+          <div>Order &amp; Chaos</div>
+          <div class="subtitle">6×6 · exact 5 wins for Order · any 6 is a loss for Order</div>
+        </div>
+        <button id="restartBtn" class="primary" title="Restart this game">Restart</button>
+      </div>
+      <div class="boardWrap">
+        <div id="board" class="board" aria-label="Game board"></div>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="turnBox card">
+        <div class="content">
+          <div class="turnTop">
+            <div class="turnLabel">
+              <span id="turnText">Order's Turn</span>
+              <span id="modePill" class="pill">PvP</span>
+            </div>
+            <div class="pill" id="rolePill">Order: Player 1</div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="row" style="margin-bottom:10px;">
+            <div class="toggleGroup" aria-label="Choose symbol">
+              <div id="pickX" class="toggle active" role="button" tabindex="0">X</div>
+              <div id="pickO" class="toggle" role="button" tabindex="0">O</div>
+            </div>
+          </div>
+
+          <p class="hint" id="hintText">Choose X or O, then click an empty square.</p>
+
+          <div class="divider"></div>
+
+          <div class="row">
+            <label>
+              Mode
+              <select id="modeSel">
+                <option value="pvp">Player vs Player</option>
+                <option value="pvcpu">Player vs CPU</option>
+              </select>
+            </label>
+
+            <label id="humanRoleLabel">
+              You play as
+              <select id="humanRoleSel">
+                <option value="order">Order</option>
+                <option value="chaos">Chaos</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <button id="newGameBtn" class="primary">New Game</button>
+            <button id="viewRulesBtn" class="ghost">Rules</button>
+          </div>
+
+          <div id="rulesBox" style="display:none; margin-top:12px;">
+            <p class="rules">
+              <strong>Order</strong> (first) tries to make an <strong>exact line of 5</strong> identical symbols (X or O) in any direction.
+              <br><br>
+              <strong>Important:</strong> A <strong>line of 6</strong> identical symbols is an immediate <strong>loss for Order</strong> (Chaos wins).
+              <br><br>
+              If the board fills with no exact-5 line, <strong>Chaos wins</strong>.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="cardHeader">
+          <div class="title"><div>Quick Notes</div></div>
+        </div>
+        <div class="content">
+          <p class="rules" style="margin-top:0;">
+            • Both players may place <strong>X</strong> or <strong>O</strong> each turn.
+            <br>
+            • Order wins on the first <strong>exact-5</strong>.
+            <br>
+            • Any <strong>6-in-a-row</strong> triggers an immediate <strong>Chaos win</strong>.
+            <br>
+            • Last move is highlighted.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Over Modal -->
+  <div id="modalBackdrop" class="modalBackdrop" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal">
+      <div class="modalHeader">
+        <div class="modalTitle">Game Over</div>
+      </div>
+      <div class="modalBody" id="modalBody">—</div>
+      <div class="modalActions">
+        <button id="closeModalBtn" class="ghost">View board</button>
+        <button id="restartFromModalBtn" class="primary">Restart</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const SIZE = 6;
+
+  const boardEl = document.getElementById('board');
+  const restartBtn = document.getElementById('restartBtn');
+  const newGameBtn = document.getElementById('newGameBtn');
+  const modeSel = document.getElementById('modeSel');
+  const humanRoleSel = document.getElementById('humanRoleSel');
+  const humanRoleLabel = document.getElementById('humanRoleLabel');
+  const pickX = document.getElementById('pickX');
+  const pickO = document.getElementById('pickO');
+  const turnText = document.getElementById('turnText');
+  const modePill = document.getElementById('modePill');
+  const rolePill = document.getElementById('rolePill');
+  const hintText = document.getElementById('hintText');
+  const viewRulesBtn = document.getElementById('viewRulesBtn');
+  const rulesBox = document.getElementById('rulesBox');
+
+  const modalBackdrop = document.getElementById('modalBackdrop');
+  const modalBody = document.getElementById('modalBody');
+  const closeModalBtn = document.getElementById('closeModalBtn');
+  const restartFromModalBtn = document.getElementById('restartFromModalBtn');
+
+  let grid = [];
+  let turn = 0; // 0 = Order, 1 = Chaos
+  let selectedSymbol = 'X';
+  let gameOver = false;
+  let lastMoveIdx = -1;
+
+  // PvCPU
+  let mode = 'pvp';
+  let humanRole = 'order'; // only for pvcpu
+
+  function idx(r,c){ return r*SIZE + c; }
+  function rc(i){ return [Math.floor(i/SIZE), i%SIZE]; }
+  function inBounds(r,c){ return r>=0 && r<SIZE && c>=0 && c<SIZE; }
+
+  function currentRole(){
+    return turn === 0 ? 'order' : 'chaos';
+  }
+
+  function isHumanTurn(){
+    if(mode !== 'pvcpu') return true;
+    return currentRole() === humanRole;
+  }
+
+  function setSelectedSymbol(sym){
+    selectedSymbol = sym;
+    pickX.classList.toggle('active', sym==='X');
+    pickO.classList.toggle('active', sym==='O');
+  }
+
+  function buildEmptyGrid(){
+    grid = new Array(SIZE*SIZE).fill('');
+  }
+
+  function render(){
+    boardEl.innerHTML = '';
+    for(let r=0;r<SIZE;r++){
+      for(let c=0;c<SIZE;c++){
+        const i = idx(r,c);
+        const cell = document.createElement('div');
+        cell.className = 'cell' + (grid[i] ? ' filled' : '') + (i===lastMoveIdx ? ' lastMove' : '');
+        cell.textContent = grid[i] || '';
+        cell.addEventListener('click', () => onCellClick(i));
+        boardEl.appendChild(cell);
+      }
+    }
+
+    const role = currentRole();
+    turnText.textContent = role === 'order' ? "Order's Turn" : "Chaos' Turn";
+    modePill.textContent = mode === 'pvp' ? 'PvP' : 'PvCPU';
+
+    rolePill.textContent = (mode === 'pvp')
+      ? 'Order: Player 1 · Chaos: Player 2'
+      : (humanRole === 'order' ? 'You: Order · CPU: Chaos' : 'You: Chaos · CPU: Order');
+
+    if(gameOver){
+      hintText.textContent = 'Game over.';
+    }else{
+      hintText.textContent = isHumanTurn()
+        ? 'Choose X or O, then click an empty square.'
+        : 'CPU is thinking…';
+    }
+  }
+
+  function openModal(message){
+    modalBody.textContent = message;
+    modalBackdrop.classList.add('show');
+    modalBackdrop.setAttribute('aria-hidden','false');
+  }
+
+  function closeModal(){
+    modalBackdrop.classList.remove('show');
+    modalBackdrop.setAttribute('aria-hidden','true');
+  }
+
+  function resetGame(){
+    buildEmptyGrid();
+    turn = 0;
+    gameOver = false;
+    lastMoveIdx = -1;
+    setSelectedSymbol('X');
+    render();
+    maybeCpuMove();
+  }
+
+  function applyMove(i, sym){
+    grid[i] = sym;
+    lastMoveIdx = i;
+  }
+
+  const DIRS = [[0,1],[1,0],[1,1],[1,-1]];
+
+  function hasAnyLineOfN(n){
+    for(let r=0;r<SIZE;r++){
+      for(let c=0;c<SIZE;c++){
+        const sym = grid[idx(r,c)];
+        if(!sym) continue;
+        for(const [dr,dc] of DIRS){
+          const pr = r-dr, pc = c-dc;
+          if(inBounds(pr,pc) && grid[idx(pr,pc)]===sym) continue;
+
+          let len = 0, rr=r, cc=c;
+          while(inBounds(rr,cc) && grid[idx(rr,cc)]===sym){
+            len++; rr+=dr; cc+=dc;
+          }
+          if(len === n) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  const hasExactFive = () => hasAnyLineOfN(5);
+  const hasSix = () => hasAnyLineOfN(6);
+  const boardFull = () => grid.every(v => v);
+
+  function endGame(message){
+    gameOver = true;
+    render();
+    openModal(message);
+  }
+
+  function advanceTurn(){ turn = 1 - turn; }
+
+  function onCellClick(i){
+    if(gameOver) return;
+    if(!isHumanTurn()) return;
+    if(grid[i]) return;
+
+    applyMove(i, selectedSymbol);
+
+    if(hasSix()){
+      endGame("Chaos wins — a line of 6 was created (Order loses).");
+      return;
+    }
+    if(hasExactFive()){
+      endGame("Order wins — an exact line of 5 was completed!");
+      return;
+    }
+    if(boardFull()){
+      endGame("Chaos wins — the board filled with no exact line of 5.");
+      return;
+    }
+
+    advanceTurn();
+    render();
+    maybeCpuMove();
+  }
+
+  // CPU (heuristic)
+  function listLegalMoves(){
+    const moves = [];
+    for(let i=0;i<grid.length;i++) if(!grid[i]) moves.push(i);
+    return moves;
+  }
+
+  function simulateMove(i, sym){
+    grid[i] = sym;
+    const six = hasSix();
+    const five = hasExactFive();
+    grid[i] = '';
+    return {six, five};
+  }
+
+  function scoreMoveForOrder(i, sym){
+    const sim = simulateMove(i, sym);
+    if(sim.six) return -1e9;
+    if(sim.five) return 1e9;
+
+    let score = 0;
+    const [r,c] = rc(i);
+
+    grid[i]=sym;
+    for(const [dr,dc] of DIRS){
+      let lenF=0, rr=r, cc=c;
+      while(inBounds(rr,cc) && grid[idx(rr,cc)]===sym){ lenF++; rr+=dr; cc+=dc; }
+
+      let lenB=0; rr=r-dr; cc=c-dc;
+      while(inBounds(rr,cc) && grid[idx(rr,cc)]===sym){ lenB++; rr-=dr; cc-=dc; }
+
+      const run = lenF + lenB;
+      const capped = Math.min(run,5);
+
+      if(capped===4) score += 60;
+      else if(capped===3) score += 18;
+      else if(capped===2) score += 6;
+      else score += 1;
+    }
+
+    const center = (SIZE-1)/2;
+    const dist = Math.abs(r-center)+Math.abs(c-center);
+    score += (6 - dist);
+    grid[i]='';
+    return score;
+  }
+
+  function countOpenFiveWindows(){
+    let count = 0;
+    for(let r=0;r<SIZE;r++){
+      for(let c=0;c<SIZE;c++){
+        for(const [dr,dc] of DIRS){
+          const endR = r + dr*4, endC = c + dc*4;
+          if(!inBounds(endR,endC)) continue;
+
+          let hasX=false, hasO=false;
+          for(let k=0;k<5;k++){
+            const v = grid[idx(r+dr*k, c+dc*k)];
+            if(v==='X') hasX=true;
+            else if(v==='O') hasO=true;
+          }
+          if(hasX && hasO) continue;
+          count++;
+        }
+      }
+    }
+    return count;
+  }
+
+  function deadWindows(){
+    let dead = 0;
+    for(let r=0;r<SIZE;r++){
+      for(let c=0;c<SIZE;c++){
+        for(const [dr,dc] of DIRS){
+          const endR = r + dr*4, endC = c + dc*4;
+          if(!inBounds(endR,endC)) continue;
+
+          let hasX=false, hasO=false;
+          for(let k=0;k<5;k++){
+            const v = grid[idx(r+dr*k, c+dc*k)];
+            if(v==='X') hasX=true;
+            else if(v==='O') hasO=true;
+          }
+          if(hasX && hasO) dead++;
+        }
+      }
+    }
+    return dead;
+  }
+
+  function scoreMoveForChaos(i, sym){
+    const sim = simulateMove(i, sym);
+    if(sim.six) return 1e9;
+    if(sim.five) return -5e6;
+
+    let score = 0;
+    grid[i]=sym;
+    score -= countOpenFiveWindows();
+    score += deadWindows() * 0.6;
+    grid[i]='';
+
+    const [r,c] = rc(i);
+    const center = (SIZE-1)/2;
+    const dist = Math.abs(r-center)+Math.abs(c-center);
+    score += (6 - dist);
+
+    return score;
+  }
+
+  function cpuChooseMove(){
+    const legal = listLegalMoves();
+    if(!legal.length) return null;
+
+    const cpuIsOrder = currentRole()==='order';
+    let bestScore = -Infinity;
+    const scored = [];
+    for(const i of legal){
+      for(const sym of ['X','O']){
+        const score = cpuIsOrder ? scoreMoveForOrder(i, sym) : scoreMoveForChaos(i, sym);
+        scored.push({i,sym,score});
+        if(score > bestScore) bestScore = score;
+      }
+    }
+
+    const candidates = scored.filter(m => m.score >= bestScore - 40).sort((a,b)=>b.score-a.score);
+    const topK = Math.min(6, candidates.length);
+    const pick = candidates[Math.floor(Math.random()*topK)];
+    return {i: pick.i, sym: pick.sym};
+  }
+
+  function maybeCpuMove(){
+    if(gameOver) return;
+    if(mode !== 'pvcpu') return;
+    if(isHumanTurn()) return;
+
+    setTimeout(() => {
+      if(gameOver) return;
+      const move = cpuChooseMove();
+      if(!move) return;
+
+      applyMove(move.i, move.sym);
+
+      if(hasSix()){
+        endGame("Chaos wins — a line of 6 was created (Order loses).");
+        return;
+      }
+      if(hasExactFive()){
+        endGame("Order wins — an exact line of 5 was completed!");
+        return;
+      }
+      if(boardFull()){
+        endGame("Chaos wins — the board filled with no exact line of 5.");
+        return;
+      }
+
+      advanceTurn();
+      render();
+    }, 220);
+  }
+
+  // Controls
+  pickX.addEventListener('click', () => setSelectedSymbol('X'));
+  pickO.addEventListener('click', () => setSelectedSymbol('O'));
+  pickX.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') setSelectedSymbol('X'); });
+  pickO.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') setSelectedSymbol('O'); });
+
+  restartBtn.addEventListener('click', () => resetGame());
+  restartFromModalBtn.addEventListener('click', () => { closeModal(); resetGame(); });
+  closeModalBtn.addEventListener('click', () => closeModal());
+  modalBackdrop.addEventListener('click', (e)=>{ if(e.target===modalBackdrop) closeModal(); });
+
+  viewRulesBtn.addEventListener('click', () => {
+    const show = rulesBox.style.display === 'none';
+    rulesBox.style.display = show ? 'block' : 'none';
+    viewRulesBtn.textContent = show ? 'Hide Rules' : 'Rules';
+  });
+
+  function syncModeUI(){
+    mode = modeSel.value;
+    const showRole = (mode === 'pvcpu');
+    humanRoleLabel.style.display = showRole ? 'flex' : 'none';
+    if(mode === 'pvcpu') humanRole = humanRoleSel.value;
+    render();
+  }
+  modeSel.addEventListener('change', syncModeUI);
+  humanRoleSel.addEventListener('change', syncModeUI);
+
+  newGameBtn.addEventListener('click', () => {
+    mode = modeSel.value;
+    if(mode === 'pvcpu') humanRole = humanRoleSel.value;
+    closeModal();
+    resetGame();
+  });
+
+  buildEmptyGrid();
+  syncModeUI();
+  resetGame();
+})();
+</script>
+</body>
+</html>

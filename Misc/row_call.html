@@ -1,0 +1,935 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Row Call</title>
+<style>
+  :root{
+    --bg:#0b0d10;
+    --panel:#11151b;
+    --panel2:#0f1318;
+    --text:#e7eef7;
+    --muted:#9fb0c3;
+    --line:#243141;
+    --accent:#6aa9ff;
+    --good:#2dd4bf;
+    --bad:#fb7185;
+    --warn:#fbbf24;
+    --shadow: 0 14px 40px rgba(0,0,0,.45);
+    --radius: 18px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    background:
+      radial-gradient(1200px 700px at 20% 10%, rgba(106,169,255,.14), transparent 50%),
+      radial-gradient(900px 600px at 85% 25%, rgba(45,212,191,.12), transparent 55%),
+      radial-gradient(900px 700px at 55% 90%, rgba(251,113,133,.10), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .app{
+    width:min(980px, 100%);
+    display:grid;
+    grid-template-columns: 360px 1fr;
+    gap:18px;
+  }
+  .card{
+    background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+    border:1px solid rgba(255,255,255,.06);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow:hidden;
+  }
+  .side{
+    padding:18px;
+  }
+  h1{
+    margin:0 0 8px 0;
+    font-size:22px;
+    letter-spacing:.2px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-size:12px;
+    padding:6px 10px;
+    border-radius:999px;
+    background: rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.07);
+    color: var(--muted);
+  }
+  .dot{
+    width:9px;height:9px;border-radius:50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px rgba(106,169,255,.16);
+  }
+  .muted{color:var(--muted); font-size:13px; line-height:1.35}
+  .row{
+    margin-top:14px;
+    display:grid;
+    gap:10px;
+  }
+  label{
+    font-size:12px;
+    color: var(--muted);
+    display:block;
+    margin-bottom:6px;
+  }
+  .seg{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .btn, .seg button, select{
+    appearance:none;
+    font: inherit;
+    color: var(--text);
+  }
+  .seg button{
+    border:1px solid rgba(255,255,255,.08);
+    background: rgba(255,255,255,.04);
+    padding:10px 10px;
+    border-radius: 12px;
+    cursor:pointer;
+    min-width: 92px;
+    transition: transform .06s ease, background .15s ease, border-color .15s ease;
+  }
+  .seg button:hover{transform: translateY(-1px); background: rgba(255,255,255,.06)}
+  .seg button[aria-pressed="true"]{
+    background: rgba(106,169,255,.14);
+    border-color: rgba(106,169,255,.35);
+    box-shadow: 0 0 0 3px rgba(106,169,255,.12) inset;
+  }
+  .btn{
+    border:1px solid rgba(255,255,255,.10);
+    background: rgba(255,255,255,.05);
+    padding:10px 12px;
+    border-radius: 12px;
+    cursor:pointer;
+    transition: transform .06s ease, background .15s ease, border-color .15s ease;
+  }
+  .btn:hover{transform: translateY(-1px); background: rgba(255,255,255,.07)}
+  .btn.primary{
+    background: rgba(106,169,255,.16);
+    border-color: rgba(106,169,255,.35);
+  }
+  .btn.primary:hover{background: rgba(106,169,255,.20)}
+  .btn:disabled{
+    opacity:.45;
+    cursor:not-allowed;
+    transform:none !important;
+  }
+  .status{
+    margin-top:14px;
+    padding:12px 12px;
+    border-radius: 14px;
+    background: rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.07);
+    display:grid;
+    gap:8px;
+  }
+  .status .headline{
+    font-size:14px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    font-weight:650;
+  }
+  .badge{
+    font-size:12px;
+    padding:4px 9px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.10);
+    background: rgba(255,255,255,.04);
+    color: var(--muted);
+  }
+  .hint{
+    font-size:12px;
+    color: var(--muted);
+    line-height:1.35;
+  }
+  .boardWrap{
+    padding:18px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height: 420px;
+  }
+  .board{
+    width:min(520px, 100%);
+  }
+
+  /* Grid layout with headers */
+  .grid{
+    display:grid;
+    grid-template-columns: 46px repeat(4, 1fr);
+    grid-template-rows: 46px repeat(4, 1fr);
+    gap:10px;
+    user-select:none;
+  }
+  .hdr, .cell{
+    border-radius: 14px;
+    border:1px solid rgba(255,255,255,.08);
+    background: rgba(255,255,255,.03);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+  }
+  .hdr{
+    font-weight:700;
+    color: var(--muted);
+    letter-spacing:.3px;
+  }
+  .hdr.clickable{
+    cursor:pointer;
+    transition: transform .06s ease, background .15s ease, border-color .15s ease;
+  }
+  .hdr.clickable:hover{transform: translateY(-1px); background: rgba(255,255,255,.055)}
+  .hdr.selected{
+    background: rgba(106,169,255,.13);
+    border-color: rgba(106,169,255,.33);
+    color: var(--text);
+  }
+  .hdr.disabled{
+    opacity:.45;
+    cursor:not-allowed;
+  }
+  .corner{
+    background: transparent;
+    border: 1px dashed rgba(255,255,255,.10);
+  }
+
+  .cell{
+    aspect-ratio: 1/1;
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    cursor: default;
+    transition: transform .08s ease, background .15s ease, border-color .15s ease;
+  }
+  .cell.empty{background: rgba(255,255,255,.02)}
+  .cell.pickable{
+    cursor:pointer;
+    background: rgba(45,212,191,.10);
+    border-color: rgba(45,212,191,.30);
+  }
+  .cell.pickable:hover{
+    transform: translateY(-1px);
+    background: rgba(45,212,191,.14);
+  }
+  .cell.x{color: rgba(231,238,247,.95)}
+  .cell.o{color: rgba(106,169,255,.95)}
+  .cell.win{
+    outline: 3px solid rgba(251,191,36,.45);
+    box-shadow: 0 0 0 4px rgba(251,191,36,.10) inset;
+  }
+
+  .lineHighlight::after{
+    content:"";
+    position:absolute;
+    inset:-6px;
+    border-radius: 16px;
+    border:2px solid rgba(106,169,255,.22);
+    pointer-events:none;
+  }
+
+  /* Modal */
+  .overlay{
+    position:fixed;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background: rgba(0,0,0,.55);
+    padding:20px;
+  }
+  .overlay.show{display:flex}
+  .modal{
+    width:min(520px, 100%);
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(17,21,27,.95), rgba(9,12,16,.95));
+    border:1px solid rgba(255,255,255,.10);
+    box-shadow: 0 18px 55px rgba(0,0,0,.55);
+    padding:18px;
+  }
+  .modal h2{
+    margin:0 0 8px 0;
+    font-size:22px;
+    letter-spacing:.2px;
+  }
+  .modal p{
+    margin:0 0 14px 0;
+    color: var(--muted);
+  }
+  .modal .actions{
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+    flex-wrap:wrap;
+  }
+
+  .footerNote{
+    margin-top:10px;
+    font-size:11px;
+    color: rgba(159,176,195,.8);
+  }
+
+  @media (max-width: 880px){
+    .app{grid-template-columns: 1fr; }
+    .boardWrap{min-height: 360px}
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <div class="card side">
+      <h1>
+        Row Call
+        <span class="pill"><span class="dot"></span> 4×4 • 3-in-a-row wins</span>
+      </h1>
+      <div class="muted">
+        Choose a row/column for <b>your symbol</b> — but your opponent chooses the exact empty cell.
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Mode</label>
+          <div class="seg" id="modeSeg">
+            <button type="button" data-mode="pvp" aria-pressed="true">Player vs Player</button>
+            <button type="button" data-mode="pvc" aria-pressed="false">Player vs Computer</button>
+          </div>
+        </div>
+
+        <div>
+          <label>Who starts?</label>
+          <div class="seg" id="startSeg">
+            <button type="button" data-start="X" aria-pressed="true">X starts</button>
+            <button type="button" data-start="O" aria-pressed="false">O starts</button>
+          </div>
+        </div>
+
+        <div class="seg">
+          <button class="btn primary" id="newGameBtn" type="button">New Game</button>
+          <button class="btn" id="resetBtn" type="button" title="Reset with same settings">Restart</button>
+        </div>
+
+        <div class="status" aria-live="polite">
+          <div class="headline">
+            <span id="turnText">X: choose a row or column</span>
+            <span class="badge" id="phaseBadge">Select line</span>
+          </div>
+          <div class="hint" id="hintText">
+            Click A–D (columns) or 1–4 (rows). Your opponent will then place your symbol in an empty space on that line.
+          </div>
+        </div>
+
+        <div class="footerNote">
+          Tips: 3+ in a row wins (horizontal, vertical, or diagonal). If the board fills with no winner: draw.
+        </div>
+      </div>
+    </div>
+
+    <div class="card boardWrap">
+      <div class="board">
+        <div class="grid" id="grid" aria-label="Row Call board"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <h2 id="modalTitle">Game Over</h2>
+      <p id="modalBody">—</p>
+      <div class="actions">
+        <button class="btn" id="viewBoardBtn" type="button">View Board</button>
+        <button class="btn primary" id="modalNewBtn" type="button">New Game</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const SIZE = 4;
+  const COLS = ["A","B","C","D"];
+
+  // Elements
+  const gridEl = document.getElementById("grid");
+  const modeSeg = document.getElementById("modeSeg");
+  const startSeg = document.getElementById("startSeg");
+  const newGameBtn = document.getElementById("newGameBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const turnText = document.getElementById("turnText");
+  const phaseBadge = document.getElementById("phaseBadge");
+  const hintText = document.getElementById("hintText");
+  const overlay = document.getElementById("overlay");
+  const modalTitle = document.getElementById("modalTitle");
+  const modalBody = document.getElementById("modalBody");
+  const viewBoardBtn = document.getElementById("viewBoardBtn");
+  const modalNewBtn = document.getElementById("modalNewBtn");
+
+  // State
+  let settings = {
+    mode: "pvp",           // pvp | pvc
+    start: "X",            // X | O
+    imperfectRate: 0.28,   // 0..1 chance to do a "meh" move
+  };
+
+  let board = [];
+  let current = "X";        // symbol to be placed next
+  let phase = "line";       // line | cell
+  let selectedLine = null;  // {type:"row"/"col", idx:int}
+  let gameOver = false;
+
+  // In PvC:
+  let human = "X";
+  let cpu = "O";
+
+  // ---------- Utilities ----------
+  const other = (s) => (s === "X" ? "O" : "X");
+
+  function emptyBoard(){
+    return Array.from({length: SIZE}, () => Array(SIZE).fill(null));
+  }
+
+  function inBounds(r,c){ return r>=0 && r<SIZE && c>=0 && c<SIZE; }
+
+  function allEmptyCellsInLine(line, b=board){
+    const cells = [];
+    if(line.type === "row"){
+      const r = line.idx;
+      for(let c=0;c<SIZE;c++) if(!b[r][c]) cells.push([r,c]);
+    } else {
+      const c = line.idx;
+      for(let r=0;r<SIZE;r++) if(!b[r][c]) cells.push([r,c]);
+    }
+    return cells;
+  }
+
+  function allPossibleLines(b=board){
+    const lines = [];
+    for(let i=0;i<SIZE;i++){
+      // Only include if there is at least one empty in the line
+      let rowHas=false, colHas=false;
+      for(let j=0;j<SIZE;j++){
+        if(!b[i][j]) rowHas=true;
+        if(!b[j][i]) colHas=true;
+      }
+      if(rowHas) lines.push({type:"row", idx:i});
+      if(colHas) lines.push({type:"col", idx:i});
+    }
+    return lines;
+  }
+
+  function cloneBoard(b){ return b.map(row => row.slice()); }
+
+  function isFull(b=board){
+    for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++) if(!b[r][c]) return false;
+    return true;
+  }
+
+  // Win detection for 3-in-a-row (covers 4-in-a-row automatically)
+  const DIRS = [
+    [1,0], [0,1], [1,1], [1,-1]
+  ];
+
+  function checkWin(symbol, b=board){
+    // length 3
+    for(let r=0;r<SIZE;r++){
+      for(let c=0;c<SIZE;c++){
+        for(const [dr,dc] of DIRS){
+          const r2 = r + dr*2, c2 = c + dc*2;
+          if(!inBounds(r2,c2)) continue;
+          if(b[r][c]===symbol && b[r+dr][c+dc]===symbol && b[r2][c2]===symbol){
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  // Also compute a set of winning cells for highlighting (first found)
+  function findWinningTriples(symbol, b=board){
+    const triples = [];
+    for(let r=0;r<SIZE;r++){
+      for(let c=0;c<SIZE;c++){
+        for(const [dr,dc] of DIRS){
+          const r2 = r + dr*2, c2 = c + dc*2;
+          if(!inBounds(r2,c2)) continue;
+          if(b[r][c]===symbol && b[r+dr][c+dc]===symbol && b[r2][c2]===symbol){
+            triples.push([[r,c],[r+dr,c+dc],[r2,c2]]);
+          }
+        }
+      }
+    }
+    return triples;
+  }
+
+  // Heuristic evaluation for CPU (higher is better for cpu)
+  function evalBoard(b, cpuSym, humanSym){
+    if(checkWin(cpuSym, b)) return  1e6;
+    if(checkWin(humanSym, b)) return -1e6;
+
+    let score = 0;
+
+    // Evaluate all length-3 segments
+    for(let r=0;r<SIZE;r++){
+      for(let c=0;c<SIZE;c++){
+        for(const [dr,dc] of DIRS){
+          const r2 = r + dr*2, c2 = c + dc*2;
+          if(!inBounds(r2,c2)) continue;
+          const cells = [b[r][c], b[r+dr][c+dc], b[r2][c2]];
+          const cpuCount = cells.filter(x => x===cpuSym).length;
+          const humCount = cells.filter(x => x===humanSym).length;
+          if(cpuCount>0 && humCount>0) continue; // blocked segment
+          if(cpuCount>0){
+            score += (cpuCount===1 ? 8 : cpuCount===2 ? 60 : 500);
+          } else if(humCount>0){
+            score -= (humCount===1 ? 9 : humCount===2 ? 75 : 600);
+          } else {
+            score += 1; // empty segment slight
+          }
+        }
+      }
+    }
+
+    // Center preference
+    const centers = [[1,1],[1,2],[2,1],[2,2]];
+    for(const [r,c] of centers){
+      if(b[r][c]===cpuSym) score += 4;
+      if(b[r][c]===humanSym) score -= 4;
+    }
+
+    return score;
+  }
+
+  function lineLabel(line){
+    if(line.type==="row") return `${line.idx+1}`;
+    return `${COLS[line.idx]}`;
+  }
+
+  function chooserSymbol(){
+    // In this game, chooser selects line for CURRENT symbol.
+    // So chooser is the player who will place their symbol next: current
+    return current;
+  }
+
+  function placerSymbol(){
+    // Placer is the opponent of current
+    return other(current);
+  }
+
+  function isHuman(sym){
+    if(settings.mode !== "pvc") return true; // both humans
+    return sym === human;
+  }
+
+  function isCPU(sym){
+    return settings.mode === "pvc" && sym === cpu;
+  }
+
+  // ---------- Rendering ----------
+  let cellEls = []; // [r][c]
+  let rowHdrEls = [];
+  let colHdrEls = [];
+
+  function buildGrid(){
+    gridEl.innerHTML = "";
+    cellEls = Array.from({length: SIZE}, () => Array(SIZE).fill(null));
+    rowHdrEls = Array(SIZE).fill(null);
+    colHdrEls = Array(SIZE).fill(null);
+
+    // Corner
+    const corner = document.createElement("div");
+    corner.className = "hdr corner";
+    corner.textContent = "";
+    gridEl.appendChild(corner);
+
+    // Column headers A-D
+    for(let c=0;c<SIZE;c++){
+      const h = document.createElement("div");
+      h.className = "hdr";
+      h.textContent = COLS[c];
+      h.dataset.type = "col";
+      h.dataset.idx = String(c);
+      gridEl.appendChild(h);
+      colHdrEls[c] = h;
+      h.addEventListener("click", () => onHeaderClick({type:"col", idx:c}));
+    }
+
+    // Rows
+    for(let r=0;r<SIZE;r++){
+      const h = document.createElement("div");
+      h.className = "hdr";
+      h.textContent = String(r+1);
+      h.dataset.type = "row";
+      h.dataset.idx = String(r);
+      gridEl.appendChild(h);
+      rowHdrEls[r] = h;
+      h.addEventListener("click", () => onHeaderClick({type:"row", idx:r}));
+
+      for(let c=0;c<SIZE;c++){
+        const cell = document.createElement("div");
+        cell.className = "cell empty";
+        cell.dataset.r = String(r);
+        cell.dataset.c = String(c);
+        cell.setAttribute("role","button");
+        cell.setAttribute("aria-label", `Cell ${COLS[c]}${r+1}`);
+        cell.addEventListener("click", () => onCellClick(r,c));
+        gridEl.appendChild(cell);
+        cellEls[r][c] = cell;
+      }
+    }
+  }
+
+  function render(){
+    // Headers state
+    const canPickLine = !gameOver && phase==="line" && isHuman(chooserSymbol());
+    for(let i=0;i<SIZE;i++){
+      const rh = rowHdrEls[i];
+      const ch = colHdrEls[i];
+
+      // Base
+      rh.className = "hdr";
+      ch.className = "hdr";
+
+      const rowLine = {type:"row", idx:i};
+      const colLine = {type:"col", idx:i};
+
+      const rowHas = allEmptyCellsInLine(rowLine).length > 0;
+      const colHas = allEmptyCellsInLine(colLine).length > 0;
+
+      if(canPickLine && rowHas){ rh.classList.add("clickable"); }
+      if(canPickLine && colHas){ ch.classList.add("clickable"); }
+
+      if(selectedLine && selectedLine.type==="row" && selectedLine.idx===i) rh.classList.add("selected");
+      if(selectedLine && selectedLine.type==="col" && selectedLine.idx===i) ch.classList.add("selected");
+
+      if(!rowHas) rh.classList.add("disabled");
+      if(!colHas) ch.classList.add("disabled");
+    }
+
+    // Cells
+    const canPickCell = !gameOver && phase==="cell" && isHuman(placerSymbol());
+    const pickables = new Set();
+    if(selectedLine){
+      for(const [r,c] of allEmptyCellsInLine(selectedLine)){
+        pickables.add(r+","+c);
+      }
+    }
+
+    for(let r=0;r<SIZE;r++){
+      for(let c=0;c<SIZE;c++){
+        const el = cellEls[r][c];
+        el.className = "cell";
+        const v = board[r][c];
+
+        if(!v){
+          el.classList.add("empty");
+          if(canPickCell && pickables.has(r+","+c)){
+            el.classList.add("pickable");
+          }
+        } else {
+          el.textContent = v;
+          el.classList.add(v==="X" ? "x" : "o");
+        }
+        if(!v) el.textContent = "";
+      }
+    }
+
+    // Status text
+    if(gameOver){
+      phaseBadge.textContent = "Game over";
+      return;
+    }
+
+    if(phase==="line"){
+      phaseBadge.textContent = "Select line";
+      const sym = chooserSymbol();
+      turnText.textContent = `${sym}: choose a row or column`;
+      hintText.textContent = `Pick a row (1–4) or column (A–D). Then ${other(sym)} chooses where your ${sym} goes on that line.`;
+    } else {
+      phaseBadge.textContent = "Place symbol";
+      const symToPlace = chooserSymbol(); // current symbol being placed
+      const placer = placerSymbol();
+      const lbl = selectedLine ? (selectedLine.type==="row" ? `Row ${selectedLine.idx+1}` : `Column ${COLS[selectedLine.idx]}`) : "the selected line";
+      turnText.textContent = `${placer}: place ${symToPlace} in ${lbl}`;
+      hintText.textContent = `Choose an empty cell on the highlighted line to place your opponent’s ${symToPlace}.`;
+    }
+  }
+
+  // ---------- Interaction ----------
+  function onHeaderClick(line){
+    if(gameOver) return;
+    if(phase !== "line") return;
+    if(!isHuman(chooserSymbol())) return;
+
+    // Must have empties
+    if(allEmptyCellsInLine(line).length === 0) return;
+
+    selectedLine = line;
+    phase = "cell";
+    render();
+    maybeCPUAct();
+  }
+
+  function onCellClick(r,c){
+    if(gameOver) return;
+    if(phase !== "cell") return;
+    if(!isHuman(placerSymbol())) return;
+    if(!selectedLine) return;
+
+    // Must be in selected line and empty
+    if(board[r][c]) return;
+    if(selectedLine.type==="row" && r !== selectedLine.idx) return;
+    if(selectedLine.type==="col" && c !== selectedLine.idx) return;
+
+    placeAt(r,c);
+  }
+
+  function placeAt(r,c){
+    const symToPlace = current;
+    board[r][c] = symToPlace;
+
+    // Check end
+    const xWin = checkWin("X", board);
+    const oWin = checkWin("O", board);
+
+    if(xWin || oWin){
+      gameOver = true;
+      render();
+      showGameOver(xWin && oWin ? "Both players win!" : (xWin ? "X wins!" : "O wins!"));
+      highlightWin(xWin, oWin);
+      return;
+    }
+
+    if(isFull(board)){
+      gameOver = true;
+      render();
+      showGameOver("Draw!");
+      return;
+    }
+
+    // Next move: swap current, reset phase/selection
+    current = other(current);
+    phase = "line";
+    selectedLine = null;
+    render();
+    maybeCPUAct();
+  }
+
+  function highlightWin(xWin, oWin){
+    // Clear previous
+    for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++) cellEls[r][c].classList.remove("win");
+
+    // Prefer winner's highlight; if both, highlight both sets
+    if(xWin){
+      const triples = findWinningTriples("X", board);
+      if(triples.length){
+        for(const [r,c] of triples[0]) cellEls[r][c].classList.add("win");
+      }
+    }
+    if(oWin && !xWin){
+      const triples = findWinningTriples("O", board);
+      if(triples.length){
+        for(const [r,c] of triples[0]) cellEls[r][c].classList.add("win");
+      }
+    }
+    if(xWin && oWin){
+      const tx = findWinningTriples("X", board);
+      const to = findWinningTriples("O", board);
+      if(tx.length) for(const [r,c] of tx[0]) cellEls[r][c].classList.add("win");
+      if(to.length) for(const [r,c] of to[0]) cellEls[r][c].classList.add("win");
+    }
+  }
+
+  // ---------- CPU ----------
+  function maybeCPUAct(){
+    if(settings.mode !== "pvc") return;
+    if(gameOver) return;
+
+    // If it's CPU's responsibility this phase, act after a tiny delay
+    const chooser = chooserSymbol();
+    const placer = placerSymbol();
+    if(phase==="line" && isCPU(chooser)){
+      setTimeout(() => cpuChooseLine(), 220);
+    } else if(phase==="cell" && isCPU(placer)){
+      setTimeout(() => cpuChooseCell(), 220);
+    }
+  }
+
+  function cpuChooseLine(){
+    if(gameOver || phase!=="line" || !isCPU(chooserSymbol())) return;
+    const lines = allPossibleLines(board);
+    if(!lines.length) return;
+
+    // Imperfect: sometimes pick random valid line
+    if(Math.random() < settings.imperfectRate){
+      selectedLine = lines[Math.floor(Math.random()*lines.length)];
+      phase = "cell";
+      render();
+      maybeCPUAct();
+      return;
+    }
+
+    // Minimax 1-ply: CPU chooses line, HUMAN (placer) chooses cell minimizing CPU eval
+    let bestLine = lines[0];
+    let bestVal = -Infinity;
+
+    for(const line of lines){
+      const empties = allEmptyCellsInLine(line, board);
+      if(!empties.length) continue;
+
+      let worstForCpu = Infinity;
+      for(const [r,c] of empties){
+        const b2 = cloneBoard(board);
+        b2[r][c] = cpu; // CPU symbol is current if CPU is chooser
+        const v = evalBoard(b2, cpu, human);
+        if(v < worstForCpu) worstForCpu = v;
+      }
+
+      if(worstForCpu > bestVal){
+        bestVal = worstForCpu;
+        bestLine = line;
+      }
+    }
+
+    selectedLine = bestLine;
+    phase = "cell";
+    render();
+    maybeCPUAct();
+  }
+
+  function cpuChooseCell(){
+    if(gameOver || phase!=="cell" || !selectedLine) return;
+    if(!isCPU(placerSymbol())) return;
+
+    const empties = allEmptyCellsInLine(selectedLine, board);
+    if(!empties.length) return;
+
+    // Imperfect: sometimes pick random empty cell in line
+    if(Math.random() < settings.imperfectRate){
+      const [r,c] = empties[Math.floor(Math.random()*empties.length)];
+      placeAt(r,c);
+      return;
+    }
+
+    // CPU is placing HUMAN's symbol (current is human in this phase)
+    // Choose cell that is best for CPU (i.e., maximize eval after human is placed)
+    let best = empties[0];
+    let bestVal = -Infinity;
+
+    for(const [r,c] of empties){
+      const b2 = cloneBoard(board);
+      b2[r][c] = human; // current symbol being placed is human's
+      const v = evalBoard(b2, cpu, human); // higher is better for cpu
+      if(v > bestVal){
+        bestVal = v;
+        best = [r,c];
+      }
+    }
+    placeAt(best[0], best[1]);
+  }
+
+  // ---------- Modal ----------
+  function showGameOver(msg){
+    modalTitle.textContent = "Game Over";
+    modalBody.textContent = msg;
+    overlay.classList.add("show");
+  }
+  function hideModal(){
+    overlay.classList.remove("show");
+  }
+
+  // ---------- Settings UI ----------
+  function setSegPressed(segEl, value, attr){
+    [...segEl.querySelectorAll("button")].forEach(btn => {
+      const on = btn.dataset[attr] === value;
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+  }
+
+  modeSeg.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-mode]");
+    if(!btn) return;
+    settings.mode = btn.dataset.mode;
+    setSegPressed(modeSeg, settings.mode, "mode");
+    // Adjust human/cpu mapping on mode change
+    if(settings.mode === "pvc"){
+      human = settings.start; // default: starter is human
+      cpu = other(human);
+    }
+    reset(false);
+  });
+
+  startSeg.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-start]");
+    if(!btn) return;
+    settings.start = btn.dataset.start;
+    setSegPressed(startSeg, settings.start, "start");
+    if(settings.mode === "pvc"){
+      human = settings.start;
+      cpu = other(human);
+    }
+    reset(false);
+  });
+
+  newGameBtn.addEventListener("click", () => reset(true));
+  resetBtn.addEventListener("click", () => reset(false));
+  modalNewBtn.addEventListener("click", () => { hideModal(); reset(true); });
+  viewBoardBtn.addEventListener("click", () => hideModal());
+  overlay.addEventListener("click", (e) => {
+    if(e.target === overlay) hideModal();
+  });
+  window.addEventListener("keydown", (e) => {
+    if(e.key === "Escape" && overlay.classList.contains("show")) hideModal();
+  });
+
+  // ---------- Game control ----------
+  function reset(full){
+    board = emptyBoard();
+    current = settings.start;
+    phase = "line";
+    selectedLine = null;
+    gameOver = false;
+
+    // Clear win highlights
+    if(cellEls.length){
+      for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++){
+        const el = cellEls[r][c];
+        if(el){ el.classList.remove("win"); el.textContent=""; }
+      }
+    }
+
+    // In PvC: starter is human symbol chosen by settings.start (as requested)
+    if(settings.mode === "pvc"){
+      human = settings.start;
+      cpu = other(human);
+    }
+
+    hideModal();
+    render();
+    maybeCPUAct();
+  }
+
+  // Init
+  buildGrid();
+  reset(false);
+})();
+</script>
+</body>
+</html>
