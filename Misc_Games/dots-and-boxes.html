@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dots & Boxes</title>
+  <style>
+    :root{
+      --bg:#0b0d10;
+      --panel:#121622;
+      --panel2:#0f1320;
+      --text:#e8eefc;
+      --muted:#aab4d6;
+      --line:#2b3350;
+      --dot:#d9def0;
+      --blue:#3b82f6;
+      --red:#ef4444;
+      --warn:#f59e0b;
+      --ok:#22c55e;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(1200px 700px at 20% 10%, #151a2a 0%, var(--bg) 60%);
+      color:var(--text);
+      height:100vh;
+      display:flex;
+      flex-direction:column;
+    }
+    .topbar{
+      display:flex;
+      align-items:center;
+      gap:14px;
+      padding:14px 16px;
+      background: linear-gradient(180deg, rgba(18,22,34,.92), rgba(12,15,24,.86));
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      backdrop-filter: blur(10px);
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px;
+      font-weight:800; letter-spacing:.2px;
+      margin-right:6px;
+      white-space:nowrap;
+    }
+    .pill{
+      padding:4px 10px;
+      border-radius:999px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.08);
+      color:var(--muted);
+      font-weight:700;
+      font-size:12px;
+    }
+    .controls{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      flex:1;
+    }
+    label{
+      font-size:12px;
+      color:var(--muted);
+      display:flex; align-items:center; gap:8px;
+      white-space:nowrap;
+    }
+    select, input[type="range"], button{
+      font: inherit;
+    }
+    select{
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,.10);
+      padding:8px 10px;
+      border-radius:10px;
+      outline:none;
+    }
+
+    /* Make dropdowns easier to read (especially the open option list) */
+    label{ color: rgba(232,238,252,.82); }
+    select{
+      background: rgba(15,19,32,.85);
+      color: rgba(232,238,252,.98);
+      border: 1px solid rgba(255,255,255,.16);
+      box-shadow: 0 6px 18px rgba(0,0,0,.22) inset;
+    }
+    select:focus{
+      border-color: rgba(147,197,253,.55);
+      box-shadow: 0 0 0 3px rgba(59,130,246,.18);
+    }
+    select option{
+      background: #0f1320;
+      color: #e8eefc;
+    }
+    input[type="range"]{
+      width:140px;
+      accent-color: #93c5fd;
+    }
+    .btn{
+      background: rgba(255,255,255,.08);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,.12);
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:800;
+      transition: transform .05s ease, background .2s ease, border-color .2s ease;
+      user-select:none;
+    }
+    .btn:hover{ background: rgba(255,255,255,.12); }
+    .btn:active{ transform: translateY(1px); }
+    .btn.primary{
+      background: linear-gradient(180deg, rgba(59,130,246,.95), rgba(37,99,235,.95));
+      border-color: rgba(147,197,253,.35);
+    }
+    .btn.primary:hover{ filter: brightness(1.03); }
+    .scorebox{
+      display:flex; align-items:center; gap:12px;
+      padding:8px 12px;
+      border-radius:14px;
+      background: rgba(0,0,0,.22);
+      border: 1px solid rgba(255,255,255,.08);
+      white-space:nowrap;
+    }
+    .score{
+      display:flex; align-items:center; gap:8px;
+      font-weight:900;
+    }
+    .dotbadge{
+      width:10px; height:10px; border-radius:999px;
+      box-shadow: 0 0 0 2px rgba(255,255,255,.08);
+    }
+    .turn{
+      font-weight:900;
+      padding:6px 10px;
+      border-radius:999px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .main{
+      flex:1;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      padding:14px;
+      min-height:0;
+    }
+    .boardWrap{
+      width:min(920px, calc(100vw - 28px));
+      height:min(720px, calc(100vh - 92px));
+      background: linear-gradient(180deg, rgba(18,22,34,.78), rgba(10,12,18,.68));
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 22px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.35);
+      position:relative;
+      overflow:hidden;
+      display:flex;
+    }
+    canvas{
+      width:100%;
+      height:100%;
+      display:block;
+    }
+    .hint{
+      position:absolute;
+      left:14px;
+      bottom:12px;
+      color: rgba(232,238,252,.72);
+      font-size:12px;
+      background: rgba(0,0,0,.18);
+      border: 1px solid rgba(255,255,255,.07);
+      padding:8px 10px;
+      border-radius: 14px;
+      backdrop-filter: blur(8px);
+      pointer-events:none;
+    }
+
+    .hint{
+      transition: opacity .22s ease, transform .22s ease;
+      transform: translateY(0);
+      opacity: 1;
+    }
+    .hint.hidden{
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events:none;
+    }
+    .shake{
+      animation: shake .22s linear;
+    }
+    @keyframes shake{
+      0%{ transform: translateX(0); }
+      20%{ transform: translateX(-5px); }
+      40%{ transform: translateX(5px); }
+      60%{ transform: translateX(-4px); }
+      80%{ transform: translateX(4px); }
+      100%{ transform: translateX(0); }
+    }
+    .flashInvalid{
+      animation: flash .26s ease;
+    }
+    @keyframes flash{
+      0%{ box-shadow: 0 0 0 0 rgba(245,158,11,0); }
+      30%{ box-shadow: 0 0 0 3px rgba(245,158,11,.55); }
+      100%{ box-shadow: 0 0 0 0 rgba(245,158,11,0); }
+    }
+
+    .overlay{
+      position:absolute;
+      inset:0;
+      background: rgba(0,0,0,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      backdrop-filter: blur(6px);
+    }
+    .overlay.show{ display:flex; }
+    .modal{
+      width:min(520px, 92vw);
+      background: linear-gradient(180deg, rgba(20,25,40,.96), rgba(10,12,18,.94));
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 20px;
+      box-shadow: 0 26px 80px rgba(0,0,0,.55);
+      padding: 18px 18px 16px;
+    }
+    .modal h2{
+      margin:0 0 8px 0;
+      font-size: 22px;
+      letter-spacing:.2px;
+    }
+    .modal p{
+      margin: 6px 0 14px 0;
+      color: rgba(232,238,252,.82);
+      line-height:1.35;
+    }
+    .modal .row{
+      display:flex;
+      gap:10px;
+      justify-content:flex-end;
+    }
+    .subtle{
+      color: rgba(232,238,252,.65);
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      Dots &amp; Boxes <span class="pill">4×4 to 7×7 dots</span>
+    </div>
+
+    <div class="controls">
+      <label>
+        Mode
+        <select id="mode">
+          <option value="pvp">Player vs Player</option>
+          <option value="pvc">Player vs Computer</option>
+        </select>
+      </label>
+
+      <label title="Number of dots per side">
+        Size <span class="pill" id="sizeLabel">4×4</span>
+        <input id="size" type="range" min="4" max="7" value="4" step="1" />
+      </label>
+
+      <button id="newGame" class="btn primary">New Game</button>
+    </div>
+
+    <div class="scorebox" aria-live="polite">
+      <div class="score">
+        <span class="dotbadge" style="background:var(--blue)"></span>
+        <span>Blue (B): <span id="scoreB">0</span></span>
+      </div>
+      <div class="score">
+        <span class="dotbadge" style="background:var(--red)"></span>
+        <span>Red (R): <span id="scoreR">0</span></span>
+      </div>
+      <div class="turn" id="turnPill">Blue's Turn</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="boardWrap" id="wrap">
+      <canvas id="cv" width="900" height="650" aria-label="Dots and Boxes board"></canvas>
+      <div class="hint" id="hint">
+        Click a dot, then an adjacent dot. Hover shows a dashed preview.
+        <span class="subtle">(Esc cancels selection)</span>
+      </div>
+
+      <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="endTitle">
+        <div class="modal">
+          <h2 id="endTitle">Game Over</h2>
+          <p id="endText"></p>
+          <div class="row">
+            <button class="btn" id="viewBoard">View Board</button>
+            <button class="btn primary" id="newFromModal">New Game</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  const cv = $("cv");
+  const ctx = cv.getContext("2d");
+  const wrap = $("wrap");
+
+  const modeSel = $("mode");
+  const sizeRange = $("size");
+  const sizeLabel = $("sizeLabel");
+  const newBtn = $("newGame");
+
+  const scoreBEl = $("scoreB");
+  const scoreREl = $("scoreR");
+  const turnPill = $("turnPill");
+
+  const overlay = $("overlay");
+  const endText = $("endText");
+  const viewBoardBtn = $("viewBoard");
+  const newFromModalBtn = $("newFromModal");
+
+  const hintEl = $("hint");
+
+  let N = parseInt(sizeRange.value, 10); // dots per side
+  let gameMode = modeSel.value; // pvp or pvc
+  let current = 0; // 0 blue, 1 red
+  let scores = [0,0];
+
+  // Edge ownership: -1 none, 0 blue, 1 red
+  let hEdges = []; // N rows, N-1 cols
+  let vEdges = []; // N-1 rows, N cols
+  let boxes  = []; // N-1 rows, N-1 cols -> -1 none, 0/1 owner
+
+  let selection = null; // {r,c}
+  let hoverDot = null; // {r,c}
+  let hoverEdge = null; // derived from selection + hoverDot
+
+  // Layout (CSS pixels)
+  let layout = { x0:0, y0:0, side:0, gap:0, dotR:6, lineW:6 };
+
+  // CPU
+  let cpuThinking = false;
+  const CPU_DELAY_MS = 400;
+
+  let hintHiddenOnce = false;
+  function hideHintOnce() {
+    if (hintHiddenOnce) return;
+    hintHiddenOnce = true;
+    if (hintEl) hintEl.classList.add("hidden");
+  }
+
+  let sizeLocked = false;
+  function lockSizeOnce() {
+    if (sizeLocked) return;
+    sizeLocked = true;
+    sizeRange.disabled = true;
+    sizeRange.style.opacity = "0.55";
+  }
+
+
+  function initArrays() {
+    hEdges = Array.from({length:N}, () => Array.from({length:N-1}, () => -1));
+    vEdges = Array.from({length:N-1}, () => Array.from({length:N}, () => -1));
+    boxes  = Array.from({length:N-1}, () => Array.from({length:N-1}, () => -1));
+    scores = [0,0];
+    current = 0;
+    selection = null;
+    hoverDot = null;
+    hoverEdge = null;
+    cpuThinking = false;
+    hintHiddenOnce = false;
+    if (hintEl) hintEl.classList.remove("hidden");
+    sizeLocked = false;
+    sizeRange.disabled = false;
+    sizeRange.style.opacity = "";
+    updateUI();
+    hideOverlay();
+    draw();
+  }
+
+  function updateUI() {
+    scoreBEl.textContent = scores[0];
+    scoreREl.textContent = scores[1];
+    turnPill.textContent = (current===0 ? "Blue" : "Red") + "'s Turn";
+  }
+
+  function showOverlay(text) {
+    endText.textContent = text;
+    overlay.classList.add("show");
+  }
+  function hideOverlay() { overlay.classList.remove("show"); }
+
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+  function resizeCanvasToWrap() {
+    const rect = wrap.getBoundingClientRect();
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+
+    cv.width  = Math.floor(rect.width  * dpr);
+    cv.height = Math.floor(rect.height * dpr);
+
+    cv.style.width = rect.width + "px";
+    cv.style.height = rect.height + "px";
+
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    computeLayout(rect.width, rect.height);
+    draw();
+  }
+
+  function computeLayout(w, h) {
+    const padY = 34; // keep vertical breathing room
+    const padX = 10; // tight left/right margins
+    const bottomReserve = 76; // keep the hint area clean
+    const usableH = Math.max(120, h - bottomReserve);
+
+    const gridW = Math.max(120, w - padX*2);
+    const gridH = Math.max(120, usableH - padY*2);
+    const gapX = gridW / (N-1);
+    const gapY = gridH / (N-1);
+
+    const base = Math.min(gapX, gapY);
+    const dotR = clamp(base * 0.12, 4.5, 9.5);
+    const lineW = clamp(base * 0.18, 4, 10);
+
+    const x0 = (w - gridW) / 2;
+    const y0 = (usableH - gridH) / 2;
+
+    layout = { x0, y0, gridW, gridH, gapX, gapY, dotR, lineW };
+  }
+
+  function dotToXY(r,c) {
+    const {x0,y0,gapX,gapY} = layout;
+    return { x: x0 + c*gapX, y: y0 + r*gapY };
+  }
+
+  function nearestDot(mx,my) {
+    const {x0,y0,gridW,gridH,gapX,gapY} = layout;
+    if (mx < x0 - gapX*0.4 || mx > x0 + gridW + gapX*0.4 ||
+        my < y0 - gapY*0.4 || my > y0 + gridH + gapY*0.4) return null;
+
+    const c = Math.round((mx - x0)/gapX);
+    const r = Math.round((my - y0)/gapY);
+    if (r < 0 || r >= N || c < 0 || c >= N) return null;
+
+    const p = dotToXY(r,c);
+    const dist2 = (p.x-mx)**2 + (p.y-my)**2;
+    const hitR = Math.max(layout.dotR*2.2, Math.min(gapX,gapY)*0.22);
+    if (dist2 <= hitR*hitR) return {r,c};
+    return null;
+  }
+
+  function isAdjacent(a,b) {
+    const dr = Math.abs(a.r-b.r);
+    const dc = Math.abs(a.c-b.c);
+    return (dr+dc === 1);
+  }
+
+  function edgeBetween(a,b) {
+    if (a.r === b.r) {
+      const r = a.r;
+      const c = Math.min(a.c, b.c);
+      return {type:'h', r, c};
+    } else {
+      const r = Math.min(a.r, b.r);
+      const c = a.c;
+      return {type:'v', r, c};
+    }
+  }
+
+  function edgeOwner(edge) {
+    if (edge.type==='h') return hEdges[edge.r][edge.c];
+    return vEdges[edge.r][edge.c];
+  }
+
+  function setEdge(edge, owner) {
+    if (edge.type==='h') hEdges[edge.r][edge.c] = owner;
+    else vEdges[edge.r][edge.c] = owner;
+  }
+
+  function boxesAdjacentToEdge(edge) {
+    const adj = [];
+    if (edge.type==='h') {
+      const r = edge.r, c = edge.c;
+      if (r-1 >= 0 && r-1 < N-1) adj.push({r:r-1, c});
+      if (r >= 0 && r < N-1) adj.push({r, c});
+    } else {
+      const r = edge.r, c = edge.c;
+      if (c-1 >= 0 && c-1 < N-1) adj.push({r, c:c-1});
+      if (c >= 0 && c < N-1) adj.push({r, c});
+    }
+    return adj;
+  }
+
+  function boxEdgeCount(br, bc) {
+    let cnt = 0;
+    if (hEdges[br][bc] !== -1) cnt++;
+    if (hEdges[br+1][bc] !== -1) cnt++;
+    if (vEdges[br][bc] !== -1) cnt++;
+    if (vEdges[br][bc+1] !== -1) cnt++;
+    return cnt;
+  }
+
+  function isBoxComplete(br, bc) {
+    return (
+      hEdges[br][bc] !== -1 &&
+      hEdges[br+1][bc] !== -1 &&
+      vEdges[br][bc] !== -1 &&
+      vEdges[br][bc+1] !== -1
+    );
+  }
+
+  function applyMove(edge, owner) {
+    setEdge(edge, owner);
+
+    let claimed = 0;
+    const adjBoxes = boxesAdjacentToEdge(edge);
+    for (const b of adjBoxes) {
+      if (boxes[b.r][b.c] === -1 && isBoxComplete(b.r, b.c)) {
+        boxes[b.r][b.c] = owner;
+        claimed++;
+      }
+    }
+    scores[owner] += claimed;
+
+    if (claimed === 0) current = 1 - current;
+
+    updateUI();
+    draw();
+    checkGameOver();
+    return claimed;
+  }
+
+  function totalEdges() { return N*(N-1) + (N-1)*N; }
+  function drawnEdgesCount() {
+    let cnt = 0;
+    for (let r=0;r<N;r++) for (let c=0;c<N-1;c++) if (hEdges[r][c] !== -1) cnt++;
+    for (let r=0;r<N-1;r++) for (let c=0;c<N;c++) if (vEdges[r][c] !== -1) cnt++;
+    return cnt;
+  }
+
+  function checkGameOver() {
+    if (drawnEdgesCount() !== totalEdges()) return;
+
+    const b = scores[0], r = scores[1];
+    let msg;
+    if (b > r) msg = `Blue wins ${b}–${r}!`;
+    else if (r > b) msg = `Red wins ${r}–${b}!`;
+    else msg = `It's a tie: ${b}–${r}.`;
+
+    showOverlay(msg);
+  }
+
+  function invalidFeedback() {
+    wrap.classList.remove("shake","flashInvalid");
+    void wrap.offsetWidth;
+    wrap.classList.add("shake","flashInvalid");
+  }
+
+  // Drawing
+  function draw() {
+    const w = wrap.getBoundingClientRect().width;
+    const h = wrap.getBoundingClientRect().height;
+    ctx.clearRect(0,0,w,h);
+
+    // subtle vignette
+    ctx.save();
+    const grad = ctx.createRadialGradient(w*0.5,h*0.35, 30, w*0.5,h*0.5, Math.max(w,h));
+    grad.addColorStop(0, "rgba(255,255,255,0.04)");
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,w,h);
+    ctx.restore();
+
+    drawBoxes();
+    drawEdges();
+    drawPreview();
+    drawDots();
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    const rr = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr, y);
+    ctx.arcTo(x+w, y, x+w, y+h, rr);
+    ctx.arcTo(x+w, y+h, x, y+h, rr);
+    ctx.arcTo(x, y+h, x, y, rr);
+    ctx.arcTo(x, y, x+w, y, rr);
+    ctx.closePath();
+  }
+
+  function drawBoxes() {
+    const {gapX, gapY} = layout;
+    const base = Math.min(gapX, gapY);
+    for (let r=0;r<N-1;r++){
+      for (let c=0;c<N-1;c++){
+        const owner = boxes[r][c];
+        if (owner === -1) continue;
+        const p = dotToXY(r,c);
+        ctx.save();
+        ctx.fillStyle = owner===0 ? "rgba(59,130,246,.16)" : "rgba(239,68,68,.16)";
+        ctx.strokeStyle = owner===0 ? "rgba(59,130,246,.24)" : "rgba(239,68,68,.24)";
+        ctx.lineWidth = Math.max(1, base*0.03);
+        const x = p.x, y = p.y, w = gapX, h = gapY;
+        const rr = Math.max(10, base*0.16);
+        roundRect(ctx, x+base*0.07, y+base*0.07, w-base*0.14, h-base*0.14, rr);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = owner===0 ? "rgba(147,197,253,.95)" : "rgba(254,202,202,.95)";
+        ctx.font = `800 ${Math.max(16, base*0.38)}px ui-sans-serif, system-ui`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(owner===0 ? "B" : "R", x + w/2, y + h/2 + base*0.01);
+        ctx.restore();
+      }
+    }
+  }
+
+  function drawEdges() {
+    const {lineW} = layout;
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    for (let r=0;r<N;r++){
+      for (let c=0;c<N-1;c++){
+        const owner = hEdges[r][c];
+        if (owner === -1) continue;
+        const a = dotToXY(r,c);
+        const b = dotToXY(r,c+1);
+        ctx.strokeStyle = owner===0 ? "rgba(59,130,246,.95)" : "rgba(239,68,68,.95)";
+        ctx.lineWidth = lineW;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+    }
+
+    for (let r=0;r<N-1;r++){
+      for (let c=0;c<N;c++){
+        const owner = vEdges[r][c];
+        if (owner === -1) continue;
+        const a = dotToXY(r,c);
+        const b = dotToXY(r+1,c);
+        ctx.strokeStyle = owner===0 ? "rgba(59,130,246,.95)" : "rgba(239,68,68,.95)";
+        ctx.lineWidth = lineW;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawPreview() {
+    if (!selection || !hoverDot) return;
+    if (!isAdjacent(selection, hoverDot)) return;
+
+    const edge = edgeBetween(selection, hoverDot);
+    if (edgeOwner(edge) !== -1) return;
+
+    const a = dotToXY(selection.r, selection.c);
+    const b = dotToXY(hoverDot.r, hoverDot.c);
+    ctx.save();
+    ctx.strokeStyle = current===0 ? "rgba(147,197,253,.85)" : "rgba(254,202,202,.85)";
+    ctx.lineWidth = Math.max(2, layout.lineW * 0.65);
+    ctx.setLineDash([8, 7]);
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawDots() {
+    const {dotR} = layout;
+    for (let r=0;r<N;r++){
+      for (let c=0;c<N;c++){
+        const p = dotToXY(r,c);
+
+        ctx.save();
+        ctx.fillStyle = "rgba(217,222,240,.92)";
+        ctx.strokeStyle = "rgba(0,0,0,.35)";
+        ctx.lineWidth = 2;
+
+        if (selection && selection.r===r && selection.c===c){
+          ctx.fillStyle = "rgba(245,158,11,.95)";
+          ctx.strokeStyle = "rgba(255,255,255,.35)";
+        } else if (hoverDot && hoverDot.r===r && hoverDot.c===c){
+          ctx.fillStyle = "rgba(255,255,255,.95)";
+          ctx.strokeStyle = "rgba(255,255,255,.25)";
+        }
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, dotR, 0, Math.PI*2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+  }
+
+  function pointerPos(evt) {
+    const rect = cv.getBoundingClientRect();
+    return { x: evt.clientX - rect.left, y: evt.clientY - rect.top };
+  }
+
+  function onMove(evt) {
+    if (overlay.classList.contains("show")) return;
+    const {x,y} = pointerPos(evt);
+    hoverDot = nearestDot(x,y);
+
+    if (selection && hoverDot && isAdjacent(selection, hoverDot)) {
+      hoverEdge = edgeBetween(selection, hoverDot);
+    } else {
+      hoverEdge = null;
+    }
+    draw();
+  }
+
+  function onLeave() {
+    hoverDot = null;
+    hoverEdge = null;
+    draw();
+  }
+
+  function onClick(evt) {
+    if (overlay.classList.contains("show")) return;
+    if (cpuThinking) return;
+    if (gameMode === "pvc" && current === 1) return;
+
+    const {x,y} = pointerPos(evt);
+    const nd = nearestDot(x,y);
+
+    if (!nd) {
+      selection = null;
+      hoverEdge = null;
+      draw();
+      return;
+    }
+
+    if (!selection) {
+      selection = nd;
+      draw();
+      return;
+    }
+
+    if (selection.r === nd.r && selection.c === nd.c) {
+      selection = null;
+      hoverEdge = null;
+      draw();
+      return;
+    }
+
+    if (!isAdjacent(selection, nd)) {
+      invalidFeedback();
+      selection = nd;
+      draw();
+      return;
+    }
+
+    const edge = edgeBetween(selection, nd);
+    if (edgeOwner(edge) !== -1) {
+      invalidFeedback();
+      selection = nd;
+      draw();
+      return;
+    }
+
+    selection = null;
+    hoverEdge = null;
+    applyMove(edge, current);
+    hideHintOnce();
+    lockSizeOnce();
+    maybeCpuTurn();
+  }
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      selection = null;
+      hoverEdge = null;
+      draw();
+    }
+  });
+
+  cv.addEventListener("mousemove", onMove);
+  cv.addEventListener("mouseleave", onLeave);
+  cv.addEventListener("click", onClick);
+
+  modeSel.addEventListener("change", () => {
+    gameMode = modeSel.value;
+    initArrays();
+  });
+
+  sizeRange.addEventListener("input", () => {
+    N = parseInt(sizeRange.value, 10);
+    sizeLabel.textContent = `${N}×${N}`;
+    computeLayout(wrap.getBoundingClientRect().width, wrap.getBoundingClientRect().height);
+    initArrays();
+  });
+
+  newBtn.addEventListener("click", () => {
+    N = parseInt(sizeRange.value, 10);
+    gameMode = modeSel.value;
+    initArrays();
+  });
+
+  viewBoardBtn.addEventListener("click", () => { hideOverlay(); draw(); });
+  newFromModalBtn.addEventListener("click", () => { initArrays(); });
+
+  // CPU
+  function allMoves() {
+    const moves = [];
+    for (let r=0;r<N;r++){
+      for (let c=0;c<N-1;c++){
+        if (hEdges[r][c] === -1) moves.push({type:'h', r, c});
+      }
+    }
+    for (let r=0;r<N-1;r++){
+      for (let c=0;c<N;c++){
+        if (vEdges[r][c] === -1) moves.push({type:'v', r, c});
+      }
+    }
+    return moves;
+  }
+
+  function simulateCountsAfter(edge) {
+    let completes = 0;
+    let risk = 0;
+    const adj = boxesAdjacentToEdge(edge);
+    for (const b of adj) {
+      if (boxes[b.r][b.c] !== -1) continue;
+      const before = boxEdgeCount(b.r, b.c);
+      const after = before + 1;
+      if (after === 4) completes++;
+      else if (after === 3) risk++;
+    }
+    return { completes, risk };
+  }
+
+  function chooseCpuMove() {
+    const moves = allMoves();
+    if (moves.length === 0) return null;
+
+    const completes = [];
+    for (const m of moves) {
+      const s = simulateCountsAfter(m);
+      if (s.completes > 0) completes.push({m, s});
+    }
+    if (completes.length) {
+      completes.sort((a,b)=> b.s.completes - a.s.completes);
+      const best = completes[0].s.completes;
+      const tied = completes.filter(x => x.s.completes === best);
+      return tied[Math.floor(Math.random()*tied.length)].m;
+    }
+
+    const safe = [];
+    const risky = [];
+    for (const m of moves) {
+      const s = simulateCountsAfter(m);
+      if (s.risk === 0) safe.push(m);
+      else risky.push({m, risk:s.risk});
+    }
+    if (safe.length) return safe[Math.floor(Math.random()*safe.length)];
+
+    risky.sort((a,b)=> a.risk - b.risk);
+    const least = risky[0].risk;
+    const tied = risky.filter(x=>x.risk===least);
+    return tied[Math.floor(Math.random()*tied.length)].m;
+  }
+
+  function maybeCpuTurn() {
+    if (overlay.classList.contains("show")) return;
+    if (gameMode !== "pvc") return;
+    if (current !== 1) return;
+
+    cpuThinking = true;
+
+    setTimeout(() => {
+      if (overlay.classList.contains("show")) { cpuThinking = false; return; }
+      const move = chooseCpuMove();
+      if (!move) { cpuThinking = false; return; }
+
+      applyMove(move, 1);
+      hideHintOnce();
+      lockSizeOnce();
+      cpuThinking = false;
+
+      if (gameMode === "pvc" && current === 1 && !overlay.classList.contains("show")) {
+        maybeCpuTurn();
+      }
+    }, CPU_DELAY_MS);
+  }
+
+  const ro = new ResizeObserver(() => resizeCanvasToWrap());
+  ro.observe(wrap);
+  window.addEventListener("resize", resizeCanvasToWrap);
+
+  sizeLabel.textContent = `${N}×${N}`;
+  initArrays();
+  resizeCanvasToWrap();
+})();
+</script>
+</body>
+</html>
