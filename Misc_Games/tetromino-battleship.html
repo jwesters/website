@@ -1,0 +1,1084 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tetromino Battleship (9×9)</title>
+  <style>
+    :root{
+      --bg:#0b0f17;
+      --text:#e5e7eb;
+      --muted:#9ca3af;
+      --line:rgba(255,255,255,.10);
+      --hit:#ef4444;
+      --miss:#60a5fa;
+      --ship:#a78bfa;
+      --good:#34d399;
+      --bad:#fb7185;
+      --shadow: 0 14px 40px rgba(0,0,0,.45);
+      --radius:16px;
+      --cell:38px;
+      --gap:6px;
+      --lab:26px;
+    }
+    @media (max-width: 980px){ :root{ --cell:32px; } }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(1000px 600px at 30% 10%, rgba(124,58,237,.22), transparent 60%),
+                  radial-gradient(900px 700px at 90% 30%, rgba(59,130,246,.20), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+    }
+    .wrap{ max-width:1220px; margin:18px auto 28px; padding:0 16px; }
+
+    .topbar{
+      display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;
+      padding:14px;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .title{ display:flex; gap:10px; align-items:baseline; min-width:280px; }
+    .title h1{ margin:0; font-size:16px; font-weight:900; letter-spacing:.2px; }
+    .pill{
+      font-size:12px; padding:5px 9px; border-radius:999px;
+      border:1px solid var(--line); color:var(--muted); background: rgba(255,255,255,.03);
+    }
+    .controls{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:flex-end; }
+    .group{
+      display:flex; gap:8px; align-items:center;
+      padding:8px 10px; border:1px solid var(--line); border-radius:999px;
+      background: rgba(255,255,255,.03);
+    }
+    label{ font-size:12px; color:var(--muted); user-select:none; }
+    input[type="checkbox"]{ accent-color:#22c55e; transform: translateY(1px); }
+
+    .btn{
+      appearance:none; border:1px solid var(--line);
+      background: rgba(255,255,255,.04); color:var(--text);
+      padding:8px 10px; border-radius:999px;
+      font-weight:800; font-size:12px; cursor:pointer; user-select:none;
+      transition: transform .06s ease, background .15s ease, border-color .15s ease, opacity .15s ease;
+    }
+    .btn:hover{ background: rgba(255,255,255,.07); }
+    .btn:active{ transform: translateY(1px); }
+    .btn.primary{ background: rgba(34,197,94,.14); border-color: rgba(34,197,94,.35); }
+    .btn.danger{ background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.30); }
+    .btn:disabled{ opacity:.45; cursor:not-allowed; }
+
+    .status{
+      width:100%; margin-top:10px;
+      padding:10px 12px; border:1px dashed rgba(255,255,255,.16);
+      background: rgba(15,23,42,.55); border-radius:14px;
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between;
+    }
+    .status .left{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .status strong{ font-weight:900; }
+    .muted{ color:var(--muted); }
+
+    .main{ display:grid; grid-template-columns: 330px 1fr; gap:14px; margin-top:14px; }
+    @media (max-width:1080px){ .main{ grid-template-columns: 1fr; } }
+
+    .panel{
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border:1px solid var(--line); border-radius: var(--radius);
+      box-shadow: var(--shadow); overflow:hidden;
+    }
+    .panel .head{
+      padding:12px 12px 10px; display:flex; align-items:center; justify-content:space-between; gap:10px;
+      border-bottom:1px solid var(--line); background: rgba(15,23,42,.40);
+    }
+    .panel .head h2{ margin:0; font-size:13px; letter-spacing:.2px; }
+    .panel .body{ padding:12px; }
+
+    .dock{ display:flex; flex-direction:column; gap:10px; }
+    .shipCard{
+      display:flex; gap:10px; align-items:center;
+      padding:10px; border:1px solid var(--line); border-radius:14px;
+      background: rgba(255,255,255,.03);
+      user-select:none;
+      transition: background .15s ease, border-color .15s ease, transform .06s ease, opacity .15s ease;
+      cursor:pointer;
+    }
+    .shipCard:hover{ background: rgba(255,255,255,.06); }
+    .shipCard:active{ transform: translateY(1px); }
+    .shipCard.selected{
+      border-color: rgba(34,197,94,.45);
+      box-shadow: 0 0 0 2px rgba(34,197,94,.14) inset;
+    }
+    .shipCard.placed{ opacity:.80; }
+    .mini{
+      width:64px; height:64px; border-radius:12px; flex:0 0 auto;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(15,23,42,.55);
+      display:grid; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(4,1fr);
+      overflow:hidden;
+    }
+    .mini div{ border:1px solid rgba(255,255,255,.04); }
+    .mini .b{ background: rgba(167,139,250,.55); border-color: rgba(167,139,250,.30); }
+    .shipInfo{ flex:1; display:flex; flex-direction:column; gap:2px; min-width:0; }
+    .shipInfo .name{ font-weight:900; font-size:12px; letter-spacing:.2px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .shipInfo .sub{ font-size:12px; color:var(--muted); line-height:1.2; }
+    .tag{
+      font-size:11px; padding:2px 8px; border-radius:999px;
+      border:1px solid var(--line); color:var(--muted); background: rgba(255,255,255,.02);
+    }
+    .tag.good{ border-color: rgba(34,197,94,.35); color: rgba(34,197,94,.95); background: rgba(34,197,94,.10); }
+
+    .boards{ display:flex; gap:14px; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; padding:12px; }
+    .boardWrap{ flex:1 1 430px; min-width:380px; }
+    .boardTitle{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin:4px 0 10px; }
+    .boardTitle h3{ margin:0; font-size:13px; letter-spacing:.2px; }
+    .boardTitle .legend{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; color:var(--muted); font-size:11px; }
+    .dot{ width:9px; height:9px; border-radius:999px; display:inline-block; margin-right:6px; }
+    .dot.hit{ background: var(--hit); }
+    .dot.miss{ background: var(--miss); }
+    .dot.ship{ background: var(--ship); }
+
+    .grid10{
+      display:grid;
+      grid-template-columns: var(--lab) repeat(9, var(--cell));
+      grid-template-rows: var(--lab) repeat(9, var(--cell));
+      gap: var(--gap);
+      padding:10px;
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(15,23,42,.55);
+      position:relative;
+      overflow:hidden;
+    }
+    .lab{
+      display:flex; align-items:center; justify-content:center;
+      color: rgba(229,231,235,.75);
+      font-size:12px; font-weight:800;
+      user-select:none;
+    }
+    .cell{
+      width: var(--cell); height: var(--cell);
+      border-radius: 12px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.02);
+      position:relative;
+      overflow:hidden;
+      transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
+      user-select:none;
+    }
+    .cell.interactive{ cursor:pointer; }
+    .cell.interactive:hover{
+      background: rgba(255,255,255,.06);
+      border-color: rgba(255,255,255,.18);
+    }
+    .cell.ship{ background: rgba(167,139,250,.18); border-color: rgba(167,139,250,.28); }
+    .cell.ship.reveal{ background: rgba(167,139,250,.22); border-color: rgba(167,139,250,.34); }
+    .cell.hit{ background: rgba(239,68,68,.22); border-color: rgba(239,68,68,.35); }
+    .cell.miss{ background: rgba(96,165,250,.18); border-color: rgba(96,165,250,.28); }
+    .cell .mark{
+      position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+      font-weight:900; font-size:15px; color: rgba(229,231,235,.90);
+      text-shadow: 0 1px 0 rgba(0,0,0,.25);
+      pointer-events:none;
+    }
+
+    .previewOk{
+      box-shadow: 0 0 0 2px rgba(34,197,94,.35) inset;
+      border-color: rgba(34,197,94,.45) !important;
+      background: rgba(34,197,94,.10) !important;
+    }
+    .previewBad{
+      box-shadow: 0 0 0 2px rgba(239,68,68,.30) inset;
+      border-color: rgba(239,68,68,.45) !important;
+      background: rgba(239,68,68,.10) !important;
+    }
+    .shake{ animation: shake .42s ease; }
+    @keyframes shake{
+      0%,100%{ transform: translateX(0); }
+      20%{ transform: translateX(-6px); }
+      40%{ transform: translateX(6px); }
+      60%{ transform: translateX(-4px); }
+      80%{ transform: translateX(4px); }
+    }
+
+    /* Overlay (opaque) */
+    .overlay{
+      position: fixed; inset:0;
+      display:none;
+      align-items:center; justify-content:center;
+      padding:18px;
+      background: rgba(0,0,0,.72);
+      z-index: 60;
+    }
+    .overlay.show{ display:flex; }
+    .modal{
+      width:min(560px, 100%);
+      border-radius: 18px;
+      border:1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(17,24,39,.98), rgba(15,23,42,.98));
+      box-shadow: 0 22px 70px rgba(0,0,0,.60);
+      padding: 16px;
+    }
+    .modal h4{ margin:0 0 6px; font-size:15px; letter-spacing:.2px; }
+    .modal p{ margin:0 0 14px; color: var(--muted); font-size:12px; line-height:1.35; }
+    .modal .row{ display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; }
+
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size:11px; color: rgba(229,231,235,.85);
+      padding:2px 7px; border-radius: 8px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="title">
+        <h1>Tetromino Battleship</h1>
+        <span class="pill" id="phasePill">Setup</span>
+        <span class="pill" id="turnPill">—</span>
+      </div>
+
+      <div class="controls">
+        <div class="group" title="Optional rule (locked once the game starts)">
+          <input id="hitAgain" type="checkbox" />
+          <label for="hitAgain">Player shoots again on hit</label>
+        </div>
+
+        <button class="btn" id="rotateBtn" type="button" title="Rotate selected ship (90°)">Rotate selected</button>
+        <button class="btn" id="undoBtn" type="button" title="Undo last setup action">Undo</button>
+
+        <button class="btn" id="autoBtn" type="button">Auto-place</button>
+        <button class="btn" id="clearBtn" type="button">Clear</button>
+
+        <button class="btn primary" id="confirmBtn" type="button" disabled>Confirm setup</button>
+        <button class="btn primary" id="startBtn" type="button" disabled>Start</button>
+        <button class="btn danger" id="newBtn" type="button">New Game</button>
+      </div>
+
+      <div class="status" role="status" aria-live="polite">
+        <div class="left">
+          <span><strong id="statusMain">Place your 5 ships.</strong></span>
+          <span class="muted" id="statusSub">Click an empty cell to place the selected ship. Click a placed ship to rotate it.</span>
+        </div>
+        <div class="muted" id="statusRight">Ships placed: <span id="placedCount">0</span>/5</div>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="panel">
+        <div class="head">
+          <h2>Ships</h2>
+          <span class="pill">Rotations allowed • Touching allowed</span>
+        </div>
+        <div class="body">
+          <div class="dock" id="dock"></div>
+          <div style="margin-top:10px; color:var(--muted); font-size:12px; line-height:1.35;">
+            <div style="margin-bottom:6px;"><span class="kbd">How</span> Select a ship → click a cell to place → click that ship again to rotate.</div>
+            <div><span class="kbd">Tip</span> You can also <strong>Auto-place</strong>, then rotate any ship by clicking it.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="head">
+          <h2>Boards</h2>
+          <span class="pill">CPU: Medium</span>
+        </div>
+        <div class="boards">
+          <div class="boardWrap">
+            <div class="boardTitle">
+              <h3>Your board</h3>
+              <div class="legend">
+                <span><span class="dot ship"></span>ship</span>
+                <span><span class="dot hit"></span>hit</span>
+                <span><span class="dot miss"></span>miss</span>
+              </div>
+            </div>
+            <div class="grid10" id="playerGrid" aria-label="Player grid"></div>
+          </div>
+
+          <div class="boardWrap">
+            <div class="boardTitle">
+              <h3>CPU board</h3>
+              <div class="legend">
+                <span><span class="dot hit"></span>hit</span>
+                <span><span class="dot miss"></span>miss</span>
+                <span class="muted" id="cpuLegendExtra"></span>
+              </div>
+            </div>
+            <div class="grid10" id="cpuGrid" aria-label="CPU grid"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Over -->
+  <div class="overlay" id="overlay">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ovTitle">
+      <h4 id="ovTitle">Game over</h4>
+      <p id="ovText">—</p>
+      <div class="row">
+        <button class="btn" id="viewBtn" type="button">View board</button>
+        <button class="btn primary" id="ovNewBtn" type="button">New game</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const SIZE = 9;
+
+  // Free tetrominoes: I, O, T, L, S (NO reflection)
+  const SHAPES = {
+    I: [[0,0],[1,0],[2,0],[3,0]],
+    O: [[0,0],[1,0],[0,1],[1,1]],
+    T: [[0,0],[1,0],[2,0],[1,1]],
+    L: [[0,0],[0,1],[0,2],[1,2]],
+    S: [[1,0],[2,0],[0,1],[1,1]],
+  };
+  const SHIP_ORDER = ["I","O","T","L","S"];
+
+  const els = {
+    dock: document.getElementById('dock'),
+    playerGrid: document.getElementById('playerGrid'),
+    cpuGrid: document.getElementById('cpuGrid'),
+    phasePill: document.getElementById('phasePill'),
+    turnPill: document.getElementById('turnPill'),
+    statusMain: document.getElementById('statusMain'),
+    statusSub: document.getElementById('statusSub'),
+    statusRight: document.getElementById('statusRight'),
+    placedCount: document.getElementById('placedCount'),
+    rotateBtn: document.getElementById('rotateBtn'),
+    undoBtn: document.getElementById('undoBtn'),
+    autoBtn: document.getElementById('autoBtn'),
+    clearBtn: document.getElementById('clearBtn'),
+    confirmBtn: document.getElementById('confirmBtn'),
+    startBtn: document.getElementById('startBtn'),
+    newBtn: document.getElementById('newBtn'),
+    hitAgain: document.getElementById('hitAgain'),
+    overlay: document.getElementById('overlay'),
+    ovTitle: document.getElementById('ovTitle'),
+    ovText: document.getElementById('ovText'),
+    viewBtn: document.getElementById('viewBtn'),
+    ovNewBtn: document.getElementById('ovNewBtn'),
+    cpuLegendExtra: document.getElementById('cpuLegendExtra'),
+  };
+
+  const inBounds = (x,y) => x>=0 && x<SIZE && y>=0 && y<SIZE;
+  const key = (x,y) => `${x},${y}`;
+  const randInt = (n) => Math.floor(Math.random()*n);
+
+  function normalize(cells){
+    let minX = Infinity, minY = Infinity;
+    for (const [x,y] of cells){ minX = Math.min(minX,x); minY = Math.min(minY,y); }
+    return cells.map(([x,y]) => [x-minX, y-minY]);
+  }
+  function rotate90(cells){
+    const r = cells.map(([x,y]) => [-y, x]);
+    return normalize(r);
+  }
+  function transform(shapeName, rot){
+    let cells = SHAPES[shapeName].map(p=>[p[0],p[1]]);
+    for (let i=0;i<rot;i++) cells = rotate90(cells);
+    return normalize(cells);
+  }
+
+  // State
+  let phase = "setup"; // setup | play | over
+  let setupConfirmed = false;
+
+  let selectedShip = "I";
+  let selectedRot = 0; // orientation for selected ship before placement
+
+  // placements: shipName -> {rot, anchor:{x,y}, cells:[{x,y}], hits}
+  let playerPlacements = new Map();
+  let cpuPlacements = new Map();
+  let playerBoard = makeBoard();
+  let cpuBoard = makeBoard();
+  let shotsOnCpu = makeShots();
+  let shotsOnPlayer = makeShots();
+
+  let playerTurn = true;
+  let allowHitAgain = false;
+  let revealCpu = false;
+
+  // CPU medium
+  let cpuTargets = [];
+  let cpuUnknown = new Set();
+
+  // Setup undo history
+  let history = []; // stack of snapshots
+
+  // Preview
+  let previewCells = [];
+
+  function makeBoard(){
+    const b = [];
+    for (let y=0;y<SIZE;y++){
+      const row = [];
+      for (let x=0;x<SIZE;x++) row.push(null);
+      b.push(row);
+    }
+    return b;
+  }
+  function makeShots(){
+    const s = [];
+    for (let y=0;y<SIZE;y++){
+      const row = [];
+      for (let x=0;x<SIZE;x++) row.push(0);
+      s.push(row);
+    }
+    return s;
+  }
+
+  function cloneBoard(b){
+    return b.map(row => row.slice());
+  }
+  function clonePlacements(map){
+    const out = [];
+    for (const [k,v] of map.entries()){
+      out.push([k, {
+        rot: v.rot,
+        anchor: {x: v.anchor.x, y: v.anchor.y},
+        cells: v.cells.map(c => ({x:c.x,y:c.y})),
+        hits: v.hits || 0
+      }]);
+    }
+    return out;
+  }
+  function restorePlacements(entries){
+    const m = new Map();
+    for (const [k,v] of entries){
+      m.set(k, v);
+    }
+    return m;
+  }
+  function pushHistory(){
+    // setup only
+    if (phase !== "setup" || setupConfirmed) return;
+    history.push({
+      playerBoard: cloneBoard(playerBoard),
+      placements: clonePlacements(playerPlacements),
+      selectedShip,
+      selectedRot,
+    });
+    // cap
+    if (history.length > 50) history.shift();
+    updateUndoButton();
+  }
+  function undo(){
+    if (phase !== "setup" || setupConfirmed) return;
+    const snap = history.pop();
+    if (!snap) return;
+    playerBoard = snap.playerBoard;
+    playerPlacements = restorePlacements(snap.placements);
+    selectedShip = snap.selectedShip;
+    selectedRot = snap.selectedRot;
+    clearPreview();
+    renderAll();
+    updateUndoButton();
+  }
+  function updateUndoButton(){
+    els.undoBtn.disabled = !(phase==="setup" && !setupConfirmed && history.length>0);
+  }
+
+  function buildGrid(container, which){
+    container.innerHTML = "";
+    const blank = document.createElement('div');
+    blank.className = "lab";
+    container.appendChild(blank);
+
+    for (let x=0;x<SIZE;x++){
+      const d = document.createElement('div');
+      d.className = "lab";
+      d.textContent = String.fromCharCode(65 + x);
+      container.appendChild(d);
+    }
+    for (let y=0;y<SIZE;y++){
+      const l = document.createElement('div');
+      l.className = "lab";
+      l.textContent = String(y+1);
+      container.appendChild(l);
+
+      for (let x=0;x<SIZE;x++){
+        const c = document.createElement('div');
+        c.className = "cell";
+        c.dataset.x = String(x);
+        c.dataset.y = String(y);
+        c.dataset.which = which;
+        container.appendChild(c);
+      }
+    }
+  }
+
+  function buildDock(){
+    els.dock.innerHTML = "";
+    for (const name of SHIP_ORDER){
+      const card = document.createElement('div');
+      card.className = "shipCard";
+      card.dataset.ship = name;
+
+      const mini = document.createElement('div');
+      mini.className = "mini";
+      for (let i=0;i<16;i++) mini.appendChild(document.createElement('div'));
+
+      const info = document.createElement('div');
+      info.className = "shipInfo";
+      const nm = document.createElement('div');
+      nm.className = "name";
+      nm.innerHTML = `Ship <span class="kbd">${name}</span> <span class="tag" id="tag-${name}">not placed</span>`;
+      const sub = document.createElement('div');
+      sub.className = "sub";
+      sub.textContent = "4 cells • click to place • click ship to rotate";
+      info.appendChild(nm);
+      info.appendChild(sub);
+
+      card.appendChild(mini);
+      card.appendChild(info);
+      els.dock.appendChild(card);
+
+      const base = normalize(SHAPES[name]);
+      for (const [x,y] of base){
+        const idx = y*4 + x;
+        if (mini.children[idx]) mini.children[idx].classList.add('b');
+      }
+    }
+    syncDock();
+  }
+
+  function syncDock(){
+    const cards = els.dock.querySelectorAll('.shipCard');
+    cards.forEach(c => {
+      const ship = c.dataset.ship;
+      c.classList.toggle('selected', ship === selectedShip);
+      c.classList.toggle('placed', playerPlacements.has(ship));
+      const tag = document.getElementById(`tag-${ship}`);
+      if (tag){
+        if (playerPlacements.has(ship)){
+          tag.textContent = "placed";
+          tag.className = "tag good";
+        } else {
+          tag.textContent = "not placed";
+          tag.className = "tag";
+        }
+      }
+    });
+    els.placedCount.textContent = String(playerPlacements.size);
+
+    const canConfirm = (phase==="setup" && !setupConfirmed && playerPlacements.size===5);
+    els.confirmBtn.disabled = !canConfirm;
+    els.startBtn.disabled = !(phase==="setup" && setupConfirmed);
+  }
+
+  function updateStatus(){
+    if (phase === "setup"){
+      els.turnPill.textContent = "—";
+      els.phasePill.textContent = setupConfirmed ? "Setup (confirmed)" : "Setup";
+      els.statusMain.textContent = setupConfirmed ? "Setup confirmed." : "Place your 5 ships.";
+      els.statusSub.textContent = setupConfirmed
+        ? "Click Start to begin."
+        : "Click an empty cell to place the selected ship. Click any placed ship to rotate it.";
+      els.statusRight.innerHTML = `Ships placed: <span id="placedCount">${playerPlacements.size}</span>/5`;
+      els.placedCount = document.getElementById('placedCount');
+    } else if (phase === "play"){
+      els.phasePill.textContent = "Play";
+      els.turnPill.textContent = playerTurn ? "Your turn" : "CPU turn";
+      els.statusMain.textContent = playerTurn ? "Take a shot." : "CPU is thinking…";
+      els.statusSub.textContent = "Click a cell on the CPU board to fire.";
+      els.statusRight.textContent = allowHitAgain ? "Rule: player shoots again on hit" : "Rule: classic (one shot)";
+    } else {
+      els.phasePill.textContent = "Game Over";
+      els.turnPill.textContent = "—";
+    }
+  }
+
+  function setPhase(p){
+    phase = p;
+    const setupOnly = (p==="setup");
+
+    // setup controls availability
+    els.hitAgain.disabled = !setupOnly || setupConfirmed;
+    els.rotateBtn.disabled = !setupOnly || setupConfirmed;
+    els.undoBtn.disabled = !setupOnly || setupConfirmed || history.length===0;
+    els.autoBtn.disabled = !setupOnly || setupConfirmed;
+    els.clearBtn.disabled = !setupOnly || setupConfirmed;
+    els.confirmBtn.disabled = !setupOnly || setupConfirmed || playerPlacements.size!==5;
+    els.startBtn.disabled = !(setupOnly && setupConfirmed);
+
+    updateStatus();
+    renderAll();
+  }
+
+  function clearPreview(){
+    previewCells = [];
+    document.querySelectorAll('.cell.previewOk,.cell.previewBad').forEach(el => el.classList.remove('previewOk','previewBad'));
+  }
+  function paintPreview(cells, ok){
+    clearPreview();
+    previewCells = cells;
+    for (const [x,y] of cells){
+      const el = els.playerGrid.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+      if (el) el.classList.add(ok ? "previewOk" : "previewBad");
+    }
+  }
+
+  function shakePlayerGrid(){
+    els.playerGrid.classList.remove('shake');
+    void els.playerGrid.offsetWidth;
+    els.playerGrid.classList.add('shake');
+    setTimeout(()=>els.playerGrid.classList.remove('shake'), 450);
+  }
+
+  function removeShipFrom(board, placements, shipName){
+    const p = placements.get(shipName);
+    if (!p) return;
+    for (const {x,y} of p.cells){
+      if (board[y][x] === shipName) board[y][x] = null;
+    }
+    placements.delete(shipName);
+  }
+
+  function canPlace(board, shipName, rot, ax, ay){
+    const offsets = transform(shipName, rot);
+    const cells = offsets.map(([dx,dy]) => [ax+dx, ay+dy]);
+    for (const [x,y] of cells){
+      if (!inBounds(x,y)) return { ok:false, cells };
+      if (board[y][x] !== null) return { ok:false, cells };
+    }
+    return { ok:true, cells };
+  }
+
+  function placeShip(board, placements, shipName, rot, ax, ay){
+    const check = canPlace(board, shipName, rot, ax, ay);
+    if (!check.ok) return { ok:false, cells: check.cells };
+
+    const offsets = transform(shipName, rot);
+    const cells = offsets.map(([dx,dy]) => [ax+dx, ay+dy]);
+    for (const [x,y] of cells) board[y][x] = shipName;
+
+    placements.set(shipName, {
+      rot,
+      anchor:{x:ax,y:ay},
+      cells: cells.map(([x,y]) => ({x,y})),
+      hits: 0
+    });
+    return { ok:true, cells: check.cells };
+  }
+
+  function placeOrMovePlayerShip(ship, rot, ax, ay){
+    const prev = playerPlacements.get(ship);
+    let snapshot = null;
+    if (prev){
+      snapshot = { rot: prev.rot, x: prev.anchor.x, y: prev.anchor.y };
+      removeShipFrom(playerBoard, playerPlacements, ship);
+    }
+    const res = placeShip(playerBoard, playerPlacements, ship, rot, ax, ay);
+    if (!res.ok && snapshot){
+      placeShip(playerBoard, playerPlacements, ship, snapshot.rot, snapshot.x, snapshot.y);
+    }
+    return res;
+  }
+
+  function shipAt(x,y){
+    return playerBoard[y][x];
+  }
+
+  function rotatePlacedShip(ship){
+    const p = playerPlacements.get(ship);
+    if (!p) return { ok:false, cells: [] };
+
+    const nextRot = (p.rot + 1) % 4;
+
+    // remove, test, replace or restore
+    const snapshot = { rot: p.rot, x: p.anchor.x, y: p.anchor.y };
+    removeShipFrom(playerBoard, playerPlacements, ship);
+
+    const check = canPlace(playerBoard, ship, nextRot, snapshot.x, snapshot.y);
+    if (!check.ok){
+      placeShip(playerBoard, playerPlacements, ship, snapshot.rot, snapshot.x, snapshot.y);
+      return { ok:false, cells: check.cells };
+    }
+    placeShip(playerBoard, playerPlacements, ship, nextRot, snapshot.x, snapshot.y);
+    return { ok:true, cells: check.cells };
+  }
+
+  function randomPlaceAll(board, placements){
+    for (const s of SHIP_ORDER) removeShipFrom(board, placements, s);
+    for (const ship of SHIP_ORDER){
+      let tries = 0, placed = false;
+      while (!placed && tries < 5000){
+        tries++;
+        const rot = randInt(4);
+        const off = transform(ship, rot);
+        let maxX = 0, maxY = 0;
+        for (const [dx,dy] of off){ maxX = Math.max(maxX, dx); maxY = Math.max(maxY, dy); }
+        const ax = randInt(SIZE - maxX);
+        const ay = randInt(SIZE - maxY);
+        const res = placeShip(board, placements, ship, rot, ax, ay);
+        if (res.ok) placed = true;
+      }
+      if (!placed) return false;
+    }
+    return true;
+  }
+
+  function renderGrid(which){
+    const grid = which === "player" ? els.playerGrid : els.cpuGrid;
+    const board = which === "player" ? playerBoard : cpuBoard;
+    const shots = which === "player" ? shotsOnPlayer : shotsOnCpu;
+
+    grid.querySelectorAll('.cell').forEach(cell => {
+      const x = Number(cell.dataset.x);
+      const y = Number(cell.dataset.y);
+
+      cell.classList.remove('ship','hit','miss','interactive','reveal');
+      cell.innerHTML = "";
+
+      if (which === "player"){
+        if (board[y][x] !== null) cell.classList.add('ship');
+      } else {
+        if (revealCpu && board[y][x] !== null) cell.classList.add('ship','reveal');
+      }
+
+      if (shots[y][x] === 1){
+        cell.classList.add('miss');
+        const m = document.createElement('div');
+        m.className = 'mark';
+        m.textContent = "•";
+        cell.appendChild(m);
+      } else if (shots[y][x] === 2){
+        cell.classList.add('hit');
+        const m = document.createElement('div');
+        m.className = 'mark';
+        m.textContent = "×";
+        cell.appendChild(m);
+      }
+
+      if (phase === "play" && which === "cpu" && playerTurn) cell.classList.add('interactive');
+    });
+
+    els.cpuLegendExtra.textContent = revealCpu ? "CPU ships revealed" : "";
+  }
+
+  function renderAll(){
+    renderGrid("player");
+    renderGrid("cpu");
+    syncDock();
+    updateStatus();
+    updateUndoButton();
+  }
+
+  // Setup click interactions
+  function wireSetupClicks(){
+    els.dock.addEventListener('click', (e) => {
+      const card = e.target.closest('.shipCard');
+      if (!card || phase !== "setup" || setupConfirmed) return;
+      selectedShip = card.dataset.ship;
+      // If placed, adopt its rot as selected rot for consistency
+      const p = playerPlacements.get(selectedShip);
+      if (p) selectedRot = p.rot;
+      clearPreview();
+      renderAll();
+    });
+
+    // Hover preview for placing selected ship onto empty cell
+    els.playerGrid.addEventListener('mousemove', (e) => {
+      if (phase !== "setup" || setupConfirmed) return;
+      const cell = e.target.closest('.cell');
+      if (!cell) { clearPreview(); return; }
+      const x = Number(cell.dataset.x), y = Number(cell.dataset.y);
+
+      // if hovering over existing ship: no placement preview
+      if (playerBoard[y][x] !== null){ clearPreview(); return; }
+
+      // preview as if selected ship were placed here; ignore its current placement by temporarily removing it
+      const ship = selectedShip;
+      const prev = playerPlacements.get(ship);
+      let snapshot = null;
+      if (prev){
+        snapshot = { rot: prev.rot, x: prev.anchor.x, y: prev.anchor.y };
+        removeShipFrom(playerBoard, playerPlacements, ship);
+      }
+      const check = canPlace(playerBoard, ship, selectedRot, x, y);
+      paintPreview(check.cells, check.ok);
+      if (snapshot){
+        placeShip(playerBoard, playerPlacements, ship, snapshot.rot, snapshot.x, snapshot.y);
+      }
+    });
+
+    els.playerGrid.addEventListener('mouseleave', () => {
+      if (phase !== "setup" || setupConfirmed) return;
+      clearPreview();
+    });
+
+    els.playerGrid.addEventListener('click', (e) => {
+      if (phase !== "setup" || setupConfirmed) return;
+      const cell = e.target.closest('.cell');
+      if (!cell) return;
+      const x = Number(cell.dataset.x), y = Number(cell.dataset.y);
+
+      const hereShip = playerBoard[y][x];
+      if (hereShip !== null){
+        // rotate this ship
+        pushHistory();
+        const res = rotatePlacedShip(hereShip);
+        clearPreview();
+        if (!res.ok){
+          shakePlayerGrid();
+          paintPreview(res.cells, false);
+          setTimeout(clearPreview, 380);
+          // revert history entry? keep (undo can restore)
+        }
+        renderAll();
+        return;
+      }
+
+      // place/move selected ship onto this empty cell
+      pushHistory();
+      const res = placeOrMovePlayerShip(selectedShip, selectedRot, x, y);
+      if (!res.ok){
+        shakePlayerGrid();
+        paintPreview(res.cells, false);
+        setTimeout(clearPreview, 380);
+      } else {
+        clearPreview();
+      }
+      renderAll();
+    });
+  }
+
+  // Controls
+  function wireControls(){
+    els.rotateBtn.addEventListener('click', () => {
+      if (phase !== "setup" || setupConfirmed) return;
+      selectedRot = (selectedRot + 1) % 4;
+      clearPreview();
+      renderAll();
+    });
+
+    els.undoBtn.addEventListener('click', () => undo());
+
+    els.autoBtn.addEventListener('click', () => {
+      if (phase !== "setup" || setupConfirmed) return;
+      pushHistory();
+      playerBoard = makeBoard();
+      playerPlacements = new Map();
+      randomPlaceAll(playerBoard, playerPlacements);
+      clearPreview();
+      renderAll();
+    });
+
+    els.clearBtn.addEventListener('click', () => {
+      if (phase !== "setup" || setupConfirmed) return;
+      pushHistory();
+      playerBoard = makeBoard();
+      playerPlacements = new Map();
+      clearPreview();
+      renderAll();
+    });
+
+    els.confirmBtn.addEventListener('click', () => {
+      if (phase !== "setup" || setupConfirmed) return;
+      if (playerPlacements.size !== 5) return;
+      setupConfirmed = true;
+      history = []; // clear undo after confirm
+      clearPreview();
+      setPhase("setup");
+    });
+
+    els.startBtn.addEventListener('click', () => {
+      if (phase !== "setup" || !setupConfirmed) return;
+      startGame();
+    });
+
+    els.newBtn.addEventListener('click', () => newGame());
+
+    els.viewBtn.addEventListener('click', () => {
+      hideOverlay();
+      renderAll();
+    });
+    els.ovNewBtn.addEventListener('click', () => {
+      hideOverlay();
+      newGame();
+    });
+    els.overlay.addEventListener('click', (e) => {
+      if (e.target === els.overlay) hideOverlay();
+    });
+  }
+
+  // Shooting
+  function applyShotTo(board, placements, shots, x, y){
+    if (shots[y][x] !== 0) return { ok:false };
+    const ship = board[y][x];
+    if (ship === null){
+      shots[y][x] = 1;
+      return { ok:true, hit:false };
+    } else {
+      shots[y][x] = 2;
+      const p = placements.get(ship);
+      if (p) p.hits = (p.hits||0) + 1;
+      return { ok:true, hit:true };
+    }
+  }
+
+  function allShipsSunk(placements){
+    for (const s of SHIP_ORDER){
+      const p = placements.get(s);
+      if (!p || (p.hits||0) < 4) return false;
+    }
+    return true;
+  }
+
+  function playerFire(x,y){
+    const res = applyShotTo(cpuBoard, cpuPlacements, shotsOnCpu, x, y);
+    if (!res.ok) return;
+    renderGrid("cpu");
+
+    if (allShipsSunk(cpuPlacements)){
+      endGame("player");
+      return;
+    }
+    if (res.hit && allowHitAgain){
+      els.statusMain.textContent = "Hit! Shoot again.";
+      els.turnPill.textContent = "Your turn";
+      return;
+    }
+    playerTurn = false;
+    updateStatus();
+    cpuTurn();
+  }
+
+  function cpuPickHuntCell(){
+    const candidates = [];
+    for (const k of cpuUnknown){
+      const [xs,ys] = k.split(',');
+      const x = +xs, y = +ys;
+      if (((x+y)&1)===0) candidates.push([x,y]);
+    }
+    const pickFrom = candidates.length ? candidates : Array.from(cpuUnknown).map(s => s.split(',').map(Number));
+    return pickFrom[randInt(pickFrom.length)];
+  }
+  function cpuChooseTarget(){
+    while (cpuTargets.length){
+      const [x,y] = cpuTargets[0];
+      if (cpuUnknown.has(key(x,y))) return cpuTargets.shift();
+      cpuTargets.shift();
+    }
+    return cpuPickHuntCell();
+  }
+  function cpuEnqueueNeighbors(x,y){
+    const neigh = [[x+1,y],[x-1,y],[x,y+1],[x,y-1]];
+    for (const [nx,ny] of neigh){
+      if (inBounds(nx,ny) && cpuUnknown.has(key(nx,ny))){
+        cpuTargets.push([nx,ny]);
+      }
+    }
+  }
+  function cpuTurn(){
+    if (phase !== "play" || playerTurn) return;
+    setTimeout(() => {
+      if (phase !== "play" || playerTurn) return;
+
+      const [x,y] = cpuChooseTarget();
+      cpuUnknown.delete(key(x,y));
+      const res = applyShotTo(playerBoard, playerPlacements, shotsOnPlayer, x, y);
+      renderGrid("player");
+      if (res.ok && res.hit) cpuEnqueueNeighbors(x,y);
+
+      if (allShipsSunk(playerPlacements)){
+        endGame("cpu");
+        return;
+      }
+      playerTurn = true;
+      updateStatus();
+      renderGrid("cpu");
+    }, 420);
+  }
+
+  function wireShooting(){
+    els.cpuGrid.addEventListener('click', (e) => {
+      const cell = e.target.closest('.cell');
+      if (!cell) return;
+      if (phase !== "play" || !playerTurn) return;
+      const x = Number(cell.dataset.x), y = Number(cell.dataset.y);
+      playerFire(x,y);
+    });
+  }
+
+  // Game flow
+  function startGame(){
+    allowHitAgain = !!els.hitAgain.checked;
+
+    cpuBoard = makeBoard();
+    cpuPlacements = new Map();
+    const ok = randomPlaceAll(cpuBoard, cpuPlacements);
+    if (!ok){
+      els.statusMain.textContent = "Could not place CPU ships. Try New Game.";
+      return;
+    }
+
+    cpuUnknown = new Set();
+    for (let y=0;y<SIZE;y++) for (let x=0;x<SIZE;x++) cpuUnknown.add(key(x,y));
+    cpuTargets = [];
+
+    revealCpu = false;
+    playerTurn = true;
+    setPhase("play");
+  }
+
+  function endGame(winner){
+    phase = "over";
+    revealCpu = true;
+    renderAll();
+    els.overlay.classList.add('show');
+    els.ovTitle.textContent = winner === "player" ? "You win!" : "CPU wins!";
+    els.ovText.textContent = winner === "player"
+      ? "You sank all five CPU tetromino ships."
+      : "The CPU sank all five of your tetromino ships.";
+    updateStatus();
+  }
+  function hideOverlay(){ els.overlay.classList.remove('show'); }
+
+  function newGame(){
+    // reset everything
+    playerBoard = makeBoard();
+    cpuBoard = makeBoard();
+    playerPlacements = new Map();
+    cpuPlacements = new Map();
+    shotsOnCpu = makeShots();
+    shotsOnPlayer = makeShots();
+    cpuTargets = [];
+    cpuUnknown = new Set();
+    playerTurn = true;
+    allowHitAgain = false;
+    revealCpu = false;
+
+    phase = "setup";
+    setupConfirmed = false;
+    selectedShip = "I";
+    selectedRot = 0;
+    history = [];
+    els.hitAgain.checked = false;
+    clearPreview();
+    setPhase("setup");
+  }
+
+  function init(){
+    buildGrid(els.playerGrid, "player");
+    buildGrid(els.cpuGrid, "cpu");
+    buildDock();
+    wireSetupClicks();
+    wireShooting();
+    wireControls();
+    newGame();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

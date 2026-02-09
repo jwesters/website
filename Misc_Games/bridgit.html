@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Bridgit</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+  :root{
+    --bg:#f4f4f6; --bar:#171717; --card:#ffffff; --muted:#e5e7eb;
+    --blue:#2563eb; --red:#dc2626;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:var(--bg); }
+  #topbar{
+    display:flex; align-items:center; gap:10px; padding:12px 14px;
+    background:var(--bar); color:#fff; flex-wrap:wrap;
+  }
+  #topbar label{ font-size:14px; opacity:.9; }
+  #topbar select{ padding:6px 8px; border-radius:10px; border:0; }
+  #topbar input[type="range"]{ width:160px; accent-color:var(--blue); }
+  #sizeLabel{ min-width:18px; text-align:center; font-weight:700; }
+  .btn{ padding:8px 12px; border-radius:12px; border:0; cursor:pointer; font-weight:650; }
+  .btn.primary{ background:var(--blue); color:#fff; }
+  .btn.secondary{ background:var(--muted); color:#111; }
+  .btn:disabled{ opacity:.45; cursor:not-allowed; }
+  #status{
+    margin-left:auto; font-weight:750; padding:6px 10px;
+    background:rgba(255,255,255,0.12); border-radius:12px; white-space:nowrap;
+  }
+
+  #wrap{ display:flex; justify-content:center; padding:10px; }
+  canvas{
+    background:var(--card);
+    border-radius:16px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.18);
+    cursor:crosshair;
+    touch-action:none;
+    width:min(92vmin, 920px);
+    height:min(92vmin, 920px);
+  }
+
+  #overlay{
+    position:fixed; inset:0;
+    background:rgba(0,0,0,0.62);
+    display:none; align-items:center; justify-content:center; padding:18px;
+  }
+  #modal{
+    width:min(420px, 92vw);
+    background:#fff; border-radius:16px;
+    box-shadow:0 18px 60px rgba(0,0,0,0.38);
+    padding:18px 18px 16px; text-align:center;
+  }
+  #modal h2{ margin:0 0 10px; }
+  #modal .actions{ display:flex; gap:10px; justify-content:center; margin-top:16px; flex-wrap:wrap; }
+
+  .shake{ animation:shake .35s; }
+  @keyframes shake{
+    0%{transform:translateX(0)}25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-6px)}100%{transform:translateX(0)}
+  }
+</style>
+</head>
+<body>
+  <div id="topbar">
+    <label for="mode">Mode:</label>
+    <select id="mode"><option value="pvp">Player vs Player</option><option value="cpu">Player vs CPU</option></select>
+    <label for="sizeSlider">Size (n):</label>
+    <input id="sizeSlider" type="range" min="3" max="9" step="1" value="4" />
+    <span id="sizeLabel">4</span>
+    <button id="startBtn" class="btn primary">Start Game</button>
+    <button id="newBtn" class="btn secondary" disabled>New Game</button>
+    <div id="status">Choose options, then Start</div>
+  </div>
+
+  <div id="wrap">
+    <canvas id="board"></canvas>
+  </div>
+
+  <div id="overlay">
+    <div id="modal">
+      <h2 id="winnerText">Winner</h2>
+      <div class="actions">
+        <button id="viewBtn" class="btn secondary">View Board</button>
+        <button id="restartBtn" class="btn primary">Restart</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const canvas = $("board");
+  const ctx = canvas.getContext("2d");
+
+  const modeSel = $("mode");
+  const sizeSlider = $("sizeSlider");
+  const sizeLabel = $("sizeLabel");
+  const startBtn = $("startBtn");
+  const newBtn = $("newBtn");
+  const statusDiv = $("status");
+
+  const overlay = $("overlay");
+  const winnerText = $("winnerText");
+  const viewBtn = $("viewBtn");
+  const restartBtn = $("restartBtn");
+
+  const COLORS = { blue:"#2563eb", red:"#dc2626" };
+
+  sizeLabel.textContent = sizeSlider.value;
+
+  let n = 4, started=false, isCPU=false, gameOver=false;
+  let current="blue", selected=null;
+  let segments=[];
+  let blueDots=[], redDots=[];
+
+  const randBool = () => Math.random() < 0.5;
+
+  function resizeCanvasToCSS(){
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const w = Math.round(rect.width * dpr);
+    const h = Math.round(rect.height * dpr);
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+  }
+
+  window.addEventListener("resize", () => { resizeCanvasToCSS(); draw(); });
+
+  sizeSlider.addEventListener("input", () => sizeLabel.textContent = sizeSlider.value);
+
+  function setupBoard(){
+    resizeCanvasToCSS();
+
+    n = parseInt(sizeSlider.value, 10);
+    started=true; gameOver=false; selected=null; segments=[]; blueDots=[]; redDots=[];
+    current = randBool() ? "blue" : "red";
+    isCPU = (modeSel.value === "cpu");
+
+    // Blue: (n+1) rows x n cols
+    // Red:  n rows x (n+1) cols
+    const blueRows = n + 1, blueCols = n;
+    const redRows  = n,     redCols  = n + 1;
+    const totalVisualRows = blueRows + redRows; // = 2n+1
+
+    // Logical bbox (in "cell units") with red shifted LEFT by 0.5
+    // Blue x: [0, n-1], Red x: [-0.5, n-0.5] => overall x span = n
+    // y: [0, 2n] => span = 2n
+    const spanX_units = n;        // from -0.5 .. n-0.5
+    const spanY_units = 2 * n;    // from 0 .. 2n
+
+    const W = canvas.width, H = canvas.height;
+    const pad = Math.min(W,H) * 0.06;
+    const usableW = W - pad*2;
+    const usableH = H - pad*2;
+
+    const cell = Math.min(usableW / spanX_units, usableH / spanY_units);
+
+    const spanX = spanX_units * cell;
+    const spanY = spanY_units * cell;
+
+    // Map logical coordinates to pixels, centering bbox.
+    // Since minX = -0.5, we add +0.5 so it starts at 0 within bbox.
+    const originX = (W - spanX) / 2 + 0.5 * cell;
+    const originY = (H - spanY) / 2;
+
+    let bRow = 0, rRow = 0;
+
+    for (let vr = 0; vr < totalVisualRows; vr++) {
+      const y = originY + vr * cell;
+
+      if (vr % 2 === 0) {
+        // BLUE row (no x shift)
+        for (let c = 0; c < blueCols; c++) {
+          const x = originX + c * cell;
+          blueDots.push({ color:"blue", r:bRow, c, x, y, key:`b:${bRow},${c}` });
+        }
+        bRow++;
+      } else {
+        // RED row (x shift -0.5)
+        for (let c = 0; c < redCols; c++) {
+          const x = originX + (c - 0.5) * cell;
+          redDots.push({ color:"red", r:rRow, c, x, y, key:`r:${rRow},${c}` });
+        }
+        rRow++;
+      }
+    }
+
+    updateStatus(); draw(); maybeCPUTurn();
+  }
+
+  function updateStatus(){
+    if(!started){ statusDiv.textContent="Choose options, then Start"; return; }
+    if(gameOver) return;
+    statusDiv.textContent = current==="blue" ? "Blue's turn (Top → Bottom)" : (isCPU ? "CPU (Red) thinking…" : "Red's turn (Left → Right)");
+  }
+
+  function draw(){
+    resizeCanvasToCSS();
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.lineCap="round";
+
+    for(const s of segments){
+      ctx.strokeStyle = COLORS[s.color];
+      ctx.lineWidth = Math.max(4, Math.min(canvas.width, canvas.height) * 0.008);
+      ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke();
+    }
+
+    const dotR = Math.max(4, Math.min(canvas.width, canvas.height) * 0.007);
+    for(const d of blueDots) drawDot(d, dotR);
+    for(const d of redDots) drawDot(d, dotR);
+
+    if(selected){
+      ctx.strokeStyle="#111";
+      ctx.lineWidth = Math.max(2, dotR * 0.5);
+      ctx.beginPath(); ctx.arc(selected.x, selected.y, dotR*2.1, 0, Math.PI*2); ctx.stroke();
+    }
+  }
+
+  function drawDot(d,r){
+    ctx.fillStyle = COLORS[d.color];
+    ctx.beginPath(); ctx.arc(d.x,d.y,r,0,Math.PI*2); ctx.fill();
+  }
+
+  function dist(x1,y1,x2,y2){ return Math.hypot(x1-x2, y1-y2); }
+
+  function hitTest(mx,my){
+    const dots = (current==="blue") ? blueDots : redDots;
+    let best=null, bd=Infinity;
+    const hitR = Math.max(14, Math.min(canvas.width, canvas.height) * 0.02);
+    for(const d of dots){
+      const dd = dist(mx,my,d.x,d.y);
+      if(dd <= hitR && dd < bd){ best=d; bd=dd; }
+    }
+    return best;
+  }
+
+  function areAdjacent(a,b){ return (Math.abs(a.r-b.r)+Math.abs(a.c-b.c))===1; }
+
+  function segKey(a,b){ return a<b ? a+"|"+b : b+"|"+a; }
+  function exists(a,b,color){
+    const k=segKey(a.key,b.key);
+    return segments.some(s=>s.color===color && s.k===k);
+  }
+
+  function intersects(s1,s2){
+    const s1h=(s1.y1===s1.y2), s2h=(s2.y1===s2.y2);
+    if(s1h===s2h) return false;
+    const h=s1h?s1:s2, v=s1h?s2:s1;
+    const minHx=Math.min(h.x1,h.x2), maxHx=Math.max(h.x1,h.x2);
+    const minVy=Math.min(v.y1,v.y2), maxVy=Math.max(v.y1,v.y2);
+    const ix=v.x1, iy=h.y1;
+    return (minHx<ix && ix<maxHx && minVy<iy && iy<maxVy);
+  }
+
+  function crossesOpponent(seg){
+    for(const s of segments){
+      if(s.color === seg.color) continue;
+      if(intersects(s,seg)) return true;
+    }
+    return false;
+  }
+
+  function tryAdd(a,b,color){
+    if(!areAdjacent(a,b)) return false;
+    if(exists(a,b,color)) return false;
+    const seg={ k:segKey(a.key,b.key), x1:a.x,y1:a.y,x2:b.x,y2:b.y, color };
+    if(crossesOpponent(seg)) return false;
+    segments.push(seg);
+    return true;
+  }
+
+  function buildAdj(color){
+    const nodes = color==="blue" ? blueDots : redDots;
+    const adj=new Map();
+    for(const d of nodes) adj.set(d.key, []);
+    for(const s of segments){
+      if(s.color!==color) continue;
+      const [k1,k2]=s.k.split("|");
+      if(adj.has(k1)&&adj.has(k2)){
+        adj.get(k1).push(k2);
+        adj.get(k2).push(k1);
+      }
+    }
+    return {nodes, adj};
+  }
+
+  function checkWin(color){
+    const {nodes, adj} = buildAdj(color);
+    const starts=[], targets=new Set();
+
+    if(color==="blue"){
+      for(const d of nodes){
+        if(d.r===0) starts.push(d.key);
+        if(d.r===n) targets.add(d.key);
+      }
+    } else {
+      for(const d of nodes){
+        if(d.c===0) starts.push(d.key);
+        if(d.c===n) targets.add(d.key);
+      }
+    }
+
+    const stack=[...starts], seen=new Set();
+    while(stack.length){
+      const u=stack.pop();
+      if(seen.has(u)) continue;
+      seen.add(u);
+      if(targets.has(u)) return true;
+      for(const v of (adj.get(u)||[])){
+        if(!seen.has(v)) stack.push(v);
+      }
+    }
+    return false;
+  }
+
+  function endGame(winner){
+    gameOver=true;
+    winnerText.textContent = winner==="blue" ? "Blue wins!" : (isCPU ? "CPU (Red) wins!" : "Red wins!");
+    overlay.style.display="flex";
+    updateStatus();
+  }
+
+  function swapTurn(){
+    if(checkWin(current)){ endGame(current); return; }
+    current = (current==="blue") ? "red" : "blue";
+    selected=null; updateStatus(); draw(); maybeCPUTurn();
+  }
+
+  function invalidFeedback(){
+    canvas.classList.remove("shake");
+    void canvas.offsetWidth;
+    canvas.classList.add("shake");
+  }
+
+  function allLegalMoves(color){
+    const nodes = color==="blue" ? blueDots : redDots;
+    const moves=[];
+    for(const a of nodes){
+      for(const b of nodes){
+        if(a===b) continue;
+        if(!areAdjacent(a,b)) continue;
+        if(exists(a,b,color)) continue;
+        const seg={x1:a.x,y1:a.y,x2:b.x,y2:b.y,color};
+        if(crossesOpponent(seg)) continue;
+        if(a.key < b.key) moves.push([a,b]);
+      }
+    }
+    return moves;
+  }
+
+  function heuristic(move,color){
+    const [a,b]=move;
+    let score=0;
+    if(color==="red") score += (a.c + b.c); else score += (a.r + b.r);
+    for(const s of segments){
+      if(s.color!==color) continue;
+      const [k1,k2]=s.k.split("|");
+      if(k1===a.key||k2===a.key||k1===b.key||k2===b.key) score+=2;
+    }
+    score += Math.random()*0.25;
+    return score;
+  }
+
+  function cpuPick(){
+    const moves=allLegalMoves("red");
+    if(!moves.length) return null;
+    if(Math.random()<0.30) return moves[Math.floor(Math.random()*moves.length)];
+    moves.sort((m1,m2)=>heuristic(m2,"red")-heuristic(m1,"red"));
+    const topK=Math.min(4,moves.length);
+    return moves[Math.floor(Math.random()*topK)];
+  }
+
+  function maybeCPUTurn(){
+    if(!started || gameOver || !isCPU || current!=="red") return;
+    setTimeout(()=>{
+      if(gameOver) return;
+      const mv=cpuPick(); if(!mv) return;
+      if(tryAdd(mv[0],mv[1],"red")) swapTurn();
+    },300);
+  }
+
+  canvas.addEventListener("pointerdown",(e)=>{
+    if(!started||gameOver) return;
+    if(isCPU && current==="red") return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const my = (e.clientY - rect.top) * (canvas.height / rect.height);
+    const d = hitTest(mx,my); if(!d) return;
+    if(!selected){ selected = d; draw(); return; }
+    const a=selected, b=d; selected=null;
+    if(a.key===b.key){ draw(); return; }
+    if(!tryAdd(a,b,current)){ invalidFeedback(); draw(); return; }
+    swapTurn();
+  });
+
+  startBtn.addEventListener("click",()=>{
+    sizeSlider.disabled=true; modeSel.disabled=true; startBtn.disabled=true; newBtn.disabled=false;
+    setupBoard();
+  });
+
+  newBtn.addEventListener("click",()=>{
+    started=false; gameOver=false;
+    sizeSlider.disabled=false; modeSel.disabled=false; startBtn.disabled=false; newBtn.disabled=true;
+    overlay.style.display="none"; selected=null; segments=[];
+    updateStatus(); draw();
+  });
+
+  viewBtn.addEventListener("click",()=> overlay.style.display="none");
+
+  restartBtn.addEventListener("click",()=>{
+    overlay.style.display="none";
+    started=false; gameOver=false;
+    sizeSlider.disabled=false; modeSel.disabled=false; startBtn.disabled=false; newBtn.disabled=true;
+    selected=null; segments=[];
+    updateStatus(); draw();
+  });
+
+  resizeCanvasToCSS(); draw(); updateStatus();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Magic Square Generator & Puzzle</title>
+<style>
+  :root{
+    --bg:#0b0d10;
+    --panel:#11151b;
+    --text:#e8eef6;
+    --muted:#9aa7b4;
+    --line:rgba(232,238,246,.14);
+    --good:#5ee38f;
+    --bad:#ff6b6b;
+    --btn:#1a2230;
+    --btnHover:#223046;
+    --focus:#7aa7ff;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    background:radial-gradient(1200px 800px at 30% -10%, rgba(122,167,255,.18), transparent 60%),
+               radial-gradient(900px 700px at 120% 20%, rgba(94,227,143,.12), transparent 60%),
+               var(--bg);
+    color:var(--text);
+    min-height:100vh;
+  }
+  header{
+    padding:22px 18px 10px;
+    max-width:1100px;
+    margin:0 auto;
+  }
+  h1{
+    font-size:18px;
+    font-weight:650;
+    margin:0 0 6px 0;
+    letter-spacing:.2px;
+  }
+  .sub{
+    margin:0;
+    color:var(--muted);
+    font-size:13px;
+  }
+
+  .wrap{
+    max-width:1100px;
+    margin:0 auto;
+    padding:12px 18px 26px;
+    display:grid;
+    grid-template-columns: 360px 1fr;
+    gap:14px;
+    align-items:start;
+  }
+
+  .card{
+    background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.25);
+  }
+
+  .controls .row{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    flex-wrap:wrap;
+    margin-bottom:10px;
+  }
+  label{
+    font-size:12px;
+    color:var(--muted);
+  }
+  select, button, input[type="range"], input[type="number"]{
+    border-radius:12px;
+    border:1px solid var(--line);
+    background:var(--btn);
+    color:var(--text);
+    padding:10px 12px;
+    font-size:13px;
+    outline:none;
+  }
+  select:focus, button:focus, input:focus{
+    border-color:rgba(122,167,255,.55);
+    box-shadow: 0 0 0 3px rgba(122,167,255,.18);
+  }
+  button{
+    cursor:pointer;
+    transition: background .12s ease, transform .04s ease;
+    user-select:none;
+  }
+  button:hover{ background:var(--btnHover); }
+  button:active{ transform: translateY(1px); }
+  button.primary{
+    background: linear-gradient(180deg, rgba(122,167,255,.28), rgba(122,167,255,.14));
+    border-color: rgba(122,167,255,.35);
+  }
+  button.good{
+    background: linear-gradient(180deg, rgba(94,227,143,.22), rgba(94,227,143,.10));
+    border-color: rgba(94,227,143,.35);
+  }
+  button.bad{
+    background: linear-gradient(180deg, rgba(255,107,107,.20), rgba(255,107,107,.10));
+    border-color: rgba(255,107,107,.32);
+  }
+  button.ghost{
+    background: rgba(255,255,255,.03);
+  }
+
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 10px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    background:rgba(0,0,0,.18);
+    font-size:12px;
+    color:var(--muted);
+  }
+  .pill strong{ color:var(--text); font-weight:650; }
+  .hint{
+    margin-top:8px;
+    font-size:12px;
+    color:var(--muted);
+    line-height:1.35;
+  }
+
+  .boardWrap{
+    padding:14px;
+  }
+  .boardHeader{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:12px;
+  }
+  .status{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .statusLine{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .statusText{
+    font-size:13px;
+    color:var(--muted);
+  }
+  .statusText b{ color:var(--text); }
+
+  .grid{
+    width:min(70vh, 720px);
+    max-width:100%;
+    aspect-ratio:1/1;
+    display:grid;
+    border-radius:16px;
+    overflow:hidden;
+    border:1px solid var(--line);
+    background:rgba(0,0,0,.18);
+  }
+  .cell{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-right:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+    font-variant-numeric: tabular-nums;
+    font-weight:650;
+    font-size: clamp(14px, 2.4vw, 22px);
+    padding:6px;
+  }
+
+  /* Puzzle inputs */
+  .cell input{
+    width:100%;
+    height:100%;
+    border:none;
+    outline:none;
+    background:rgba(255,255,255,.02);
+    color:var(--text);
+    font:inherit;
+    text-align:center;
+    font-weight:700;
+    font-variant-numeric: tabular-nums;
+    padding:0;
+    border-radius:10px;
+  }
+  .cell input::placeholder{ color:rgba(154,167,180,.35); }
+  .cell input:focus{
+    box-shadow: inset 0 0 0 2px rgba(122,167,255,.45);
+    background:rgba(122,167,255,.06);
+  }
+  .given{
+    background: rgba(255,255,255,.03);
+  }
+  .wrong{
+    box-shadow: inset 0 0 0 2px rgba(255,107,107,.45);
+    background: rgba(255,107,107,.07) !important;
+  }
+  .right{
+    box-shadow: inset 0 0 0 2px rgba(94,227,143,.45);
+    background: rgba(94,227,143,.06) !important;
+  }
+
+  .checks{
+    margin-top:12px;
+    display:grid;
+    gap:8px;
+  }
+  .checkRow{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    font-size:12px;
+    color:var(--muted);
+  }
+  .badge{
+    padding:5px 8px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    background:rgba(255,255,255,.04);
+    display:inline-flex;
+    gap:6px;
+    align-items:center;
+  }
+  .dot{
+    width:8px;height:8px;border-radius:999px;
+    background:var(--muted);
+  }
+  .dot.good{ background:var(--good); }
+  .dot.bad{ background:var(--bad); }
+
+  .mini{
+    font-size:12px;
+    color:var(--muted);
+    margin-top:-2px;
+  }
+  .rangeRow{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    width:100%;
+  }
+  .rangeRow input[type="range"]{
+    flex:1 1 auto;
+    padding:0;
+    height:34px;
+  }
+  .rangeVal{
+    min-width:56px;
+    text-align:right;
+    font-variant-numeric: tabular-nums;
+    color:var(--text);
+    font-weight:650;
+  }
+
+  @media (max-width: 920px){
+    .wrap{ grid-template-columns: 1fr; }
+    .grid{ width:min(72vh, 720px); }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Magic Square</h1>
+  <p class="sub">Generator + “fill-the-blanks” puzzle mode (3–6). Includes rotate/reflect, validation, and true PDF export.</p>
+</header>
+
+<main class="wrap">
+  <section class="card controls" aria-label="Controls">
+    <div class="row">
+      <div style="display:flex; flex-direction:column; gap:6px; min-width:120px;">
+        <label for="sizeSelect">Size</label>
+        <select id="sizeSelect">
+          <option value="3">3 × 3</option>
+          <option value="4">4 × 4</option>
+          <option value="5">5 × 5</option>
+          <option value="6">6 × 6</option>
+        </select>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:6px; min-width:140px;">
+        <label for="modeSelect">Mode</label>
+        <select id="modeSelect">
+          <option value="generator">Generator</option>
+          <option value="puzzle">Puzzle (blanks)</option>
+        </select>
+      </div>
+
+      <button id="btnGenerate" class="primary" style="flex:1 1 auto;">Generate</button>
+    </div>
+
+    <div class="row" style="margin-top:2px;">
+      <div style="display:flex; flex-direction:column; gap:6px; min-width:160px;">
+        <label for="multSelect">Number style</label>
+        <select id="multSelect" title="Applies newValue = a × oldValue (keeps it magic)">
+          <option value="1">Normal (1×)</option>
+          <option value="2">2×</option>
+          <option value="3">3×</option>
+          <option value="5">5×</option>
+          <option value="7">7×</option>
+          <option value="9">9×</option>
+          <option value="11">11× (like 11/22/33…)</option>
+          <option value="12">12×</option>
+          <option value="random">Random</option>
+        </select>
+        <div class="mini">Keeps it magic: value = a×(1…n²)</div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:6px; min-width:160px;">
+        <label for="offsetInput">Offset (optional)</label>
+        <input id="offsetInput" type="number" value="0" step="1" />
+        <div class="mini">value = a×base + b</div>
+      </div>
+    </div>
+
+    <div id="puzzleControls" style="display:none; margin-top:2px;">
+      <div class="row">
+        <div style="display:flex; flex-direction:column; gap:6px; width:100%;">
+          <label for="difficultySelect">Difficulty</label>
+          <select id="difficultySelect">
+            <option value="easy">Easy</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:-2px;">
+        <div style="display:flex; flex-direction:column; gap:6px; width:100%;">
+          <label for="clueRange">Clues shown</label>
+          <div class="rangeRow">
+            <input id="clueRange" type="range" min="3" max="9" value="4" />
+            <div class="rangeVal" id="clueVal">4</div>
+          </div>
+          <div class="mini">Higher clues = easier. “Generate” makes a new puzzle.</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="btnShowSolution" class="ghost">Show solution</button>
+        <button id="btnClearEntries" class="ghost">Clear blanks</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <button id="btnValidate" class="good">Check sums / Validate</button>
+      <button id="btnRandomize" title="Apply a random rotation and/or reflection">Rotate/Reflect (random)</button>
+    </div>
+
+    <div class="row">
+      <button id="btnRotL" title="Rotate 90° left">↺ Rotate</button>
+      <button id="btnRotR" title="Rotate 90° right">↻ Rotate</button>
+      <button id="btnFlipH" title="Reflect horizontally">⇋ Reflect</button>
+      <button id="btnFlipV" title="Reflect vertically">⇵ Reflect</button>
+    </div>
+
+    <div class="row">
+      <button id="btnPrint">Print</button>
+      <button id="btnPdf">Export PDF</button>
+    </div>
+
+    <div class="row">
+      <span class="pill"><strong>Magic constant:</strong> <span id="magicConst">—</span></span>
+      <span class="pill" id="pillStatus"><strong>Status:</strong> <span id="statusText">Generate a square.</span></span>
+    </div>
+
+    <div class="hint">
+      Puzzle mode matches your screenshot idea: some numbers shown, the rest blank for students to fill.
+      Validate checks row/col/diag sums and (in puzzle mode) marks entries right/wrong vs the solution.
+    </div>
+  </section>
+
+  <section class="card boardWrap" aria-label="Magic square">
+    <div class="boardHeader">
+      <div class="status">
+        <div class="statusLine">
+          <div class="statusText"><b id="titleSize">—</b></div>
+          <div class="statusText">Magic constant: <b id="magicConstHeader">—</b></div>
+          <div class="statusText">Range: <b id="rangeText">—</b></div>
+        </div>
+        <div class="statusText" id="modeHint">Tip: Generate → (optional) rotate/reflect → validate.</div>
+      </div>
+    </div>
+
+    <div id="grid" class="grid" role="grid" aria-label="Magic square grid"></div>
+    <div class="checks" id="checks" aria-label="Validation details" style="display:none;"></div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const sizeSelect = document.getElementById('sizeSelect');
+  const modeSelect = document.getElementById('modeSelect');
+  const gridEl = document.getElementById('grid');
+  const checksEl = document.getElementById('checks');
+
+  const magicConstEl = document.getElementById('magicConst');
+  const magicConstHeaderEl = document.getElementById('magicConstHeader');
+  const statusTextEl = document.getElementById('statusText');
+  const titleSizeEl = document.getElementById('titleSize');
+  const rangeTextEl = document.getElementById('rangeText');
+  const modeHintEl = document.getElementById('modeHint');
+
+  const multSelect = document.getElementById('multSelect');
+  const offsetInput = document.getElementById('offsetInput');
+
+  const puzzleControls = document.getElementById('puzzleControls');
+  const difficultySelect = document.getElementById('difficultySelect');
+  const clueRange = document.getElementById('clueRange');
+  const clueVal = document.getElementById('clueVal');
+  const btnShowSolution = document.getElementById('btnShowSolution');
+  const btnClearEntries = document.getElementById('btnClearEntries');
+
+  const btnGenerate = document.getElementById('btnGenerate');
+  const btnValidate = document.getElementById('btnValidate');
+  const btnRandomize = document.getElementById('btnRandomize');
+  const btnRotL = document.getElementById('btnRotL');
+  const btnRotR = document.getElementById('btnRotR');
+  const btnFlipH = document.getElementById('btnFlipH');
+  const btnFlipV = document.getElementById('btnFlipV');
+  const btnPrint = document.getElementById('btnPrint');
+  const btnPdf = document.getElementById('btnPdf');
+
+  // State:
+  // baseSquare: normal magic square using 1..n^2 (after any rotate/reflect)
+  // solutionSquare: transformed numbers after multiplier+offset
+  // puzzleMask: true means "given" (shown clue)
+  // entries: student entries matrix (numbers or null) for blanks (given cells ignored)
+  let baseSquare = null;
+  let solutionSquare = null;
+  let puzzleMask = null;
+  let entries = null;
+  let lastValidation = null;
+
+  function magicConstant(n){
+    return n * (n*n + 1) / 2;
+  }
+  function magicConstantTransformed(n, a, b){
+    // each row sum: a * M + b*n
+    return a * magicConstant(n) + b * n;
+  }
+
+  function setStatus(text, kind=null){
+    statusTextEl.textContent = text;
+    const pill = document.getElementById('pillStatus');
+    pill.style.borderColor = 'var(--line)';
+    if(kind === 'good') pill.style.borderColor = 'rgba(94,227,143,.45)';
+    if(kind === 'bad') pill.style.borderColor = 'rgba(255,107,107,.45)';
+  }
+
+  function deepCopy2D(M){ return M.map(r => r.slice()); }
+  function zeros2D(n){ return Array.from({length:n}, () => Array(n).fill(null)); }
+
+  // ===== Magic square generators =====
+  function genOdd(n){
+    const M = Array.from({length:n}, () => Array(n).fill(0));
+    let i = 0;
+    let j = Math.floor(n/2);
+    for(let num=1; num<=n*n; num++){
+      M[i][j] = num;
+      const ni = (i - 1 + n) % n;
+      const nj = (j + 1) % n;
+      if(M[ni][nj] !== 0){
+        i = (i + 1) % n;
+      }else{
+        i = ni; j = nj;
+      }
+    }
+    return M;
+  }
+
+  function genDoublyEven(n){
+    const M = Array.from({length:n}, (_,i) => Array.from({length:n}, (_,j) => i*n + j + 1));
+    const N = n*n + 1;
+    for(let i=0;i<n;i++){
+      for(let j=0;j<n;j++){
+        const a = i % 4;
+        const b = j % 4;
+        if(a === b || (a + b) === 3){
+          M[i][j] = N - M[i][j];
+        }
+      }
+    }
+    return M;
+  }
+
+  function genSinglyEven(n){
+    // Used for n=6 here.
+    const m = n/2; // odd
+    const S = genOdd(m);
+    const m2 = m*m;
+
+    const A = S.map(row => row.slice());
+    const B = S.map(row => row.map(v => v + 2*m2));
+    const C = S.map(row => row.map(v => v + 3*m2));
+    const D = S.map(row => row.map(v => v + 1*m2));
+
+    const M = Array.from({length:n}, () => Array(n).fill(0));
+    for(let i=0;i<m;i++){
+      for(let j=0;j<m;j++){
+        M[i][j] = A[i][j];
+        M[i][j+m] = B[i][j];
+        M[i+m][j] = C[i][j];
+        M[i+m][j+m] = D[i][j];
+      }
+    }
+
+    const k = (m - 1) / 2;
+    for(let j=0; j<k; j++){
+      for(let i=0; i<m; i++){
+        if(i === k) continue;
+        const tmp = M[i][j];
+        M[i][j] = M[i+m][j];
+        M[i+m][j] = tmp;
+      }
+    }
+    // central swap
+    {
+      const i = k, j = k;
+      const tmp = M[i][j];
+      M[i][j] = M[i+m][j];
+      M[i+m][j] = tmp;
+    }
+    return M;
+  }
+
+  function generateBase(n){
+    if(n % 2 === 1) return genOdd(n);
+    if(n % 4 === 0) return genDoublyEven(n);
+    return genSinglyEven(n);
+  }
+
+  // ===== Transformations (apply to any matrix) =====
+  function rotateRight(M){
+    const n = M.length;
+    const R = Array.from({length:n}, () => Array(n).fill(null));
+    for(let i=0;i<n;i++){
+      for(let j=0;j<n;j++){
+        R[j][n-1-i] = M[i][j];
+      }
+    }
+    return R;
+  }
+  function rotateLeft(M){
+    const n = M.length;
+    const R = Array.from({length:n}, () => Array(n).fill(null));
+    for(let i=0;i<n;i++){
+      for(let j=0;j<n;j++){
+        R[n-1-j][i] = M[i][j];
+      }
+    }
+    return R;
+  }
+  function reflectH(M){
+    return M.map(row => row.slice().reverse());
+  }
+  function reflectV(M){
+    return M.slice().reverse().map(row => row.slice());
+  }
+
+  function randomizeSymmetry(){
+    const turns = Math.floor(Math.random()*4);
+    for(let t=0;t<turns;t++) applyTransform('rotR');
+    if(Math.random() < 0.5) applyTransform('flipH');
+    if(Math.random() < 0.5) applyTransform('flipV');
+  }
+
+  function applyTransform(kind){
+    if(!baseSquare) return;
+    const doIt = (mat) => {
+      if(kind === 'rotL') return rotateLeft(mat);
+      if(kind === 'rotR') return rotateRight(mat);
+      if(kind === 'flipH') return reflectH(mat);
+      if(kind === 'flipV') return reflectV(mat);
+      return mat;
+    };
+    baseSquare = doIt(baseSquare);
+    // keep puzzle structures aligned too
+    if(puzzleMask) puzzleMask = doIt(puzzleMask);
+    if(entries) entries = doIt(entries);
+    rebuildSolutionAndRender();
+    checksEl.style.display = 'none';
+    setStatus('Transformed.', null);
+  }
+
+  // ===== Number styling =====
+  function getA(){
+    const v = multSelect.value;
+    if(v === 'random'){
+      const opts = [2,3,5,7,9,11,12];
+      return opts[Math.floor(Math.random()*opts.length)];
+    }
+    return parseInt(v, 10);
+  }
+  function getB(){
+    const b = parseInt(offsetInput.value || '0', 10);
+    return Number.isFinite(b) ? b : 0;
+  }
+
+  function buildSolutionFromBase(){
+    const n = baseSquare.length;
+    const a = getA();
+    const b = getB();
+    solutionSquare = Array.from({length:n}, (_,i) => Array.from({length:n}, (_,j) => a * baseSquare[i][j] + b));
+    const mc = magicConstantTransformed(n, a, b);
+    magicConstEl.textContent = mc;
+    if(magicConstHeaderEl) magicConstHeaderEl.textContent = mc;
+    titleSizeEl.textContent = `${n} × ${n} magic square`;
+    rangeTextEl.textContent = `${Math.min(...solutionSquare.flat())}–${Math.max(...solutionSquare.flat())}`;
+  }
+
+  // ===== Puzzle generation =====
+  function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+
+  function defaultClues(n, diff){
+    const total = n*n;
+    if(diff === 'easy')   return clamp(Math.round(total * 0.55), n+1, total-1);
+    if(diff === 'hard')   return clamp(Math.round(total * 0.25), n+1, total-1);
+    return clamp(Math.round(total * 0.38), n+1, total-1); // medium
+  }
+
+  function setClueRangeForSize(){
+    const n = parseInt(sizeSelect.value, 10);
+    const total = n*n;
+    clueRange.min = String(Math.max(3, n+1));
+    clueRange.max = String(total-1);
+    const want = defaultClues(n, difficultySelect.value);
+    clueRange.value = String(want);
+    clueVal.textContent = String(want);
+  }
+
+  function makePuzzleMask(n, clueCount){
+    const total = n*n;
+    const idx = Array.from({length:total}, (_,k) => k);
+    // shuffle
+    for(let i=idx.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [idx[i], idx[j]] = [idx[j], idx[i]];
+    }
+    const chosen = new Set(idx.slice(0, clueCount));
+    const mask = Array.from({length:n}, (_,r) => Array.from({length:n}, (_,c) => chosen.has(r*n + c)));
+    return mask;
+  }
+
+  function ensureStateForMode(){
+    const n = parseInt(sizeSelect.value, 10);
+    if(!baseSquare) baseSquare = generateBase(n);
+    buildSolutionFromBase();
+
+    const mode = modeSelect.value;
+    if(mode === 'puzzle'){
+      const clues = parseInt(clueRange.value, 10);
+      puzzleMask = makePuzzleMask(n, clues);
+      entries = zeros2D(n);
+    } else {
+      puzzleMask = null;
+      entries = null;
+    }
+  }
+
+  // ===== Rendering =====
+  function clearCellMarks(){
+    [...gridEl.querySelectorAll('.cell')].forEach(c => {
+      c.classList.remove('wrong','right');
+    });
+    [...gridEl.querySelectorAll('input')].forEach(inp => {
+      inp.classList.remove('wrong','right');
+    });
+  }
+
+  function render(){
+    if(!solutionSquare){
+      gridEl.style.gridTemplateColumns = 'repeat(3, 1fr)';
+      gridEl.innerHTML = '';
+      return;
+    }
+    const n = solutionSquare.length;
+    gridEl.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+    gridEl.innerHTML = '';
+
+    const mode = modeSelect.value;
+    modeHintEl.textContent = (mode === 'puzzle')
+      ? 'Tip: Fill the blanks → Validate (checks sums + marks right/wrong).'
+      : 'Tip: Generate → (optional) rotate/reflect → validate.';
+
+    for(let r=0;r<n;r++){
+      for(let c=0;c<n;c++){
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        if(c === n-1) cell.style.borderRight = 'none';
+        if(r === n-1) cell.style.borderBottom = 'none';
+
+        if(mode === 'puzzle'){
+          const given = puzzleMask && puzzleMask[r][c];
+          if(given){
+            cell.classList.add('given');
+            cell.textContent = solutionSquare[r][c];
+          } else {
+            const inp = document.createElement('input');
+            inp.inputMode = 'numeric';
+            inp.placeholder = '';
+            inp.setAttribute('aria-label', `Row ${r+1}, Col ${c+1}`);
+            const v = entries?.[r]?.[c];
+            inp.value = (v === null || v === undefined) ? '' : String(v);
+            inp.addEventListener('input', () => {
+              // allow negatives too (offset could create negatives)
+              const raw = inp.value.trim();
+              if(raw === '') entries[r][c] = null;
+              else {
+                const num = parseInt(raw, 10);
+                entries[r][c] = Number.isFinite(num) ? num : null;
+              }
+              inp.classList.remove('wrong','right');
+              checksEl.style.display = 'none';
+              setStatus('Editing…', null);
+            });
+            cell.appendChild(inp);
+          }
+        } else {
+          cell.textContent = solutionSquare[r][c];
+        }
+
+        gridEl.appendChild(cell);
+      }
+    }
+  }
+
+  function combinedMatrixForValidation(){
+    // returns matrix with puzzle entries filled in (or null if missing)
+    const n = solutionSquare.length;
+    const mode = modeSelect.value;
+    if(mode !== 'puzzle') return deepCopy2D(solutionSquare);
+
+    const M = Array.from({length:n}, (_,r) => Array.from({length:n}, (_,c) => {
+      if(puzzleMask[r][c]) return solutionSquare[r][c];
+      return entries[r][c];
+    }));
+    return M;
+  }
+
+  // ===== Validation =====
+  function validateSums(M, target){
+    const n = M.length;
+    const rowSums = [];
+    const colSums = Array(n).fill(0);
+    let d1 = 0, d2 = 0;
+
+    for(let r=0;r<n;r++){
+      let s = 0;
+      for(let c=0;c<n;c++){
+        const v = M[r][c];
+        if(v === null || v === undefined) return { ok:false, incomplete:true };
+        s += v;
+        colSums[c] += v;
+      }
+      rowSums.push(s);
+      d1 += M[r][r];
+      d2 += M[r][n-1-r];
+    }
+
+    const okRows = rowSums.every(s => s === target);
+    const okCols = colSums.every(s => s === target);
+    const okDiags = (d1 === target) && (d2 === target);
+    const ok = okRows && okCols && okDiags;
+    return { ok, incomplete:false, target, rowSums, colSums, d1, d2 };
+  }
+
+  function renderChecks(v){
+    checksEl.innerHTML = '';
+    if(v.incomplete){
+      checksEl.style.display = 'none';
+      return;
+    }
+    const makeBadge = (label, ok, value) => {
+      const b = document.createElement('div');
+      b.className = 'badge';
+      const dot = document.createElement('span');
+      dot.className = 'dot ' + (ok ? 'good' : 'bad');
+      const t = document.createElement('span');
+      t.textContent = `${label}: ${value}`;
+      b.appendChild(dot);
+      b.appendChild(t);
+      return b;
+    };
+
+    const rowOk = v.rowSums.map(s => s === v.target);
+    const colOk = v.colSums.map(s => s === v.target);
+
+    const rowLine = document.createElement('div');
+    rowLine.className = 'checkRow';
+    rowLine.appendChild(document.createTextNode('Rows:'));
+    rowOk.forEach((ok, i) => rowLine.appendChild(makeBadge(`R${i+1}`, ok, v.rowSums[i])));
+
+    const colLine = document.createElement('div');
+    colLine.className = 'checkRow';
+    colLine.appendChild(document.createTextNode('Cols:'));
+    colOk.forEach((ok, i) => colLine.appendChild(makeBadge(`C${i+1}`, ok, v.colSums[i])));
+
+    const diagLine = document.createElement('div');
+    diagLine.className = 'checkRow';
+    diagLine.appendChild(document.createTextNode('Diags:'));
+    diagLine.appendChild(makeBadge('Main', v.d1 === v.target, v.d1));
+    diagLine.appendChild(makeBadge('Other', v.d2 === v.target, v.d2));
+
+    checksEl.appendChild(rowLine);
+    checksEl.appendChild(colLine);
+    checksEl.appendChild(diagLine);
+    checksEl.style.display = 'grid';
+  }
+
+  function markPuzzleCorrectness(){
+    // mark inputs right/wrong compared to solutionSquare (only on blanks)
+    const mode = modeSelect.value;
+    if(mode !== 'puzzle') return;
+    const n = solutionSquare.length;
+    const cells = [...gridEl.querySelectorAll('.cell')];
+    let k = 0;
+    for(let r=0;r<n;r++){
+      for(let c=0;c<n;c++){
+        const cell = cells[k++];
+        if(puzzleMask[r][c]) continue;
+        const inp = cell.querySelector('input');
+        if(!inp) continue;
+        const v = entries[r][c];
+        inp.classList.remove('wrong','right');
+        if(v === null || v === undefined) continue;
+        if(v === solutionSquare[r][c]) inp.classList.add('right');
+        else inp.classList.add('wrong');
+      }
+    }
+  }
+
+  // ===== PDF Export (minimal, no external libs) =====
+  
+  // ===== PDF Export (minimal, no external libs) =====
+  function pdfEscape(s){
+    return String(s).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+  }
+
+  function drawPageContent(viewMatrix, title, magicConst){
+    // Returns a PDF content stream string for one page.
+    const n = viewMatrix.length;
+    const W = 612, H = 792; // Letter
+    const margin = 54;
+    const headerH = 78;
+
+    const gridSize = Math.min(W - 2*margin, H - 2*margin - headerH);
+    const cell = gridSize / n;
+    const x0 = (W - gridSize) / 2;
+    const y0 = H - margin - headerH - gridSize;
+
+    let c = '';
+
+    // Title + constant (use absolute text matrix so it never drifts off page)
+    c += 'BT\n/F1 18 Tf\n';
+    c += `1 0 0 1 ${margin} ${H - margin - 24} Tm\n(${pdfEscape(title)}) Tj\n`;
+    c += '/F1 12 Tf\n';
+    c += `1 0 0 1 ${margin} ${H - margin - 44} Tm\n(${pdfEscape(`Magic constant: ${magicConst}`)}) Tj\n`;
+    c += 'ET\n';
+
+    // Grid lines
+    c += '0.8 w\n0 0 0 RG\n';
+    c += `${x0} ${y0} m ${x0 + gridSize} ${y0} l ${x0 + gridSize} ${y0 + gridSize} l ${x0} ${y0 + gridSize} l h S\n`;
+    for(let i=1;i<n;i++){
+      const x = x0 + i*cell;
+      const y = y0 + i*cell;
+      c += `${x} ${y0} m ${x} ${y0 + gridSize} l S\n`;
+      c += `${x0} ${y} m ${x0 + gridSize} ${y} l S\n`;
+    }
+
+    // Numbers
+    c += 'BT\n/F1 14 Tf\n0 0 0 rg\n';
+    for(let r=0;r<n;r++){
+      for(let col=0; col<n; col++){
+        const val = viewMatrix[r][col] == null ? '' : String(viewMatrix[r][col]);
+        const approxW = val.length * 7; // rough text width
+        const tx = x0 + col*cell + (cell/2) - (approxW/2);
+        const ty = y0 + (n-1-r)*cell + (cell/2) - 6;
+        c += `1 0 0 1 ${tx.toFixed(2)} ${ty.toFixed(2)} Tm\n(${pdfEscape(val)}) Tj\n`;
+      }
+    }
+    c += 'ET\n';
+    return c;
+  }
+
+  function buildPdfBytes(pages){
+    // pages: [{matrix, title, magicConst}]
+    const W = 612, H = 792;
+    const encoder = new TextEncoder();
+
+    // Objects:
+    // 1 Catalog
+    // 2 Pages
+    // 3.. page objects (one per page)
+    // font object
+    // content objects (one per page)
+    const objects = [];
+    const obj = (n, bodyBytes) => ({n, bodyBytes});
+
+    // We'll allocate object numbers deterministically.
+    const pageCount = pages.length;
+    const firstPageObj = 3;
+    const firstContentObj = firstPageObj + pageCount;
+    const fontObjNum = firstContentObj + pageCount;
+    const pagesObjNum = 2;
+    const catalogObjNum = 1;
+
+    // Catalog and Pages will be filled after we know kids.
+    objects.push(obj(catalogObjNum, encoder.encode(`<< /Type /Catalog /Pages ${pagesObjNum} 0 R >>`)));
+
+    // Placeholder for Pages (we'll patch after kids list built)
+    // We'll create it after we compute kid refs.
+    // Create Page + Contents objects
+    const kidRefs = [];
+    for(let i=0;i<pageCount;i++){
+      const pageObjNum = firstPageObj + i;
+      kidRefs.push(`${pageObjNum} 0 R`);
+    }
+    objects.push(obj(pagesObjNum, encoder.encode(`<< /Type /Pages /Kids [${kidRefs.join(' ')}] /Count ${pageCount} >>`)));
+
+    // Page objects
+    for(let i=0;i<pageCount;i++){
+      const pageObjNum = firstPageObj + i;
+      const contentObjNum = firstContentObj + i;
+      const pageDict = `<< /Type /Page /Parent ${pagesObjNum} 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << /F1 ${fontObjNum} 0 R >> >> /Contents ${contentObjNum} 0 R >>`;
+      objects.push(obj(pageObjNum, encoder.encode(pageDict)));
+    }
+
+    // Content objects
+    for(let i=0;i<pageCount;i++){
+      const contentObjNum = firstContentObj + i;
+      const p = pages[i];
+      const contentStr = drawPageContent(p.matrix, p.title, p.magicConst);
+      const contentBytes = encoder.encode(contentStr);
+      const streamHeader = encoder.encode(`<< /Length ${contentBytes.length} >>\nstream\n`);
+      const streamFooter = encoder.encode('\nendstream');
+      const body = new Uint8Array(streamHeader.length + contentBytes.length + streamFooter.length);
+      body.set(streamHeader, 0);
+      body.set(contentBytes, streamHeader.length);
+      body.set(streamFooter, streamHeader.length + contentBytes.length);
+      objects.push(obj(contentObjNum, body));
+    }
+
+    // Font
+    objects.push(obj(fontObjNum, encoder.encode('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>')));
+
+    // Assemble file with xref
+    const parts = [];
+    const pushStr = (s) => parts.push(encoder.encode(s));
+    const pushBytes = (b) => parts.push(b);
+
+    pushStr('%PDF-1.4\n%\u00E2\u00E3\u00CF\u00D3\n');
+
+    // Sort objects by number (important for xref table)
+    objects.sort((a,b)=>a.n-b.n);
+
+    const offsets = [0]; // object 0
+    let cursor = parts.reduce((a,b)=>a+b.length,0);
+
+    for(const o of objects){
+      offsets.push(cursor);
+      pushStr(`${o.n} 0 obj\n`);
+      pushBytes(o.bodyBytes);
+      pushStr('\nendobj\n');
+      cursor = parts.reduce((a,b)=>a+b.length,0);
+    }
+
+    const xrefStart = cursor;
+    pushStr(`xref\n0 ${objects.length+1}\n`);
+    pushStr(`0000000000 65535 f \n`);
+    for(let i=1;i<offsets.length;i++){
+      pushStr(String(offsets[i]).padStart(10,'0') + ' 00000 n \n');
+    }
+    pushStr(`trailer\n<< /Size ${objects.length+1} /Root ${catalogObjNum} 0 R >>\nstartxref\n${xrefStart}\n%%EOF`);
+
+    const totalLen = parts.reduce((a,b)=>a+b.length,0);
+    const out = new Uint8Array(totalLen);
+    let p=0;
+    for(const part of parts){
+      out.set(part, p);
+      p += part.length;
+    }
+    return out;
+  }
+
+  function downloadBlob(blob, filename){
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      URL.revokeObjectURL(a.href);
+      a.remove();
+    }, 1500);
+  }
+
+  function exportPdf(){
+    if(!solutionSquare){
+      setStatus('Generate first.', 'bad');
+      return;
+    }
+
+    const mode = modeSelect.value;
+    const n = solutionSquare.length;
+    const a = getA(), b = getB();
+    const mc = magicConstantTransformed(n, a, b);
+
+    // Page 1: puzzle view or full view
+    let page1Matrix;
+    let page1Title;
+    if(mode === 'puzzle'){
+      page1Title = `Magic Square Puzzle (${n}×${n})`;
+      page1Matrix = Array.from({length:n}, (_,r) => Array.from({length:n}, (_,c) => {
+        return puzzleMask[r][c] ? solutionSquare[r][c] : null;
+      }));
+    } else {
+      page1Title = `Magic Square (${n}×${n})`;
+      page1Matrix = deepCopy2D(solutionSquare);
+    }
+
+    const pages = [{matrix: page1Matrix, title: page1Title, magicConst: mc}];
+
+    // If puzzle mode: Page 2 solution
+    if(mode === 'puzzle'){
+      pages.push({matrix: deepCopy2D(solutionSquare), title: `Solution (${n}×${n})`, magicConst: mc});
+    }
+
+    const bytes = buildPdfBytes(pages);
+    const blob = new Blob([bytes], {type:'application/pdf'});
+    downloadBlob(blob, `magic-square-${mode}-${n}x${n}.pdf`);
+    setStatus(mode === 'puzzle' ? 'PDF exported (puzzle + solution).':'PDF exported.', 'good');
+  }
+
+  function printView(){
+
+    if(!solutionSquare){
+      setStatus('Generate first.', 'bad');
+      return;
+    }
+    const n = solutionSquare.length;
+    const a = getA(), b = getB();
+    const mc = magicConstantTransformed(n, a, b);
+    const mode = modeSelect.value;
+
+    const w = window.open('', '_blank', 'width=900,height=700');
+    if(!w){
+      setStatus('Popup blocked — allow popups to print.', 'bad');
+      return;
+    }
+    // Some browsers show a blank window unless we explicitly open the document stream.
+    w.document.open();
+    const style = `
+      <style>
+        body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; padding:24px;}
+        h1{margin:0 0 6px 0; font-size:18px;}
+        .muted{color:#555; font-size:12px; margin:0 0 18px 0;}
+        .grid{display:grid; grid-template-columns:repeat(${n}, 1fr); width:520px; aspect-ratio:1/1; border:1px solid #111;}
+        .cell{display:flex; align-items:center; justify-content:center; border-right:1px solid #111; border-bottom:1px solid #111; font-weight:650; font-variant-numeric:tabular-nums;}
+        .cell:nth-child(${n}n){border-right:none;}
+        .cell:nth-last-child(-n+${n}){border-bottom:none;}
+      </style>
+    `;
+
+    let view = [];
+    if(mode === 'puzzle'){
+      view = Array.from({length:n}, (_,r) => Array.from({length:n}, (_,c) => puzzleMask[r][c] ? solutionSquare[r][c] : ''));
+    } else {
+      view = deepCopy2D(solutionSquare);
+    }
+    const cells = view.flat().map(v => `<div class="cell">${v ?? ''}</div>`).join('');
+    const title = mode === 'puzzle' ? `Magic Square Puzzle (${n}×${n})` : `Magic Square (${n}×${n})`;
+
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8">${style}</head><body>
+      <h1>${title}</h1>
+      <p class="muted">Magic constant: <b>${mc}</b></p>
+      <div class="grid">${cells}</div>
+      <script>window.onload=()=>{ setTimeout(()=>window.print(), 50); }<\/script>
+    </body></html>`);
+    w.document.close();
+    setStatus('Print dialog opened.', 'good');
+  }
+
+  // ===== Lifecycle =====
+  function rebuildSolutionAndRender(){
+    if(!baseSquare) return;
+    buildSolutionFromBase();
+    render();
+  }
+
+  function generateAll(){
+    const n = parseInt(sizeSelect.value, 10);
+    baseSquare = generateBase(n);
+    // if multiplier is random, lock it in by converting to numeric option for this generation
+    if(multSelect.value === 'random'){
+      const a = getA();
+      // set select label to chosen a for transparency
+      multSelect.value = String(a);
+    }
+    ensurePuzzleControlsVisibility();
+    ensureStateForMode();
+    rebuildSolutionAndRender();
+    checksEl.style.display = 'none';
+    clearCellMarks();
+    setStatus(modeSelect.value === 'puzzle' ? 'Puzzle generated.' : 'Generated.', null);
+  }
+
+  function ensurePuzzleControlsVisibility(){
+    const isPuzzle = modeSelect.value === 'puzzle';
+    puzzleControls.style.display = isPuzzle ? 'block' : 'none';
+    btnShowSolution.disabled = !isPuzzle;
+    btnClearEntries.disabled = !isPuzzle;
+  }
+
+  // ===== Events =====
+  modeSelect.addEventListener('change', () => {
+    ensurePuzzleControlsVisibility();
+    setClueRangeForSize();
+    // Keep the same baseSquare if it exists; just rebuild for the new mode.
+    if(baseSquare){
+      ensureStateForMode();
+      rebuildSolutionAndRender();
+      checksEl.style.display = 'none';
+      clearCellMarks();
+      setStatus('Mode changed.', null);
+    }
+  });
+
+  sizeSelect.addEventListener('change', () => {
+    setClueRangeForSize();
+    // do not auto-generate; user asked for explicit button behavior
+    setStatus('Pick settings, then Generate.', null);
+  });
+
+  difficultySelect.addEventListener('change', () => {
+    setClueRangeForSize();
+  });
+
+  clueRange.addEventListener('input', () => {
+    clueVal.textContent = clueRange.value;
+  });
+
+  multSelect.addEventListener('change', () => {
+    if(!baseSquare) return;
+    // if random, choose a numeric now
+    if(multSelect.value === 'random'){
+      const a = getA();
+      multSelect.value = String(a);
+    }
+    rebuildSolutionAndRender();
+    checksEl.style.display = 'none';
+    clearCellMarks();
+    setStatus('Number style updated.', null);
+  });
+
+  offsetInput.addEventListener('change', () => {
+    if(!baseSquare) return;
+    rebuildSolutionAndRender();
+    checksEl.style.display = 'none';
+    clearCellMarks();
+    setStatus('Offset updated.', null);
+  });
+
+  btnGenerate.addEventListener('click', generateAll);
+
+  btnValidate.addEventListener('click', () => {
+    if(!solutionSquare){
+      setStatus('Generate first.', 'bad');
+      return;
+    }
+    clearCellMarks();
+
+    const mode = modeSelect.value;
+    const n = solutionSquare.length;
+    const a = getA(), b = getB();
+    const target = magicConstantTransformed(n, a, b);
+
+    const filled = combinedMatrixForValidation();
+    const v = validateSums(filled, target);
+    lastValidation = v;
+
+    if(v.incomplete){
+      setStatus('Fill all blanks first.', 'bad');
+      checksEl.style.display = 'none';
+      if(mode === 'puzzle') markPuzzleCorrectness();
+      return;
+    }
+
+    renderChecks(v);
+    if(mode === 'puzzle') markPuzzleCorrectness();
+
+    if(v.ok) setStatus('Valid ✅', 'good');
+    else setStatus('Not magic (check sums).', 'bad');
+  });
+
+  btnRandomize.addEventListener('click', () => {
+    if(!baseSquare){
+      setStatus('Generate first.', 'bad');
+      return;
+    }
+    randomizeSymmetry();
+    setStatus('Applied random rotate/reflect.', null);
+  });
+
+  btnRotL.addEventListener('click', () => {
+    if(!baseSquare){ setStatus('Generate first.', 'bad'); return; }
+    applyTransform('rotL');
+  });
+  btnRotR.addEventListener('click', () => {
+    if(!baseSquare){ setStatus('Generate first.', 'bad'); return; }
+    applyTransform('rotR');
+  });
+  btnFlipH.addEventListener('click', () => {
+    if(!baseSquare){ setStatus('Generate first.', 'bad'); return; }
+    applyTransform('flipH');
+  });
+  btnFlipV.addEventListener('click', () => {
+    if(!baseSquare){ setStatus('Generate first.', 'bad'); return; }
+    applyTransform('flipV');
+  });
+
+  btnShowSolution.addEventListener('click', () => {
+    if(!solutionSquare || modeSelect.value !== 'puzzle') return;
+    // Reveal everything by making mask all true
+    const n = solutionSquare.length;
+    puzzleMask = Array.from({length:n}, () => Array(n).fill(true));
+    entries = zeros2D(n);
+    rebuildSolutionAndRender();
+    checksEl.style.display = 'none';
+    clearCellMarks();
+    setStatus('Solution shown.', null);
+  });
+
+  btnClearEntries.addEventListener('click', () => {
+    if(!solutionSquare || modeSelect.value !== 'puzzle') return;
+    const n = solutionSquare.length;
+    entries = zeros2D(n);
+    rebuildSolutionAndRender();
+    checksEl.style.display = 'none';
+    clearCellMarks();
+    setStatus('Cleared blanks.', null);
+  });
+
+  btnPrint.addEventListener('click', printView);
+  btnPdf.addEventListener('click', exportPdf);
+
+  // init
+  ensurePuzzleControlsVisibility();
+  setClueRangeForSize();
+  rebuildSolutionAndRender(); // placeholder blank
+})();
+</script>
+</body>
+</html>
