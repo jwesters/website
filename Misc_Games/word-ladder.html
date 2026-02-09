@@ -1,0 +1,744 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Word Ladder</title>
+<style>
+  :root {
+    --bg: #0b0c10;
+    --panel: #111319;
+    --panel2: #0f1117;
+    --text: #e9ecf1;
+    --muted: #a8b0bf;
+    --accent: #6ea8ff;
+    --good: #57d18f;
+    --bad: #ff6b6b;
+    --line: rgba(255,255,255,.10);
+    --shadow: 0 18px 60px rgba(0,0,0,.45);
+    --radius: 16px;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    color: var(--text);
+    background: radial-gradient(1200px 700px at 20% 10%, rgba(110,168,255,.16), transparent 60%),
+                radial-gradient(900px 600px at 80% 20%, rgba(87,209,143,.10), transparent 55%),
+                var(--bg);
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 18px;
+  }
+  .app {
+    width: min(980px, 100%);
+    display: grid;
+    grid-template-columns: 1.1fr .9fr;
+    gap: 14px;
+  }
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+  }
+  .card {
+    background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .header {
+    padding: 18px 18px 12px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: .2px;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .content {
+    padding: 18px;
+  }
+  .row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(255,255,255,.03);
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .pill b {
+    color: var(--text);
+    font-family: var(--mono);
+    font-weight: 700;
+    letter-spacing: .6px;
+  }
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  @media (max-width: 520px) {
+    .controls { grid-template-columns: 1fr; }
+  }
+  label {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+    margin: 0 0 6px;
+  }
+  select, input[type="text"] {
+    width: 100%;
+    padding: 12px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: rgba(0,0,0,.24);
+    color: var(--text);
+    outline: none;
+    font-size: 14px;
+  }
+  select:focus, input[type="text"]:focus {
+    border-color: rgba(110,168,255,.55);
+    box-shadow: 0 0 0 4px rgba(110,168,255,.12);
+  }
+  .btnbar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  button {
+    appearance: none;
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,.05);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: transform .05s ease, background .15s ease, border-color .15s ease;
+  }
+  button:hover {
+    background: rgba(255,255,255,.08);
+    border-color: rgba(255,255,255,.18);
+  }
+  button:active { transform: translateY(1px); }
+  button.primary {
+    background: rgba(110,168,255,.18);
+    border-color: rgba(110,168,255,.45);
+  }
+  button.primary:hover {
+    background: rgba(110,168,255,.25);
+  }
+  button.danger {
+    background: rgba(255,107,107,.14);
+    border-color: rgba(255,107,107,.42);
+  }
+  button.danger:hover {
+    background: rgba(255,107,107,.22);
+  }
+  button:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+  }
+  .msg {
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--muted);
+    min-height: 18px;
+  }
+  .msg.good { color: var(--good); }
+  .msg.bad { color: var(--bad); }
+  .ladder {
+    display: grid;
+    gap: 10px;
+  }
+  .step {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 12px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: rgba(0,0,0,.18);
+  }
+  .step .w {
+    font-family: var(--mono);
+    font-size: 16px;
+    letter-spacing: .8px;
+  }
+  .step .meta {
+    color: var(--muted);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .step.current {
+    border-color: rgba(110,168,255,.42);
+    box-shadow: 0 0 0 4px rgba(110,168,255,.10);
+  }
+  .tiny {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.35;
+  }
+  .divider {
+    height: 1px;
+    background: var(--line);
+    margin: 14px 0;
+  }
+  /* Modal */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.72);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    z-index: 50;
+  }
+  .overlay.show { display: flex; }
+  .modal {
+    width: min(720px, 100%);
+    background: #0e1016;
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .modal .mhead {
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid rgba(255,255,255,.12);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .modal .mhead h2 {
+    margin: 0;
+    font-size: 16px;
+    letter-spacing: .2px;
+  }
+  .modal .mcontent {
+    padding: 16px 18px 18px;
+  }
+  .path {
+    display: grid;
+    gap: 8px;
+    margin: 10px 0 0;
+  }
+  .path code {
+    display: block;
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 10px 12px;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 12px;
+    background: rgba(255,255,255,.04);
+    overflow-x: auto;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <section class="card">
+    <div class="header">
+      <div>
+        <div class="title">Word Ladder</div>
+        <div class="subtitle">Change <b>one</b> letter at a time to reach the target.</div>
+      </div>
+      <div class="pill" title="Word list source">
+        <span>List:</span>
+        <b>Top 5000</b>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="row" style="justify-content: space-between;">
+        <div class="row">
+          <div class="pill"><span>Start</span><b id="startWord">----</b></div>
+          <div class="pill"><span>Target</span><b id="targetWord">----</b></div>
+          <div class="pill"><span>Steps</span><b id="stepsCount">0</b></div>
+        </div>
+        <div class="pill" title="Words available for this length">
+          <span>Dictionary</span><b id="dictCount">0</b>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div>
+          <label for="lenSel">Word length</label>
+          <select id="lenSel">
+            <option value="3">3 letters</option>
+            <option value="4" selected>4 letters</option>
+            <option value="5">5 letters</option>
+          </select>
+        </div>
+        <div>
+          <label for="wordInput">Next word</label>
+          <input id="wordInput" type="text" autocomplete="off" spellcheck="false" placeholder="Type a word and press Enter" />
+        </div>
+      </div>
+
+      <div class="btnbar">
+        <button class="primary" id="newBtn">New puzzle</button>
+        <button id="hintBtn">Hint</button>
+        <button class="danger" id="giveUpBtn">Give up</button>
+      </div>
+
+      <div id="msg" class="msg"></div>
+
+      <div class="divider"></div>
+
+      <div class="ladder" id="ladder"></div>
+
+      <div class="divider"></div>
+      <div class="tiny">
+        Rules: each step must be a valid word of the same length, and change <b>exactly one letter</b> from the current word.
+      </div>
+    </div>
+  </section>
+
+  <aside class="card">
+    <div class="header">
+      <div>
+        <div class="title">How it works</div>
+        <div class="subtitle">Classroom-friendly, offline.</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="tiny" style="margin-bottom:10px;">
+        This game uses an embedded word list derived from <b>google-10000-english</b> (top 5000 words),
+        then filtered to 3–5 letter alphabetic words that contain at least one vowel.
+      </div>
+      <div class="tiny" id="countsLine"></div>
+
+      <div class="divider"></div>
+
+      <div class="tiny">
+        Tip: If students get stuck, use <b>Hint</b> to reveal a helpful next move on a shortest path (if one exists).
+        Use <b>Give up</b> to reveal the full shortest ladder.
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="tiny">
+        Teacher note: You can refresh for a new random ladder any time, and choose 3/4/5 letters.
+      </div>
+    </div>
+  </aside>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <div class="mhead">
+      <h2 id="mTitle">Game Over</h2>
+      <div class="subtitle" id="mSub"></div>
+    </div>
+    <div class="mcontent">
+      <div class="row">
+        <button class="primary" id="mNew">New puzzle</button>
+        <button id="mView">View solution</button>
+      </div>
+      <div class="path" id="mPath" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const WORDS_BY_LEN = {"3":["the","and","for","you","not","are","all","new","was","can","has","but","our","one","may","out","use","any","see","his","who","web","now","get","how","its","top","had","day","two","buy","her","add","jan","she","sex","set","map","way","off","did","car","own","end","him","per","big","law","art","usa","old","non","low","man","job","too","men","box","gay","air","yes","hot","say","dec","san","tax","got","let","act","red","key","few","age","oct","pay","war","nov","fax","yet","sun","run","net","put","god","log","faq","fun","feb","sep","lot","ask","due","mar","pro","url","aug","ago","apr","via","bad","far","jul","jun","oil","bit","bay","bar","dog","eur","usr","mon","com","gas","six","pre","sat","zip","bid","fri","wed","inn","los","inc","win","bed","tue","ass","thu","sea","cut","tel","kit","boy","est","son","mac","iii","max","bin","van","ads","pop","int","hit","eye","usb","etc","fee","las","min","aid","fat","saw","tom","sub","led","fan","ten","cat","die","pet","guy","dev","cup","vol","lee","bob","fit","met","cum","ice","sec","bus","bag","ibm","nor","bug","mid","jim","del","joe","lab","des","ave","pic","tag","mix","fix","ray","spa","con","ups","var","won","doc","mom","row","usd","eat","aim","les","ann","tip","ski","dan","hey","tea","avg","rom","toy","hip","dot","hiv","pda","zum","dna","tim","don","acc","cap","ink","pin","raw","gnu","ben","aol","hat","lib","utc","der","cam","wet","ram","fox","arm","pub","hop","gun","sam","ref","kid","pan","und","iso","sum","oak","vat","sir","kim","res","sit","wow","que","fig","tab","bio","von","sci","edt","sin","ing","med","leg","abc","jay","gap","biz","rob","era","asp","jet","par","mad","ken","exp","pen","joy","cpu","ran","jon","ill","lay","bet","def","nba","epa","ron","org","dad","pat","reg","ear","pci","tie","ian","mod","ceo","rep","mit","sri","toe","api","urw","lan","nec","den","aud","lie","amp","usc","amd"],"4":["that","this","with","from","your","have","more","will","home","page","free","time","they","site","what","news","only","when","here","also","help","view","been","were","some","like","than","find","date","back","list","name","just","over","year","into","next","used","work","last","most","data","make","them","post","city","such","best","then","good","well","info","high","each","very","book","read","need","many","user","said","does","mail","full","life","know","days","part","real","item","ebay","must","made","line","send","type","take","area","want","long","code","show","even","much","sign","file","link","open","case","same","both","game","care","down","size","shop","text","rate","form","love","john","main","call","save","york","card","jobs","food","sale","teen","room","join","west","look","left","team","week","note","live","june","plan","cost","july","test","come","cart","play","less","blog","park","side","give","sell","body","east","club","road","gift","hard","four","blue","easy","star","hand","keep","porn","baby","term","film","head","cell","self","away","once","sure","cars","tell","able","gold","arts","past","five","upon","says","land","done","ever","word","bill","talk","nude","kids","true","else","mark","rock","tips","plus","auto","edit","fast","fact","unit","tech","meet","feel","bank","risk","town","girl","toys","golf","loan","wide","sort","half","step","none","paul","lake","sony","fire","chat","loss","face","base","near","stay","turn","mean","king","copy","drug","pics","cash","seen","port","stop","soon","held","mind","lost","tour","menu","hope","wish","role","came","fine","hour","bush","huge","kind","move","logo","nice","sent","band","lead","went","mode","fund","male","took","song","cnet","late","fall","idea","tool","hill","maps","deal","hold","safe","feed","hall","anti","ship","paid","hair","anal","tree","thus","wall","wine","vote","ways","rule","told","feet","sexy","door","cool","asia","uses","java","pass","fees","skin","prev","mary","ring","iraq","boys","deep","rest","pool","mini","fish","pack","born","race","rape","debt","core","sets","wood","rent","dark","host","isbn","fair","ohio","gets","dead","mike","trip","poor","eyes","farm","lord","hear","goes","wife","hits","zone","jack","flat","flow","path","laws","skip","diet","army","gear","lots","firm","jump","ball","goal","sold","wind","milf","palm","pain","xbox","oral","ford","edge","root","pink","shot","cold","foot","mass","heat","wild","miss","task","soft","fuel","walk","fuck","wait","rose","pick","load","tags","guys","cock","drop","rich","ipod","seem","hire","gave","ones","tits","rank","kong","died","inch","snow","camp","fill","gone","fort","gene","disc","boat","icon","ends","cast","felt","soul","aids","flag","atom","iron","void","disk","desk","dave","hong","vice","duty","bear","gain","lack","iowa","knew","zoom","blow","clip","wire","tape","spam","acid","cent","null","zero","roll","bath","font","beta","fail","jazz","bags","wear","rare","bars","dual","rise","bird","lady","fans","dell","seat","bids","toll","cape","mine","whom","math","dogs","moon","fear","wars","kept","beat","arms","utah","hide","slow","faqs","nine","eric","spot","grow","rain","onto","diff","bass","hole","pets","ride","pair","runs","yeah","sexo","evil","euro","peak","dick","salt","bell","jeff","lane","kill","ages","plug","cook","perl","bike","lose","seek","tony","kits","soil","matt","exit","iran","keys","wave","holy","acts","mesh","dean","poll","unix","bond","jean","visa","pure","hell","lens","draw","warm","suck","babe","crew","legs","rear","node","lock","mile","mens","bowl","tank","navy","dish","adam","slot","gray","demo","hate","rice","loop","gary","vary","rome","arab","milk","boot","push","misc","alan","dear","beer","jose","jane","earn","twin","dont","bits","suit","chip","char","echo","grid","voip","pull","nasa","nick","plot","pump","anne","exam","ryan","beds","grey","bold","scan","aged","bulk","pmid","cute","para","seed","peer","meat","alex","bang","bone","bugs","gate","tone","busy","neck","wing","tiny","rail","tube","belt","luck","dial","gang","cake","semi","andy","cafe","till","shoe","sand","seal","lies","pipe","deck","thin","sick","dose","lets","cats","greg","folk","okay","hist","lift","lisa","mall","fell","yard","sean","pour","tion","dust","wiki","butt","kent","adds","ward","roof","kiss","rush","mpeg","yoga","lamp","rico","phil","glad","wins","rack","boss","ross","anna","solo","tall","pdas","nova","wake","shit","drum","foto","ease","orgy","tabs","pine","tend","gulf","rick","hunt","thai","fred","mill","burn","labs","sole","laid","clay","weak","wise","odds"],"5":["about","other","which","their","there","first","would","these","click","price","state","email","world","music","after","video","where","books","links","years","order","items","group","under","games","could","great","hotel","store","terms","right","local","those","using","phone","forum","based","black","check","index","being","women","today","south","pages","found","house","photo","power","while","three","total","place","think","north","posts","media","water","since","guide","board","white","small","times","sites","level","hours","image","title","shall","class","still","money","every","visit","tools","reply","value","press","learn","print","stock","point","sales","large","table","start","model","human","movie","march","yahoo","going","study","staff","again","april","never","users","topic","below","party","login","legal","above","quote","story","rates","young","field","paper","girls","night","texas","poker","issue","range","court","audio","light","write","offer","given","files","event","china","needs","might","month","major","areas","space","cards","child","enter","share","added","radio","until","color","track","least","trade","david","green","close","drive","short","means","daily","beach","costs","style","front","parts","early","miles","sound","works","rules","final","adult","thing","cheap","third","gifts","cover","often","watch","deals","words","linux","james","heart","error","clear","makes","india","taken","known","cases","quick","whole","later","basic","shows","along","among","death","speed","brand","stuff","japan","doing","loans","shoes","entry","notes","force","river","album","views","plans","build","types","lines","apply","asked","cross","weeks","lower","union","names","leave","teens","woman","cable","score","shown","flash","ideas","allow","homes","super","asian","cause","focus","rooms","voice","comes","brown","forms","glass","happy","smith","thank","prior","sport","ready","round","built","blood","earth","nokia","italy","basis","award","peter","extra","pussy","rated","quite","horse","stars","lists","owner","takes","bring","input","agent","valid","grand","trial","units","wrote","ships","metal","funds","guest","seems","trust","multi","grade","panel","floor","match","plant","sense","stage","goods","maybe","spain","youth","break","dance","apple","enjoy","block","civil","steel","songs","fixed","wrong","hands","paris","fully","worth","peace","coast","grant","agree","blogs","scale","stand","frame","chief","gives","heard","begin","royal","clean","bible","suite","vegas","chris","piece","sheet","seven","older","cells","looks","calls","whose","naked","lives","stone","tests","buyer","steve","label","scott","canon","waste","chair","phase","motor","shirt","crime","count","claim","patch","santa","alone","jones","saint","drugs","joint","fresh","dates","upper","prime","limit","began","louis","steps","shops","creek","urban","tours","labor","admin","heavy","solid","theme","porno","touch","goals","serve","magic","mount","smart","latin","avoid","birth","virus","abuse","facts","faith","chain","moved","reach","sorry","gamma","truth","films","owned","draft","chart","jesus","clubs","equal","codes","kinds","teams","funny","tried","named","laser","harry","taxes","mouse","brain","dream","false","falls","stats","carry","hello","clips","brief","ended","eight","wants","alert","queen","sweet","diego","truck","votes","ocean","signs","depth","train","feeds","route","frank","anime","speak","query","rural","judge","bytes","fight","filed","korea","banks","kelly","leads","brian","miami","wales","minor","noted","spent","davis","helps","cycle","sleep","scene","drink","intel","rings","henry","guess","ahead","devel","delta","cisco","alpha","bonus","adobe","trees","dress","refer","babes","layer","spend","clock","ratio","proof","empty","maine","ideal","specs","parks","cream","boxes","hills","aware","shape","irish","firms","usage","mixed","exist","wheel","angel","width","noise","array","greek","sharp","occur","knows","coach","kevin","plate","logic","sizes","plain","costa","trail","buddy","setup","blues","scope","crazy","bears","mouth","meter","fruit","lewis","sugar","stick","allen","genre","slide","exact","bound","storm","micro","dolls","paint","delay","pilot","czech","novel","ultra","idaho","plays","truly","lodge","boobs","broad","swiss","sarah","clark","foods","guard","newly","raise","drama","bands","lunch","dildo","audit","polls","tower","yours","jason","shell","solar","catch","doubt","tasks","const","doors","forth","bruce","split","twice","egypt","shift","simon","marks","loved","birds","saved","shots","moore","treat","piano","risks","ports","teach","rapid","hairy","dutch","boots","holds","pulse","metro","strip","pearl","penis","heads","logos","milfs","honda","bills","opera","asset","blank","humor","lived","tight","meant","plane","meets","tampa","grace","susan","adams","villa","inner","roman","taste","trips","sides","turns","cache","lease","proud","giant","seats","alarm","usual","angle","vinyl","worst","honor","eagle","pants","nurse","quiet","comic","crown","maker","crack","picks","smoke","craft","apart","blind","coins","gross","epson","actor","finds","fifth","prize","dirty","wayne","alive","prove","wings","ridge","modem","larry","skill","moves","throw","trend","rhode","busty","worse","boats","tells","fiber","graph","talks","bonds","fraud","roger","crash","inter","grove","spray","roads","faces","cocks","mayor","yield","hence","radar","lakes","diary","kings","flags","baker","shock","walls","ebony","drawn","beast","dodge","pizza","yards","woods","jokes","twiki","globe","dicke","kerry","ghost","pride","keith","linda","chile","maria","brass","plaza","quest","trans","booty","acres","venue","vital","excel","modes","enemy","wells","opens","lucky","thick","iraqi","vista","chips","terry","flood","arena","grown","jerry","smile","lands","armed","laura","tokyo","nikon","candy","pills","tiger","folks","balls","boost","icons","moral","keeps","pound","roses","bread","tough","gonna","chest","billy","craig","solve","nancy","tones","sight","towns"]};
+  const COUNTS = {"3":311,"4":653,"5":751};
+  const VOWELS = new Set(["a","e","i","o","u"]);
+
+  const el = (id) => document.getElementById(id);
+
+  const startWordEl = el("startWord");
+  const targetWordEl = el("targetWord");
+  const stepsCountEl = el("stepsCount");
+  const dictCountEl = el("dictCount");
+  const lenSel = el("lenSel");
+  const wordInput = el("wordInput");
+  const ladderEl = el("ladder");
+  const msgEl = el("msg");
+  const countsLine = el("countsLine");
+
+  const overlay = el("overlay");
+  const mTitle = el("mTitle");
+  const mSub = el("mSub");
+  const mNew = el("mNew");
+  const mView = el("mView");
+  const mPath = el("mPath");
+
+  const newBtn = el("newBtn");
+  const hintBtn = el("hintBtn");
+  const giveUpBtn = el("giveUpBtn");
+
+  let state = {
+    L: 4,
+    words: [],
+    wordSet: null,
+    buckets: null, // pattern -> array of word indices
+    start: "",
+    target: "",
+    current: "",
+    history: [],
+    shortestPath: null,
+  };
+
+  function setMsg(text, kind="") {
+    msgEl.textContent = text || "";
+    msgEl.className = "msg" + (kind ? " " + kind : "");
+  }
+
+  function buildCountsLine() {
+    countsLine.textContent = `Available words: 3-letter ${COUNTS[3]}, 4-letter ${COUNTS[4]}, 5-letter ${COUNTS[5]}.`;
+  }
+
+  function normalize(w) {
+    return (w || "").trim().toLowerCase();
+  }
+
+  function differsByOne(a, b) {
+    if (!a || !b || a.length !== b.length) return false;
+    let d = 0;
+    for (let i=0;i<a.length;i++) {
+      if (a[i] !== b[i]) d++;
+      if (d > 1) return false;
+    }
+    return d === 1;
+  }
+
+  function patternsFor(word) {
+    const out = [];
+    for (let i=0;i<word.length;i++) {
+      out.push(word.slice(0,i) + "*" + word.slice(i+1));
+    }
+    return out;
+  }
+
+  function buildBuckets(words) {
+    const map = new Map();
+    for (let idx=0; idx<words.length; idx++) {
+      const w = words[idx];
+      for (const p of patternsFor(w)) {
+        if (!map.has(p)) map.set(p, []);
+        map.get(p).push(idx);
+      }
+    }
+    return map;
+  }
+
+  function neighborsOf(word) {
+    const seen = new Set();
+    const out = [];
+    const idxList = [];
+    for (const p of patternsFor(word)) {
+      const arr = state.buckets.get(p);
+      if (!arr) continue;
+      for (const idx of arr) {
+        const w = state.words[idx];
+        if (w === word) continue;
+        if (seen.has(w)) continue;
+        seen.add(w);
+        out.push(w);
+      }
+    }
+    return out;
+  }
+
+  function bfsShortestPath(start, target) {
+    if (start === target) return [start];
+    const q = [start];
+    const prev = new Map();
+    prev.set(start, null);
+
+    let qi = 0;
+    while (qi < q.length) {
+      const cur = q[qi++];
+      const neigh = neighborsOf(cur);
+      for (const nxt of neigh) {
+        if (prev.has(nxt)) continue;
+        prev.set(nxt, cur);
+        if (nxt === target) {
+          // reconstruct
+          const path = [];
+          let t = target;
+          while (t !== null) {
+            path.push(t);
+            t = prev.get(t);
+          }
+          path.reverse();
+          return path;
+        }
+        q.push(nxt);
+      }
+    }
+    return null;
+  }
+
+  function pickRandomSolvablePair() {
+    // Try several times to find a pair with a reasonably sized ladder.
+    const words = state.words;
+    const tries = 300;
+    const minD = Math.min(4, Math.max(3, state.L - 1));
+    const maxD = state.L === 3 ? 6 : (state.L === 4 ? 8 : 10);
+
+    for (let t=0; t<tries; t++) {
+      const start = words[Math.floor(Math.random()*words.length)];
+      // quick BFS outward from start to collect candidates in distance range
+      const q = [start];
+      const dist = new Map([[start, 0]]);
+      let qi = 0;
+      const candidates = [];
+      while (qi < q.length) {
+        const cur = q[qi++];
+        const d = dist.get(cur);
+        if (d >= maxD) continue;
+        for (const nxt of neighborsOf(cur)) {
+          if (dist.has(nxt)) continue;
+          const nd = d + 1;
+          dist.set(nxt, nd);
+          q.push(nxt);
+          if (nd >= minD && nd <= maxD) candidates.push(nxt);
+        }
+      }
+      if (candidates.length === 0) continue;
+      const target = candidates[Math.floor(Math.random()*candidates.length)];
+      const path = bfsShortestPath(start, target);
+      if (!path) continue;
+      const d = path.length - 1;
+      if (d < minD || d > maxD) continue;
+      return { start, target, path };
+    }
+
+    // Fallback: just find any pair with a path
+    for (let t=0; t<tries; t++) {
+      const start = words[Math.floor(Math.random()*words.length)];
+      const target = words[Math.floor(Math.random()*words.length)];
+      if (start === target) continue;
+      const path = bfsShortestPath(start, target);
+      if (path && path.length >= 3) return { start, target, path };
+    }
+
+    // Worst-case fallback: pick any two distinct words (might be unsolvable)
+    const start = words[0] || "----";
+    const target = words[1] || "----";
+    return { start, target, path: null };
+  }
+
+  function renderLadder() {
+    ladderEl.innerHTML = "";
+    for (let i=0; i<state.history.length; i++) {
+      const w = state.history[i];
+      const div = document.createElement("div");
+      div.className = "step" + (i === state.history.length - 1 ? " current" : "");
+      const left = document.createElement("div");
+      left.className = "w";
+      left.textContent = w;
+      const right = document.createElement("div");
+      right.className = "meta";
+      right.textContent = i === 0 ? "start" : (w === state.target ? "target" : `step ${i}`);
+      div.appendChild(left);
+      div.appendChild(right);
+      ladderEl.appendChild(div);
+    }
+    stepsCountEl.textContent = String(Math.max(0, state.history.length - 1));
+  }
+
+  function openModal(kind, subtitle) {
+    mTitle.textContent = kind;
+    mSub.textContent = subtitle || "";
+    mPath.style.display = "none";
+    mPath.innerHTML = "";
+    overlay.classList.add("show");
+  }
+
+  function closeModal() {
+    overlay.classList.remove("show");
+  }
+
+  function showSolutionInModal() {
+    const path = state.shortestPath;
+    mPath.style.display = "grid";
+    mPath.innerHTML = "";
+    const code = document.createElement("code");
+    if (!path) {
+      code.textContent = "No solution found for this pair (rare). Try a new puzzle.";
+    } else {
+      code.textContent = path.join(" → ");
+    }
+    mPath.appendChild(code);
+  }
+
+  function startNewPuzzle() {
+    state.L = parseInt(lenSel.value, 10);
+    state.words = WORDS_BY_LEN[String(state.L)].slice();
+    state.wordSet = new Set(state.words);
+    state.buckets = buildBuckets(state.words);
+    dictCountEl.textContent = String(state.words.length);
+
+    const pair = pickRandomSolvablePair();
+    state.start = pair.start;
+    state.target = pair.target;
+    state.current = pair.start;
+    state.history = [pair.start];
+    state.shortestPath = pair.path;
+
+    startWordEl.textContent = state.start;
+    targetWordEl.textContent = state.target;
+    setMsg("New puzzle ready. Good luck!");
+    wordInput.value = "";
+    wordInput.maxLength = state.L;
+    wordInput.placeholder = `Enter a ${state.L}-letter word`;
+    renderLadder();
+  }
+
+  function submitWord(raw) {
+    const w = normalize(raw);
+    if (!w) return;
+    if (w.length !== state.L) {
+      setMsg(`Must be exactly ${state.L} letters.`, "bad");
+      return;
+    }
+    if (!/^[a-z]+$/.test(w)) {
+      setMsg("Letters only (a–z).", "bad");
+      return;
+    }
+    if (!state.wordSet.has(w)) {
+      setMsg("Not in the dictionary for this game.", "bad");
+      return;
+    }
+    if (!differsByOne(state.current, w)) {
+      setMsg("Must change exactly one letter from the current word.", "bad");
+      return;
+    }
+    if (state.history.includes(w)) {
+      setMsg("You already used that word.", "bad");
+      return;
+    }
+
+    state.current = w;
+    state.history.push(w);
+    setMsg("Nice.", "good");
+    renderLadder();
+    wordInput.value = "";
+
+    if (w === state.target) {
+      openModal("You win!", `Solved in ${state.history.length - 1} steps.`);
+    }
+  }
+
+  function hint() {
+    // Hint = next word on the stored shortest path, if available and the player is on the path.
+    const path = state.shortestPath;
+    if (!path) {
+      setMsg("No hint available for this pair. Try a new puzzle.", "bad");
+      return;
+    }
+    const cur = state.current;
+    const idx = path.indexOf(cur);
+    if (idx >= 0 && idx < path.length - 1) {
+      const next = path[idx + 1];
+      setMsg(`Hint: try “${next}”.`, "good");
+      return;
+    }
+    // If the player has deviated, compute a shortest path from current to target.
+    const newPath = bfsShortestPath(cur, state.target);
+    if (!newPath) {
+      setMsg("No path from your current word. You may need to backtrack (start a new puzzle).", "bad");
+      return;
+    }
+    setMsg(`Hint: try “${newPath[1]}”.`, "good");
+  }
+
+  function giveUp() {
+    openModal("Solution", `Shortest ladder from ${state.start} to ${state.target}.`);
+  }
+
+  // Wire up
+  buildCountsLine();
+  startNewPuzzle();
+
+  newBtn.addEventListener("click", () => {
+    closeModal();
+    startNewPuzzle();
+  });
+  lenSel.addEventListener("change", () => {
+    closeModal();
+    startNewPuzzle();
+  });
+
+  wordInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      submitWord(wordInput.value);
+    }
+  });
+
+  hintBtn.addEventListener("click", () => hint());
+  giveUpBtn.addEventListener("click", () => giveUp());
+
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) closeModal();
+  });
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeModal();
+  });
+
+  mNew.addEventListener("click", () => {
+    closeModal();
+    startNewPuzzle();
+  });
+  mView.addEventListener("click", () => {
+    showSolutionInModal();
+  });
+  // When modal opens via give up / win, clicking View solution reveals path
+  const origOpenModal = openModal;
+  openModal = (kind, subtitle) => {
+    mTitle.textContent = kind;
+    mSub.textContent = subtitle || "";
+    mPath.style.display = "none";
+    mPath.innerHTML = "";
+    overlay.classList.add("show");
+  };
+
+  // Override giveUp/win open behavior to allow solution viewing
+  const _giveUp = giveUp;
+  giveUp = () => {
+    mTitle.textContent = "Solution";
+    mSub.textContent = `Shortest ladder from ${state.start} to ${state.target}.`;
+    mPath.style.display = "none";
+    mPath.innerHTML = "";
+    overlay.classList.add("show");
+  };
+
+  // Make sure the modal buttons are relevant after a win
+  // (New puzzle always, View solution optional)
+})();
+</script>
+</body>
+</html>
