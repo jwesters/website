@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Spelling Test (Audio)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { color-scheme: light; }
+    body{
+      font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      margin:0; padding:24px;
+      background:#fff; color:#111;
+    }
+    .wrap{ max-width:760px; margin:0 auto; }
+    h1{ font-size:1.4rem; margin:0 0 12px; }
+    p{ margin:8px 0 14px; color:#333; }
+    textarea, input{
+      width:100%;
+      font-size:1rem;
+      padding:10px 12px;
+      border:1px solid #ccc;
+      border-radius:10px;
+      box-sizing:border-box;
+    }
+    textarea{ min-height:170px; resize:vertical; }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; }
+    button{
+      font-size:1rem;
+      padding:10px 12px;
+      border:1px solid #bbb;
+      background:#f7f7f7;
+      border-radius:10px;
+      cursor:pointer;
+    }
+    button:hover{ background:#eee; }
+    button.primary{
+      background:#111; color:#fff; border-color:#111;
+    }
+    button.primary:hover{ background:#000; }
+    .card{
+      border:1px solid #e3e3e3;
+      border-radius:16px;
+      padding:16px;
+      background:#fff;
+      box-shadow: 0 1px 8px rgba(0,0,0,.04);
+    }
+    .muted{ color:#555; font-size:.95rem; }
+    .tiny{ color:#666; font-size:.9rem; }
+    .pill{
+      display:inline-block;
+      padding:4px 10px;
+      border-radius:999px;
+      border:1px solid #ddd;
+      background:#fafafa;
+      font-size:.9rem;
+      color:#444;
+    }
+    .feedback{
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid #ddd;
+      background:#fafafa;
+      min-height:44px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .ok{ border-color:#cfe9d6; background:#f3fbf5; }
+    .bad{ border-color:#f1c5c5; background:#fff5f5; }
+    .list{
+      margin-top:12px;
+      border-top:1px solid #eee;
+      padding-top:12px;
+    }
+    .miss{
+      padding:10px 12px;
+      border:1px solid #eee;
+      border-radius:12px;
+      margin:10px 0;
+      background:#fcfcfc;
+    }
+    a{ color:#0b57d0; text-decoration:none; }
+    a:hover{ text-decoration:underline; }
+    .hr{ height:1px; background:#eee; margin:14px 0; }
+    .hide{ display:none !important; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Spelling Test (Audio)</h1>
+
+    <!-- Teacher setup -->
+    <div id="teacherView" class="card hide">
+      <p class="muted">Paste a list of words (one per line). Then generate a share link for students.</p>
+
+      <label class="tiny" for="wordsBox">Word list</label>
+      <textarea id="wordsBox" placeholder="cat&#10;window&#10;because&#10;..."></textarea>
+
+      <div class="row" style="margin-top:10px;">
+        <button class="primary" id="startLocalBtn">Start test</button>
+        <button id="shareBtn">Generate share link</button>
+        <button id="clearBtn">Clear</button>
+      </div>
+
+      <div class="hr"></div>
+
+      <div>
+        <div class="tiny" style="margin-bottom:6px;">Share link (encoded)</div>
+        <input id="shareLink" type="text" readonly placeholder="Click “Generate share link”" />
+        <div class="row" style="margin-top:10px;">
+          <button id="copyBtn">Copy link</button>
+          <span class="tiny" id="copyMsg" aria-live="polite"></span>
+        </div>
+        <p class="tiny" style="margin-top:12px;">
+          Note: this is a simple encode/obfuscate (ROT13 + Base64). Anyone with the link could still decode it if they try.
+        </p>
+      </div>
+    </div>
+
+    <!-- Student test -->
+    <div id="testView" class="card hide">
+      <div class="row" style="justify-content:space-between; align-items:center;">
+        <span class="pill" id="progressPill">Word 1 of 1</span>
+        <button id="restartBtn">Restart</button>
+      </div>
+
+      <div style="margin-top:14px;">
+        <p class="muted" style="margin-bottom:10px;">
+          Click <b>Hear word</b>, then type what you heard.
+        </p>
+
+        <div class="row">
+          <button class="primary" id="hearBtn">Hear word</button>
+          <button id="repeatBtn">Repeat word</button>
+        </div>
+
+        <div style="margin-top:12px;">
+          <label class="tiny" for="answerInput">Your spelling</label>
+          <input id="answerInput" type="text" autocomplete="off" spellcheck="false" />
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <button class="primary" id="submitBtn">Check</button>
+        </div>
+
+        <div id="feedbackBox" class="feedback" aria-live="polite"></div>
+
+        <div class="tiny" style="margin-top:12px;">
+          Tip: If audio doesn’t play, your browser may require a click first—press <b>Hear word</b>.
+        </div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="resultsView" class="card hide">
+      <div class="row" style="justify-content:space-between; align-items:center;">
+        <span class="pill" id="scorePill">Score: 0/0</span>
+        <button id="newTestBtn" class="primary">New test</button>
+      </div>
+
+      <div id="missedList" class="list"></div>
+    </div>
+  </div>
+
+  <script>
+    // ---------- Simple encoding: Base64 (UTF-8) + ROT13 obfuscation ----------
+    function rot13(str){
+      return str.replace(/[a-zA-Z]/g, c => {
+        const base = c <= 'Z' ? 65 : 97;
+        return String.fromCharCode(((c.charCodeAt(0) - base + 13) % 26) + base);
+      });
+    }
+
+    function b64EncodeUtf8(str){
+      return btoa(unescape(encodeURIComponent(str)));
+    }
+    function b64DecodeUtf8(str){
+      return decodeURIComponent(escape(atob(str)));
+    }
+
+    function encodeWords(wordsText){
+      const b64 = b64EncodeUtf8(wordsText);
+      return rot13(b64);
+    }
+    function decodeWords(encoded){
+      const b64 = rot13(encoded);
+      return b64DecodeUtf8(b64);
+    }
+
+    // ---------- Helpers ----------
+    function normalizeWord(w){
+      return (w || "").trim();
+    }
+
+    function parseWords(text){
+      return text
+        .split(/\r?\n/)
+        .map(normalizeWord)
+        .filter(Boolean);
+    }
+
+    function shuffle(arr){
+      for (let i = arr.length - 1; i > 0; i--){
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function speak(text){
+      if (!("speechSynthesis" in window)) {
+        return false;
+      }
+      try{
+        const u = new SpeechSynthesisUtterance(text);
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(u);
+        return true;
+      }catch{
+        return false;
+      }
+    }
+
+    // ---------- State ----------
+    let words = [];
+    let order = [];
+    let idx = 0;
+    let results = []; // {target, typed, correct}
+    let lastSpoken = "";
+
+    // ---------- Elements ----------
+    const teacherView = document.getElementById("teacherView");
+    const testView = document.getElementById("testView");
+    const resultsView = document.getElementById("resultsView");
+
+    const wordsBox = document.getElementById("wordsBox");
+    const startLocalBtn = document.getElementById("startLocalBtn");
+    const shareBtn = document.getElementById("shareBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const shareLink = document.getElementById("shareLink");
+    const copyBtn = document.getElementById("copyBtn");
+    const copyMsg = document.getElementById("copyMsg");
+
+    const progressPill = document.getElementById("progressPill");
+    const hearBtn = document.getElementById("hearBtn");
+    const repeatBtn = document.getElementById("repeatBtn");
+    const answerInput = document.getElementById("answerInput");
+    const submitBtn = document.getElementById("submitBtn");
+    const feedbackBox = document.getElementById("feedbackBox");
+    const restartBtn = document.getElementById("restartBtn");
+
+    const scorePill = document.getElementById("scorePill");
+    const missedList = document.getElementById("missedList");
+    const newTestBtn = document.getElementById("newTestBtn");
+
+    // ---------- View switching ----------
+    function show(view){
+      teacherView.classList.add("hide");
+      testView.classList.add("hide");
+      resultsView.classList.add("hide");
+      view.classList.remove("hide");
+    }
+
+    function setFeedback(type, html){
+      feedbackBox.className = "feedback";
+      if (type === "ok") feedbackBox.classList.add("ok");
+      if (type === "bad") feedbackBox.classList.add("bad");
+      feedbackBox.innerHTML = html || "";
+    }
+
+    // ---------- Test flow ----------
+    function startTest(fromWords){
+      words = [...fromWords];
+      if (!words.length){
+        alert("Please provide at least one word.");
+        return;
+      }
+      order = shuffle(words.slice());
+      idx = 0;
+      results = [];
+      lastSpoken = "";
+
+      show(testView);
+      setFeedback("", "Ready when you are.");
+      answerInput.value = "";
+      answerInput.focus();
+      updateProgress();
+    }
+
+    function updateProgress(){
+      progressPill.textContent = `Word ${Math.min(idx + 1, order.length)} of ${order.length}`;
+    }
+
+    function currentTarget(){
+      return order[idx] || "";
+    }
+
+    function playCurrent(){
+      const target = currentTarget();
+      if (!target) return;
+      lastSpoken = target;
+      const ok = speak(target);
+      if (!ok){
+        setFeedback("bad", "Sorry—your browser doesn’t support speech synthesis.");
+      }
+    }
+
+    function checkAnswer(){
+      const target = currentTarget();
+      const typed = (answerInput.value || "").trim();
+      if (!target) return;
+
+      const correct = typed.localeCompare(target, undefined, { sensitivity: "accent" }) === 0
+        || typed.toLowerCase() === target.toLowerCase(); // case-insensitive
+
+      results.push({ target, typed, correct });
+
+      if (correct){
+        setFeedback("ok", "✅ Correct!");
+      } else {
+        // instant feedback + show correct word
+        setFeedback("bad", `❌ Not quite. Correct spelling: <b>${escapeHtml(target)}</b>`);
+      }
+
+      idx++;
+
+      // move on quickly
+      setTimeout(() => {
+        if (idx >= order.length){
+          finish();
+        } else {
+          answerInput.value = "";
+          setFeedback("", "Next word ready.");
+          updateProgress();
+          answerInput.focus();
+        }
+      }, 900);
+    }
+
+    function finish(){
+      const correctCount = results.filter(r => r.correct).length;
+      scorePill.textContent = `Score: ${correctCount}/${results.length}`;
+
+      // Missed list
+      const missed = results
+        .map((r, i) => ({...r, n: i + 1}))
+        .filter(r => !r.correct);
+
+      if (!missed.length){
+        missedList.innerHTML = "<p class='muted' style='margin-top:12px;'>Perfect score 🎉</p>";
+      } else {
+        missedList.innerHTML = "<h2 style='font-size:1.05rem; margin:14px 0 6px;'>Missed words</h2>" +
+          missed.map(m => `
+            <div class="miss">
+              <div class="tiny"><b>#${m.n}</b></div>
+              <div style="margin-top:6px;"><b>Correct:</b> ${escapeHtml(m.target)}</div>
+              <div style="margin-top:6px;"><b>You typed:</b> ${escapeHtml(m.typed || "(blank)")}</div>
+            </div>
+          `).join("");
+      }
+
+      show(resultsView);
+    }
+
+    function escapeHtml(s){
+      return String(s).replace(/[&<>"']/g, ch => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+      }[ch]));
+    }
+
+    // ---------- Share link ----------
+    function buildShareLink(wordsText){
+      const encoded = encodeWords(wordsText);
+      const url = new URL(window.location.href);
+      // Use hash so it doesn't hit servers / logs as query params often do.
+      url.hash = "w=" + encodeURIComponent(encoded);
+      return url.toString();
+    }
+
+    function getSharedWords(){
+      const hash = (window.location.hash || "").replace(/^#/, "");
+      if (!hash) return null;
+      const params = new URLSearchParams(hash);
+      const w = params.get("w");
+      if (!w) return null;
+      try{
+        const decoded = decodeWords(decodeURIComponent(w));
+        return parseWords(decoded);
+      }catch(e){
+        return null;
+      }
+    }
+
+    // ---------- Wire up ----------
+    startLocalBtn.addEventListener("click", () => {
+      const list = parseWords(wordsBox.value);
+      startTest(list);
+    });
+
+    shareBtn.addEventListener("click", () => {
+      const list = parseWords(wordsBox.value);
+      if (!list.length){
+        alert("Please paste at least one word first.");
+        return;
+      }
+      const text = list.join("\n");
+      const link = buildShareLink(text);
+      shareLink.value = link;
+      copyMsg.textContent = "";
+    });
+
+    clearBtn.addEventListener("click", () => {
+      wordsBox.value = "";
+      shareLink.value = "";
+      copyMsg.textContent = "";
+      wordsBox.focus();
+    });
+
+    copyBtn.addEventListener("click", async () => {
+      if (!shareLink.value) return;
+      try{
+        await navigator.clipboard.writeText(shareLink.value);
+        copyMsg.textContent = "Copied!";
+        setTimeout(() => copyMsg.textContent = "", 1200);
+      }catch{
+        shareLink.select();
+        document.execCommand("copy");
+        copyMsg.textContent = "Copied!";
+        setTimeout(() => copyMsg.textContent = "", 1200);
+      }
+    });
+
+    hearBtn.addEventListener("click", playCurrent);
+    repeatBtn.addEventListener("click", () => {
+      if (lastSpoken) speak(lastSpoken);
+      else playCurrent();
+    });
+
+    submitBtn.addEventListener("click", checkAnswer);
+    answerInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") checkAnswer();
+    });
+
+    restartBtn.addEventListener("click", () => {
+      // restart same set/order (reshuffle fresh)
+      startTest(words);
+    });
+
+    newTestBtn.addEventListener("click", () => {
+      // back to teacher view (doesn't erase text if they came from teacher)
+      window.location.hash = "";
+      show(teacherView);
+      setFeedback("", "");
+    });
+
+    // ---------- Boot ----------
+    const shared = getSharedWords();
+    if (shared && shared.length){
+      // Student mode from shared link
+      show(testView);
+      words = shared.slice();
+      // Lock: no teacher UI shown
+      startTest(words);
+    } else {
+      show(teacherView);
+      wordsBox.focus();
+    }
+  </script>
+</body>
+</html>
