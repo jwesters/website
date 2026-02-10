@@ -37,6 +37,7 @@
       background:#111; color:#fff; border-color:#111;
     }
     button.primary:hover{ background:#000; }
+    button:disabled{ opacity:.55; cursor:not-allowed; }
     .card{
       border:1px solid #e3e3e3;
       border-radius:16px;
@@ -80,8 +81,6 @@
       margin:10px 0;
       background:#fcfcfc;
     }
-    a{ color:#0b57d0; text-decoration:none; }
-    a:hover{ text-decoration:underline; }
     .hr{ height:1px; background:#eee; margin:14px 0; }
     .hide{ display:none !important; }
   </style>
@@ -90,12 +89,14 @@
   <div class="wrap">
     <h1>Spelling Test (Audio)</h1>
 
-    <!-- Teacher setup -->
     <div id="teacherView" class="card hide">
-      <p class="muted">Paste a list of words (one per line). Then generate a share link for students.</p>
+      <p class="muted">
+        Paste a list of words (one per line). Optional sentence format:
+        <span class="pill">word, "Sentence using the word."</span>
+      </p>
 
       <label class="tiny" for="wordsBox">Word list</label>
-      <textarea id="wordsBox" placeholder="cat&#10;window&#10;because&#10;..."></textarea>
+      <textarea id="wordsBox" placeholder='cat, "The cat was outside."&#10;because, "I stayed inside because it was cold."&#10;window'></textarea>
 
       <div class="row" style="margin-top:10px;">
         <button class="primary" id="startLocalBtn">Start test</button>
@@ -118,7 +119,6 @@
       </div>
     </div>
 
-    <!-- Student test -->
     <div id="testView" class="card hide">
       <div class="row" style="justify-content:space-between; align-items:center;">
         <span class="pill" id="progressPill">Word 1 of 1</span>
@@ -126,13 +126,11 @@
       </div>
 
       <div style="margin-top:14px;">
-        <p class="muted" style="margin-bottom:10px;">
-          Click <b>Hear word</b>, then type what you heard.
-        </p>
+        <p class="muted" style="margin-bottom:10px;">Click <b>Hear word</b>, then type what you heard.</p>
 
         <div class="row">
           <button class="primary" id="hearBtn">Hear word</button>
-          <button id="repeatBtn">Repeat word</button>
+          <button id="sentenceBtn" class="hide">Word used in a sentence</button>
         </div>
 
         <div style="margin-top:12px;">
@@ -152,7 +150,6 @@
       </div>
     </div>
 
-    <!-- Results -->
     <div id="resultsView" class="card hide">
       <div class="row" style="justify-content:space-between; align-items:center;">
         <span class="pill" id="scorePill">Score: 0/0</span>
@@ -164,41 +161,16 @@
   </div>
 
   <script>
-    // ---------- Simple encoding: Base64 (UTF-8) + ROT13 obfuscation ----------
     function rot13(str){
       return str.replace(/[a-zA-Z]/g, c => {
         const base = c <= 'Z' ? 65 : 97;
         return String.fromCharCode(((c.charCodeAt(0) - base + 13) % 26) + base);
       });
     }
-
-    function b64EncodeUtf8(str){
-      return btoa(unescape(encodeURIComponent(str)));
-    }
-    function b64DecodeUtf8(str){
-      return decodeURIComponent(escape(atob(str)));
-    }
-
-    function encodeWords(wordsText){
-      const b64 = b64EncodeUtf8(wordsText);
-      return rot13(b64);
-    }
-    function decodeWords(encoded){
-      const b64 = rot13(encoded);
-      return b64DecodeUtf8(b64);
-    }
-
-    // ---------- Helpers ----------
-    function normalizeWord(w){
-      return (w || "").trim();
-    }
-
-    function parseWords(text){
-      return text
-        .split(/\r?\n/)
-        .map(normalizeWord)
-        .filter(Boolean);
-    }
+    function b64EncodeUtf8(str){ return btoa(unescape(encodeURIComponent(str))); }
+    function b64DecodeUtf8(str){ return decodeURIComponent(escape(atob(str))); }
+    function encodeWords(wordsText){ return rot13(b64EncodeUtf8(wordsText)); }
+    function decodeWords(encoded){ return b64DecodeUtf8(rot13(encoded)); }
 
     function shuffle(arr){
       for (let i = arr.length - 1; i > 0; i--){
@@ -207,29 +179,41 @@
       }
       return arr;
     }
-
     function speak(text){
-      if (!("speechSynthesis" in window)) {
-        return false;
-      }
+      if (!("speechSynthesis" in window)) return false;
       try{
         const u = new SpeechSynthesisUtterance(text);
         window.speechSynthesis.cancel();
         window.speechSynthesis.speak(u);
         return true;
-      }catch{
-        return false;
-      }
+      }catch{ return false; }
+    }
+    function escapeHtml(s){
+      return String(s).replace(/[&<>"']/g, ch => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+      }[ch]));
     }
 
-    // ---------- State ----------
-    let words = [];
-    let order = [];
-    let idx = 0;
-    let results = []; // {target, typed, correct}
-    let lastSpoken = "";
+    function parseLine(line){
+      const raw = (line || "").trim();
+      if (!raw) return null;
+      const m = raw.match(/^\s*([^,]+?)\s*,\s*"([^"]+)"\s*$/);
+      if (m){
+        const word = (m[1] || "").trim();
+        const sentence = (m[2] || "").trim();
+        if (!word) return null;
+        return { word, sentence: sentence || null };
+      }
+      return { word: raw, sentence: null };
+    }
 
-    // ---------- Elements ----------
+    function parseList(text){
+      return (text || "")
+        .split(/\r?\n/)
+        .map(parseLine)
+        .filter(x => x && x.word);
+    }
+
     const teacherView = document.getElementById("teacherView");
     const testView = document.getElementById("testView");
     const resultsView = document.getElementById("resultsView");
@@ -244,7 +228,7 @@
 
     const progressPill = document.getElementById("progressPill");
     const hearBtn = document.getElementById("hearBtn");
-    const repeatBtn = document.getElementById("repeatBtn");
+    const sentenceBtn = document.getElementById("sentenceBtn");
     const answerInput = document.getElementById("answerInput");
     const submitBtn = document.getElementById("submitBtn");
     const feedbackBox = document.getElementById("feedbackBox");
@@ -254,14 +238,17 @@
     const missedList = document.getElementById("missedList");
     const newTestBtn = document.getElementById("newTestBtn");
 
-    // ---------- View switching ----------
+    let items = [];
+    let order = [];
+    let idx = 0;
+    let results = [];
+
     function show(view){
       teacherView.classList.add("hide");
       testView.classList.add("hide");
       resultsView.classList.add("hide");
       view.classList.remove("hide");
     }
-
     function setFeedback(type, html){
       feedbackBox.className = "feedback";
       if (type === "ok") feedbackBox.classList.add("ok");
@@ -269,70 +256,71 @@
       feedbackBox.innerHTML = html || "";
     }
 
-    // ---------- Test flow ----------
-    function startTest(fromWords){
-      words = [...fromWords];
-      if (!words.length){
+    function startTest(fromItems){
+      items = [...fromItems];
+      if (!items.length){
         alert("Please provide at least one word.");
         return;
       }
-      order = shuffle(words.slice());
+      order = shuffle(items.slice());
       idx = 0;
       results = [];
-      lastSpoken = "";
 
       show(testView);
       setFeedback("", "Ready when you are.");
       answerInput.value = "";
       answerInput.focus();
-      updateProgress();
+      updateUIForCurrent();
     }
 
-    function updateProgress(){
+    function currentItem(){ return order[idx] || null; }
+
+    function updateUIForCurrent(){
       progressPill.textContent = `Word ${Math.min(idx + 1, order.length)} of ${order.length}`;
+      const it = currentItem();
+      if (it && it.sentence) sentenceBtn.classList.remove("hide");
+      else sentenceBtn.classList.add("hide");
     }
 
-    function currentTarget(){
-      return order[idx] || "";
+    function playWord(){
+      const it = currentItem();
+      if (!it) return;
+      const ok = speak(it.word);
+      if (!ok) setFeedback("bad", "Sorry—your browser doesn’t support speech synthesis.");
     }
 
-    function playCurrent(){
-      const target = currentTarget();
-      if (!target) return;
-      lastSpoken = target;
-      const ok = speak(target);
-      if (!ok){
-        setFeedback("bad", "Sorry—your browser doesn’t support speech synthesis.");
-      }
+    function playSentence(){
+      const it = currentItem();
+      if (!it || !it.sentence) return;
+      const ok = speak(it.sentence);
+      if (!ok) setFeedback("bad", "Sorry—your browser doesn’t support speech synthesis.");
     }
 
     function checkAnswer(){
-      const target = currentTarget();
+      const it = currentItem();
+      if (!it) return;
+
       const typed = (answerInput.value || "").trim();
-      if (!target) return;
+      const target = it.word;
 
-      const correct = typed.localeCompare(target, undefined, { sensitivity: "accent" }) === 0
-        || typed.toLowerCase() === target.toLowerCase(); // case-insensitive
-
+      const correct = typed.toLowerCase() === target.toLowerCase();
       results.push({ target, typed, correct });
 
       if (correct){
         setFeedback("ok", "✅ Correct!");
       } else {
-        // instant feedback + show correct word
         setFeedback("bad", `❌ Not quite. Correct spelling: <b>${escapeHtml(target)}</b>`);
       }
 
       idx++;
 
-      // move on quickly
       setTimeout(() => {
         if (idx >= order.length){
           finish();
         } else {
           answerInput.value = "";
           setFeedback("", "Next word ready.");
-          updateProgress();
+          updateUIForCurrent();
           answerInput.focus();
         }
       }, 900);
@@ -342,15 +330,13 @@
       const correctCount = results.filter(r => r.correct).length;
       scorePill.textContent = `Score: ${correctCount}/${results.length}`;
 
-      // Missed list
-      const missed = results
-        .map((r, i) => ({...r, n: i + 1}))
-        .filter(r => !r.correct);
+      const missed = results.map((r,i)=>({ ...r, n:i+1 })).filter(r=>!r.correct);
 
       if (!missed.length){
         missedList.innerHTML = "<p class='muted' style='margin-top:12px;'>Perfect score 🎉</p>";
       } else {
-        missedList.innerHTML = "<h2 style='font-size:1.05rem; margin:14px 0 6px;'>Missed words</h2>" +
+        missedList.innerHTML =
+          "<h2 style='font-size:1.05rem; margin:14px 0 6px;'>Missed words</h2>" +
           missed.map(m => `
             <div class="miss">
               <div class="tiny"><b>#${m.n}</b></div>
@@ -359,54 +345,38 @@
             </div>
           `).join("");
       }
-
       show(resultsView);
     }
 
-    function escapeHtml(s){
-      return String(s).replace(/[&<>"']/g, ch => ({
-        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-      }[ch]));
-    }
-
-    // ---------- Share link ----------
     function buildShareLink(wordsText){
       const encoded = encodeWords(wordsText);
       const url = new URL(window.location.href);
-      // Use hash so it doesn't hit servers / logs as query params often do.
       url.hash = "w=" + encodeURIComponent(encoded);
       return url.toString();
     }
 
-    function getSharedWords(){
+    function getSharedText(){
       const hash = (window.location.hash || "").replace(/^#/, "");
       if (!hash) return null;
       const params = new URLSearchParams(hash);
       const w = params.get("w");
       if (!w) return null;
-      try{
-        const decoded = decodeWords(decodeURIComponent(w));
-        return parseWords(decoded);
-      }catch(e){
-        return null;
-      }
+      try{ return decodeWords(decodeURIComponent(w)); }catch{ return null; }
     }
 
-    // ---------- Wire up ----------
     startLocalBtn.addEventListener("click", () => {
-      const list = parseWords(wordsBox.value);
+      const list = parseList(wordsBox.value);
       startTest(list);
     });
 
     shareBtn.addEventListener("click", () => {
-      const list = parseWords(wordsBox.value);
+      const list = parseList(wordsBox.value);
       if (!list.length){
         alert("Please paste at least one word first.");
         return;
       }
-      const text = list.join("\n");
-      const link = buildShareLink(text);
-      shareLink.value = link;
+      const normalizedText = list.map(it => it.sentence ? `${it.word}, "${it.sentence}"` : it.word).join("\n");
+      shareLink.value = buildShareLink(normalizedText);
       copyMsg.textContent = "";
     });
 
@@ -431,37 +401,25 @@
       }
     });
 
-    hearBtn.addEventListener("click", playCurrent);
-    repeatBtn.addEventListener("click", () => {
-      if (lastSpoken) speak(lastSpoken);
-      else playCurrent();
-    });
+    hearBtn.addEventListener("click", playWord);
+    sentenceBtn.addEventListener("click", playSentence);
 
-    submitBtn.addEventListener("click", checkAnswer);
-    answerInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") checkAnswer();
-    });
+    document.getElementById("submitBtn").addEventListener("click", checkAnswer);
+    answerInput.addEventListener("keydown", (e) => { if (e.key === "Enter") checkAnswer(); });
 
-    restartBtn.addEventListener("click", () => {
-      // restart same set/order (reshuffle fresh)
-      startTest(words);
-    });
+    restartBtn.addEventListener("click", () => startTest(items));
+    newTestBtn.addEventListener("click", () => { window.location.hash = ""; show(teacherView); });
 
-    newTestBtn.addEventListener("click", () => {
-      // back to teacher view (doesn't erase text if they came from teacher)
-      window.location.hash = "";
-      show(teacherView);
-      setFeedback("", "");
-    });
-
-    // ---------- Boot ----------
-    const shared = getSharedWords();
-    if (shared && shared.length){
-      // Student mode from shared link
-      show(testView);
-      words = shared.slice();
-      // Lock: no teacher UI shown
-      startTest(words);
+    const sharedText = getSharedText();
+    if (sharedText){
+      const list = parseList(sharedText);
+      if (list.length){
+        show(testView);
+        startTest(list);
+      } else {
+        show(teacherView);
+        wordsBox.focus();
+      }
     } else {
       show(teacherView);
       wordsBox.focus();
