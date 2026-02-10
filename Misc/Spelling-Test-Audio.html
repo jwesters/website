@@ -56,6 +56,15 @@
       font-size:.9rem;
       color:#444;
     }
+    .warn{
+      display:inline-block;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid #f0c36d;
+      background:#fff7e6;
+      color:#8a5a00;
+      font-size:.9rem;
+    }
     .feedback{
       margin-top:10px;
       padding:10px 12px;
@@ -83,6 +92,25 @@
     }
     .hr{ height:1px; background:#eee; margin:14px 0; }
     .hide{ display:none !important; }
+    .seg{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin:10px 0 2px;
+    }
+    .seg label{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      border:1px solid #ddd;
+      border-radius:12px;
+      background:#fafafa;
+      cursor:pointer;
+      user-select:none;
+    }
+    .seg input{ width:auto; }
   </style>
 </head>
 <body>
@@ -96,9 +124,25 @@
       </p>
 
       <label class="tiny" for="wordsBox">Word list</label>
-      <textarea id="wordsBox" placeholder='cat, "The cat was outside."&#10;because, "I stayed inside because it was cold."&#10;window'></textarea>
+      <textarea id="wordsBox" placeholder='cat, "The cat was outside."&#10;because, "I stayed inside because it was cold."&#10;Christmas'></textarea>
 
-      <div class="row" style="margin-top:10px;">
+      <div class="seg" aria-label="Order selection">
+        <span class="tiny" style="min-width:110px;">Word order</span>
+        <label><input type="radio" name="orderMode" value="inorder" checked> Same order</label>
+        <label><input type="radio" name="orderMode" value="random"> Random</label>
+      </div>
+
+      <div class="seg" aria-label="Case sensitivity">
+        <span class="tiny" style="min-width:110px;">Case checking</span>
+        <label><input type="radio" name="caseMode" value="insensitive" checked> Case-insensitive</label>
+        <label><input type="radio" name="caseMode" value="sensitive"> Case-sensitive</label>
+      </div>
+
+      <div class="tiny" style="margin-top:6px;">
+        These choices are saved in the share link and can’t be changed once the test starts.
+      </div>
+
+      <div class="row" style="margin-top:12px;">
         <button class="primary" id="startLocalBtn">Start test</button>
         <button id="shareBtn">Generate share link</button>
         <button id="clearBtn">Clear</button>
@@ -121,7 +165,10 @@
 
     <div id="testView" class="card hide">
       <div class="row" style="justify-content:space-between; align-items:center;">
-        <span class="pill" id="progressPill">Word 1 of 1</span>
+        <div class="row" style="align-items:center;">
+          <span class="pill" id="progressPill">Word 1 of 1</span>
+          <span id="caseNotice" class="warn hide">Case-sensitive</span>
+        </div>
         <button id="restartBtn">Restart</button>
       </div>
 
@@ -152,7 +199,10 @@
 
     <div id="resultsView" class="card hide">
       <div class="row" style="justify-content:space-between; align-items:center;">
-        <span class="pill" id="scorePill">Score: 0/0</span>
+        <div class="row">
+          <button id="retryBtn">Retry Test</button>
+          <span class="pill" id="scorePill">Score: 0/0</span>
+        </div>
         <button id="newTestBtn" class="primary">New test</button>
       </div>
 
@@ -227,6 +277,7 @@
     const copyMsg = document.getElementById("copyMsg");
 
     const progressPill = document.getElementById("progressPill");
+    const caseNotice = document.getElementById("caseNotice");
     const hearBtn = document.getElementById("hearBtn");
     const sentenceBtn = document.getElementById("sentenceBtn");
     const answerInput = document.getElementById("answerInput");
@@ -237,11 +288,7 @@
     const scorePill = document.getElementById("scorePill");
     const missedList = document.getElementById("missedList");
     const newTestBtn = document.getElementById("newTestBtn");
-
-    let items = [];
-    let order = [];
-    let idx = 0;
-    let results = [];
+    const retryBtn = document.getElementById("retryBtn");
 
     function show(view){
       teacherView.classList.add("hide");
@@ -256,21 +303,53 @@
       feedbackBox.innerHTML = html || "";
     }
 
-    function startTest(fromItems){
+    function getSelectedOrderMode(){
+      const el = document.querySelector('input[name="orderMode"]:checked');
+      return el ? el.value : "inorder";
+    }
+    function getSelectedCaseMode(){
+      const el = document.querySelector('input[name="caseMode"]:checked');
+      return el ? el.value : "insensitive";
+    }
+
+    let items = [];
+    let order = [];
+    let idx = 0;
+    let results = [];
+    let orderMode = "inorder";
+    let caseMode = "insensitive";
+    let locked = false;
+
+    function buildOrder(fromItems, mode){
+      const base = fromItems.slice();
+      return (mode === "random") ? shuffle(base) : base;
+    }
+
+    function startTest(fromItems, mode, cMode){
       items = [...fromItems];
       if (!items.length){
         alert("Please provide at least one word.");
         return;
       }
-      order = shuffle(items.slice());
+      orderMode = (mode === "random") ? "random" : "inorder";
+      caseMode = (cMode === "sensitive") ? "sensitive" : "insensitive";
+      order = buildOrder(items, orderMode);
       idx = 0;
       results = [];
+      locked = false;
+      submitBtn.disabled = false;
 
       show(testView);
       setFeedback("", "Ready when you are.");
       answerInput.value = "";
       answerInput.focus();
       updateUIForCurrent();
+
+      if (caseMode === "sensitive"){
+        caseNotice.classList.remove("hide");
+      } else {
+        caseNotice.classList.add("hide");
+      }
     }
 
     function currentItem(){ return order[idx] || null; }
@@ -297,13 +376,23 @@
     }
 
     function checkAnswer(){
+      if (locked) return;
       const it = currentItem();
       if (!it) return;
+
+      locked = true;
+      submitBtn.disabled = true;
 
       const typed = (answerInput.value || "").trim();
       const target = it.word;
 
-      const correct = typed.toLowerCase() === target.toLowerCase();
+      let correct;
+      if (caseMode === "sensitive"){
+        correct = typed === target;
+      } else {
+        correct = typed.toLowerCase() === target.toLowerCase();
+      }
+
       results.push({ target, typed, correct });
 
       if (correct){
@@ -322,6 +411,8 @@
           setFeedback("", "Next word ready.");
           updateUIForCurrent();
           answerInput.focus();
+          locked = false;
+          submitBtn.disabled = false;
         }
       }, 900);
     }
@@ -348,25 +439,42 @@
       show(resultsView);
     }
 
-    function buildShareLink(wordsText){
+    // Share link params:
+    //  w = encoded word list
+    //  o = order mode: r|i
+    //  c = case mode: s|i
+    function buildShareLink(wordsText, mode, cMode){
       const encoded = encodeWords(wordsText);
       const url = new URL(window.location.href);
-      url.hash = "w=" + encodeURIComponent(encoded);
+      const params = new URLSearchParams();
+      params.set("w", encoded);
+      params.set("o", mode === "random" ? "r" : "i");
+      params.set("c", cMode === "sensitive" ? "s" : "i");
+      url.hash = params.toString();
       return url.toString();
     }
 
-    function getSharedText(){
+    function getSharedConfig(){
       const hash = (window.location.hash || "").replace(/^#/, "");
       if (!hash) return null;
       const params = new URLSearchParams(hash);
       const w = params.get("w");
       if (!w) return null;
-      try{ return decodeWords(decodeURIComponent(w)); }catch{ return null; }
+      const o = params.get("o") || "i";
+      const c = params.get("c") || "i";
+      const mode = (o === "r") ? "random" : "inorder";
+      const cMode = (c === "s") ? "sensitive" : "insensitive";
+      try{
+        const text = decodeWords(decodeURIComponent(w));
+        return { text, mode, cMode };
+      }catch{
+        return null;
+      }
     }
 
     startLocalBtn.addEventListener("click", () => {
       const list = parseList(wordsBox.value);
-      startTest(list);
+      startTest(list, getSelectedOrderMode(), getSelectedCaseMode());
     });
 
     shareBtn.addEventListener("click", () => {
@@ -376,7 +484,9 @@
         return;
       }
       const normalizedText = list.map(it => it.sentence ? `${it.word}, "${it.sentence}"` : it.word).join("\n");
-      shareLink.value = buildShareLink(normalizedText);
+      const mode = getSelectedOrderMode();
+      const cMode = getSelectedCaseMode();
+      shareLink.value = buildShareLink(normalizedText, mode, cMode);
       copyMsg.textContent = "";
     });
 
@@ -404,18 +514,29 @@
     hearBtn.addEventListener("click", playWord);
     sentenceBtn.addEventListener("click", playSentence);
 
-    document.getElementById("submitBtn").addEventListener("click", checkAnswer);
+    submitBtn.addEventListener("click", checkAnswer);
     answerInput.addEventListener("keydown", (e) => { if (e.key === "Enter") checkAnswer(); });
 
-    restartBtn.addEventListener("click", () => startTest(items));
-    newTestBtn.addEventListener("click", () => { window.location.hash = ""; show(teacherView); });
+    restartBtn.addEventListener("click", () => {
+      startTest(items, orderMode, caseMode);
+    });
 
-    const sharedText = getSharedText();
-    if (sharedText){
-      const list = parseList(sharedText);
+    retryBtn.addEventListener("click", () => {
+      // Retry the same test (same words, same settings; random reshuffles again)
+      startTest(items, orderMode, caseMode);
+    });
+
+    newTestBtn.addEventListener("click", () => {
+      window.location.hash = "";
+      show(teacherView);
+    });
+
+    const shared = getSharedConfig();
+    if (shared){
+      const list = parseList(shared.text);
       if (list.length){
         show(testView);
-        startTest(list);
+        startTest(list, shared.mode, shared.cMode);
       } else {
         show(teacherView);
         wordsBox.focus();
