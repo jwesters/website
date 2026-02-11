@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Fry Sight Words – Speak Check</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --card:#121a33;
+      --text:#eef2ff;
+      --muted:#a9b3d1;
+      --good:#22c55e;
+      --bad:#ef4444;
+      --warn:#f59e0b;
+      --btn:#1f2a52;
+      --btn2:#243163;
+      --border:rgba(255,255,255,.12);
+      --glass: rgba(0,0,0,.40);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; min-height:100vh;
+      display:flex; align-items:center; justify-content:center;
+      background: radial-gradient(1200px 700px at 30% 20%, #18214a 0%, var(--bg) 60%);
+      color:var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .wrap{ width:min(980px, 94vw); padding:24px; }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid var(--border);
+      border-radius:22px;
+      padding:22px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.35);
+      position:relative;
+    }
+    .top{ display:flex; gap:14px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; }
+    .title{ display:flex; flex-direction:column; gap:6px; }
+    .title h1{ margin:0; font-size:18px; letter-spacing:.3px; color:var(--muted); font-weight:900; }
+    .hint{ font-size:13px; color:var(--muted); opacity:.92; max-width:620px; }
+    .setupRow{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:12px; }
+    select, .miniBtn{
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      padding:10px 12px;
+      border-radius:14px;
+      font-size:14px;
+      font-weight:850;
+      outline:none;
+    }
+    select option{ color:#0b1020; }
+    button{
+      border:1px solid var(--border);
+      background: var(--btn);
+      color:var(--text);
+      padding:12px 16px;
+      border-radius:14px;
+      font-size:16px;
+      font-weight:950;
+      cursor:pointer;
+      transition: transform .05s ease, background .15s ease, opacity .2s ease;
+      user-select:none;
+    }
+    button:hover{ background: var(--btn2); }
+    button:active{ transform: scale(.99); }
+    button:disabled{ opacity:.55; cursor:not-allowed; }
+
+    .wordBox{
+      margin:16px 0 12px;
+      display:flex; align-items:center; justify-content:center;
+      min-height:240px;
+      border-radius:18px;
+      border:1px dashed rgba(255,255,255,.18);
+      background: rgba(0,0,0,.16);
+      padding:18px;
+      position:relative;
+    }
+    #word{
+      font-size: clamp(54px, 9vw, 120px);
+      font-weight: 950;
+      letter-spacing: 1px;
+      text-align:center;
+      line-height:1.05;
+      text-shadow: 0 10px 40px rgba(0,0,0,.35);
+      user-select:none;
+      padding: 8px 10px;
+      border-radius: 16px;
+    }
+    .wordHint{
+      position:absolute;
+      bottom:12px; left:12px; right:12px;
+      text-align:center;
+      color: var(--muted);
+      font-weight:900;
+      font-size: 14px;
+      opacity:.95;
+    }
+
+    .controls{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:center; margin:8px 0 10px; }
+    .micBtn{ display:flex; align-items:center; gap:10px; padding:12px 16px; min-width: 260px; justify-content:center; }
+    .dot{ width:12px; height:12px; border-radius:999px; background: rgba(255,255,255,.35); box-shadow: 0 0 0 0 rgba(239,68,68,.0); }
+    .recording .dot{ background: var(--bad); animation: pulse 1.1s infinite; }
+    @keyframes pulse{ 0%{ box-shadow:0 0 0 0 rgba(239,68,68,.55); } 70%{ box-shadow:0 0 0 12px rgba(239,68,68,0); } 100%{ box-shadow:0 0 0 0 rgba(239,68,68,0); } }
+
+    .statusGrid{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-top:10px; }
+    @media (max-width:720px){ .statusGrid{ grid-template-columns:1fr; } }
+    .status{ border:1px solid var(--border); background: rgba(0,0,0,.18); border-radius:16px; padding:14px 16px; font-size:16px; line-height:1.35; }
+    .status .label{ color:var(--muted); font-weight:950; font-size:13px; letter-spacing:.4px; text-transform:uppercase; }
+    .status .value{ margin-top:6px; font-weight:900; word-break:break-word; }
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px; border-radius:999px;
+      font-weight:950; border:1px solid var(--border);
+      background: rgba(255,255,255,.06); margin-left:8px;
+      font-size:14px; vertical-align:middle;
+    }
+    .pill.good{ border-color: rgba(34,197,94,.35); background: rgba(34,197,94,.12); color: #d7ffe7; }
+    .pill.bad{ border-color: rgba(239,68,68,.35); background: rgba(239,68,68,.12); color: #ffe0e0; }
+    .pill.warn{ border-color: rgba(245,158,11,.35); background: rgba(245,158,11,.12); color: #fff3d6; }
+
+    .small{ font-size:13px; color:var(--muted); margin-top:12px; text-align:center; }
+
+    /* Overlay */
+    .overlay{
+      position:fixed; inset:0;
+      background: rgba(0,0,0,.72);
+      display:none;
+      align-items:center; justify-content:center;
+      padding: 20px;
+      z-index: 999;
+    }
+    .overlay.show{ display:flex; }
+    .modal{
+      width:min(820px, 96vw);
+      background: rgba(18,26,51,.98);
+      border:1px solid var(--border);
+      border-radius:22px;
+      box-shadow: 0 30px 120px rgba(0,0,0,.55);
+      padding:18px 18px 16px;
+    }
+    .modalHeader{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+    .modalTitle{ font-size:18px; font-weight:950; margin:0; }
+    .modalSub{ color:var(--muted); font-weight:850; font-size:13px; margin-top:6px; }
+    .missedList{
+      margin-top:14px;
+      display:flex; flex-wrap:wrap; gap:10px;
+      padding: 12px;
+      border-radius: 18px;
+      border: 1px dashed rgba(255,255,255,.18);
+      background: rgba(0,0,0,.16);
+      min-height: 72px;
+    }
+    .chip{
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      padding:10px 12px;
+      border-radius:999px;
+      font-weight:950;
+      cursor:pointer;
+      user-select:none;
+    }
+    .chip:hover{ background: rgba(255,255,255,.10); }
+    .modalBtns{ margin-top:14px; display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+    .ghost{ background: rgba(255,255,255,.06); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="top">
+        <div class="title">
+          <h1>Fry Sight Words – Speak Check</h1>
+          <div class="hint">
+            Pick a set of 25 words, then click <b>Start</b>. The student says the word out loud.
+            Tap the mic to start/stop listening. A word is marked missed only after <b>3 wrong attempts in a row</b>.
+            At the end, missed words appear for review (click a missed word to hear it).
+          </div>
+        </div>
+        <div class="title" style="align-items:flex-end;">
+          <div class="hint" id="supportHint"></div>
+        </div>
+      </div>
+
+      <div class="setupRow" id="setupRow">
+        <label style="display:flex; gap:10px; align-items:center; font-weight:950; color:var(--muted);">
+          Set:
+          <select id="rangeSelect">
+            <option value="">Select a range…</option>
+          </select>
+        </label>
+        <button id="startBtn" disabled>Start</button>
+        <span id="setInfo" class="hint"></span>
+      </div>
+
+      <div class="wordBox">
+        <div id="word">—</div>
+        <div class="wordHint" id="wordHint"></div>
+      </div>
+
+      <div class="controls">
+        <button id="micBtn" class="micBtn" disabled title="Tap to start/stop listening">
+          <span class="dot" aria-hidden="true"></span>
+          <span id="micLabel">Start listening</span>
+        </button>
+        <button id="repeatListenBtn" class="ghost" disabled title="Clears transcript + lets them try again">Try again</button>
+      </div>
+
+      <div class="statusGrid">
+        <div class="status">
+          <div class="label">Progress</div>
+          <div class="value" id="progress">—</div>
+        </div>
+        <div class="status">
+          <div class="label">Attempts (this word)</div>
+          <div class="value" id="attempts">—</div>
+        </div>
+        <div class="status" style="grid-column: 1 / -1;">
+          <div class="label">Heard</div>
+          <div class="value" id="heard">—</div>
+        </div>
+        <div class="status" style="grid-column: 1 / -1;">
+          <div class="label">Result</div>
+          <div class="value" id="result">— <span class="pill warn" id="pill">Waiting</span></div>
+        </div>
+      </div>
+
+      <div class="small">
+        Chrome recommended. Microphone permission required. This tool does not speak words during attempts.
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modalHeader">
+        <div>
+          <div class="modalTitle" id="modalTitle">Set complete</div>
+          <div class="modalSub" id="modalSub">Click a missed word to hear it.</div>
+        </div>
+        <button class="ghost" id="closeOverlayBtn">Close</button>
+      </div>
+
+      <div class="missedList" id="missedList"></div>
+
+      <div class="modalBtns">
+        <button class="ghost" id="newSetBtn">Start new set</button>
+        <button id="practiceMissedBtn">Practice missed words</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const WORDS = ["the", "of", "and", "a", "to", "in", "is", "you", "that", "it", "he", "for", "are", "was", "on", "as", "with", "his", "they", "I", "at", "be", "have", "this", "from", "or", "one", "had", "by", "word", "but", "not", "what", "all", "were", "we", "your", "said", "when", "can", "there", "use", "an", "each", "which", "she", "do", "their", "how", "if", "will", "up", "other", "about", "out", "many", "then", "them", "these", "so", "some", "would", "her", "make", "like", "him", "into", "time", "has", "look", "two", "more", "write", "go", "see", "number", "no", "way", "could", "people", "my", "than", "first", "water", "been", "call", "am", "who", "its", "now", "find", "long", "down", "day", "did", "get", "come", "may", "made", "part", "over", "new", "sound", "take", "only", "little", "work", "know", "place", "year", "live", "back", "most", "me", "give", "very", "after", "thing", "our", "just", "name", "good", "man", "sentence", "think", "say", "great", "where", "help", "through", "much", "before", "line", "right", "too", "mean", "any", "tell", "old", "same", "boy", "follow", "came", "want", "show", "also", "around", "three", "form", "small", "set", "put", "end", "does", "another", "well", "large", "must", "big", "even", "such", "turn", "why", "because", "here", "ask", "went", "men", "read", "need", "land", "different", "us", "home", "move", "try", "kind", "hand", "picture", "again", "change", "off", "play", "spell", "air", "away", "house", "page", "animal", "point", "letter", "mother", "answer", "found", "study", "still", "learn", "should", "Canada", "world", "high", "every", "near", "add", "food", "between", "own", "below", "country", "plant", "last", "father", "tree", "school", "keep", "never", "start", "city", "earth", "eye", "light", "thought", "under", "head", "story", "saw", "left", "don't", "few", "while", "along", "might", "close", "something", "seem", "next", "open", "begin", "hard", "example", "life", "always", "those", "both", "paper", "together", "got", "often", "group", "run", "important", "until", "children", "side", "feet", "car", "mile", "night", "walk", "white", "sea", "grow", "river", "began", "took", "four", "carry", "state", "once", "book", "hear", "stop", "second", "without", "late", "miss", "idea", "enough", "eat", "face", "watch", "far", "real", "almost", "let", "above", "sometimes", "cut", "girl", "mountain", "young", "talk", "soon", "list", "song", "being", "leave", "family", "it's", "body"];
+
+  // UI
+  const $rangeSelect = document.getElementById("rangeSelect");
+  const $startBtn = document.getElementById("startBtn");
+  const $setInfo = document.getElementById("setInfo");
+  const $word = document.getElementById("word");
+  const $wordHint = document.getElementById("wordHint");
+  const $micBtn = document.getElementById("micBtn");
+  const $micLabel = document.getElementById("micLabel");
+  const $repeatListenBtn = document.getElementById("repeatListenBtn");
+  const $heard = document.getElementById("heard");
+  const $progress = document.getElementById("progress");
+  const $attempts = document.getElementById("attempts");
+  const $result = document.getElementById("result");
+  const $pill = document.getElementById("pill");
+  const $supportHint = document.getElementById("supportHint");
+
+  // Overlay
+  const $overlay = document.getElementById("overlay");
+  const $missedList = document.getElementById("missedList");
+  const $modalTitle = document.getElementById("modalTitle");
+  const $modalSub = document.getElementById("modalSub");
+  const $closeOverlayBtn = document.getElementById("closeOverlayBtn");
+  const $newSetBtn = document.getElementById("newSetBtn");
+  const $practiceMissedBtn = document.getElementById("practiceMissedBtn");
+
+  // Speech Recognition
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognition = null;
+  let recognizing = false;
+
+  // Session state
+  let currentPool = [];         // words in the current run (25 or missed-only)
+  let remaining = [];           // shuffled words left to attempt
+  let currentWord = "";
+  let wordIndex = 0;            // 0..pool-1
+  let missStreak = 0;           // wrong attempts in a row for current word
+  let missedWords = [];         // unique missed words in this set
+  let missedSet = new Set();
+  let inSession = false;
+  let mode = "set";             // "set" or "missed"
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function setPill(kind, text) {
+    $pill.classList.remove("good","bad","warn");
+    $pill.classList.add(kind);
+    $pill.textContent = text;
+  }
+
+  function setResultPrefix(prefixText) {
+    if ($result.firstChild) $result.firstChild.textContent = prefixText;
+  }
+
+  function normalizeText(s) {
+    return (s || "")
+      .toLowerCase()
+      .replace(/[’']/g, "")
+      .replace(/[^a-z\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function isMatch(transcript, target) {
+    const t = normalizeText(transcript);
+    const w = normalizeText(target);
+
+    if (!t || !w) return false;
+
+    // Special rule for "a": accept only "uh" or "ah" (reject transcript "a")
+    if (w === "a") {
+      const words = t.split(" ").filter(Boolean);
+      return words.includes("uh") || words.includes("ah");
+    }
+
+    // Usual leniency:
+    // - exact match OR appears as a whole word in a short phrase
+    if (t === w) return true;
+
+    const words = t.split(" ").filter(Boolean);
+    if (words.includes(w)) return true;
+
+    const re = new RegExp(`(^|\\s)${w}(\\s|$)`);
+    if (re.test(t)) return true;
+
+    // small homophone leniency for a few common ones
+    const homophones = {
+      "to": ["too","two"],
+      "i": ["eye"]
+    };
+    if (homophones[w]) {
+      for (const alt of homophones[w]) {
+        const re2 = new RegExp(`(^|\\s)${alt}(\\s|$)`);
+        if (re2.test(t)) return true;
+      }
+    }
+
+    return false;
+  }
+
+  function updateMicUI() {
+    if (recognizing) {
+      $micBtn.classList.add("recording");
+      $micLabel.textContent = "Stop listening";
+    } else {
+      $micBtn.classList.remove("recording");
+      $micLabel.textContent = "Start listening";
+    }
+  }
+
+  function setWordHint() {
+    if (!currentWord) { $wordHint.textContent = ""; return; }
+    if (currentWord.toLowerCase() === "a") {
+      $wordHint.textContent = "For “a”: say the short sound (uh / ah). Do NOT say the letter name.";
+    } else {
+      $wordHint.textContent = "";
+    }
+  }
+
+  function updateStatus() {
+    if (!inSession) {
+      $progress.textContent = "—";
+      $attempts.textContent = "—";
+      return;
+    }
+    const total = currentPool.length;
+    $progress.textContent = `${Math.min(wordIndex+1,total)} / ${total} (${mode === "missed" ? "Missed practice" : "Set"})`;
+    $attempts.textContent = `${missStreak} / 3`;
+    setWordHint();
+  }
+
+  function clearHeard() {
+    $heard.textContent = "—";
+  }
+
+  function startRecognition() {
+    if (!recognition || recognizing) return;
+    try {
+      recognition.start();
+      recognizing = true;
+      updateMicUI();
+      setResultPrefix("— ");
+      setPill("warn","Listening…");
+    } catch(e) {
+      // Ignore rapid-start errors
+    }
+  }
+
+  function stopRecognition() {
+    if (!recognition || !recognizing) return;
+    try { recognition.stop(); } catch(e) {}
+    recognizing = false;
+    updateMicUI();
+  }
+
+  function nextWord() {
+    // stop listening if needed
+    stopRecognition();
+    missStreak = 0;
+
+    if (remaining.length === 0) {
+      endSession();
+      return;
+    }
+
+    currentWord = remaining.shift();
+    wordIndex = currentPool.length - remaining.length - 1;
+
+    $word.textContent = currentWord;
+    clearHeard();
+    setResultPrefix("— ");
+    setPill("warn","Waiting");
+    updateStatus();
+  }
+
+  function markMissed(word) {
+    if (!missedSet.has(word)) {
+      missedSet.add(word);
+      missedWords.push(word);
+    }
+  }
+
+  function handleFinalTranscript(finalText) {
+    const display = (finalText || "").trim();
+    if (display) $heard.textContent = display;
+
+    const ok = isMatch(finalText, currentWord);
+
+    if (ok) {
+      setResultPrefix("Correct ");
+      setPill("good","Nice!");
+      // advance after a short beat
+      setTimeout(() => nextWord(), 550);
+    } else {
+      missStreak += 1;
+      updateStatus();
+
+      if (missStreak >= 3) {
+        markMissed(currentWord);
+        setResultPrefix("Missed ");
+        setPill("bad","Moving on");
+        setTimeout(() => nextWord(), 650);
+      } else {
+        setResultPrefix("Not quite ");
+        setPill("bad", `Try again (${missStreak}/3)`);
+        // stay on same word; student can tap mic again
+      }
+    }
+  }
+
+  function buildSetFromRange(rangeIndex) {
+    // rangeIndex: 0..11
+    const start = rangeIndex * 25;
+    const slice = WORDS.slice(start, start+25);
+    return slice;
+  }
+
+  function beginSession(poolWords, newMode) {
+    mode = newMode || "set";
+    inSession = true;
+
+    currentPool = poolWords.slice();
+    remaining = shuffle(poolWords.slice());
+    missedWords = [];
+    missedSet = new Set();
+    missStreak = 0;
+    currentWord = "";
+    wordIndex = 0;
+
+    $micBtn.disabled = false;
+    $repeatListenBtn.disabled = false;
+    $startBtn.disabled = true;
+    $rangeSelect.disabled = true;
+
+    nextWord();
+  }
+
+  function endSession() {
+    inSession = false;
+    stopRecognition();
+
+    $micBtn.disabled = true;
+    $repeatListenBtn.disabled = true;
+    $rangeSelect.disabled = false;
+    $startBtn.disabled = ($rangeSelect.value === "");
+
+    showOverlay();
+  }
+
+  function showOverlay() {
+    $missedList.innerHTML = "";
+
+    if (missedWords.length === 0) {
+      $modalTitle.textContent = "All correct! 🎉";
+      $modalSub.textContent = "No missed words in this set.";
+      const none = document.createElement("div");
+      none.style.color = "var(--muted)";
+      none.style.fontWeight = "900";
+      none.textContent = "Nothing to review.";
+      $missedList.appendChild(none);
+      $practiceMissedBtn.disabled = true;
+    } else {
+      $modalTitle.textContent = "Set complete";
+      $modalSub.textContent = "Missed words (click to hear):";
+      $practiceMissedBtn.disabled = false;
+
+      for (const w of missedWords) {
+        const chip = document.createElement("button");
+        chip.className = "chip";
+        chip.type = "button";
+        chip.textContent = w;
+        chip.addEventListener("click", () => speakWord(w));
+        $missedList.appendChild(chip);
+      }
+    }
+
+    $overlay.classList.add("show");
+  }
+
+  function closeOverlay() {
+    $overlay.classList.remove("show");
+  }
+
+  function speakWord(word) {
+    // default voice, default rate
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(word);
+      u.lang = "en-US";
+      window.speechSynthesis.speak(u);
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  function resetToSetup(keepSelection=true) {
+    stopRecognition();
+    recognizing = false;
+    updateMicUI();
+
+    inSession = false;
+    currentPool = [];
+    remaining = [];
+    currentWord = "";
+    wordIndex = 0;
+    missStreak = 0;
+    missedWords = [];
+    missedSet = new Set();
+    mode = "set";
+
+    $word.textContent = "—";
+    $wordHint.textContent = "";
+    clearHeard();
+    setResultPrefix("— ");
+    setPill("warn","Waiting");
+    $micBtn.disabled = true;
+    $repeatListenBtn.disabled = true;
+
+    $rangeSelect.disabled = false;
+    $startBtn.disabled = ($rangeSelect.value === "");
+    if (!keepSelection) $rangeSelect.value = "";
+    updateStatus();
+  }
+
+  // Setup dropdown options 1–25 ... 276–300
+  function initRanges() {
+    for (let i = 0; i < 12; i++) {
+      const start = i*25 + 1;
+      const end = i*25 + 25;
+      const opt = document.createElement("option");
+      opt.value = String(i);
+      opt.textContent = `${start}–${end}`;
+      $rangeSelect.appendChild(opt);
+    }
+  }
+
+  function setSupportText() {
+    if (!SR) {
+      $supportHint.textContent = "Speech recognition not supported in this browser.";
+    } else {
+      $supportHint.textContent = "Mic ready (tap to start/stop).";
+    }
+  }
+
+  // Wire up
+  initRanges();
+  setSupportText();
+
+  $rangeSelect.addEventListener("change", () => {
+    const v = $rangeSelect.value;
+    $startBtn.disabled = (v === "");
+    if (v !== "") {
+      const idx = parseInt(v, 10);
+      const setWords = buildSetFromRange(idx);
+      $setInfo.textContent = `Selected: ${$rangeSelect.options[$rangeSelect.selectedIndex].text} (25 words)`;
+      // preview first/last word in set (subtle)
+      // (No need to display list)
+    } else {
+      $setInfo.textContent = "";
+    }
+  });
+
+  $startBtn.addEventListener("click", () => {
+    if ($rangeSelect.value === "") return;
+    const idx = parseInt($rangeSelect.value, 10);
+    const setWords = buildSetFromRange(idx);
+    beginSession(setWords, "set");
+  });
+
+  $repeatListenBtn.addEventListener("click", () => {
+    // clears transcript and result, lets them try again
+    clearHeard();
+    setResultPrefix("— ");
+    setPill("warn","Waiting");
+  });
+
+  // Overlay buttons
+  $closeOverlayBtn.addEventListener("click", closeOverlay);
+  $overlay.addEventListener("click", (e) => {
+    if (e.target === $overlay) closeOverlay();
+  });
+
+  $newSetBtn.addEventListener("click", () => {
+    closeOverlay();
+    resetToSetup(true);
+  });
+
+  $practiceMissedBtn.addEventListener("click", () => {
+    if (missedWords.length === 0) return;
+    closeOverlay();
+    // begin missed-practice session using the missedWords from last run
+    beginSession(missedWords.slice(), "missed");
+  });
+
+  // Speech recognition init
+  if (SR) {
+    recognition = new SR();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+    recognition.maxAlternatives = 3;
+
+    recognition.onresult = (event) => {
+      let interim = "";
+      let finalText = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const res = event.results[i];
+        const txt = res[0]?.transcript || "";
+        if (res.isFinal) finalText += " " + txt;
+        else interim += " " + txt;
+      }
+
+      const display = (finalText || interim).trim();
+      if (display) $heard.textContent = display;
+
+      if (finalText.trim()) {
+        handleFinalTranscript(finalText);
+      }
+    };
+
+    recognition.onerror = (event) => {
+      recognizing = false;
+      updateMicUI();
+      let msg = "Mic error";
+      if (event && event.error) msg += `: ${event.error}`;
+      $heard.textContent = msg;
+      setResultPrefix("— ");
+      setPill("warn","Check mic");
+    };
+
+    recognition.onend = () => {
+      recognizing = false;
+      updateMicUI();
+      if ($pill.textContent === "Listening…") setPill("warn","Waiting");
+    };
+
+    $micBtn.addEventListener("click", () => {
+      if (!inSession) return;
+      if (!recognizing) startRecognition();
+      else stopRecognition();
+    });
+  } else {
+    $micBtn.disabled = true;
+  }
+
+  // Initial state
+  resetToSetup(true);
+})();
+</script>
+</body>
+</html>
