@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Which Pitch Is Higher?</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  :root{
+    --bg:#0e1020; --panel:#171a33; --panel2:#101338;
+    --text:#eef1ff; --muted:#b8bfe6;
+    --accent:#7aa2ff; --good:#6bffb1; --bad:#ff6b6b;
+    --chip:#1f2348; --border:rgba(255,255,255,.12);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+    font-family:system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    background:linear-gradient(180deg,#0e1020,#0b0d1a); color:var(--text);
+  }
+  .card{
+    width:min(780px, 92vw);
+    background:var(--panel);
+    border-radius:18px;
+    padding:20px 22px 24px;
+    box-shadow:0 20px 40px rgba(0,0,0,.4);
+  }
+  h1{margin:0 0 8px; font-size:1.35rem}
+  .sub{color:var(--muted); margin-bottom:14px; line-height:1.3rem}
+  .panel{
+    background:var(--panel2);
+    border-radius:14px;
+    padding:14px;
+    margin:12px 0;
+    border:1px solid rgba(255,255,255,.06);
+  }
+  .status{
+    display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;
+    color:var(--muted);
+  }
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:center}
+  button{
+    border:0; border-radius:12px; padding:12px 16px; font-size:1rem; cursor:pointer;
+    background:#22265a; color:var(--text);
+  }
+  button.primary{background:var(--accent); color:#0b0d1a; font-weight:800}
+  button.ghost{background:var(--chip)}
+  button:disabled{opacity:.6; cursor:not-allowed}
+  .big{display:flex; gap:12px; justify-content:center; margin:14px 0 6px; flex-wrap:wrap}
+  .big button{flex:1 1 240px; padding:16px; font-size:1.05rem; font-weight:800}
+  .footer{display:flex; gap:10px; justify-content:center; margin-top:10px; flex-wrap:wrap}
+  .feedback{min-height:1.9em; text-align:center; font-weight:800; margin-top:8px}
+  .good{color:var(--good)} .bad{color:var(--bad)}
+  .hidden{display:none}
+  .form{
+    display:grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap:12px;
+    margin-top:10px;
+  }
+  @media (max-width: 760px){
+    .form{grid-template-columns:1fr}
+  }
+  .field{
+    background:rgba(255,255,255,.04);
+    border-radius:14px;
+    padding:12px;
+    border:1px solid rgba(255,255,255,.06);
+  }
+  .field .title{font-weight:800; margin-bottom:8px}
+  select{
+    width:100%;
+    padding:12px 12px;
+    border-radius:12px;
+    border:1px solid var(--border);
+    background:#0f1230;
+    color:var(--text);
+    font-size:1rem;
+    outline:none;
+  }
+  .hint{margin-top:8px; color:var(--muted); font-size:.9rem; line-height:1.25rem}
+  .pill{
+    display:inline-block;
+    padding:3px 10px;
+    border-radius:999px;
+    background:rgba(122,162,255,.15);
+    color:var(--text);
+    border:1px solid rgba(122,162,255,.25);
+    font-size:.85rem;
+    font-weight:800;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Which pitch is higher?</h1>
+    <div class="sub">
+      Choose your note range (C1–C6, including sharps) and number of questions, then start.
+      Notes sound piano-like and play one at a time.
+    </div>
+
+    <!-- SETUP -->
+    <div class="panel" id="setupPanel">
+      <div class="status">
+        <div><span class="pill">Setup</span></div>
+        <div class="hint" style="margin:0">Pick a <b>start</b> and <b>end</b> note (start must be lower).</div>
+      </div>
+
+      <div class="form">
+        <div class="field">
+          <div class="title">Starting pitch</div>
+          <select id="startNote"></select>
+          <div class="hint">Lowest note allowed.</div>
+        </div>
+        <div class="field">
+          <div class="title">Ending pitch</div>
+          <select id="endNote"></select>
+          <div class="hint">Highest note allowed.</div>
+        </div>
+        <div class="field">
+          <div class="title">Number of questions</div>
+          <select id="qCount">
+            <option value="5">5</option>
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+          </select>
+          <div class="hint">You’ll see your score at the end.</div>
+        </div>
+      </div>
+
+      <!-- ONLY Start quiz on setup screen -->
+      <div class="row" style="margin-top:12px">
+        <button class="primary" id="startBtn">Start quiz</button>
+      </div>
+
+      <div class="feedback" id="setupFeedback"></div>
+    </div>
+
+    <!-- QUIZ -->
+    <div class="panel hidden" id="quizPanel">
+      <div class="status">
+        <div>Question <b id="qNum">1</b> / <span id="qTotal">10</span></div>
+        <div>Score: <b id="score">0</b></div>
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <button class="ghost" id="play1">▶ Play 1st</button>
+        <button class="ghost" id="play2">▶ Play 2nd</button>
+        <button class="ghost" id="replayBoth">▶ Play Both</button>
+        <button class="ghost" id="stopBtn">■ Stop</button>
+      </div>
+
+      <div class="big">
+        <button class="primary" id="btn1">1st is higher</button>
+        <button class="primary" id="btn2">2nd is higher</button>
+      </div>
+
+      <div class="feedback" id="feedback"></div>
+    </div>
+
+    <div class="footer">
+      <button class="ghost hidden" id="nextBtn">Next</button>
+      <button class="ghost hidden" id="restartBtn">Back to setup</button>
+    </div>
+  </div>
+
+<script>
+/* ---------------- Audio (monophonic piano-ish synth) ---------------- */
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+const ctx = new AudioCtx();
+
+let active = null;
+let reverb = null;
+
+function stopNow(){
+  if(!active) return;
+  const now = ctx.currentTime;
+  for(const n of active.nodes){
+    try{
+      if(n.gain && n.gain.cancelScheduledValues) n.gain.cancelScheduledValues(now);
+      if(n.gain && n.gain.setTargetAtTime) n.gain.setTargetAtTime(0.00001, now, 0.01);
+      if(n.stop) n.stop(now + 0.05);
+      if(n.disconnect) n.disconnect();
+    }catch(e){}
+  }
+  active = null;
+}
+
+function createReverb(){
+  const rate = ctx.sampleRate;
+  const seconds = 1.7;
+  const length = Math.floor(rate * seconds);
+  const impulse = ctx.createBuffer(2, length, rate);
+  for(let ch=0; ch<2; ch++){
+    const data = impulse.getChannelData(ch);
+    for(let i=0; i<length; i++){
+      const t = i/length;
+      const decay = Math.pow(1 - t, 3.4);
+      data[i] = (Math.random()*2-1) * decay * (0.6 + 0.4*Math.random());
+    }
+  }
+  const convolver = ctx.createConvolver();
+  convolver.buffer = impulse;
+  return convolver;
+}
+
+function ensureReverb(){
+  if(!reverb) reverb = createReverb();
+  return reverb;
+}
+
+function pianoNote(freq, duration=0.95){
+  if(ctx.state !== "running") ctx.resume();
+  stopNow(); // monophonic: never overlap notes
+
+  const now = ctx.currentTime;
+  const end = now + duration;
+
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0.00001, now);
+  master.gain.exponentialRampToValueAtTime(0.95, now + 0.012);
+  master.gain.exponentialRampToValueAtTime(0.20, now + 0.12);
+  master.gain.exponentialRampToValueAtTime(0.0008, end);
+
+  const oscA = ctx.createOscillator();
+  const oscB = ctx.createOscillator();
+  const oscC = ctx.createOscillator();
+  oscA.type = "sawtooth";
+  oscB.type = "sawtooth";
+  oscC.type = "triangle";
+
+  oscA.frequency.setValueAtTime(freq, now);
+  oscB.frequency.setValueAtTime(freq * 0.997, now);
+  oscC.frequency.setValueAtTime(freq * 2, now);
+  oscA.detune.value = -2.5;
+  oscB.detune.value = +2.0;
+
+  const filt = ctx.createBiquadFilter();
+  filt.type = "lowpass";
+  filt.Q.value = 0.85;
+  filt.frequency.setValueAtTime(Math.min(9000, freq*16), now);
+  filt.frequency.exponentialRampToValueAtTime(Math.min(2400, freq*6), now + 0.18);
+  filt.frequency.exponentialRampToValueAtTime(Math.min(1600, freq*5), end);
+
+  const peq = ctx.createBiquadFilter();
+  peq.type = "peaking";
+  peq.frequency.value = Math.min(1200, freq*3);
+  peq.Q.value = 1.1;
+  peq.gain.value = 2.1;
+
+  // hammer transient
+  const noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.04), ctx.sampleRate);
+  const noiseData = noiseBuf.getChannelData(0);
+  for(let i=0; i<noiseData.length; i++){
+    noiseData[i] = (Math.random()*2-1) * (1 - i/noiseData.length);
+  }
+  const noise = ctx.createBufferSource();
+  noise.buffer = noiseBuf;
+
+  const noiseHP = ctx.createBiquadFilter();
+  noiseHP.type = "highpass";
+  noiseHP.frequency.value = 1800;
+
+  const noiseGain = ctx.createGain();
+  noiseGain.gain.setValueAtTime(0.00001, now);
+  noiseGain.gain.exponentialRampToValueAtTime(0.22, now + 0.004);
+  noiseGain.gain.exponentialRampToValueAtTime(0.00001, now + 0.04);
+
+  const dry = ctx.createGain();
+  dry.gain.value = 0.86;
+
+  const wet = ctx.createGain();
+  wet.gain.value = 0.22;
+
+  const convolver = ensureReverb();
+
+  oscA.connect(filt);
+  oscB.connect(filt);
+  oscC.connect(filt);
+  filt.connect(peq);
+  peq.connect(master);
+
+  noise.connect(noiseHP);
+  noiseHP.connect(noiseGain);
+  noiseGain.connect(master);
+
+  master.connect(dry);
+  dry.connect(ctx.destination);
+
+  master.connect(convolver);
+  convolver.connect(wet);
+  wet.connect(ctx.destination);
+
+  oscA.start(now); oscB.start(now); oscC.start(now); noise.start(now);
+  oscA.stop(end);  oscB.stop(end);  oscC.stop(end);  noise.stop(now + 0.05);
+
+  active = { nodes:[oscA, oscB, oscC, noise, master, dry, wet, filt, peq, convolver, noiseHP, noiseGain] };
+}
+
+/* ---------------- Notes: C1–C6 chromatic ---------------- */
+const NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+function midiToFreq(midi){ return 440 * Math.pow(2, (midi - 69) / 12); }
+function midiToName(midi){
+  const name = NAMES[midi % 12];
+  const octave = Math.floor(midi/12) - 1;
+  return name + octave;
+}
+// C1 midi 24 to C6 midi 84 inclusive
+const allNotes = [];
+for(let m=24; m<=84; m++){
+  allNotes.push({ midi:m, name:midiToName(m), f:midiToFreq(m) });
+}
+
+/* ---------------- UI / Setup ---------------- */
+const setupPanel = document.getElementById('setupPanel');
+const quizPanel  = document.getElementById('quizPanel');
+
+const startSel = document.getElementById('startNote');
+const endSel   = document.getElementById('endNote');
+const qCountSel= document.getElementById('qCount');
+const setupFeedback = document.getElementById('setupFeedback');
+const startBtn  = document.getElementById('startBtn');
+
+const qNumEl    = document.getElementById('qNum');
+const qTotalEl  = document.getElementById('qTotal');
+const scoreEl   = document.getElementById('score');
+const feedbackEl= document.getElementById('feedback');
+const nextBtn   = document.getElementById('nextBtn');
+const restartBtn= document.getElementById('restartBtn');
+
+const play1Btn  = document.getElementById('play1');
+const play2Btn  = document.getElementById('play2');
+const replayBothBtn = document.getElementById('replayBoth');
+const stopBtn   = document.getElementById('stopBtn');
+const btn1      = document.getElementById('btn1');
+const btn2      = document.getElementById('btn2');
+
+function populateSelectors(){
+  startSel.innerHTML = "";
+  endSel.innerHTML = "";
+  for(let i=0; i<allNotes.length; i++){
+    const n = allNotes[i];
+    const o1 = document.createElement('option');
+    o1.value = String(i);
+    o1.textContent = n.name;
+    startSel.appendChild(o1);
+
+    const o2 = document.createElement('option');
+    o2.value = String(i);
+    o2.textContent = n.name;
+    endSel.appendChild(o2);
+  }
+  // Defaults: C4 -> C5
+  const idxC4 = allNotes.findIndex(n => n.name === "C4");
+  const idxC5 = allNotes.findIndex(n => n.name === "C5");
+  startSel.value = String(idxC4);
+  endSel.value = String(idxC5);
+}
+populateSelectors();
+
+function clampEndAboveStart(){
+  // If user picks same or higher start, force end to be at least start+1 (if possible)
+  const a = parseInt(startSel.value, 10);
+  const b = parseInt(endSel.value, 10);
+  if(b <= a){
+    const newB = Math.min(allNotes.length - 1, a + 1);
+    endSel.value = String(newB);
+  }
+}
+function clampStartBelowEnd(){
+  const a = parseInt(startSel.value, 10);
+  const b = parseInt(endSel.value, 10);
+  if(a >= b){
+    const newA = Math.max(0, b - 1);
+    startSel.value = String(newA);
+  }
+}
+
+function validateRange(showMsg=true){
+  const a = parseInt(startSel.value, 10);
+  const b = parseInt(endSel.value, 10);
+  if(!(a < b)){
+    if(showMsg) setupFeedback.innerHTML = '<span class="bad">Start must be lower than end (no same-note range).</span>';
+    return false;
+  }
+  if((b - a + 1) < 2){
+    if(showMsg) setupFeedback.innerHTML = '<span class="bad">Range must include at least two different notes.</span>';
+    return false;
+  }
+  if(showMsg) setupFeedback.textContent = "";
+  return true;
+}
+
+startSel.addEventListener('change', () => { clampEndAboveStart(); validateRange(true); });
+endSel.addEventListener('change', () => { clampStartBelowEnd(); validateRange(true); });
+
+/* ---------------- Quiz logic ---------------- */
+let rangeNotes = [];
+let totalQuestions = 10;
+let q = 1;
+let score = 0;
+let n1 = null, n2 = null;
+let answered = false;
+let playingSeq = false;
+
+function pickTwoDifferent(){
+  let a = Math.floor(Math.random() * rangeNotes.length);
+  let b = Math.floor(Math.random() * rangeNotes.length);
+  while(b === a){
+    b = Math.floor(Math.random() * rangeNotes.length);
+  }
+  return [rangeNotes[a], rangeNotes[b]];
+}
+
+async function playBothSequential(){
+  if(playingSeq) return;
+  playingSeq = true;
+  stopNow();
+  pianoNote(n1.f, 0.95);
+  await new Promise(r => setTimeout(r, 1050));
+  pianoNote(n2.f, 0.95);
+  await new Promise(r => setTimeout(r, 950));
+  playingSeq = false;
+}
+
+function showQuiz(){
+  setupPanel.classList.add('hidden');
+  quizPanel.classList.remove('hidden');
+  nextBtn.classList.add('hidden');
+  restartBtn.classList.add('hidden');
+}
+
+function showSetup(){
+  stopNow();
+  setupPanel.classList.remove('hidden');
+  quizPanel.classList.add('hidden');
+  nextBtn.classList.add('hidden');
+  restartBtn.classList.add('hidden');
+  feedbackEl.textContent = "";
+  setupFeedback.textContent = "";
+}
+
+function newQuestion(){
+  answered = false;
+  feedbackEl.textContent = "";
+  nextBtn.classList.add('hidden');
+  btn1.disabled = false;
+  btn2.disabled = false;
+
+  const pair = pickTwoDifferent();
+  n1 = pair[0];
+  n2 = pair[1];
+
+  qNumEl.textContent = String(q);
+  qTotalEl.textContent = String(totalQuestions);
+  scoreEl.textContent = String(score);
+
+  playBothSequential();
+}
+
+function checkAnswer(which){
+  if(answered) return;
+  answered = true;
+
+  const higherIsFirst = n1.f > n2.f;
+  const userSaysFirst = (which === 1);
+  const correct = (higherIsFirst && userSaysFirst) || (!higherIsFirst && !userSaysFirst);
+
+  if(correct){
+    score++;
+    feedbackEl.innerHTML = '<span class="good">Correct!</span> ' + n1.name + ' vs ' + n2.name;
+  }else{
+    feedbackEl.innerHTML = '<span class="bad">Incorrect.</span> ' + n1.name + ' vs ' + n2.name;
+  }
+  scoreEl.textContent = String(score);
+
+  btn1.disabled = true;
+  btn2.disabled = true;
+
+  if(q < totalQuestions){
+    nextBtn.classList.remove('hidden');
+  }else{
+    feedbackEl.innerHTML += "<br><br><b>Final score: " + score + " / " + totalQuestions + "</b>";
+    restartBtn.classList.remove('hidden');
+  }
+}
+
+play1Btn.onclick = () => { if(!n1) return; stopNow(); pianoNote(n1.f, 0.95); };
+play2Btn.onclick = () => { if(!n2) return; stopNow(); pianoNote(n2.f, 0.95); };
+replayBothBtn.onclick = () => playBothSequential();
+stopBtn.onclick  = () => stopNow();
+
+btn1.onclick = () => checkAnswer(1);
+btn2.onclick = () => checkAnswer(2);
+
+nextBtn.onclick = () => {
+  q++;
+  stopNow();
+  newQuestion();
+};
+
+restartBtn.onclick = () => {
+  showSetup();
+};
+
+startBtn.onclick = () => {
+  // Ensure invalid same-note isn't possible
+  clampEndAboveStart();
+  if(!validateRange(true)) return;
+
+  const a = parseInt(startSel.value, 10);
+  const b = parseInt(endSel.value, 10);
+  rangeNotes = allNotes.slice(a, b + 1);
+
+  totalQuestions = parseInt(qCountSel.value, 10);
+  q = 1;
+  score = 0;
+
+  showQuiz();
+  newQuestion();
+};
+
+// start at setup
+showSetup();
+</script>
+</body>
+</html>
