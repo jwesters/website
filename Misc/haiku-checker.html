@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Haiku Checker (5–7–5)</title>
+  <style>
+    :root{
+      --bg:#0b0f1a;
+      --card:#121a2a;
+      --text:#eaf0ff;
+      --muted:#aab6d6;
+      --line:#223055;
+      --good:#52ffa3;
+      --bad:#ff5a7a;
+      --warn:#ffd36b;
+      --shadow: 0 18px 40px rgba(0,0,0,.45);
+      --radius: 18px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      color:var(--text);
+      background: radial-gradient(1200px 700px at 20% 10%, #16244a 0%, transparent 55%),
+                  radial-gradient(900px 600px at 80% 20%, #1b2d52 0%, transparent 60%),
+                  var(--bg);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+    }
+    .wrap{
+      width:min(980px, 100%);
+      display:grid;
+      gap:16px;
+      grid-template-columns: 1.1fr 0.9fr;
+    }
+    @media (max-width: 860px){
+      .wrap{grid-template-columns: 1fr}
+    }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    header{
+      padding:18px 18px 10px 18px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    h1{
+      font-size: 20px;
+      margin:0;
+      letter-spacing:.2px;
+    }
+    .sub{
+      margin-top:6px;
+      color:var(--muted);
+      font-size: 13px;
+      line-height:1.35;
+    }
+    .content{padding:18px}
+    textarea{
+      width:100%;
+      height: 240px;
+      resize: vertical;
+      min-height: 200px;
+      padding:14px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(10,14,26,.6);
+      color: var(--text);
+      font-size: 16px;
+      line-height: 1.5;
+      outline:none;
+    }
+    textarea:focus{
+      border-color: rgba(122,162,255,.65);
+      box-shadow: 0 0 0 4px rgba(122,162,255,.15);
+    }
+    .row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      margin-top:12px;
+      flex-wrap:wrap;
+    }
+    button{
+      appearance:none;
+      border:none;
+      cursor:pointer;
+      padding:12px 14px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(82,255,163,.95), rgba(82,255,163,.70));
+      color:#07151a;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: .2px;
+      box-shadow: 0 10px 22px rgba(82,255,163,.18);
+    }
+    button:active{transform: translateY(1px)}
+    .ghost{
+      background: rgba(255,255,255,.08);
+      color: var(--text);
+      font-weight: 650;
+      box-shadow:none;
+      border:1px solid rgba(255,255,255,.12);
+    }
+    .pill{
+      padding:8px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      color: var(--muted);
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+    }
+    .results{
+      display:grid;
+      gap:12px;
+    }
+    .status{
+      padding:14px 14px;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+    }
+    .status strong{display:block; font-size:15px}
+    .status .small{color:var(--muted); font-size: 13px; margin-top:6px; line-height:1.4}
+    .ok{border-color: rgba(82,255,163,.40); background: rgba(82,255,163,.08)}
+    .bad{border-color: rgba(255,90,122,.45); background: rgba(255,90,122,.08)}
+    .warn{border-color: rgba(255,211,107,.45); background: rgba(255,211,107,.08)}
+    .lines{
+      display:grid;
+      gap:10px;
+    }
+    .lineCard{
+      padding:12px 12px;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(10,14,26,.35);
+    }
+    .lineHead{
+      display:flex;
+      justify-content: space-between;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-bottom:8px;
+    }
+    .badge{
+      font-size: 12px;
+      padding:6px 10px;
+      border-radius: 999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .badge.good{border-color: rgba(82,255,163,.55); color: var(--good); background: rgba(82,255,163,.08)}
+    .badge.bad{border-color: rgba(255,90,122,.55); color: var(--bad); background: rgba(255,90,122,.08)}
+    .lineText{
+      white-space: pre-wrap;
+      font-size: 14px;
+      line-height: 1.45;
+      color: var(--text);
+    }
+    .breakdown{
+      margin-top:10px;
+      color: var(--muted);
+      font-size: 12.5px;
+      line-height:1.35;
+      border-top:1px dashed rgba(255,255,255,.12);
+      padding-top:10px;
+    }
+    .mini{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+    .hint{
+      color: var(--muted);
+      font-size: 12.5px;
+      line-height:1.45;
+    }
+    .footerNote{
+      padding: 14px 18px 18px 18px;
+      color: var(--muted);
+      font-size: 12.5px;
+      line-height: 1.5;
+      border-top:1px solid rgba(255,255,255,.08);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="card">
+      <header>
+        <h1>Haiku Checker</h1>
+        <div class="sub">Type your poem in exactly <b>3 lines</b>. This checks for the classic <b>5–7–5</b> syllable pattern (English, rule-based).</div>
+      </header>
+      <div class="content">
+        <textarea id="haiku" spellcheck="true" placeholder="Line 1 (5 syllables)
+Line 2 (7 syllables)
+Line 3 (5 syllables)"></textarea>
+
+        <div class="row">
+          <button id="checkBtn">Check haiku</button>
+          <button id="clearBtn" class="ghost">Clear</button>
+          <span class="pill" id="targetPill">Target: 5 • 7 • 5</span>
+        </div>
+
+        <div style="margin-top:12px" class="hint">
+          Notes: Syllable counting in English is imperfect. This tool uses a heuristic with common exceptions, including a special <span class="mini">-ed</span> rule (e.g., <span class="mini">wanted</span> = 2, <span class="mini">walked</span> = 1).
+        </div>
+      </div>
+      <div class="footerNote">
+        Strict mode: it must be <b>exactly 3 non-empty lines</b>, and each must match the target syllable count.
+      </div>
+    </section>
+
+    <aside class="card">
+      <header>
+        <h1>Results</h1>
+        <div class="sub">You’ll see a verdict plus syllable counts for each line.</div>
+      </header>
+      <div class="content results" id="results">
+        <div class="status warn">
+          <strong>Waiting for text…</strong>
+          <div class="small">Enter a 3-line poem, then click <b>Check haiku</b>.</div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+<script>
+(() => {
+  const target = [5, 7, 5];
+
+  // Common exception overrides (lowercase, no punctuation).
+  // Values are syllable counts.
+  const EXCEPTIONS = new Map(Object.entries({
+    "fire": 1,
+    "hour": 1,
+    "our": 1,
+    "your": 1,
+    "you're": 1,
+    "youre": 1,
+    "every": 2,
+    "family": 3,
+    "business": 2,
+    "queue": 1,
+    "one": 1,
+    "once": 1,
+    "two": 1,
+    "three": 1,
+    "people": 2,
+    "again": 2,
+    "because": 2,
+    "beautiful": 3,
+    "being": 2,
+    "quiet": 2,
+    "science": 2,
+    "poem": 2,
+    "haiku": 2,
+    "rhythm": 2,
+    "chocolate": 3,
+    "different": 3,
+    "interest": 3,
+    "favorite": 3,
+    "camera": 3,
+    "poetry": 3,
+    "toward": 1,
+    "towards": 1,
+    "sure": 1,
+    "ion": 2,
+    "coyote": 3,
+    "mayonnaise": 3
+  }));
+
+  function normalizeWord(raw){
+    return raw.toLowerCase().replace(/[^a-z']/g, "");
+  }
+
+  // Heuristic syllable counter for a single word, including a clear -ed exception:
+  // If a word ends in "ed" and the letter before is 't' or 'd', count an extra syllable (wanted, added).
+  // Otherwise, "ed" is usually silent (walked, jumped).
+  function syllablesInWord(rawWord){
+    let w = normalizeWord(rawWord);
+    if (!w) return 0;
+
+    if (EXCEPTIONS.has(w)) return EXCEPTIONS.get(w);
+
+    // Remove possessive/aux endings for counting
+    w = w.replace(/'(s|d|ll|re|ve|m)$/g, "");
+    if (!w) return 0;
+
+    if (w.length <= 3) return 1;
+
+    const vowels = "aeiouy";
+    let count = 0;
+    let prevIsVowel = false;
+    for (let i = 0; i < w.length; i++){
+      const isVowel = vowels.includes(w[i]);
+      if (isVowel && !prevIsVowel) count++;
+      prevIsVowel = isVowel;
+    }
+
+    // Silent 'e' (except consonant+le)
+    if (w.endsWith("e")){
+      const le = w.endsWith("le") && w.length > 2 && !vowels.includes(w[w.length - 3]);
+      if (!le) count--;
+    }
+
+    // Consonant + "le" adds one (table, little)
+    if (w.endsWith("le") && w.length > 2 && !vowels.includes(w[w.length - 3])) {
+      count++;
+    }
+
+    // Split "ia"/"io" sometimes
+    if (/ia/.test(w)) count++;
+    if (/io/.test(w)) count++;
+    if (/(tion|sion|cian)$/.test(w)) count--; // undo overcount for these endings
+
+    // --- Explicit -ed rule ---
+// In our vowel-group heuristic, the "e" in "-ed" often counts as an extra syllable.
+// Most "-ed" endings are silent (walked, jumped, killed) -> subtract 1.
+// If the letter before "ed" is t or d, the ending is usually pronounced (want-ed, add-ed) -> do not subtract.
+if (w.endsWith("ed") && w.length > 3){
+  const before = w[w.length - 3];
+  if (before !== "t" && before !== "d"){
+    count--;
+  }
+}
+
+    // Ensure at least 1
+    if (count < 1) count = 1;
+    if (count > 12) count = 12;
+
+    return count;
+  }
+
+  function tokenize(line){
+    return line
+      .replace(/—/g, "-")
+      .split(/[\s]+/)
+      .flatMap(tok => tok.split(/[-]+/))
+      .map(t => t.trim())
+      .filter(Boolean);
+  }
+
+  function countSyllablesInLine(line){
+    const words = tokenize(line);
+    const details = [];
+    let total = 0;
+    for (const w of words){
+      const s = syllablesInWord(w);
+      total += s;
+      details.push({ word: w, syllables: s });
+    }
+    return { total, details };
+  }
+
+  function escapeHtml(str){
+    return (str ?? "").replace(/[&<>"']/g, c => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  function render(resultsObj){
+    const host = document.getElementById("results");
+    host.innerHTML = "";
+
+    const { strictOk, lineInfos, lines, message, verdictType } = resultsObj;
+
+    const status = document.createElement("div");
+    status.className = "status " + (verdictType || "warn");
+
+    const title = document.createElement("strong");
+    title.textContent = message;
+    status.appendChild(title);
+
+    const small = document.createElement("div");
+    small.className = "small";
+    small.innerHTML = strictOk
+      ? `✅ Pattern matches <b>5–7–5</b>.`
+      : `Counts: <b>${lineInfos.map((x)=>x.total).join(" • ")}</b> (target <b>5 • 7 • 5</b>).`;
+    status.appendChild(small);
+
+    host.appendChild(status);
+
+    const linesWrap = document.createElement("div");
+    linesWrap.className = "lines";
+
+    for (let i = 0; i < 3; i++){
+      const box = document.createElement("div");
+      box.className = "lineCard";
+
+      const head = document.createElement("div");
+      head.className = "lineHead";
+
+      const left = document.createElement("div");
+      left.innerHTML = `<b>Line ${i+1}</b> <span class="mini">(target ${target[i]})</span>`;
+      head.appendChild(left);
+
+      const ok = (lineInfos[i]?.total === target[i]);
+      const badge = document.createElement("span");
+      badge.className = "badge " + (ok ? "good" : "bad");
+      badge.textContent = `${lineInfos[i]?.total ?? 0} syllable${(lineInfos[i]?.total ?? 0) === 1 ? "" : "s"}`;
+      head.appendChild(badge);
+
+      box.appendChild(head);
+
+      const text = document.createElement("div");
+      text.className = "lineText";
+      text.textContent = (lines[i] ?? "");
+      box.appendChild(text);
+
+      const breakdown = document.createElement("div");
+      breakdown.className = "breakdown";
+      const det = (lineInfos[i]?.details ?? []);
+      if (det.length === 0){
+        breakdown.innerHTML = `<span class="mini">No words found.</span>`;
+      } else {
+        breakdown.innerHTML = det.map(d => `<span class="mini">${escapeHtml(d.word)}:${d.syllables}</span>`).join("  ");
+      }
+      box.appendChild(breakdown);
+
+      linesWrap.appendChild(box);
+    }
+
+    host.appendChild(linesWrap);
+  }
+
+  function checkHaiku(){
+    const raw = document.getElementById("haiku").value || "";
+    const parts = raw.replace(/\r\n/g, "\n").split("\n");
+
+    if (parts.length !== 3){
+      render({
+        strictOk: false,
+        verdictType: "bad",
+        message: "Not a haiku (strict mode).",
+        lines: [parts[0] ?? "", parts[1] ?? "", parts[2] ?? ""],
+        lineInfos: [
+          countSyllablesInLine(parts[0] ?? ""),
+          countSyllablesInLine(parts[1] ?? ""),
+          countSyllablesInLine(parts[2] ?? "")
+        ]
+      });
+      return;
+    }
+
+    const lines = parts.map(s => s.trim());
+    const anyEmpty = lines.some(s => s.length === 0);
+    const infos = lines.map(countSyllablesInLine);
+
+    const countsMatch = infos.every((info, idx) => info.total === target[idx]);
+    const strictOk = (!anyEmpty) && countsMatch;
+
+    let message, verdictType;
+    if (anyEmpty){
+      message = "Not a haiku (a line is empty).";
+      verdictType = "bad";
+    } else if (strictOk){
+      message = "Valid haiku ✅";
+      verdictType = "ok";
+    } else {
+      message = "Not a haiku ❌";
+      verdictType = "bad";
+    }
+
+    render({
+      strictOk,
+      verdictType,
+      message,
+      lines,
+      lineInfos: infos
+    });
+  }
+
+  function clearAll(){
+    document.getElementById("haiku").value = "";
+    render({
+      strictOk: false,
+      verdictType: "warn",
+      message: "Waiting for text…",
+      lines: ["", "", ""],
+      lineInfos: [{total:0,details:[]},{total:0,details:[]},{total:0,details:[]}]
+    });
+  }
+
+  document.getElementById("checkBtn").addEventListener("click", checkHaiku);
+  document.getElementById("clearBtn").addEventListener("click", clearAll);
+})();
+</script>
+</body>
+</html>
