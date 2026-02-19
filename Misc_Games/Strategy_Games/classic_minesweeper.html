@@ -1,0 +1,885 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Classic Minesweeper</title>
+<style>
+  :root{
+    --bg:#c0c0c0;
+    --dark:#808080;
+    --darker:#404040;
+    --light:#ffffff;
+    --lighter:#f8f8f8;
+    --shadow:#7a7a7a;
+    --face:#c0c0c0;
+    --red:#ff0000;
+
+    --cell:24px;          /* default cell size */
+    --gap:0px;
+    --font: "Segoe UI", Tahoma, Verdana, Arial, sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background:#9b9b9b;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:18px;
+    font-family:var(--font);
+    color:#000;
+  }
+
+  /* Classic Windows 3D panel */
+  .panel{
+    background:var(--bg);
+    padding:10px;
+    border-top:3px solid var(--light);
+    border-left:3px solid var(--light);
+    border-right:3px solid var(--darker);
+    border-bottom:3px solid var(--darker);
+    box-shadow: 0 8px 22px rgba(0,0,0,.18);
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  .topbar{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    justify-content:space-between;
+    padding:6px 8px;
+    background:var(--bg);
+    border-top:2px solid var(--shadow);
+    border-left:2px solid var(--shadow);
+    border-right:2px solid var(--light);
+    border-bottom:2px solid var(--light);
+    margin-bottom:10px;
+  }
+
+  .led{
+    background:#000;
+    color:#ff2b2b;
+    font-family: "Courier New", Courier, monospace;
+    font-weight:700;
+    letter-spacing: 1px;
+    font-size: 22px;
+    line-height: 1;
+    padding:4px 6px 3px;
+    border-top:2px solid var(--darker);
+    border-left:2px solid var(--darker);
+    border-right:2px solid var(--light);
+    border-bottom:2px solid var(--light);
+    min-width: 62px;
+    text-align:center;
+    user-select:none;
+  }
+
+  .face{
+    width:38px;
+    height:38px;
+    background:var(--face);
+    border-top:3px solid var(--light);
+    border-left:3px solid var(--light);
+    border-right:3px solid var(--darker);
+    border-bottom:3px solid var(--darker);
+    display:grid;
+    place-items:center;
+    cursor:pointer;
+    user-select:none;
+  }
+  .face:active{
+    border-top:3px solid var(--darker);
+    border-left:3px solid var(--darker);
+    border-right:3px solid var(--light);
+    border-bottom:3px solid var(--light);
+  }
+  .face span{ font-size:22px; }
+
+  .controls{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:10px;
+    flex-wrap:wrap;
+  }
+
+  .select, .btn{
+    background:var(--bg);
+    border-top:2px solid var(--light);
+    border-left:2px solid var(--light);
+    border-right:2px solid var(--darker);
+    border-bottom:2px solid var(--darker);
+    padding:6px 10px;
+    font-size:14px;
+    cursor:pointer;
+    user-select:none;
+  }
+  select.select{
+    padding:5px 8px;
+    cursor:pointer;
+  }
+
+  .toggle{
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .toggle .mode{
+    min-width: 96px;
+    text-align:center;
+  }
+
+  .board-wrap{
+    padding:10px;
+    background:var(--bg);
+    border-top:3px solid var(--shadow);
+    border-left:3px solid var(--shadow);
+    border-right:3px solid var(--light);
+    border-bottom:3px solid var(--light);
+    width: fit-content;
+    max-width: 100%;
+    overflow:auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(var(--cols), var(--cell));
+    grid-auto-rows: var(--cell);
+    gap: var(--gap);
+    touch-action: manipulation; /* allow long-press */
+  }
+
+  .cell{
+    width: var(--cell);
+    height: var(--cell);
+    background:var(--bg);
+    border-top:2px solid var(--light);
+    border-left:2px solid var(--light);
+    border-right:2px solid var(--shadow);
+    border-bottom:2px solid var(--shadow);
+    display:grid;
+    place-items:center;
+    font-size: 16px;
+    font-weight: 800;
+    user-select:none;
+    position:relative;
+    cursor:pointer;
+  }
+  .cell:active{
+    border-top:2px solid var(--shadow);
+    border-left:2px solid var(--shadow);
+    border-right:2px solid var(--light);
+    border-bottom:2px solid var(--light);
+  }
+
+  .cell.revealed{
+    border:1px solid #a0a0a0;
+    background:#c6c6c6;
+    cursor:default;
+  }
+  .cell.revealed:active{
+    border:1px solid #a0a0a0;
+  }
+
+  .cell.mine-hit{
+    background: var(--red);
+  }
+
+  .cell .flag{
+    font-size:16px;
+    line-height:1;
+    transform: translateY(-1px);
+  }
+
+  .cell .qmark{
+    font-size:16px;
+    line-height:1;
+    transform: translateY(-1px);
+  }
+
+  /* Number colors (classic-ish) */
+  .n1{ color:#0000ff; }
+  .n2{ color:#008000; }
+  .n3{ color:#ff0000; }
+  .n4{ color:#000080; }
+  .n5{ color:#800000; }
+  .n6{ color:#008080; }
+  .n7{ color:#000000; }
+  .n8{ color:#808080; }
+
+  .footer{
+    margin-top:10px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    font-size:13px;
+    color:#222;
+  }
+
+  .hs{
+    background:var(--bg);
+    border-top:2px solid var(--shadow);
+    border-left:2px solid var(--shadow);
+    border-right:2px solid var(--light);
+    border-bottom:2px solid var(--light);
+    padding:6px 8px;
+    user-select:none;
+    min-width: 220px;
+  }
+
+  .small{
+    font-size:12px;
+    color:#333;
+    user-select:none;
+  }
+
+  @media (max-width: 520px){
+    :root{ --cell: 22px; }
+    .led{ font-size: 20px; min-width: 58px; }
+    .face{ width: 36px; height:36px; }
+  }
+</style>
+</head>
+<body>
+  <div class="panel" id="app">
+    <div class="controls">
+      <select class="select" id="difficulty">
+        <option value="beginner">Beginner (9×9, 10 mines)</option>
+        <option value="intermediate">Intermediate (16×16, 40 mines)</option>
+        <option value="expert">Expert (30×16, 99 mines)</option>
+      </select>
+
+      <div class="toggle">
+        <button class="btn mode" id="modeBtn" title="Tap to toggle. On mobile, long-press also flags.">Mode: Reveal</button>
+        <button class="btn" id="resetHS" title="Reset saved best times">Reset Best Times</button>
+      </div>
+    </div>
+
+    <div class="topbar">
+      <div class="led" id="mineCount">010</div>
+      <div class="face" id="face" title="New game"><span id="faceIcon">🙂</span></div>
+      <div class="led" id="timer">000</div>
+    </div>
+
+    <div class="board-wrap" id="boardWrap">
+      <div class="grid" id="grid" aria-label="Minesweeper board"></div>
+    </div>
+
+    <div class="footer">
+      <div class="hs" id="bestTimes"></div>
+      <div class="small" id="hint">Right-click flags. Long-press flags. Click a number to chord when flags match.</div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const presets = {
+    beginner: { cols: 9, rows: 9, mines: 10 },
+    intermediate: { cols: 16, rows: 16, mines: 40 },
+    expert: { cols: 30, rows: 16, mines: 99 },
+  };
+
+  const gridEl = document.getElementById('grid');
+  const mineCountEl = document.getElementById('mineCount');
+  const timerEl = document.getElementById('timer');
+  const faceEl = document.getElementById('face');
+  const faceIconEl = document.getElementById('faceIcon');
+  const difficultyEl = document.getElementById('difficulty');
+  const bestTimesEl = document.getElementById('bestTimes');
+  const modeBtn = document.getElementById('modeBtn');
+  const resetHSBtn = document.getElementById('resetHS');
+
+  let cols = 9, rows = 9, mineTotal = 10;
+  let board = [];
+  let started = false;
+  let gameOver = false;
+  let won = false;
+  let time = 0;
+  let timerId = null;
+  let flagsPlaced = 0;
+
+  // Mobile mode toggle: reveal vs flag
+  let touchMode = 'reveal'; // 'reveal' | 'flag'
+
+  // ---------- Sounds (simple WebAudio synth) ----------
+  let audioCtx = null;
+  function getAudio(){
+    if (!audioCtx){
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    return audioCtx;
+  }
+
+  function beep(freq=440, dur=0.06, type='square', gain=0.06){
+    const ctx = getAudio();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = type;
+    o.frequency.value = freq;
+    g.gain.value = gain;
+    o.connect(g); g.connect(ctx.destination);
+    const t = ctx.currentTime;
+    o.start(t);
+    o.stop(t + dur);
+    g.gain.setValueAtTime(gain, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  }
+
+  function noiseBurst(dur=0.15, gain=0.10){
+    const ctx = getAudio();
+    const bufferSize = Math.floor(ctx.sampleRate * dur);
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i=0;i<bufferSize;i++){
+      data[i] = (Math.random()*2-1) * (1 - i/bufferSize);
+    }
+    const src = ctx.createBufferSource();
+    const g = ctx.createGain();
+    g.gain.value = gain;
+    src.buffer = buffer;
+    src.connect(g); g.connect(ctx.destination);
+    src.start();
+  }
+
+  const SFX = {
+    click(){ beep(880, 0.04, 'square', 0.05); },
+    reveal(){ beep(660, 0.04, 'square', 0.05); },
+    flag(){ beep(440, 0.05, 'square', 0.05); },
+    unflag(){ beep(330, 0.05, 'square', 0.05); },
+    chord(){ beep(990, 0.03, 'square', 0.045); },
+    boom(){ noiseBurst(0.22, 0.12); beep(110, 0.16, 'sawtooth', 0.08); },
+    win(){ beep(784, 0.08, 'square', 0.06); setTimeout(()=>beep(988,0.08,'square',0.06),90); setTimeout(()=>beep(1319,0.10,'square',0.06),180); },
+  };
+
+  // ---------- Helpers ----------
+  const idx = (x,y)=> y*cols + x;
+  const inBounds = (x,y)=> x>=0 && y>=0 && x<cols && y<rows;
+
+  function neighbors(x,y){
+    const out = [];
+    for (let dy=-1; dy<=1; dy++){
+      for (let dx=-1; dx<=1; dx++){
+        if (dx===0 && dy===0) continue;
+        const nx = x+dx, ny=y+dy;
+        if (inBounds(nx,ny)) out.push([nx,ny]);
+      }
+    }
+    return out;
+  }
+
+  function pad3(n){
+    n = Math.max(-99, Math.min(999, n));
+    const neg = n < 0;
+    const s = Math.abs(n).toString().padStart(3,'0');
+    return neg ? ('-' + s.slice(1)) : s;
+  }
+
+  function setLED(el, value){
+    el.textContent = pad3(value);
+  }
+
+  function setFace(state){
+    // 🙂 normal, 😮 pressed, 😵 lose, 😎 win
+    if (state === 'normal') faceIconEl.textContent = '🙂';
+    else if (state === 'pressed') faceIconEl.textContent = '😮';
+    else if (state === 'lose') faceIconEl.textContent = '😵';
+    else if (state === 'win') faceIconEl.textContent = '😎';
+  }
+
+  // ---------- High scores ----------
+  const HS_KEY = 'classic_minesweeper_best_times_v1';
+  function getHS(){
+    try{
+      const raw = localStorage.getItem(HS_KEY);
+      return raw ? JSON.parse(raw) : {};
+    }catch{ return {}; }
+  }
+  function setHS(obj){
+    try{ localStorage.setItem(HS_KEY, JSON.stringify(obj)); }catch{}
+  }
+  function renderHS(){
+    const hs = getHS();
+    const b = hs.beginner ?? null;
+    const i = hs.intermediate ?? null;
+    const e = hs.expert ?? null;
+
+    const fmt = v => (v==null ? '—' : (v + 's'));
+    bestTimesEl.innerHTML = `
+      <div><b>Best Times</b></div>
+      <div>Beginner: <b>${fmt(b)}</b></div>
+      <div>Intermediate: <b>${fmt(i)}</b></div>
+      <div>Expert: <b>${fmt(e)}</b></div>
+    `;
+  }
+
+  function maybeRecordHS(){
+    const key = difficultyEl.value;
+    const hs = getHS();
+    const prev = hs[key];
+    if (prev == null || time < prev){
+      hs[key] = time;
+      setHS(hs);
+      renderHS();
+    }
+  }
+
+  // ---------- Game setup ----------
+  function newBoard(){
+    const p = presets[difficultyEl.value];
+    cols = p.cols; rows = p.rows; mineTotal = p.mines;
+
+    // adjust cell size slightly for expert on narrow screens
+    if (difficultyEl.value === 'expert' && window.innerWidth < 600){
+      document.documentElement.style.setProperty('--cell', '20px');
+    }else{
+      document.documentElement.style.setProperty('--cell', '');
+    }
+
+    document.documentElement.style.setProperty('--cols', cols);
+
+    board = [];
+    for (let y=0; y<rows; y++){
+      for (let x=0; x<cols; x++){
+        board.push({
+          x,y,
+          mine:false,
+          revealed:false,
+          flagged:false,
+          qmark:false,
+          adj:0,
+          el:null
+        });
+      }
+    }
+
+    started = false;
+    gameOver = false;
+    won = false;
+    time = 0;
+    flagsPlaced = 0;
+    setLED(timerEl, 0);
+    setLED(mineCountEl, mineTotal - flagsPlaced);
+    setFace('normal');
+    stopTimer();
+    buildGrid();
+    renderHS();
+  }
+
+  function buildGrid(){
+    gridEl.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    for (let i=0; i<board.length; i++){
+      const c = board[i];
+      const d = document.createElement('div');
+      d.className = 'cell';
+      d.setAttribute('role', 'button');
+      d.setAttribute('aria-label', 'Hidden cell');
+      d.dataset.i = i.toString();
+      c.el = d;
+
+      // Mouse
+      d.addEventListener('mousedown', (e) => {
+        if (gameOver) return;
+        if (e.button === 0){
+          setFace('pressed');
+        }
+      });
+
+      d.addEventListener('mouseup', (e) => {
+        if (gameOver) return;
+        setFace('normal');
+      });
+
+      d.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        if (gameOver) return;
+        onFlag(i);
+      });
+
+      d.addEventListener('click', (e) => {
+        if (gameOver) return;
+        // left click
+        if (touchMode === 'flag' && isTouchDevice()) {
+          onFlag(i);
+        } else {
+          onReveal(i);
+        }
+      });
+
+      // Touch long-press flagging
+      attachLongPress(d, () => {
+        if (gameOver) return;
+        onFlag(i);
+      });
+
+      frag.appendChild(d);
+    }
+    gridEl.appendChild(frag);
+    refreshAllCells();
+  }
+
+  function isTouchDevice(){
+    return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  }
+
+  function attachLongPress(el, cb){
+    let pressTimer = null;
+    let moved = false;
+
+    const start = () => {
+      if (gameOver) return;
+      moved = false;
+      pressTimer = setTimeout(() => {
+        pressTimer = null;
+        if (!moved) cb();
+      }, 380);
+    };
+
+    const cancel = () => {
+      if (pressTimer){
+        clearTimeout(pressTimer);
+        pressTimer = null;
+      }
+    };
+
+    el.addEventListener('touchstart', start, {passive:true});
+    el.addEventListener('touchend', cancel);
+    el.addEventListener('touchcancel', cancel);
+    el.addEventListener('touchmove', () => { moved = true; cancel(); }, {passive:true});
+  }
+
+  function placeMinesSafe(firstX, firstY){
+    // Keep a 3x3 area around first click mine-free to ensure an opening.
+    const safe = new Set();
+    for (let dy=-1; dy<=1; dy++){
+      for (let dx=-1; dx<=1; dx++){
+        const x = firstX + dx, y = firstY + dy;
+        if (inBounds(x,y)) safe.add(idx(x,y));
+      }
+    }
+
+    // Create list of candidate indices
+    const candidates = [];
+    for (let i=0; i<board.length; i++){
+      if (!safe.has(i)) candidates.push(i);
+    }
+
+    // Shuffle
+    for (let i=candidates.length-1; i>0; i--){
+      const j = Math.floor(Math.random() * (i+1));
+      [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+    }
+
+    for (let m=0; m<mineTotal; m++){
+      const i = candidates[m];
+      board[i].mine = true;
+    }
+
+    // Compute adjacencies
+    for (let i=0; i<board.length; i++){
+      const c = board[i];
+      if (c.mine){ c.adj = 0; continue; }
+      let count = 0;
+      for (const [nx,ny] of neighbors(c.x,c.y)){
+        if (board[idx(nx,ny)].mine) count++;
+      }
+      c.adj = count;
+    }
+  }
+
+  function startTimer(){
+    stopTimer();
+    timerId = setInterval(() => {
+      time = Math.min(999, time+1);
+      setLED(timerEl, time);
+    }, 1000);
+  }
+
+  function stopTimer(){
+    if (timerId){
+      clearInterval(timerId);
+      timerId = null;
+    }
+  }
+
+  // ---------- UI refresh ----------
+  function refreshCell(i){
+    const c = board[i];
+    const el = c.el;
+    if (!el) return;
+
+    el.classList.toggle('revealed', c.revealed);
+
+    // clear content
+    el.innerHTML = '';
+    el.classList.remove('mine-hit');
+    for (let k=1;k<=8;k++) el.classList.remove('n'+k);
+
+    if (c.revealed){
+      el.setAttribute('aria-label', c.mine ? 'Mine' : (c.adj ? `Number ${c.adj}` : 'Empty'));
+      if (c.mine){
+        el.textContent = '💣';
+      }else if (c.adj > 0){
+        el.textContent = String(c.adj);
+        el.classList.add('n'+c.adj);
+      }else{
+        el.textContent = '';
+      }
+      return;
+    }
+
+    // hidden
+    el.setAttribute('aria-label', c.flagged ? 'Flagged cell' : (c.qmark ? 'Question mark cell' : 'Hidden cell'));
+
+    if (c.flagged){
+      const s = document.createElement('span');
+      s.className = 'flag';
+      s.textContent = '🚩';
+      el.appendChild(s);
+    }else if (c.qmark){
+      const s = document.createElement('span');
+      s.className = 'qmark';
+      s.textContent = '?';
+      el.appendChild(s);
+    }
+  }
+
+  function refreshAllCells(){
+    for (let i=0; i<board.length; i++) refreshCell(i);
+  }
+
+  function revealAllMines(triggerIdx){
+    for (let i=0; i<board.length; i++){
+      const c = board[i];
+      if (c.mine){
+        c.revealed = true;
+        refreshCell(i);
+      }else if (c.flagged){
+        // show wrong flags as X
+        if (!c.mine){
+          c.revealed = true;
+          c.el.textContent = '❌';
+          c.el.classList.add('revealed');
+        }
+      }
+    }
+    if (triggerIdx != null && board[triggerIdx]?.el){
+      board[triggerIdx].el.classList.add('mine-hit');
+    }
+  }
+
+  function remainingHiddenNonMines(){
+    let rem = 0;
+    for (const c of board){
+      if (!c.mine && !c.revealed) rem++;
+    }
+    return rem;
+  }
+
+  // ---------- Gameplay ----------
+  function onReveal(i){
+    const c = board[i];
+    if (c.revealed) {
+      // chord attempt
+      if (c.adj > 0) tryChord(i);
+      return;
+    }
+    if (c.flagged) return;
+
+    // start game
+    if (!started){
+      started = true;
+      placeMinesSafe(c.x, c.y);
+      startTimer();
+    }
+
+    if (c.mine){
+      // lose
+      c.revealed = true;
+      refreshCell(i);
+      lose(i);
+      return;
+    }
+
+    floodReveal(i);
+    SFX.reveal();
+    checkWin();
+  }
+
+  function floodReveal(startIdx){
+    const start = board[startIdx];
+    if (start.revealed || start.flagged) return;
+
+    const stack = [startIdx];
+    while (stack.length){
+      const i = stack.pop();
+      const c = board[i];
+      if (c.revealed || c.flagged) continue;
+      c.revealed = true;
+      c.qmark = false;
+      refreshCell(i);
+
+      if (c.adj === 0){
+        for (const [nx,ny] of neighbors(c.x,c.y)){
+          const ni = idx(nx,ny);
+          const n = board[ni];
+          if (!n.revealed && !n.flagged && !n.mine){
+            stack.push(ni);
+          }
+        }
+      }
+    }
+  }
+
+  function cycleMark(c){
+    // Windows: blank -> flag -> ? -> blank
+    if (!c.flagged && !c.qmark){
+      c.flagged = true;
+      c.qmark = false;
+      flagsPlaced++;
+      SFX.flag();
+    }else if (c.flagged){
+      c.flagged = false;
+      c.qmark = true;
+      flagsPlaced--;
+      SFX.unflag();
+    }else{
+      c.qmark = false;
+      c.flagged = false;
+      SFX.click();
+    }
+  }
+
+  function onFlag(i){
+    const c = board[i];
+    if (c.revealed) return;
+
+    cycleMark(c);
+    setLED(mineCountEl, mineTotal - flagsPlaced);
+    refreshCell(i);
+    checkWin();
+  }
+
+  function tryChord(i){
+    const c = board[i];
+    if (!c.revealed || c.adj <= 0) return;
+
+    let flagged = 0;
+    const neigh = neighbors(c.x,c.y);
+    for (const [nx,ny] of neigh){
+      if (board[idx(nx,ny)].flagged) flagged++;
+    }
+    if (flagged !== c.adj) return;
+
+    SFX.chord();
+
+    // reveal all unflagged neighbors
+    for (const [nx,ny] of neigh){
+      const ni = idx(nx,ny);
+      const n = board[ni];
+      if (n.flagged || n.revealed) continue;
+      if (n.mine){
+        n.revealed = true;
+        refreshCell(ni);
+        lose(ni);
+        return;
+      }else{
+        floodReveal(ni);
+      }
+    }
+    checkWin();
+  }
+
+  function lose(triggerIdx){
+    if (gameOver) return;
+    gameOver = true;
+    won = false;
+    stopTimer();
+    setFace('lose');
+    SFX.boom();
+    revealAllMines(triggerIdx);
+  }
+
+  function win(){
+    if (gameOver) return;
+    gameOver = true;
+    won = true;
+    stopTimer();
+    setFace('win');
+
+    // Flag all remaining mines
+    for (const c of board){
+      if (c.mine && !c.flagged){
+        c.flagged = true;
+        c.qmark = false;
+      }
+    }
+    flagsPlaced = mineTotal;
+    setLED(mineCountEl, mineTotal - flagsPlaced);
+    refreshAllCells();
+
+    SFX.win();
+    maybeRecordHS();
+  }
+
+  function checkWin(){
+    if (!started || gameOver) return;
+    if (remainingHiddenNonMines() === 0){
+      win();
+    }
+  }
+
+  // ---------- Mode toggle ----------
+  function updateModeUI(){
+    modeBtn.textContent = touchMode === 'reveal' ? 'Mode: Reveal' : 'Mode: Flag';
+  }
+
+  modeBtn.addEventListener('click', () => {
+    touchMode = (touchMode === 'reveal') ? 'flag' : 'reveal';
+    updateModeUI();
+    SFX.click();
+  });
+
+  // ---------- Face / Difficulty ----------
+  faceEl.addEventListener('click', () => {
+    SFX.click();
+    newBoard();
+  });
+
+  difficultyEl.addEventListener('change', () => {
+    SFX.click();
+    newBoard();
+  });
+
+  resetHSBtn.addEventListener('click', () => {
+    SFX.click();
+    try{ localStorage.removeItem(HS_KEY); }catch{}
+    renderHS();
+  });
+
+  // Prevent dragging selections
+  document.addEventListener('dragstart', (e) => e.preventDefault());
+
+  // Keyboard helper
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'r' || e.key === 'R'){
+      newBoard();
+    }
+  });
+
+  // Initialize
+  updateModeUI();
+  renderHS();
+  newBoard();
+})();
+</script>
+</body>
+</html>

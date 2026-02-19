@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Anti-SOS (2 Players) — 10×10</title>
+  <style>
+    :root{
+      --bg:#0f1220;
+      --panel:#171a2b;
+      --panel2:#1f2340;
+      --text:#e9ecff;
+      --muted:#aab1d6;
+      --p1:#66e3b4;
+      --p2:#ff7aa8;
+      --gridline:rgba(255,255,255,.12);
+      --warn:#ffe27a;
+      --danger:#ff5b7a;
+      --overlay: rgba(0,0,0,.62);
+      --blocked: rgba(255,255,255,.10);
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: radial-gradient(1000px 600px at 20% 10%, #232a58 0%, var(--bg) 50%, #0b0d18 100%);
+      color:var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      padding:18px;
+    }
+    .wrap{ width:min(1100px, 100%); display:grid; gap:14px; }
+
+    .top{
+      background: linear-gradient(180deg, var(--panel) 0%, var(--panel2) 100%);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:16px;
+      padding:14px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      box-shadow: 0 10px 24px rgba(0,0,0,.35);
+    }
+    .leftInfo{ display:flex; flex-direction:column; gap:10px; min-width:320px; }
+    .titleRow{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+    .titleRow h1{ font-size:18px; margin:0; letter-spacing:.4px; }
+
+    .rules{
+      font-size:12.5px;
+      color:var(--muted);
+      line-height:1.45;
+      margin:0;
+      padding-left: 16px;
+    }
+    .rules li{ margin: 2px 0; }
+
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+
+    /* Bigger turn pills */
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 14px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.07);
+      font-size:15px;
+      white-space:nowrap;
+      font-weight:800;
+      letter-spacing:.2px;
+    }
+    .pill strong{ font-weight:950; }
+    .dot{ width:12px;height:12px;border-radius:50%;display:inline-block; }
+    .dot.p1{ background:var(--p1); box-shadow:0 0 0 4px rgba(102,227,180,.16); }
+    .dot.p2{ background:var(--p2); box-shadow:0 0 0 4px rgba(255,122,168,.16); }
+
+    .btn{
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:750;
+      transition: background .15s ease, transform .02s ease;
+      white-space:nowrap;
+    }
+    .btn:hover{ background: rgba(255,255,255,.09); }
+    .btn:active{ transform: translateY(1px); }
+
+    /* ONE big container: board on left, grey area on right */
+    .arena{
+      background: linear-gradient(180deg, rgba(255,255,255,.06) 0%, rgba(255,255,255,.03) 100%);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:16px;
+      box-shadow: 0 12px 28px rgba(0,0,0,.35);
+      overflow:hidden;
+      display:grid;
+      grid-template-columns: max-content 1fr;
+      min-height: 560px;
+    }
+
+    .boardPane{
+      padding:14px;
+      border-right:1px solid rgba(255,255,255,.10);
+      overflow:auto; /* scroll board if needed */
+      background: rgba(10,12,24,.20);
+    }
+
+    .rightGreyPane{
+  padding:14px;
+  background: radial-gradient(1200px 700px at 20% 10%, rgba(255,255,255,.07) 0%, rgba(255,255,255,.02) 55%, rgba(0,0,0,.0) 100%);
+  display:flex;
+  align-items:flex-start;
+- justify-content:flex-end;
++ justify-content:flex-start;
+}
+
+    @media (max-width: 900px){
+      .arena{
+        grid-template-columns: 1fr;
+        min-height: unset;
+      }
+      .boardPane{
+        border-right:0;
+        border-bottom:1px solid rgba(255,255,255,.10);
+      }
+      .rightGreyPane{
+        justify-content:flex-start;
+      }
+    }
+
+    .board{
+      display:grid;
+      grid-template-columns: repeat(10, 52px);
+      grid-template-rows: repeat(10, 52px);
+      width:max-content;
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:12px;
+      overflow:hidden;
+      background: rgba(10,12,24,.55);
+    }
+    .cell{
+      width:52px;height:52px;
+      display:flex;align-items:center;justify-content:center;
+      font-size:22px;font-weight:950;letter-spacing:.5px;
+      cursor:pointer; user-select:none;
+      border-right:1px solid var(--gridline);
+      border-bottom:1px solid var(--gridline);
+      transition: background .12s ease, transform .02s ease, filter .12s ease, opacity .12s ease;
+      position:relative;
+    }
+    .cell:nth-child(10n){ border-right:0; }
+    .cell:nth-last-child(-n+10){ border-bottom:0; }
+    .cell:hover{ background: rgba(255,255,255,.05); }
+    .cell:active{ transform: translateY(1px); }
+    .cell.filled{ cursor:default; }
+    .cell.filled:hover{ background: transparent; }
+
+    .cell.turnBlocked{
+      opacity: .55;
+      filter: grayscale(.2);
+      background: var(--blocked);
+      cursor: not-allowed;
+    }
+    .cell.turnBlocked:hover{ background: var(--blocked); }
+
+    .mark{
+      width:34px;height:34px;border-radius:10px;
+      display:flex;align-items:center;justify-content:center;
+      font-weight:950;
+    }
+    .p1Mark{ color:#07140f; background: rgba(102,227,180,.95); }
+    .p2Mark{ color:#18040b; background: rgba(255,122,168,.95); }
+
+    .sos-yellow .mark{
+      background: rgba(255,226,122,.95) !important;
+      color: #201700 !important;
+      box-shadow: 0 0 0 2px rgba(255,226,122,.25) inset;
+    }
+
+    .flash{
+      animation: glow .9s ease-out 1;
+      outline: 2px solid rgba(255,226,122,.95);
+      outline-offset: -2px;
+      background: rgba(255,226,122,.10);
+    }
+    @keyframes glow{
+      0%{ box-shadow: 0 0 0 0 rgba(255,226,122,.0); }
+      40%{ box-shadow: 0 0 0 10px rgba(255,226,122,.22); }
+      100%{ box-shadow: 0 0 0 0 rgba(255,226,122,.0); }
+    }
+
+    /* Lives panel (sits inside the grey pane) */
+    .side{
+      width: 260px;
+      background: linear-gradient(180deg, rgba(0,0,0,.18) 0%, rgba(0,0,0,.08) 100%);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:16px;
+      padding:14px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      box-shadow: 0 10px 22px rgba(0,0,0,.28);
+    }
+    .side h2{
+      margin:0;
+      font-size:14px;
+      letter-spacing:.3px;
+      color: var(--muted);
+      font-weight:900;
+      text-transform:uppercase;
+    }
+    .livesCard{
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      border-radius:14px;
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .livesHeader{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .livesLabel{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight:950;
+      font-size:14px;
+    }
+    .livesCount{
+      font-weight:950;
+      font-size:26px;
+      line-height:1;
+    }
+    .hearts{
+      font-size:20px;
+      letter-spacing:1px;
+      line-height:1.15;
+      opacity:.95;
+      user-select:none;
+      word-break: break-word;
+    }
+    .danger{ color: var(--danger) !important; }
+    .sideNote{
+      color: var(--muted);
+      font-size:12px;
+      line-height:1.35;
+    }
+
+    .footer{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      color: var(--muted);
+      font-size:12px;
+      padding: 0 4px;
+    }
+    .stat{
+      display:flex; align-items:center; gap:8px;
+      padding:6px 10px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      font-size:13px; color: var(--text);
+    }
+    .winner{ font-weight:900; color: var(--warn); }
+
+    /* Modal */
+    .modalOverlay{
+      position:fixed;
+      inset:0;
+      background: var(--overlay);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index: 9999;
+    }
+    .modalOverlay.show{ display:flex; }
+    .modal{
+      width: min(520px, 100%);
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(23,26,43,.96) 0%, rgba(31,35,64,.96) 100%);
+      box-shadow: 0 18px 60px rgba(0,0,0,.6);
+      padding: 16px;
+    }
+    .modalTitle{
+      margin:0 0 6px 0;
+      font-size:18px;
+      letter-spacing:.3px;
+      font-weight:950;
+      color: var(--warn);
+    }
+    .modalText{
+      margin:0 0 14px 0;
+      color: var(--text);
+      line-height:1.35;
+      font-size:14px;
+    }
+    .modalActions{
+      display:flex;
+      gap:10px;
+      justify-content:flex-end;
+      flex-wrap:wrap;
+    }
+    .btnPrimary{
+      background: rgba(255,226,122,.20);
+      border-color: rgba(255,226,122,.35);
+    }
+
+    @media (max-width: 520px){
+      .board{ grid-template-columns: repeat(10, 44px); grid-template-rows: repeat(10, 44px); }
+      .cell{ width:44px; height:44px; font-size:20px; }
+      .pill{ font-size:14px; padding:9px 12px; }
+      .livesCount{ font-size:24px; }
+      .hearts{ font-size:18px; }
+      .side{ width:100%; }
+      .arena{ border-radius:16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="leftInfo">
+        <div class="titleRow">
+          <h1>Anti-SOS — 2 Players</h1>
+        </div>
+
+        <ul class="rules" aria-label="Rules">
+          <li>Player 1 always plays <b>S</b></li>
+          <li>Player 2 always plays <b>O</b></li>
+          <li>Goal: <b>DON’T</b> make “SOS”</li>
+          <li>If your move creates one or more SOS lines, you lose <b>1 life</b> (per move)</li>
+          <li>Each player starts with <b>5 lives</b></li>
+          <li>Reach <b>0</b> = you lose</li>
+          <li>When an SOS forms, those letters turn <b>yellow</b></li>
+          <li>On your next turn, you <b>can’t play</b> in the <b>same row or column</b> as your previous move (the other player can)</li>
+        </ul>
+
+        <div class="row">
+          <span class="pill" id="turnPill">
+            <span class="dot p1" id="turnDot"></span>
+            <span id="turnText">Player 1’s turn</span>
+          </span>
+          <span class="pill" id="fixedLetterPill">Placing: <strong id="placingText">S</strong></span>
+        </div>
+      </div>
+
+      <div class="row">
+        <button class="btn" id="newGame" type="button">New Game</button>
+      </div>
+    </div>
+
+    <!-- Lives now sit INSIDE the grey area to the right of the board -->
+    <div class="arena">
+      <div class="boardPane">
+        <div class="board" id="board" aria-label="Anti-SOS board"></div>
+      </div>
+
+      <div class="rightGreyPane">
+        <aside class="side" aria-label="Player lives">
+          <h2>Lives</h2>
+
+          <div class="livesCard" id="p1LivesBox">
+            <div class="livesHeader">
+              <div class="livesLabel"><span class="dot p1"></span> Player 1</div>
+              <div class="livesCount" id="p1Lives">5</div>
+            </div>
+            <div class="hearts" id="p1Hearts"></div>
+          </div>
+
+          <div class="livesCard" id="p2LivesBox">
+            <div class="livesHeader">
+              <div class="livesLabel"><span class="dot p2"></span> Player 2</div>
+              <div class="livesCount" id="p2Lives">5</div>
+            </div>
+            <div class="hearts" id="p2Hearts"></div>
+          </div>
+
+          <div class="sideNote">
+            Tip: A single move can create multiple SOS lines, but you still lose only <b>1</b> life that move.
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="stat" id="gameState">Game in progress</div>
+    </div>
+  </div>
+
+  <!-- Game Over Modal -->
+  <div class="modalOverlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <h2 class="modalTitle" id="modalTitle">Game Over</h2>
+      <p class="modalText" id="modalText"></p>
+      <div class="modalActions">
+        <button class="btn" id="closeModal" type="button">Close</button>
+        <button class="btn btnPrimary" id="modalNewGame" type="button">New Game</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const SIZE = 10;
+  const START_LIVES = 5;
+
+  const boardEl = document.getElementById('board');
+  const newGameBtn = document.getElementById('newGame');
+
+  const turnDot = document.getElementById('turnDot');
+  const turnText = document.getElementById('turnText');
+  const placingText = document.getElementById('placingText');
+
+  const p1LivesEl = document.getElementById('p1Lives');
+  const p2LivesEl = document.getElementById('p2Lives');
+  const p1HeartsEl = document.getElementById('p1Hearts');
+  const p2HeartsEl = document.getElementById('p2Hearts');
+  const p1LivesBox = document.getElementById('p1LivesBox');
+  const p2LivesBox = document.getElementById('p2LivesBox');
+
+  const gameStateEl = document.getElementById('gameState');
+
+  // Modal
+  const modalOverlay = document.getElementById('modalOverlay');
+  const modalText = document.getElementById('modalText');
+  const closeModalBtn = document.getElementById('closeModal');
+  const modalNewGameBtn = document.getElementById('modalNewGame');
+
+  let grid, cells;
+  let currentPlayer; // 1 or 2
+  let lives;
+  let gameOver;
+
+  // last move row/col per player (restrict only that player next turn)
+  let lastMove = { 1: null, 2: null }; // {r,c} or null
+
+  // Unique lines (paired with opposite directions)
+  const LINES = [
+    [ 1, 0], // horizontal
+    [ 0, 1], // vertical
+    [ 1, 1], // diag down-right
+    [ 1,-1]  // diag up-right
+  ];
+
+  const inBounds = (r,c) => r>=0 && r<SIZE && c>=0 && c<SIZE;
+  const idx = (r,c) => r*SIZE + c;
+
+  function fixedLetterFor(player){ return player === 1 ? 'S' : 'O'; }
+
+  function setTurn(player){
+    currentPlayer = player;
+    const isP1 = player === 1;
+    turnDot.classList.toggle('p1', isP1);
+    turnDot.classList.toggle('p2', !isP1);
+    turnText.textContent = isP1 ? "Player 1’s turn" : "Player 2’s turn";
+    placingText.textContent = fixedLetterFor(player);
+    updateTurnBlockedShading();
+  }
+
+  function renderLives(){
+    p1LivesEl.textContent = lives[1];
+    p2LivesEl.textContent = lives[2];
+
+    p1HeartsEl.textContent = '♥'.repeat(lives[1]);
+    p2HeartsEl.textContent = '♥'.repeat(lives[2]);
+
+    const p1Danger = lives[1] <= 1;
+    const p2Danger = lives[2] <= 1;
+
+    p1LivesEl.classList.toggle('danger', p1Danger);
+    p2LivesEl.classList.toggle('danger', p2Danger);
+    p1HeartsEl.classList.toggle('danger', p1Danger);
+    p2HeartsEl.classList.toggle('danger', p2Danger);
+
+    p1LivesBox.style.outline = p1Danger ? '2px solid rgba(255,91,122,.45)' : 'none';
+    p2LivesBox.style.outline = p2Danger ? '2px solid rgba(255,91,122,.45)' : 'none';
+  }
+
+  function clearFlash(){
+    for(const cell of cells) cell.classList.remove('flash');
+  }
+
+  function markCell(r,c, player, letter){
+    const cell = cells[idx(r,c)];
+    cell.classList.add('filled');
+    cell.innerHTML = `<span class="mark ${player===1?'p1Mark':'p2Mark'}">${letter}</span>`;
+  }
+
+  function isCellTurnBlocked(r,c, player){
+    const lm = lastMove[player];
+    if(!lm) return false;
+    return (r === lm.r || c === lm.c);
+  }
+
+  function updateTurnBlockedShading(){
+    if(!cells) return;
+
+    for(const cell of cells) cell.classList.remove('turnBlocked');
+    if(gameOver) return;
+
+    const lm = lastMove[currentPlayer];
+    if(!lm) return;
+
+    for(let r=0;r<SIZE;r++){
+      for(let c=0;c<SIZE;c++){
+        const cell = cells[idx(r,c)];
+        if(cell.classList.contains('filled')) continue;
+        if(isCellTurnBlocked(r,c,currentPlayer)){
+          cell.classList.add('turnBlocked');
+        }
+      }
+    }
+  }
+
+  function findNewSOS(r,c){
+    const placed = grid[r][c];
+    const involved = new Set();
+    let count = 0;
+
+    function recordTriple(a,b,d){
+      involved.add(idx(a[0],a[1]));
+      involved.add(idx(b[0],b[1]));
+      involved.add(idx(d[0],d[1]));
+    }
+
+    if(placed === 'O'){
+      for(const [dr,dc] of LINES){
+        const r1 = r - dr, c1 = c - dc;
+        const r2 = r + dr, c2 = c + dc;
+        if(inBounds(r1,c1) && inBounds(r2,c2)){
+          if(grid[r1][c1] === 'S' && grid[r2][c2] === 'S'){
+            count++;
+            recordTriple([r1,c1],[r,c],[r2,c2]);
+          }
+        }
+      }
+      return { count, involved: [...involved] };
+    }
+
+    if(placed === 'S'){
+      for(const [dr,dc] of LINES){
+        {
+          const r1 = r + dr, c1 = c + dc;
+          const r2 = r + 2*dr, c2 = c + 2*dc;
+          if(inBounds(r1,c1) && inBounds(r2,c2)){
+            if(grid[r1][c1] === 'O' && grid[r2][c2] === 'S'){
+              count++;
+              recordTriple([r,c],[r1,c1],[r2,c2]);
+            }
+          }
+        }
+        {
+          const r1 = r - dr, c1 = c - dc;
+          const r2 = r - 2*dr, c2 = c - 2*dc;
+          if(inBounds(r1,c1) && inBounds(r2,c2)){
+            if(grid[r1][c1] === 'O' && grid[r2][c2] === 'S'){
+              count++;
+              recordTriple([r2,c2],[r1,c1],[r,c]);
+            }
+          }
+        }
+      }
+      return { count, involved: [...involved] };
+    }
+
+    return { count:0, involved:[] };
+  }
+
+  function applyYellow(indices){
+    for(const i of indices){
+      cells[i].classList.add('sos-yellow');
+      cells[i].classList.add('flash');
+    }
+  }
+
+  function showModal(message){
+    modalText.textContent = message;
+    modalOverlay.classList.add('show');
+    modalNewGameBtn.focus();
+  }
+
+  function hideModal(){
+    modalOverlay.classList.remove('show');
+  }
+
+  function declareLoss(loserPlayer){
+    gameOver = true;
+    const winner = loserPlayer === 1 ? 2 : 1;
+    gameStateEl.innerHTML = `<span class="winner">Player ${winner} wins!</span>`;
+    turnText.textContent = "Game over";
+    showModal(`Player ${loserPlayer} lost (ran out of lives). Player ${winner} wins!`);
+    updateTurnBlockedShading();
+  }
+
+  function onCellClick(r,c){
+    if(gameOver) return;
+    if(grid[r][c] !== '') return;
+    if(isCellTurnBlocked(r,c,currentPlayer)) return;
+
+    clearFlash();
+
+    const letter = fixedLetterFor(currentPlayer);
+    grid[r][c] = letter;
+    markCell(r,c,currentPlayer,letter);
+
+    lastMove[currentPlayer] = { r, c };
+
+    const {count, involved} = findNewSOS(r,c);
+    if(count > 0){
+      applyYellow(involved);
+
+      lives[currentPlayer] = Math.max(0, lives[currentPlayer] - 1);
+      renderLives();
+
+      if(lives[currentPlayer] <= 0){
+        declareLoss(currentPlayer);
+        return;
+      }
+    }
+
+    setTurn(currentPlayer === 1 ? 2 : 1);
+  }
+
+  function buildBoard(){
+    boardEl.innerHTML = '';
+    cells = [];
+    for(let r=0;r<SIZE;r++){
+      for(let c=0;c<SIZE;c++){
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.setAttribute('role','button');
+        cell.setAttribute('aria-label', `Row ${r+1}, Column ${c+1}`);
+        cell.addEventListener('click', () => onCellClick(r,c));
+        boardEl.appendChild(cell);
+        cells.push(cell);
+      }
+    }
+  }
+
+  function resetGame(){
+    grid = Array.from({length: SIZE}, () => Array.from({length: SIZE}, () => ''));
+    lives = {1: START_LIVES, 2: START_LIVES};
+    gameOver = false;
+    lastMove = {1: null, 2: null};
+
+    hideModal();
+    buildBoard();
+    renderLives();
+    setTurn(1);
+    gameStateEl.textContent = "Game in progress";
+  }
+
+  closeModalBtn.addEventListener('click', hideModal);
+  modalNewGameBtn.addEventListener('click', resetGame);
+  modalOverlay.addEventListener('click', (e) => {
+    if(e.target === modalOverlay) hideModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if(!modalOverlay.classList.contains('show')) return;
+    if(e.key === 'Escape') hideModal();
+  });
+
+  newGameBtn.addEventListener('click', resetGame);
+
+  resetGame();
+})();
+</script>
+</body>
+</html>

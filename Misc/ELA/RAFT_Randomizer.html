@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>RAFT Randomizer</title>
+  <style>
+    :root{
+      --bg:#0f1222;
+      --text:#eef1ff;
+      --muted:#b8c0e6;
+      --line:rgba(255,255,255,.10);
+      --accent:#7aa2ff;
+      --shadow: 0 14px 34px rgba(0,0,0,.40);
+      --radius: 16px;
+    }
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background: radial-gradient(1200px 700px at 20% -10%, rgba(122,162,255,.22), transparent 60%),
+                  radial-gradient(1000px 600px at 110% 10%, rgba(107,255,177,.12), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+      line-height:1.35;
+    }
+    .wrap{ max-width: 980px; margin: 22px auto; padding: 0 16px 36px; }
+    header{
+      display:flex; align-items:flex-end; justify-content:space-between;
+      gap: 12px; margin-bottom: 14px; flex-wrap: wrap;
+    }
+    .title{ display:flex; flex-direction:column; gap:6px; min-width: 260px; flex: 1 1 auto; }
+    h1{ margin:0; font-size: clamp(20px, 2.3vw, 28px); letter-spacing:.2px; }
+    .sub{ margin:0; color:var(--muted); font-size: 13px; max-width: 70ch; }
+    .bar{ display:flex; gap: 10px; flex-wrap:wrap; align-items:center; justify-content:flex-end; flex: 0 0 auto; }
+    .btn{
+      border:1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      color:var(--text);
+      padding:10px 12px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-weight: 650;
+      letter-spacing:.2px;
+      box-shadow: 0 10px 22px rgba(0,0,0,.20);
+      transition: transform .06s ease, border-color .12s ease, filter .12s ease;
+      user-select:none;
+    }
+    .btn:hover{ filter: brightness(1.08); border-color: rgba(122,162,255,.45); }
+    .btn:active{ transform: translateY(1px); }
+    .btn.primary{ border-color: rgba(122,162,255,.65); background: linear-gradient(180deg, rgba(122,162,255,.34), rgba(122,162,255,.16)); }
+    .btn.ghost{ background: transparent; box-shadow: none; }
+    .btn.bad{ border-color: rgba(255,107,107,.55); background: linear-gradient(180deg, rgba(255,107,107,.28), rgba(255,107,107,.12)); }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card h2{ margin:0; font-size: 15px; color: var(--muted); letter-spacing:.25px; }
+    .card .head{
+      padding: 14px 14px 10px;
+      display:flex; align-items:center; justify-content:space-between; gap: 12px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.04), transparent);
+      flex-wrap: wrap;
+    }
+    .card .body{ padding: 14px; }
+    .status{
+      font-size: 12px; color: var(--muted); padding: 6px 10px; border-radius: 999px;
+      border: 1px solid var(--line); background: rgba(255,255,255,.02); user-select:none; white-space: nowrap;
+    }
+
+    .raftList{ display:flex; flex-direction:column; gap: 10px; }
+    .raftRow{
+      display:grid; grid-template-columns: 64px 1fr auto; gap: 12px; align-items:center;
+      padding: 12px; border-radius: 14px; border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.06)); cursor: default; outline: none;
+    }
+    .raftRow:focus{ border-color: rgba(122,162,255,.55); box-shadow: 0 0 0 3px rgba(122,162,255,.12); }
+    .bigLetter{
+      width:64px; height:64px; border-radius: 16px; display:flex; align-items:center; justify-content:center;
+      font-weight: 900; font-size: 30px; letter-spacing: .5px; border: 1px solid var(--line);
+      background: rgba(255,255,255,.03); user-select:none;
+    }
+    .rowText{ display:flex; flex-direction:column; gap: 4px; min-width: 0; }
+    .rowLabel{ color: var(--muted); font-size: 12px; letter-spacing: .25px; }
+    .rowValue{ font-size: 18px; font-weight: 850; letter-spacing:.2px; word-break: break-word; }
+    .toggle{ display:flex; align-items:center; gap:8px; color: var(--muted); font-size: 13px; user-select:none; white-space: nowrap; padding-left: 6px; }
+    .toggle input{ width: 18px; height: 18px; accent-color: var(--accent); }
+
+    .promptBox{
+      margin-top: 12px; padding: 14px; border-radius: 14px; border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.06));
+    }
+    .promptText{ font-size: 16px; font-weight: 760; letter-spacing: .15px; }
+    .hint{ margin-top: 8px; color: var(--muted); font-size: 13px; }
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 12px; border: 1px solid var(--line); border-bottom-color: rgba(255,255,255,.18);
+      background: rgba(255,255,255,.03); padding: 2px 6px; border-radius: 6px; color: var(--muted);
+    }
+    .toast{
+      position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+      background: rgba(10,12,25,.92); border: 1px solid var(--line); color: var(--text);
+      padding: 10px 12px; border-radius: 12px; box-shadow: 0 16px 40px rgba(0,0,0,.45);
+      opacity:0; pointer-events:none; transition: opacity .18s ease, transform .18s ease;
+      max-width: min(720px, calc(100vw - 24px)); font-size: 13px;
+    }
+    .toast.show{ opacity: 1; transform: translateX(-50%) translateY(-3px); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">
+        <h1>RAFT Randomizer</h1>
+        <p class="sub">Role, Topic, and Audience are aligned so they “match.” Format stays fully random. Lock any row to keep it the same.</p>
+      </div>
+      <div class="bar">
+        <button class="btn primary" id="btnAll">Generate RAFT</button>
+        <button class="btn" id="btnCopy">Copy prompt</button>
+        <button class="btn ghost" id="btnSeed">Show seed</button>
+        <button class="btn bad" id="btnReset">Reset</button>
+      </div>
+    </header>
+
+    <section class="card">
+      <div class="head">
+        <h2>RAFT</h2>
+        <div class="status" id="status">Ready</div>
+      </div>
+      <div class="body">
+        <div class="raftList" id="raftList"></div>
+
+        <div class="promptBox" aria-label="Prompt">
+          <div class="promptText" id="promptText"></div>
+          <div class="hint">
+            Hotkeys: <span class="kbd">G</span> generate • <span class="kbd">C</span> copy • <span class="kbd">L</span> lock/unlock focused row
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const KEY = "RAFT_RANDOMIZER_V6_TAG_MATCH_50_50";
+  const $ = (id) => document.getElementById(id);
+
+  const DATA = {
+    roles: [
+      // SCHOOL (12)
+      {t:"school", s:"a playground supervisor"},{t:"school", s:"a school nurse"},{t:"school", s:"a teacher-librarian"},{t:"school", s:"a student journalist"},
+      {t:"school", s:"a new student on the first day"},{t:"school", s:"a student council president"},{t:"school", s:"a classroom moderator"},{t:"school", s:"a janitor who notices everything"},
+      {t:"school", s:"a lunchroom helper"},{t:"school", s:"a hallway monitor"},{t:"school", s:"a substitute teacher"},{t:"school", s:"a school custodian"},
+      // NATURE (10)
+      {t:"nature", s:"a worried polar bear"},{t:"nature", s:"a honeybee"},{t:"nature", s:"a wise old tree"},{t:"nature", s:"a drop of water"},
+      {t:"nature", s:"a cloud"},{t:"nature", s:"a turtle"},{t:"nature", s:"a snowflake"},{t:"nature", s:"a river on a long journey"},
+      {t:"nature", s:"a park trail"},{t:"nature", s:"a migrating goose"},
+      // STEM (10)
+      {t:"stem", s:"a proud calculator"},{t:"stem", s:"a science lab beaker"},{t:"stem", s:"a robot that just learned emotions"},{t:"stem", s:"a timekeeper clock"},
+      {t:"stem", s:"a meteorologist"},{t:"stem", s:"a brave astronaut"},{t:"stem", s:"a fraction that feels misunderstood"},{t:"stem", s:"a detective"},
+      {t:"stem", s:"a computer program"},{t:"stem", s:"a microscope"},
+      // CIVICS (10)
+      {t:"civics", s:"a mayor"},{t:"civics", s:"a community council member"},{t:"civics", s:"a city planner"},{t:"civics", s:"a newspaper editor"},
+      {t:"civics", s:"a bus driver"},{t:"civics", s:"a park ranger"},{t:"civics", s:"a volunteer coordinator"},{t:"civics", s:"a courtroom judge"},
+      {t:"civics", s:"an election worker"},{t:"civics", s:"a community mediator"},
+      // SPORTS/ARTS/FUN (8)
+      {t:"sports", s:"a hockey coach"},{t:"sports", s:"a soccer ball"},{t:"sports", s:"a basketball"},
+      {t:"arts", s:"a guitar string"},{t:"arts", s:"a book that wants to be read"},{t:"arts", s:"a drama club director"},
+      {t:"fun", s:"a tired pencil"},{t:"fun", s:"a traffic light"}
+    ],
+    topics: [
+      {t:"school", s:"how to welcome someone new"},{t:"school", s:"how to be respectful during discussions"},{t:"school", s:"why recess matters"},{t:"school", s:"how to organize your workspace"},
+      {t:"school", s:"why healthy lunches matter"},{t:"school", s:"how to ask for help"},{t:"school", s:"how to manage time better"},{t:"school", s:"how to participate in a class debate respectfully"},
+      {t:"school", s:"a fair classroom rule and why it matters"},{t:"school", s:"how to handle conflict peacefully"},
+      {t:"nature", s:"how to reduce plastic waste"},{t:"nature", s:"why we should protect wildlife"},{t:"nature", s:"how to prevent littering"},{t:"nature", s:"why we should conserve water"},
+      {t:"nature", s:"how to save energy at school"},{t:"nature", s:"preparing for a big storm"},{t:"nature", s:"why kindness spreads to communities"},{t:"nature", s:"why we should recycle"},
+      {t:"nature", s:"how weather affects daily life"},{t:"nature", s:"how small choices help the environment"},
+      {t:"stem", s:"explaining a math idea clearly"},{t:"stem", s:"how fractions show parts of a whole"},{t:"stem", s:"how to solve a tricky word problem"},{t:"stem", s:"how to choose reliable information"},
+      {t:"stem", s:"why learning from mistakes helps"},{t:"stem", s:"how to stay safe online"},{t:"stem", s:"how to use evidence in writing"},{t:"stem", s:"why practice helps you improve"},
+      {t:"stem", s:"how to set goals and stick to them"},{t:"stem", s:"why sleep is important"},
+      {t:"civics", s:"why community rules matter"},{t:"civics", s:"how a student council works"},{t:"civics", s:"why voting in school elections matters"},{t:"civics", s:"how to share different opinions kindly"},
+      {t:"civics", s:"how to have a respectful debate"},{t:"civics", s:"what makes a good leader"},{t:"civics", s:"how laws and rules affect everyday life"},{t:"civics", s:"how to make a positive change at school"},
+      {t:"civics", s:"why volunteering matters"},{t:"civics", s:"how to listen when you disagree"},
+      {t:"sports", s:"how to be a good teammate"},{t:"sports", s:"why teamwork beats arguing"},{t:"sports", s:"how to stay calm when frustrated"},
+      {t:"sports", s:"how to set a goal and track progress"},{t:"sports", s:"how to handle winning and losing respectfully"},
+      {t:"arts", s:"why reading every day matters"},{t:"arts", s:"how to write a strong paragraph"},{t:"arts", s:"why listening is important"},
+      {t:"arts", s:"why gratitude matters"},{t:"arts", s:"why empathy matters"},
+      {t:"fun", s:"a silly but fair rule for a game"},{t:"fun", s:"why honesty matters"},{t:"fun", s:"how to include everyone"},
+      {t:"fun", s:"why persistence matters"},{t:"fun", s:"how to make a positive change in your day"}
+    ],
+    audiences: [
+      // SCHOOL (12)
+      {t:"school", s:"a classroom"},{t:"school", s:"a group of Grade 6 students"},{t:"school", s:"a teacher"},{t:"school", s:"the school principal"},{t:"school", s:"a school assembly"},
+      {t:"school", s:"a group of kindergarteners"},{t:"school", s:"a group of Grade 3 students"},{t:"school", s:"a group of Grade 9 students"},{t:"school", s:"a class newsletter audience"},
+      {t:"school", s:"parents and guardians"},{t:"school", s:"a new student"},{t:"school", s:"the student council"},
+      // NATURE (10)
+      {t:"nature", s:"a park ranger"},{t:"nature", s:"a community group"},{t:"nature", s:"a science club"},{t:"nature", s:"a local newspaper reader"},
+      {t:"nature", s:"a nature center visitor"},{t:"nature", s:"a school eco-team"},{t:"nature", s:"a recycling committee"},{t:"nature", s:"a neighborhood committee"},
+      {t:"nature", s:"a garden club"},{t:"nature", s:"a campground meeting"},
+      // STEM (10)
+      {t:"stem", s:"a science fair judge"},{t:"stem", s:"a class"},{t:"stem", s:"a math club"},{t:"stem", s:"a teacher-librarian"},
+      {t:"stem", s:"a coding club"},{t:"stem", s:"a robotics team"},{t:"stem", s:"a STEM night audience"},{t:"stem", s:"a group of experiment partners"},
+      {t:"stem", s:"a technology committee"},{t:"stem", s:"a science museum visitor"},
+      // CIVICS (10)
+      {t:"civics", s:"a community council"},{t:"civics", s:"a town hall meeting"},{t:"civics", s:"a civics class"},{t:"civics", s:"a youth council"},
+      {t:"civics", s:"a debate audience"},{t:"civics", s:"a local newspaper reader"},{t:"civics", s:"a neighborhood committee"},{t:"civics", s:"a school board meeting"},
+      {t:"civics", s:"a volunteer group"},{t:"civics", s:"a community elder"},
+      // SPORTS/ARTS/FUN (8)
+      {t:"sports", s:"a team"},{t:"sports", s:"a coach"},{t:"sports", s:"a teammate"},{t:"sports", s:"a sports club"},
+      {t:"arts", s:"a book club"},{t:"arts", s:"a drama club"},{t:"fun", s:"a group of friends"},{t:"fun", s:"an online audience"}
+    ],
+    formats: [
+      "a letter","a diary entry","a persuasive speech","a news report","a poem","a set of instructions",
+      "a poster slogan with a short explanation","an email","a social media post thread","a comic script (no drawings needed)",
+      "a public service announcement","a conversation script","a thank-you note","a complaint letter",
+      "a short story","a fairy tale retelling","a how-to guide","a brochure","a TV interview transcript",
+      "a podcast intro and summary","a courtroom statement","a debate opening statement","a song (no melody needed)",
+      "a riddle collection","a bulletin announcement","a classroom anchor-chart text","a recipe-style explanation",
+      "a travel guide page","a job advertisement","a set of text messages","a journal reflection","a pledge",
+      "a pledge with reasons","a persuasive paragraph","a mini-lesson script","a letter to the editor",
+      "a timeline narration","a weather report","a scientific observation log","a comic monologue",
+      "a top five tips list","a Q and A sheet","a script for a short skit","a set of rules","a mission briefing",
+      "an apology letter","a pep talk","a safety announcement","a memo","a morning announcement","a quick infographic caption"
+    ]
+  };
+
+  const state = {
+    seed: null,
+    lock: { role:false, aud:false, fmt:false, top:false },
+    value: { role:"", aud:"", fmt:"", top:"" },
+    roleTag: "school",
+    focusKey: "role"
+  };
+
+  function mulberry32(a){
+    return function(){
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    }
+  }
+  function newSeed(){
+    const n = crypto.getRandomValues(new Uint32Array(1))[0] >>> 0;
+    state.seed = n;
+    return n;
+  }
+  function rng(){
+    if(state.seed == null) newSeed();
+    return mulberry32(state.seed >>> 0);
+  }
+  function pick(arr, r){ return arr[Math.floor(r()*arr.length)]; }
+
+  function capFirst(s){
+    s = (s || "").trim();
+    if(!s) return s;
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  function chooseArticle(phrase){
+    const w = (phrase || "").trim().toLowerCase();
+    const first = w.replace(/^[^a-z0-9]+/i,"").split(/\s+/)[0] || "";
+    const anExceptions = ["honest","hour","honor","heir"];
+    if(anExceptions.includes(first)) return "an";
+    const aExceptions = ["university","unicorn","unique","useful","euro","one","once","user"];
+    if(aExceptions.includes(first)) return "a";
+    return /^[aeiou]/.test(first) ? "an" : "a";
+  }
+  function normalizeLeadingArticle(phrase){
+    return (phrase || "").replace(/^\s*(a|an|the)\s+/i, (m)=> m.toLowerCase());
+  }
+  function toSentenceCase(s){
+    s = (s || "").trim();
+    if(!s) return s;
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+  function ensureArticle(phrase){
+    phrase = (phrase || "").trim();
+    if(!phrase) return phrase;
+    if(/^\s*(a|an|the)\s+/i.test(phrase)) return normalizeLeadingArticle(phrase);
+    return `${chooseArticle(phrase)} ${phrase}`;
+  }
+
+  function buildPrompt(){
+    const fmt = ensureArticle(state.value.fmt || "format");
+    const role = ensureArticle(state.value.role || "role");
+    const aud  = ensureArticle(state.value.aud  || "audience");
+    const topic = toSentenceCase(state.value.top || "topic");
+    return `Write ${fmt} as ${role} for ${aud} about: ${topic}.`;
+  }
+
+  function toast(msg){
+    const el = $("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(el._t);
+    el._t = setTimeout(()=> el.classList.remove("show"), 1400);
+  }
+
+  function save(){
+    try{
+      localStorage.setItem(KEY, JSON.stringify({ seed: state.seed, lock: state.lock, value: state.value, roleTag: state.roleTag }));
+    }catch(e){}
+  }
+  function load(){
+    try{
+      const raw = localStorage.getItem(KEY);
+      if(!raw) return null;
+      return JSON.parse(raw);
+    }catch(e){ return null; }
+  }
+
+  function tagOfRoleString(roleStr){
+    const needle = (roleStr || "").trim().toLowerCase();
+    const hit = DATA.roles.find(r => r.s.toLowerCase() === needle);
+    return hit ? hit.t : state.roleTag;
+  }
+
+  function generateAll(){
+    newSeed();
+    const r = rng();
+
+    // Role first
+    if(!state.lock.role){
+      const pickedRole = pick(DATA.roles, r);
+      state.value.role = pickedRole.s;
+      state.roleTag = pickedRole.t;
+    }else{
+      state.roleTag = tagOfRoleString(state.value.role);
+    }
+
+    // Topic aligns with role tag
+    if(!state.lock.top){
+      const options = DATA.topics.filter(x => x.t === state.roleTag);
+      const pool = options.length ? options : DATA.topics;
+      state.value.top = pick(pool, r).s;
+    }
+
+    // Audience aligns with role tag
+    if(!state.lock.aud){
+      const optionsA = DATA.audiences.filter(x => x.t === state.roleTag);
+      const poolA = optionsA.length ? optionsA : DATA.audiences;
+      state.value.aud = pick(poolA, r).s;
+    }
+
+    // Format remains fully random
+    if(!state.lock.fmt) state.value.fmt = pick(DATA.formats, r);
+
+    render();
+  }
+
+  function toggleLock(key){
+    state.lock[key] = !state.lock[key];
+    render();
+  }
+
+  function render(){
+    const rows = [
+      { key:"role", letter:"R", label:"Role" },
+      { key:"aud",  letter:"A", label:"Audience" },
+      { key:"fmt",  letter:"F", label:"Format" },
+      { key:"top",  letter:"T", label:"Topic" }
+    ];
+
+    const list = $("raftList");
+    list.innerHTML = "";
+
+    rows.forEach((row) => {
+      const el = document.createElement("div");
+      el.className = "raftRow";
+      el.tabIndex = 0;
+      el.dataset.key = row.key;
+
+      const locked = state.lock[row.key];
+
+      el.innerHTML = `
+        <div class="bigLetter" aria-hidden="true">${row.letter}</div>
+        <div class="rowText">
+          <div class="rowLabel">${row.label}</div>
+          <div class="rowValue">${capFirst(state.value[row.key] || "—")}</div>
+        </div>
+        <label class="toggle" title="Lock this row (won't change when generating)">
+          <input type="checkbox" ${locked ? "checked":""} aria-label="Lock ${row.label}" />
+          <span>${locked ? "Locked" : "Unlocked"}</span>
+        </label>
+      `;
+
+      el.addEventListener("focus", () => state.focusKey = row.key);
+      el.addEventListener("click", () => { state.focusKey = row.key; el.focus(); });
+      el.querySelector("input").addEventListener("change", () => toggleLock(row.key));
+
+      list.appendChild(el);
+    });
+
+    $("promptText").textContent = buildPrompt();
+    $("status").textContent = `Seed: ${state.seed ?? "—"} • Tag: ${state.roleTag} • Locks: ${Object.values(state.lock).filter(Boolean).length}/4`;
+    save();
+  }
+
+  function copyPrompt(){
+    const text = buildPrompt();
+    (navigator.clipboard?.writeText(text) || Promise.reject()).then(()=> toast("Copied!"))
+      .catch(()=>{
+        const ta = document.createElement("textarea");
+        ta.value = text; ta.style.position="fixed"; ta.style.left="-9999px";
+        document.body.appendChild(ta); ta.select();
+        try{ document.execCommand("copy"); toast("Copied!"); }catch(e){ toast("Copy failed"); }
+        document.body.removeChild(ta);
+      });
+  }
+
+  function resetAll(){
+    if(!confirm("Reset locks and generated RAFT back to defaults?")) return;
+    state.lock = { role:false, aud:false, fmt:false, top:false };
+    state.value = { role:"", aud:"", fmt:"", top:"" };
+    state.seed = null;
+    state.roleTag = "school";
+    generateAll();
+    toast("Reset.");
+  }
+
+  window.addEventListener("keydown", (e) => {
+    const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : "";
+    if(tag === "textarea" || tag === "input") return;
+    const k = e.key.toLowerCase();
+    if(k === "g"){ e.preventDefault(); generateAll(); }
+    else if(k === "c"){ e.preventDefault(); copyPrompt(); }
+    else if(k === "l"){ e.preventDefault(); toggleLock(state.focusKey); toast(`Toggled lock: ${state.focusKey.toUpperCase()}`); }
+  });
+
+  $("btnAll").addEventListener("click", generateAll);
+  $("btnCopy").addEventListener("click", copyPrompt);
+  $("btnSeed").addEventListener("click", () => toast(`Seed: ${state.seed ?? "—"}`));
+  $("btnReset").addEventListener("click", resetAll);
+
+  const saved = load();
+  if(saved){
+    state.seed = saved.seed ?? null;
+    state.lock = saved.lock ?? state.lock;
+    state.value = saved.value ?? state.value;
+    state.roleTag = saved.roleTag ?? state.roleTag;
+  }
+
+  if(!state.value.role && !state.value.aud && !state.value.fmt && !state.value.top){
+    generateAll();
+  }else{
+    if(state.seed == null) newSeed();
+    state.roleTag = state.lock.role ? tagOfRoleString(state.value.role) : (state.roleTag || "school");
+    render();
+  }
+})();
+</script>
+</body>
+</html>

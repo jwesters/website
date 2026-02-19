@@ -1,0 +1,898 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Acrostic Poem Builder</title>
+  <style>
+    :root{
+      --bg:#0f1222;
+      --text:#eef1ff;
+      --muted:#b7c0ff;
+      --border:rgba(255,255,255,.12);
+      --shadow: 0 14px 34px rgba(0,0,0,.45);
+      --radius:16px;
+      --good:#6bffb1;
+      --bad:#ff6b6b;
+      --accent:#7aa2ff;
+    }
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(1100px 700px at 20% 10%, #1b2150 0%, rgba(27,33,80,0) 55%),
+                  radial-gradient(1000px 650px at 80% 0%, #2a1d4a 0%, rgba(42,29,74,0) 55%),
+                  var(--bg);
+      color:var(--text);
+    }
+    .wrap{ max-width:1100px; margin:0 auto; padding:22px 16px 28px; }
+    .top{ display:flex; gap:14px; flex-wrap:wrap; align-items:stretch; }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid var(--border);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+      padding:14px;
+    }
+    .controls{ flex: 1 1 520px; min-width: 320px; }
+    .actions{ flex: 1 1 360px; min-width: 320px; display:flex; flex-direction:column; gap:10px; justify-content:space-between; }
+    h1{ margin:0 0 10px; font-size:18px; letter-spacing:.2px; }
+    p{ margin:0; color:var(--muted); font-size:13px; line-height:1.35; }
+    label{ display:block; font-size:12px; color:var(--muted); margin:0 0 6px; }
+    .row{ display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-top:12px; }
+    .field{ flex:1 1 220px; min-width:220px; }
+    input[type="text"]{
+      width:100%;
+      padding:12px 12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.18);
+      color:var(--text);
+      outline:none;
+      font-size:15px;
+    }
+    input[type="text"]::placeholder{ color: rgba(238,241,255,.55); }
+    .btn{
+      appearance:none;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.07);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 11px 12px;
+      cursor:pointer;
+      font-weight:650;
+      letter-spacing:.15px;
+      box-shadow: 0 10px 22px rgba(0,0,0,.25);
+      transition: transform .05s ease, background .15s ease, border-color .15s ease;
+      user-select:none;
+      width:auto;
+    }
+    .btn:hover{ background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.18); }
+    .btn:active{ transform: translateY(1px); }
+    .primary{
+      background: linear-gradient(180deg, rgba(122,162,255,.35), rgba(122,162,255,.18));
+      border-color: rgba(122,162,255,.55);
+    }
+    .good{
+      background: linear-gradient(180deg, rgba(107,255,177,.22), rgba(107,255,177,.10));
+      border-color: rgba(107,255,177,.55);
+    }
+    .bad{
+      background: linear-gradient(180deg, rgba(255,107,107,.22), rgba(255,107,107,.10));
+      border-color: rgba(255,107,107,.55);
+    }
+
+    .status{
+      margin-top:10px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      font-size:13px;
+      color:var(--muted);
+    }
+    .pill{
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.16);
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .pill.ok{ color: rgba(107,255,177,.95); border-color: rgba(107,255,177,.35); }
+    .pill.err{ color: rgba(255,107,107,.95); border-color: rgba(255,107,107,.35); }
+
+    .btnGrid{ display:flex; flex-direction:column; gap:10px; }
+    .btnRow{ display:flex; gap:10px; flex-wrap:wrap; }
+
+    .main{ margin-top:14px; }
+    .poemCard{ padding:14px; }
+    .emptyHint{
+      color: rgba(183,192,255,.9);
+      font-size: 14px;
+      padding: 4px 2px 10px;
+    }
+
+    .grid{ display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+    .line{ display:grid; grid-template-columns: 62px 1fr; gap:8px; align-items:start; }
+    .letterBox{
+      height:48px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.18);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:900;
+      font-size:26px;
+      letter-spacing:.5px;
+      color: var(--text);
+    }
+    .textWrap{
+      border-radius:14px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.14);
+      padding:8px 10px;
+    }
+    textarea{
+      width:100%;
+      resize:none;
+      border:none;
+      outline:none;
+      background: transparent;
+      color: var(--text);
+      font-size:18px;
+      line-height:1.35;
+      min-height:26px;
+      font-family: inherit;
+    }
+
+    .toast{
+      position: fixed;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      background: rgba(10,12,24,.92);
+      border: 1px solid rgba(255,255,255,.14);
+      box-shadow: var(--shadow);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 13px;
+      display:none;
+      z-index: 999;
+      max-width: calc(100vw - 24px);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    @media print{
+      body{ background:#fff; color:#000; }
+      .top, .status, .toast, .emptyHint{ display:none !important; }
+      .wrap{ max-width:none; padding:0; margin:0; }
+      .card{ box-shadow:none; border:none; background:none; }
+      .letterBox, .textWrap{ border:1px solid #000; background:none; color:#000; }
+      textarea{ color:#000; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="card controls">
+        <h1>Acrostic Poem Builder</h1>
+        <p>Type an acrostic word (A–Z and spaces). Then click <b>Build poem</b> and write beside each letter.</p>
+
+        <div class="row">
+          <div class="field" style="flex:1 1 320px; min-width: 260px;">
+            <label for="wordInput">Acrostic word (max 15 letters; spaces allowed)</label>
+            <input id="wordInput" type="text" placeholder="e.g., FRIENDSHIP" autocomplete="off" />
+          </div>
+
+          <div class="field" style="flex:0 0 170px; min-width: 170px;">
+            <label>&nbsp;</label>
+            <button id="buildBtn" class="btn primary" style="width:100%;">Build poem</button>
+            <div style="height:10px;"></div>
+            <button id="clearBtn" class="btn bad" style="width:100%;">Clear</button>
+          </div>
+        </div>
+
+        <div class="status" aria-live="polite">
+          <span class="pill" id="lettersPill">Letters: 0 / 15</span>
+          <span class="pill" id="sharePill">Share link: not ready</span>
+        </div>
+      </div>
+
+      <div class="card actions">
+        <div>
+          <h1>Actions</h1>
+          <p>Share link includes the full poem and is compressed.</p>
+        </div>
+
+        <div class="btnGrid">
+          <div class="btnRow">
+            <button id="copyLinkBtn" class="btn good">Copy share link</button>
+            <button id="copyTextBtn" class="btn">Copy poem text</button>
+          </div>
+          <div class="btnRow">
+            <button id="pdfBtn" class="btn primary">Download PDF</button>
+            <button id="printBtn" class="btn">Print</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="card poemCard">
+        <div class="emptyHint" id="emptyHint">Type an acrostic word above and click <b>Build poem</b>.</div>
+        <div class="grid" id="grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+/* ========= LZ-String (URL-safe) — MIT — minimal parts needed ========= */
+const LZString = (function() {
+  const f = String.fromCharCode;
+  const keyStrUriSafe = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$";
+  function getBaseValue(alphabet, character) {
+    if (!getBaseValue._cache) getBaseValue._cache = {};
+    if (!getBaseValue._cache[alphabet]) {
+      getBaseValue._cache[alphabet] = {};
+      for (let i = 0; i < alphabet.length; i++) getBaseValue._cache[alphabet][alphabet.charAt(i)] = i;
+    }
+    return getBaseValue._cache[alphabet][character];
+  }
+  function compressToEncodedURIComponent(input) {
+    if (input == null) return "";
+    return _compress(input, 6, a => keyStrUriSafe.charAt(a));
+  }
+  function decompressFromEncodedURIComponent(input) {
+    if (input == null) return "";
+    if (input === "") return null;
+    input = input.replace(/ /g, "+");
+    return _decompress(input.length, 32, index => getBaseValue(keyStrUriSafe, input.charAt(index)));
+  }
+  function _compress(uncompressed, bitsPerChar, getCharFromInt) {
+    if (uncompressed == null) return "";
+    let i, value;
+    const context_dictionary = {};
+    const context_dictionaryToCreate = {};
+    let context_c = "";
+    let context_wc = "";
+    let context_w = "";
+    let context_enlargeIn = 2;
+    let context_dictSize = 3;
+    let context_numBits = 2;
+    const context_data = [];
+    let context_data_val = 0;
+    let context_data_position = 0;
+
+    for (let ii = 0; ii < uncompressed.length; ii += 1) {
+      context_c = uncompressed.charAt(ii);
+      if (!Object.prototype.hasOwnProperty.call(context_dictionary, context_c)) {
+        context_dictionary[context_c] = context_dictSize++;
+        context_dictionaryToCreate[context_c] = true;
+      }
+      context_wc = context_w + context_c;
+      if (Object.prototype.hasOwnProperty.call(context_dictionary, context_wc)) {
+        context_w = context_wc;
+      } else {
+        if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w)) {
+          if (context_w.charCodeAt(0) < 256) {
+            for (i = 0; i < context_numBits; i++) {
+              context_data_val = (context_data_val << 1);
+              if (context_data_position == bitsPerChar - 1) { context_data_position = 0; context_data.push(getCharFromInt(context_data_val)); context_data_val = 0; }
+              else context_data_position++;
+            }
+            value = context_w.charCodeAt(0);
+            for (i = 0; i < 8; i++) {
+              context_data_val = (context_data_val << 1) | (value & 1);
+              if (context_data_position == bitsPerChar - 1) { context_data_position = 0; context_data.push(getCharFromInt(context_data_val)); context_data_val = 0; }
+              else context_data_position++;
+              value = value >> 1;
+            }
+          } else {
+            value = 1;
+            for (i = 0; i < context_numBits; i++) {
+              context_data_val = (context_data_val << 1) | value;
+              if (context_data_position == bitsPerChar - 1) { context_data_position = 0; context_data.push(getCharFromInt(context_data_val)); context_data_val = 0; }
+              else context_data_position++;
+              value = 0;
+            }
+            value = context_w.charCodeAt(0);
+            for (i = 0; i < 16; i++) {
+              context_data_val = (context_data_val << 1) | (value & 1);
+              if (context_data_position == bitsPerChar - 1) { context_data_position = 0; context_data.push(getCharFromInt(context_data_val)); context_data_val = 0; }
+              else context_data_position++;
+              value = value >> 1;
+            }
+          }
+          context_enlargeIn--;
+          if (context_enlargeIn == 0) { context_enlargeIn = Math.pow(2, context_numBits); context_numBits++; }
+          delete context_dictionaryToCreate[context_w];
+        } else {
+          value = context_dictionary[context_w];
+          for (i = 0; i < context_numBits; i++) {
+            context_data_val = (context_data_val << 1) | (value & 1);
+            if (context_data_position == bitsPerChar - 1) { context_data_position = 0; context_data.push(getCharFromInt(context_data_val)); context_data_val = 0; }
+            else context_data_position++;
+            value = value >> 1;
+          }
+        }
+        context_enlargeIn--;
+        if (context_enlargeIn == 0) { context_enlargeIn = Math.pow(2, context_numBits); context_numBits++; }
+        context_dictionary[context_wc] = context_dictSize++;
+        context_w = String(context_c);
+      }
+    }
+
+    if (context_w !== "") {
+      if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w)) {
+        if (context_w.charCodeAt(0) < 256) {
+          for (i = 0; i < context_numBits; i++) {
+            context_data_val = (context_data_val << 1);
+            if (context_data_position == bitsPerChar - 1) { context_data_position = 0; context_data.push(getCharFromInt(context_data_val)); context_data_val = 0; }
+            else context_data_position++;
+          }
+          value = context_w.charCodeAt(0);
+          for (i = 0; i < 8; i++) {
+            context_data_val = (context_data_val << 1) | (value & 1);
+            if (context_data_position == bitsPerChar - 1) { context_data_position = 0; context_data.push(getCharFromInt(context_data_val)); context_data_val = 0; }
+            else context_data_position++;
+            value = value >> 1;
+          }
+        } else {
+          value = 1;
+          for (i = 0; i < context_numBits; i++) {
+            context_data_val = (context_data_val << 1) | value;
+            if (context_data_position == bitsPerChar - 1) { context_data_position = 0; context_data.push(getCharFromInt(context_data_val)); context_data_val = 0; }
+            else context_data_position++;
+            value = 0;
+          }
+          value = context_w.charCodeAt(0);
+          for (i = 0; i < 16; i++) {
+            context_data_val = (context_data_val << 1) | (value & 1);
+            if (context_data_position == bitsPerChar - 1) { context_data_position = 0; context_data.push(getCharFromInt(context_data_val)); context_data_val = 0; }
+            else context_data_position++;
+            value = value >> 1;
+          }
+        }
+        context_enlargeIn--;
+        if (context_enlargeIn == 0) { context_enlargeIn = Math.pow(2, context_numBits); context_numBits++; }
+        delete context_dictionaryToCreate[context_w];
+      } else {
+        value = context_dictionary[context_w];
+        for (i = 0; i < context_numBits; i++) {
+          context_data_val = (context_data_val << 1) | (value & 1);
+          if (context_data_position == bitsPerChar - 1) { context_data_position = 0; context_data.push(getCharFromInt(context_data_val)); context_data_val = 0; }
+          else context_data_position++;
+          value = value >> 1;
+        }
+      }
+      context_enlargeIn--;
+      if (context_enlargeIn == 0) { context_enlargeIn = Math.pow(2, context_numBits); context_numBits++; }
+    }
+
+    value = 2;
+    for (i = 0; i < context_numBits; i++) {
+      context_data_val = (context_data_val << 1) | (value & 1);
+      if (context_data_position == bitsPerChar - 1) { context_data_position = 0; context_data.push(getCharFromInt(context_data_val)); context_data_val = 0; }
+      else context_data_position++;
+      value = value >> 1;
+    }
+
+    while (true) {
+      context_data_val = (context_data_val << 1);
+      if (context_data_position == bitsPerChar - 1) { context_data.push(getCharFromInt(context_data_val)); break; }
+      else context_data_position++;
+    }
+    return context_data.join('');
+  }
+
+  function _decompress(length, resetValue, getNextValue) {
+    const dictionary = [];
+    let enlargeIn = 4;
+    let dictSize = 4;
+    let numBits = 3;
+    let entry = "";
+    const result = [];
+    let i, w, bits, resb, maxpower, power, c;
+    const data = { val:getNextValue(0), position:resetValue, index:1 };
+
+    for (i = 0; i < 3; i += 1) dictionary[i] = i;
+
+    bits = 0; maxpower = Math.pow(2,2); power=1;
+    while (power != maxpower) {
+      resb = data.val & data.position;
+      data.position >>= 1;
+      if (data.position == 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+      bits |= (resb > 0 ? 1 : 0) * power;
+      power <<= 1;
+    }
+
+    switch (c = bits) {
+      case 0:
+        bits = 0; maxpower = Math.pow(2,8); power=1;
+        while (power != maxpower) {
+          resb = data.val & data.position;
+          data.position >>= 1;
+          if (data.position == 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+          bits |= (resb > 0 ? 1 : 0) * power;
+          power <<= 1;
+        }
+        c = f(bits); break;
+      case 1:
+        bits = 0; maxpower = Math.pow(2,16); power=1;
+        while (power != maxpower) {
+          resb = data.val & data.position;
+          data.position >>= 1;
+          if (data.position == 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+          bits |= (resb > 0 ? 1 : 0) * power;
+          power <<= 1;
+        }
+        c = f(bits); break;
+      case 2:
+        return "";
+    }
+
+    dictionary[3] = c;
+    w = c;
+    result.push(c);
+
+    while (true) {
+      if (data.index > length) return "";
+      bits = 0; maxpower = Math.pow(2,numBits); power=1;
+      while (power != maxpower) {
+        resb = data.val & data.position;
+        data.position >>= 1;
+        if (data.position == 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+        bits |= (resb > 0 ? 1 : 0) * power;
+        power <<= 1;
+      }
+
+      switch (c = bits) {
+        case 0:
+          bits = 0; maxpower = Math.pow(2,8); power=1;
+          while (power != maxpower) {
+            resb = data.val & data.position;
+            data.position >>= 1;
+            if (data.position == 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+            bits |= (resb > 0 ? 1 : 0) * power;
+            power <<= 1;
+          }
+          dictionary[dictSize++] = f(bits);
+          c = dictSize-1;
+          enlargeIn--;
+          break;
+        case 1:
+          bits = 0; maxpower = Math.pow(2,16); power=1;
+          while (power != maxpower) {
+            resb = data.val & data.position;
+            data.position >>= 1;
+            if (data.position == 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+            bits |= (resb > 0 ? 1 : 0) * power;
+            power <<= 1;
+          }
+          dictionary[dictSize++] = f(bits);
+          c = dictSize-1;
+          enlargeIn--;
+          break;
+        case 2:
+          return result.join('');
+      }
+
+      if (enlargeIn == 0) { enlargeIn = Math.pow(2, numBits); numBits++; }
+
+      if (dictionary[c]) entry = dictionary[c];
+      else { if (c === dictSize) entry = w + w.charAt(0); else return null; }
+
+      result.push(entry);
+      dictionary[dictSize++] = w + entry.charAt(0);
+      enlargeIn--;
+      w = entry;
+
+      if (enlargeIn == 0) { enlargeIn = Math.pow(2, numBits); numBits++; }
+    }
+  }
+
+  return { compressToEncodedURIComponent, decompressFromEncodedURIComponent };
+})();
+
+/* ========= App ========= */
+const els = {
+  wordInput: document.getElementById('wordInput'),
+  buildBtn: document.getElementById('buildBtn'),
+  clearBtn: document.getElementById('clearBtn'),
+  grid: document.getElementById('grid'),
+  emptyHint: document.getElementById('emptyHint'),
+  lettersPill: document.getElementById('lettersPill'),
+  sharePill: document.getElementById('sharePill'),
+  copyLinkBtn: document.getElementById('copyLinkBtn'),
+  copyTextBtn: document.getElementById('copyTextBtn'),
+  pdfBtn: document.getElementById('pdfBtn'),
+  printBtn: document.getElementById('printBtn'),
+  toast: document.getElementById('toast')
+};
+
+let state = { word:"", lines:[] };
+
+function toast(msg){
+  els.toast.textContent = msg;
+  els.toast.style.display = 'block';
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=> els.toast.style.display='none', 2200);
+}
+
+function sanitizeWord(raw){
+  let w = (raw || "").toUpperCase();
+  w = w.replace(/[^A-Z ]/g, "");
+  w = w.replace(/\s+/g, " ").trim();
+  return w;
+}
+function letterCount(w){ return (w.match(/[A-Z]/g) || []).length; }
+function updatePills(){
+  const lc = letterCount(state.word || "");
+  els.lettersPill.textContent = `Letters: ${lc} / 15`;
+  els.lettersPill.className = 'pill ' + (lc<=15 ? 'ok' : 'err');
+}
+function setShareReady(isReady){
+  if (!state.word){
+    els.sharePill.textContent = "Share link: not ready";
+    return;
+  }
+  els.sharePill.textContent = isReady ? "Share link: ready" : "Share link: needs update";
+}
+
+function autoResize(ta){
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(220, ta.scrollHeight) + 'px';
+}
+function autoFitFont(ta){
+  const base = 18, min = 12;
+  ta.style.fontSize = base + 'px';
+  let loops = 0;
+  while (ta.scrollWidth > ta.clientWidth + 8 && parseFloat(ta.style.fontSize) > min && loops < 12){
+    ta.style.fontSize = (parseFloat(ta.style.fontSize) - 1) + 'px';
+    loops++;
+  }
+}
+
+function validateWord(word){
+  const lc = letterCount(word);
+  if (!word) return { ok:false, msg:"Type an acrostic word first." };
+  if (lc === 0) return { ok:false, msg:"Your word needs at least one letter (A–Z)." };
+  if (lc > 15) return { ok:false, msg:"Max 15 letters (spaces don’t count)." };
+  return { ok:true };
+}
+
+function buildPoem(word, preserve=true){
+  const w = sanitizeWord(word);
+  const v = validateWord(w);
+  if (!v.ok){ toast(v.msg); return; }
+
+  const chars = [...w];
+  let newLines = new Array(chars.length).fill("");
+
+  if (preserve && state.word === w && state.lines.length === newLines.length){
+    newLines = state.lines.slice();
+  }
+
+  state.word = w;
+  state.lines = newLines;
+
+  els.grid.innerHTML = "";
+  if (els.emptyHint) els.emptyHint.style.display = "none";
+
+  chars.forEach((ch, idx)=>{
+    if (ch === " "){
+      const gap = document.createElement('div');
+      gap.style.height = "12px";
+      els.grid.appendChild(gap);
+      return;
+    }
+
+    const line = document.createElement('div');
+    line.className = "line";
+
+    const letterBox = document.createElement('div');
+    letterBox.className = "letterBox";
+    letterBox.textContent = ch;
+
+    const textWrap = document.createElement('div');
+    textWrap.className = "textWrap";
+
+    const ta = document.createElement('textarea');
+    ta.value = state.lines[idx] || "";
+    ta.maxLength = 100;
+    ta.placeholder = "";
+    ta.autocomplete = "off";
+
+    ta.addEventListener('input', ()=>{
+      // maxlength handles it, but keep state synced
+      if (ta.value.length > 100) ta.value = ta.value.slice(0,100);
+      state.lines[idx] = ta.value;
+      autoFitFont(ta);
+      autoResize(ta);
+      persist();
+      setShareReady(false);
+    });
+
+    // initial sizing
+    requestAnimationFrame(()=>{ autoFitFont(ta); autoResize(ta); });
+
+    textWrap.appendChild(ta);
+    line.appendChild(letterBox);
+    line.appendChild(textWrap);
+    els.grid.appendChild(line);
+  });
+
+  updatePills();
+  persist();
+  setShareReady(false);
+  toast("Built!");
+}
+
+function poemAsText(){
+  if (!state.word) return "";
+  const out = [state.word, ""];
+  const chars = [...state.word];
+  for (let i=0;i<chars.length;i++){
+    const ch = chars[i];
+    if (ch === " "){ out.push(""); continue; }
+    out.push(`${ch}  ${(state.lines[i] || "").trimEnd()}`);
+  }
+  return out.join("\n").trimEnd();
+}
+
+function serialize(){
+  return { w: state.word, l: state.lines };
+}
+function persist(){
+  try{ localStorage.setItem("acrostic_poem_v1", JSON.stringify(serialize())); }catch{}
+}
+function restore(obj){
+  if (!obj || typeof obj.w !== "string") return false;
+  const w = sanitizeWord(obj.w);
+  if (!w) return false;
+  state.word = w;
+  state.lines = Array.isArray(obj.l) ? obj.l.map(x => (""+x).slice(0,100)) : new Array([...w].length).fill("");
+  // Build without clearing preserved lines (state already holds them)
+  buildPoem(w, true);
+  return true;
+}
+
+function makeShareURL(){
+  const json = JSON.stringify(serialize());
+  const compressed = LZString.compressToEncodedURIComponent(json);
+  return `${location.origin}${location.pathname}#p=${compressed}`;
+}
+async function copyToClipboard(text){
+  try{ await navigator.clipboard.writeText(text); toast("Copied!"); }
+  catch{
+    const t = document.createElement("textarea");
+    t.value = text; t.style.position="fixed"; t.style.left="-9999px";
+    document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove();
+    toast("Copied!");
+  }
+}
+
+function clearAll(){
+  state = { word:"", lines:[] };
+  els.wordInput.value = "";
+  els.grid.innerHTML = "";
+  if (els.emptyHint) els.emptyHint.style.display = "";
+  updatePills();
+  setShareReady(false);
+  try{ localStorage.removeItem("acrostic_poem_v1"); }catch{}
+  history.replaceState(null, "", `${location.origin}${location.pathname}`);
+  toast("Cleared.");
+}
+
+/* ========= PDF (real download) ========= */
+function pdfEscape(s){
+  return (s || "").replace(/\\/g,"\\\\").replace(/\(/g,"\\(").replace(/\)/g,"\\)").replace(/\r\n/g,"\n").replace(/\r/g,"\n");
+}
+function wrapTextApprox(text, maxWidthPt, fontSize){
+  const avg = 0.52;
+  const maxChars = Math.max(1, Math.floor(maxWidthPt / (fontSize * avg)));
+  if (!text) return [""];
+  if (text.length <= maxChars) return [text];
+  const words = text.split(/\s+/);
+  const lines = [];
+  let cur = "";
+  for (const w of words){
+    if (!cur) cur = w;
+    else if ((cur.length + 1 + w.length) <= maxChars) cur += " " + w;
+    else { lines.push(cur); cur = w; }
+    while (cur.length > maxChars){ lines.push(cur.slice(0,maxChars)); cur = cur.slice(maxChars); }
+  }
+  if (cur) lines.push(cur);
+  return lines.length ? lines : [text.slice(0,maxChars)];
+}
+function buildPdfBytes(){
+  const pageW = 612, pageH = 792; // Letter
+  const margin = 54;
+  const xLetter = margin;
+  const xText = margin + 26;
+  const usableW = pageW - margin*2;
+  const textW = usableW - 26;
+
+  const titleSize = 18, letterSize = 22, textSize = 13;
+  const lhTitle = Math.round(titleSize*1.25);
+  const lhLetter = Math.round(letterSize*1.25);
+  const lhText = Math.round(textSize*1.35);
+
+  const title = state.word || "Acrostic Poem";
+
+  function beginPage(){
+    const ops = [];
+    let y = pageH - margin;
+    ops.push(`BT /F1 ${titleSize} Tf ${xLetter} ${y} Td (${pdfEscape(title)}) Tj ET`);
+    y -= lhTitle;
+    y -= 8;
+    ops.push(`1 w 0 0 0 RG ${xLetter} ${y} m ${pageW-margin} ${y} l S`);
+    y -= 18;
+    return { ops, y };
+  }
+
+  const pagesOps = [];
+  let page = beginPage();
+  const chars = [...(state.word || "")];
+
+  for (let i=0;i<chars.length;i++){
+    const ch = chars[i];
+    if (ch === " "){
+      page.y -= 12;
+      if (page.y < margin + 40){ pagesOps.push(page.ops); page = beginPage(); }
+      continue;
+    }
+
+    const txt = (state.lines[i] || "").trimEnd();
+    const wrapped = wrapTextApprox(txt, textW, textSize);
+    const needed = Math.max(lhLetter, wrapped.length*lhText);
+
+    if (page.y - needed < margin + 30){ pagesOps.push(page.ops); page = beginPage(); }
+
+    page.ops.push(`BT /F1 ${letterSize} Tf ${xLetter} ${page.y} Td (${pdfEscape(ch)}) Tj ET`);
+
+    const baseY = page.y;
+    for (let li=0; li<wrapped.length; li++){
+      const yLine = baseY - li*lhText;
+      page.ops.push(`BT /F2 ${textSize} Tf ${xText} ${yLine} Td (${pdfEscape(wrapped[li] || "")}) Tj ET`);
+    }
+
+    page.y -= Math.max(lhLetter, wrapped.length*lhText) + 6;
+  }
+
+  pagesOps.push(page.ops);
+
+  const objects = [];
+  const addObj = (str)=>{ objects.push(str); return objects.length; };
+
+  const fontBoldObj = addObj(`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>`);
+  const fontRegObj  = addObj(`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>`);
+
+  const kids = [];
+  for (let p=0; p<pagesOps.length; p++){
+    const content = pagesOps[p].join("\n");
+    const stream = `<< /Length ${content.length} >>\nstream\n${content}\nendstream`;
+    const cId = addObj(stream);
+    const pageObj = `<< /Type /Page /Parent 0 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Resources << /Font << /F1 ${fontBoldObj} 0 R /F2 ${fontRegObj} 0 R >> >> /Contents ${cId} 0 R >>`;
+    const pId = addObj(pageObj);
+    kids.push(pId);
+  }
+
+  const pagesObjId = addObj(`<< /Type /Pages /Kids [${kids.map(id=>`${id} 0 R`).join(" ")}] /Count ${kids.length} >>`);
+  const catalogObjId = addObj(`<< /Type /Catalog /Pages ${pagesObjId} 0 R >>`);
+
+  for (const pageId of kids){
+    objects[pageId-1] = objects[pageId-1].replace("/Parent 0 0 R", `/Parent ${pagesObjId} 0 R`);
+  }
+
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+  for (let i=0;i<objects.length;i++){
+    offsets.push(pdf.length);
+    pdf += `${i+1} 0 obj\n${objects[i]}\nendobj\n`;
+  }
+  const xrefStart = pdf.length;
+  pdf += "xref\n";
+  pdf += `0 ${objects.length+1}\n`;
+  pdf += "0000000000 65535 f \n";
+  for (let i=1;i<offsets.length;i++){
+    const off = String(offsets[i]).padStart(10,'0');
+    pdf += `${off} 00000 n \n`;
+  }
+  pdf += "trailer\n";
+  pdf += `<< /Size ${objects.length+1} /Root ${catalogObjId} 0 R >>\n`;
+  pdf += "startxref\n";
+  pdf += `${xrefStart}\n`;
+  pdf += "%%EOF";
+
+  return new TextEncoder().encode(pdf);
+}
+function downloadPdf(){
+  if (!state.word){ toast("Build a poem first."); return; }
+  const bytes = buildPdfBytes();
+  const blob = new Blob([bytes], {type:"application/pdf"});
+  const safeWord = (state.word || "acrostic").replace(/[^A-Z0-9]+/g,"-").replace(/-+/g,"-").replace(/^-|-$/g,"").slice(0,40) || "acrostic";
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Acrostic-Poem-${safeWord}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=> URL.revokeObjectURL(a.href), 1500);
+}
+
+/* ========= Events ========= */
+els.wordInput.addEventListener('input', ()=>{
+  const w = sanitizeWord(els.wordInput.value);
+  els.wordInput.value = w;
+  // live update pill for letters count
+  state.word = w;
+  updatePills();
+});
+
+els.buildBtn.addEventListener('click', ()=> buildPoem(els.wordInput.value, true));
+els.clearBtn.addEventListener('click', ()=> { if (confirm("Clear everything?")) clearAll(); });
+
+els.copyLinkBtn.addEventListener('click', async ()=>{
+  if (!state.word){ toast("Build a poem first."); return; }
+  const url = makeShareURL();
+  setShareReady(true);
+  history.replaceState(null, "", url);
+  await copyToClipboard(url);
+});
+
+els.copyTextBtn.addEventListener('click', async ()=>{
+  if (!state.word){ toast("Build a poem first."); return; }
+  await copyToClipboard(poemAsText());
+});
+
+els.pdfBtn.addEventListener('click', downloadPdf);
+els.printBtn.addEventListener('click', ()=>{ if (!state.word){ toast("Build a poem first."); return; } window.print(); });
+
+/* ========= Boot: restore from hash or local ========= */
+(function init(){
+  // hash
+  const m = (location.hash || "").match(/#p=([^&]+)/);
+  if (m){
+    const json = LZString.decompressFromEncodedURIComponent(m[1]);
+    if (json){
+      try{
+        const obj = JSON.parse(json);
+        if (restore(obj)){
+          els.wordInput.value = state.word;
+          setShareReady(true);
+          toast("Loaded from share link.");
+          return;
+        }
+      }catch{}
+    }
+  }
+  // local
+  try{
+    const raw = localStorage.getItem("acrostic_poem_v1");
+    if (raw){
+      const obj = JSON.parse(raw);
+      if (restore(obj)){
+        els.wordInput.value = state.word;
+        toast("Restored your last poem.");
+      }
+    }
+  }catch{}
+  // empty initial state
+  if (!state.word){
+    updatePills();
+    setShareReady(false);
+  }
+})();
+</script>
+</body>
+</html>

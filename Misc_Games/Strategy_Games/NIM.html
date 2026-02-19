@@ -1,0 +1,793 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Nim / 21 (Classic or Random)</title>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --panel:#f6f7f9;
+      --card:#ffffff;
+      --text:#111827;
+      --muted:#6b7280;
+      --border:#e5e7eb;
+      --shadow: 0 12px 30px rgba(0,0,0,.08);
+      --radius: 16px;
+      --good:#16a34a;
+      --bad:#dc2626;
+      --warn:#f59e0b;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font: 15px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .wrap{
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 18px;
+      display:grid;
+      gap: 14px;
+    }
+    .card{
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .hdr{
+      padding: 14px 16px;
+      border-bottom:1px solid var(--border);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      background:#fafafa;
+    }
+    .hdr h1{ margin:0; font-size:18px; }
+    .sub{ font-size:12px; color:var(--muted); }
+    .pill{
+      font-size:12px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background:#fff;
+      white-space:nowrap;
+    }
+    .pill.good{ background:rgba(22,163,74,.08); border-color:rgba(22,163,74,.25); }
+    .pill.warn{ background:rgba(245,158,11,.10); border-color:rgba(245,158,11,.25); }
+
+    .body{ padding:14px 16px; background:var(--panel); }
+
+    /* Setup */
+    .grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+    @media(max-width:700px){
+      .grid{ grid-template-columns:1fr; }
+    }
+    .field{
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    label{ font-size:12px; color:var(--muted); }
+    select,button{
+      font:inherit;
+      padding:12px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background:#fff;
+    }
+    button{ cursor:pointer; font-weight:800; }
+    button.primary{
+      background:#111827;
+      border-color:#111827;
+      color:#fff;
+    }
+    .row{
+      display:flex;
+      justify-content:flex-end;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .note{ font-size:13px; color:var(--muted); }
+
+    /* Game */
+    .score{
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .big{ font-size:14px; font-weight:900; }
+    .small{ font-size:12px; color:var(--muted); }
+    .turn{ font-weight:900; }
+    .turn.cpu{ color:var(--warn); }
+
+    .panel{
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:14px;
+      display:grid;
+      gap:12px;
+      margin-top:12px;
+    }
+    .totals{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .total{
+      font-size:64px;
+      font-weight:900;
+      line-height:1;
+    }
+    .target{
+      text-align:right;
+    }
+    .target .k{ font-size:12px; color:var(--muted); }
+    .target .v{ font-size:18px; font-weight:900; }
+
+    .timerRow{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .bar{
+      flex:1;
+      min-width:180px;
+      height:12px;
+      border:1px solid var(--border);
+      border-radius:999px;
+      overflow:hidden;
+      background:#fff;
+    }
+    .bar > div{
+      height:100%;
+      width:100%;
+      background:rgba(17,24,39,.2);
+      transform-origin:left center;
+      transform:scaleX(1);
+    }
+
+    .moves{
+      display:flex;
+      justify-content:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .moveBtn{
+      min-width:90px;
+      padding:14px;
+      border-radius:16px;
+      font-size:22px;
+      font-weight:900;
+      border:1px solid var(--border);
+      background:#fff;
+    }
+    .moveBtn:disabled{ opacity:.45; cursor:not-allowed; }
+
+    details{
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:10px 12px;
+      margin-top:12px;
+    }
+    summary{ font-weight:900; cursor:pointer; }
+    summary::-webkit-details-marker{ display:none; }
+    .log{
+      font-size:13px;
+      white-space:pre-wrap;
+      line-height:1.35;
+      max-height: 240px;
+      overflow:auto;
+    }
+
+    /* Modal */
+    .overlay{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index:10;
+    }
+    .overlay.show{ display:flex; }
+    .modal{
+      background:#fff;
+      border-radius:18px;
+      border:1px solid var(--border);
+      box-shadow:var(--shadow);
+      max-width:620px;
+      width:100%;
+      overflow:hidden;
+    }
+    .modalTop{
+      padding:14px 16px;
+      border-bottom:1px solid var(--border);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+    }
+    .modalTop h2{ margin:0; font-size:18px; }
+    .modalBody{
+      padding:14px 16px;
+      background:#fafafa;
+    }
+    .modalBody p{ margin: 8px 0; }
+    .modalActions{
+      padding:14px 16px;
+      display:flex;
+      justify-content:flex-end;
+      gap:10px;
+      border-top:1px solid var(--border);
+      background:#fff;
+      flex-wrap:wrap;
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- SETUP -->
+  <section class="card" id="setupCard">
+    <div class="hdr">
+      <div>
+        <h1>Nim / 21 — Setup</h1>
+        <div class="sub">Choose Classic or Random. Rules are shown before play.</div>
+      </div>
+      <div class="pill" id="setupPill">Ready</div>
+    </div>
+
+    <div class="body">
+      <div class="grid">
+        <div class="field">
+          <label>Play mode</label>
+          <select id="modeSel">
+            <option value="pvc" selected>Human vs Computer</option>
+            <option value="pvp">Human vs Human</option>
+          </select>
+          <div class="note">2-second timer. Timeout auto-picks the largest allowed number.</div>
+        </div>
+
+        <div class="field">
+          <label>Game mode</label>
+          <select id="gameModeSel">
+            <option value="classic">Classic</option>
+            <option value="random" selected>Random</option>
+          </select>
+          <div class="note">Random mode generates a rule set (target, allowed picks, win/lose on target, optional bonus 6/7, optional hidden target if 30+).</div>
+        </div>
+
+        <div class="field" id="diffField">
+          <label>Computer difficulty</label>
+          <select id="diffSel">
+            <option value="easy">Easy (random)</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard (optimal)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Match length (Best of X)</label>
+          <select id="bestOfSel">
+            <option value="1">Best of 1</option>
+            <option value="3">Best of 3</option>
+            <option value="5" selected>Best of 5</option>
+            <option value="7">Best of 7</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <button id="resetBtn">Reset</button>
+        <button class="primary" id="showRulesBtn">Show Rules</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- GAME -->
+  <section class="card" id="gameCard" style="display:none;">
+    <div class="hdr">
+      <div>
+        <h1>Nim / 21 — Game</h1>
+        <div class="sub" id="gameSubtitle">—</div>
+      </div>
+      <div class="pill" id="statusPill">—</div>
+    </div>
+
+    <div class="body">
+      <div class="score">
+        <div>
+          <div class="big" id="roundLine">—</div>
+          <div class="small" id="scoreLine">—</div>
+        </div>
+        <div class="turn" id="turnLine">—</div>
+      </div>
+
+      <div class="panel">
+        <div class="totals">
+          <div>
+            <div class="small">Current total</div>
+            <div class="total" id="totalBig">0</div>
+          </div>
+          <div class="target">
+            <div class="k">Target</div>
+            <div class="v" id="targetVal">—</div>
+            <div class="small" id="targetNote"></div>
+          </div>
+        </div>
+
+        <div class="timerRow">
+          <div>
+            <div class="small">Turn timer</div>
+            <div class="big" id="timerText">—</div>
+          </div>
+          <div class="bar"><div id="timerBar"></div></div>
+        </div>
+
+        <div>
+          <div class="small" style="text-align:center;margin-bottom:8px;">Choose a move</div>
+          <div class="moves" id="movesWrap"></div>
+        </div>
+
+        <div class="row">
+          <button id="backBtn">Back to setup</button>
+          <button class="primary" id="restartBtn">Restart match</button>
+        </div>
+      </div>
+
+      <details open>
+        <summary>Move history</summary>
+        <div class="log" id="log"></div>
+      </details>
+    </div>
+  </section>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" aria-modal="true" role="dialog">
+  <div class="modal">
+    <div class="modalTop">
+      <h2 id="modalTitle">Rules</h2>
+      <div class="pill" id="modalPill"></div>
+    </div>
+    <div class="modalBody">
+      <p id="modalMsg" style="font-weight:900; margin-top:0;"></p>
+      <p id="modalSub" class="note" style="white-space:pre-wrap;"></p>
+    </div>
+    <div class="modalActions">
+      <button id="modalClose">Close</button>
+      <button class="primary" id="modalNext">Continue</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const choice = a => a[Math.floor(Math.random()*a.length)];
+  const shuffle = a => {
+    const b=a.slice();
+    for(let i=b.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [b[i],b[j]]=[b[j],b[i]];
+    }
+    return b;
+  };
+
+  const state = {
+    mode:"pvc",
+    diff:"medium",
+    bestOf:5,
+    gameMode:"random",
+    cfg:null,
+
+    total:0,
+    turn:"P1",
+    inRound:false,
+
+    score1:0,
+    score2:0,
+    round:0,
+
+    revealed:true,     // for hidden target
+    turnMs:3000,
+
+    timer:null,        // setTimeout id
+    raf:null,          // requestAnimationFrame id
+
+    modalState:"rules" // "rules" | "round"
+  };
+
+  function formatPlayer(p){
+    return p==="P1" ? "Player 1" : (state.mode==="pvc" ? "Computer" : "Player 2");
+  }
+
+  function setPill(el, text, kind=""){
+    el.textContent = text;
+    el.className = "pill" + (kind ? " "+kind : "");
+  }
+
+  // ---------- Configs ----------
+  const classicCfg = () => ({
+    kind:"Classic",
+    target:21,
+    allowed:[1,2,3],
+    loseOnTarget:true,
+    bonus67:false,
+    hide:false
+  });
+
+  const randomCfg = () => {
+    const target = Math.floor(22 + Math.random()*12); // 22..33
+    const others = shuffle([2,3,4,5]).slice(0,2);
+    const allowed = shuffle([1, ...others]);          // 3 nums, includes 1
+
+    return {
+      kind:"Random",
+      target,
+      allowed,
+      loseOnTarget: Math.random() < 0.5,              // toggle win/lose on target
+      bonus67: Math.random() < 0.4,                   // optional bonus mode
+      hide: (target >= 30 && Math.random() < 0.6)     // hide until halfway only for 30+
+    };
+  };
+
+  // ---------- Timer (FIXED: cancels RAF + timeout to prevent freeze) ----------
+  function stopTimer(){
+    if (state.timer){
+      clearTimeout(state.timer);
+      state.timer = null;
+    }
+    if (state.raf){
+      cancelAnimationFrame(state.raf);
+      state.raf = null;
+    }
+    $("timerText").textContent = "—";
+    $("timerBar").style.transform = "scaleX(1)";
+  }
+
+  function startTimer(){
+    stopTimer();
+
+    const start = performance.now();
+    const bar = $("timerBar");
+
+    const tick = () => {
+      const left = Math.max(0, state.turnMs - (performance.now() - start));
+      $("timerText").textContent = (left/1000).toFixed(2) + "s";
+      bar.style.transform = `scaleX(${left/state.turnMs})`;
+
+      if (left > 0 && state.inRound){
+        state.raf = requestAnimationFrame(tick);
+      } else {
+        state.raf = null;
+      }
+    };
+
+    tick();
+
+    state.timer = setTimeout(() => {
+      if (!state.inRound) return;
+      // don't auto-pick for computer
+      if (state.mode==="pvc" && state.turn==="P2") return;
+
+      const maxAllowed = Math.max(...state.cfg.allowed);
+      move(maxAllowed, true);
+    }, state.turnMs);
+  }
+
+  // ---------- Rules modal ----------
+  function showRules(){
+    state.mode = $("modeSel").value;
+    state.gameMode = $("gameModeSel").value;
+    state.diff = $("diffSel").value;
+    state.bestOf = +$("bestOfSel").value;
+
+    state.cfg = state.gameMode==="classic" ? classicCfg() : randomCfg();
+
+    const sortedAllowed = [...state.cfg.allowed].sort((a,b)=>a-b);
+
+    const targetLine = state.cfg.hide
+      ? "Target number: Hidden until halfway through the game"
+      : `Target number: ${state.cfg.target}`;
+
+    const rulesLines = [
+      `Mode: ${state.cfg.kind}`,
+      targetLine,
+      `Allowed picks each turn: ${sortedAllowed.join(", ")}`,
+      `Landing on the target: ${state.cfg.loseOnTarget ? "LOSE" : "WIN"}`,
+      `Going over the target: LOSE`,
+      `Turn timer: 3 seconds (auto-picks the largest allowed number)`,
+      `Bonus 6 / 7 extra turn: ${state.cfg.bonus67 ? "ON (landing on 6 or 7 gives another turn)" : "OFF"}`
+    ];
+
+    $("modalTitle").textContent = "Rules";
+    $("modalMsg").textContent = `${state.cfg.kind} • Best of ${state.bestOf}`;
+    $("modalSub").textContent = rulesLines.join("\n"); // NEW LINE PER RULE
+    $("modalPill").textContent = "Read first";
+
+    state.modalState = "rules";
+    $("modalNext").textContent = "Start Match";
+
+    $("overlay").classList.add("show");
+  }
+
+  function startMatch(){
+    $("overlay").classList.remove("show");
+
+    $("setupCard").style.display="none";
+    $("gameCard").style.display="";
+
+    const opp = state.mode==="pvc" ? `vs Computer (${state.diff})` : "vs Player 2";
+    $("gameSubtitle").textContent = `${state.cfg.kind} • ${opp} • Best of ${state.bestOf}`;
+
+    state.score1 = 0;
+    state.score2 = 0;
+    state.round = 0;
+
+    setPill($("statusPill"), "Match started", "good");
+    nextRound();
+  }
+
+  // ---------- Gameplay ----------
+  function updateUI(){
+    const needed = Math.ceil(state.bestOf/2);
+
+    $("roundLine").textContent = `Round ${state.round} of ${needed}`;
+    $("scoreLine").textContent = `Score: Player 1 ${state.score1} – ${formatPlayer("P2")} ${state.score2}`;
+
+    const isCPU = (state.mode==="pvc" && state.turn==="P2");
+    $("turnLine").textContent = `${formatPlayer(state.turn)} to move`;
+    $("turnLine").className = "turn" + (isCPU ? " cpu" : "");
+
+    $("totalBig").textContent = state.total;
+
+    if (state.cfg.hide && !state.revealed){
+      $("targetVal").textContent = "Hidden";
+      $("targetNote").textContent = `Reveals at ${Math.ceil(state.cfg.target/2)}+`;
+    } else {
+      $("targetVal").textContent = state.cfg.target;
+      $("targetNote").textContent = "";
+    }
+
+    renderMoves();
+  }
+
+  function renderMoves(){
+    const wrap = $("movesWrap");
+    wrap.innerHTML = "";
+
+    // show buttons in ascending order for clarity
+    const moves = [...state.cfg.allowed].sort((a,b)=>a-b);
+
+    moves.forEach(n => {
+      const b = document.createElement("button");
+      b.className = "moveBtn";
+      b.textContent = "+" + n;
+
+      const disabled = !state.inRound || (state.mode==="pvc" && state.turn==="P2");
+      b.disabled = disabled;
+
+      b.onclick = () => move(n, false);
+      wrap.appendChild(b);
+    });
+  }
+
+  function beginTurn(){
+    updateUI();
+    startTimer();
+
+    // computer move
+    if (state.mode==="pvc" && state.turn==="P2"){
+      setPill($("statusPill"), "Computer thinking…", "warn");
+      setTimeout(() => {
+        if (!state.inRound) return;
+        // easy: random; medium/hard: simple heuristic without full DP (kept lightweight)
+        let pick;
+        const moves = [...state.cfg.allowed].sort((a,b)=>a-b);
+
+        if (state.diff==="easy"){
+          pick = choice(moves);
+        } else {
+          // medium/hard: try to win immediately (if win-on-target), or avoid immediate loss if lose-on-target
+          const target = state.cfg.target;
+          const winOnTarget = !state.cfg.loseOnTarget;
+
+          // candidate list
+          const legal = moves.filter(m => state.total + m <= target);
+
+          // if exact target is a winning move, take it
+          const finish = legal.find(m => state.total + m === target);
+          if (finish !== undefined && winOnTarget){
+            pick = finish;
+          } else {
+            // otherwise medium sometimes random; hard prefers largest legal
+            if (state.diff==="medium" && Math.random() < 0.25){
+              pick = choice(legal.length ? legal : moves);
+            } else {
+              pick = (legal.length ? legal[legal.length-1] : moves[moves.length-1]);
+            }
+          }
+        }
+
+        move(pick, false, true);
+      }, 420);
+    } else {
+      setPill($("statusPill"), "Your move", "");
+    }
+  }
+
+  function nextRound(){
+    state.round++;
+    state.total = 0;
+    state.turn = "P1";
+    state.inRound = true;
+    state.revealed = !state.cfg.hide;
+
+    $("log").textContent = "";
+    $("log").textContent += `Round ${state.round} begins.\n`;
+
+    if (state.cfg.bonus67){
+      $("log").textContent += `Bonus rule ON: landing on 6 or 7 gives another turn.\n`;
+    }
+    if (state.cfg.hide){
+      $("log").textContent += `Target is hidden until halfway.\n`;
+    }
+    $("log").textContent += `Allowed picks: ${[...state.cfg.allowed].sort((a,b)=>a-b).join(", ")}\n`;
+    $("log").textContent += `Landing on target: ${state.cfg.loseOnTarget ? "LOSE" : "WIN"}\n`;
+
+    beginTurn();
+  }
+
+  function move(n, auto, fromComputer=false){
+  if (!state.inRound) return;
+
+  // Block HUMAN input during computer's turn (but allow the computer itself)
+  if (state.mode === "pvc" && state.turn === "P2" && !fromComputer) return;
+
+  stopTimer(); // prevents freeze
+
+  state.total += n;
+  $("log").textContent += `${formatPlayer(state.turn)} +${n}${auto ? " (auto)" : ""} → ${state.total}\n`;
+
+  // reveal hidden target at halfway
+  if (state.cfg.hide && !state.revealed && state.total >= Math.ceil(state.cfg.target/2)){
+    state.revealed = true;
+    $("log").textContent += `Target revealed!\n`;
+  }
+
+  const target = state.cfg.target;
+
+  // bust
+  if (state.total > target){
+    const winner = (state.turn==="P1") ? "P2" : "P1";
+    endRound(winner, `${formatPlayer(state.turn)} went over ${target}.`);
+    return;
+  }
+
+  // hit target
+  if (state.total === target){
+    const winner = state.cfg.loseOnTarget ? ((state.turn==="P1") ? "P2" : "P1") : state.turn;
+    const reason = state.cfg.loseOnTarget
+      ? `${formatPlayer(state.turn)} landed on ${target} and loses (Lose-on-target).`
+      : `${formatPlayer(state.turn)} landed on ${target} and wins (Win-on-target).`;
+    endRound(winner, reason);
+    return;
+  }
+
+  // bonus turn?
+  const bonusKeepTurn = state.cfg.bonus67 && (state.total===6 || state.total===7);
+  if (!bonusKeepTurn){
+    state.turn = (state.turn==="P1") ? "P2" : "P1";
+  }
+
+  beginTurn();
+}
+
+  function endRound(winner, reason){
+    state.inRound = false;
+    stopTimer(); // IMPORTANT: also stop timer here to be safe
+
+    if (winner==="P1") state.score1++;
+    else state.score2++;
+
+    updateUI();
+
+    const neededToWin = Math.ceil(state.bestOf/2);
+    const matchOver = (state.score1>=neededToWin || state.score2>=neededToWin);
+
+    $("modalTitle").textContent = matchOver ? "Match Over" : "Round Over";
+    $("modalMsg").textContent = matchOver
+      ? `${formatPlayer(winner)} wins the match!`
+      : `${formatPlayer(winner)} wins the round!`;
+    $("modalSub").textContent = `${reason}\n\nScore: ${state.score1}–${state.score2}`;
+    $("modalPill").textContent = `Round ${state.round}`;
+
+    state.modalState = matchOver ? "matchOver" : "roundOver";
+    $("modalNext").textContent = matchOver ? "Back to Setup" : "Next Round";
+
+    $("overlay").classList.add("show");
+  }
+
+  // ---------- Navigation / Buttons ----------
+  function backToSetup(){
+    stopTimer();
+    $("overlay").classList.remove("show");
+    $("gameCard").style.display="none";
+    $("setupCard").style.display="";
+    setPill($("setupPill"), "Ready", "");
+  }
+
+  $("showRulesBtn").onclick = showRules;
+  $("modalClose").onclick = () => $("overlay").classList.remove("show");
+
+  $("modalNext").onclick = () => {
+    $("overlay").classList.remove("show");
+
+    if (state.modalState === "rules"){
+      startMatch();
+      return;
+    }
+
+    if (state.modalState === "roundOver"){
+      nextRound();
+      return;
+    }
+
+    // matchOver
+    backToSetup();
+  };
+
+  $("resetBtn").onclick = () => location.reload();
+  $("backBtn").onclick = backToSetup;
+  $("restartBtn").onclick = backToSetup;
+
+  // Hide difficulty when PvP
+  $("modeSel").addEventListener("change", () => {
+    $("diffField").style.display = ($("modeSel").value==="pvc") ? "" : "none";
+  });
+  // initial diff visibility
+  $("diffField").style.display = ($("modeSel").value==="pvc") ? "" : "none";
+
+  // Keyboard support: number keys 1..5 (only if allowed)
+  window.addEventListener("keydown", (e) => {
+    if (!state.inRound) return;
+    const k = e.key;
+    if (k >= "1" && k <= "5"){
+      const n = parseInt(k, 10);
+      if (state.cfg && state.cfg.allowed.includes(n)){
+        move(n, false);
+      }
+    }
+  });
+
+})();
+</script>
+</body>
+</html>

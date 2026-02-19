@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Exact Four (10×10)</title>
+<style>
+  :root{
+    --bg:#0f1222;
+    --panel:#171a33;
+    --panel2:#1d2140;
+    --text:#eef1ff;
+    --muted:#b8bfe6;
+    --x:#6bffb1;
+    --o:#ff6b6b;
+    --grid:rgba(255,255,255,.14);
+    --hi:#ffd56b;
+    --shadow: 0 14px 34px rgba(0,0,0,.45);
+    --r: 16px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+    background: radial-gradient(1200px 700px at 20% 10%, #1a1f44 0%, var(--bg) 55%, #0b0e1a 100%);
+    color:var(--text);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+  }
+  .app{
+    width:min(980px, 100%);
+    display:grid;
+    grid-template-columns: 1fr 320px;
+    gap:14px;
+  }
+  @media (max-width: 860px){
+    .app{grid-template-columns:1fr}
+  }
+  .card{
+    background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+    border:1px solid rgba(255,255,255,.10);
+    border-radius: var(--r);
+    box-shadow: var(--shadow);
+    overflow:hidden;
+  }
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:14px 16px;
+    background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
+    border-bottom:1px solid rgba(255,255,255,.10);
+  }
+  .title{display:flex; flex-direction:column; gap:2px;}
+  .title b{font-size:16px; letter-spacing:.2px}
+  .title span{font-size:12.5px; color:var(--muted)}
+  .turn{
+    font-size:13px;
+    color:var(--muted);
+    display:flex;
+    align-items:center;
+    gap:8px;
+    white-space:nowrap;
+  }
+  .pill{
+    padding:4px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.07);
+    border:1px solid rgba(255,255,255,.12);
+    font-weight:700;
+    letter-spacing:.3px;
+  }
+  .pill.x{color:var(--x)}
+  .pill.o{color:var(--o)}
+  .boardWrap{ padding:14px; }
+  .board{
+    width:100%;
+    aspect-ratio: 1 / 1;
+    display:grid;
+    grid-template-columns: repeat(10, 1fr);
+    border:2px solid rgba(255,255,255,.12);
+    border-radius: 14px;
+    overflow:hidden;
+    background: rgba(0,0,0,.18);
+  }
+  .cell{
+    aspect-ratio: 1 / 1;           /* lock cell size so board never shifts */
+    border-right:1px solid var(--grid);
+    border-bottom:1px solid var(--grid);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    user-select:none;
+    cursor:pointer;
+    background: rgba(255,255,255,.02);
+    min-width:0;
+  }
+  .cell:nth-child(10n){ border-right:none; }
+  .cell:nth-last-child(-n + 10){ border-bottom:none; }
+  .cell:hover{ background: rgba(255,255,255,.04); }
+  .cell.disabled{ cursor:not-allowed; opacity:.95; }
+  .cell.hi{
+    background: rgba(255,213,107,.16);
+    box-shadow: inset 0 0 0 2px rgba(255,213,107,.55);
+  }
+  .mark{
+    font-weight:900;
+    font-size: 26px;               /* fixed size to avoid layout shift */
+    line-height:1;
+    transform: translateY(-1px);
+    text-shadow: 0 8px 18px rgba(0,0,0,.35);
+  }
+  .mark.x{ color: var(--x); }
+  .mark.o{ color: var(--o); }
+
+  .side{ display:flex; flex-direction:column; }
+  .side .section{
+    padding:14px 16px;
+    border-bottom:1px solid rgba(255,255,255,.10);
+  }
+  .side .section:last-child{border-bottom:none}
+  label{
+    font-size:12.5px;
+    color:var(--muted);
+    display:block;
+    margin: 0 0 6px;
+  }
+
+  /* OPAQUE MENUS/BUTTONS */
+  select, button{
+    width:100%;
+    padding:10px 12px;
+    border-radius: 12px;
+    border:1px solid rgba(255,255,255,.18);
+    background: var(--panel2);     /* solid background, not transparent */
+    color:var(--text);
+    font-size:14px;
+    outline:none;
+  }
+  select{ cursor:pointer; }
+  button{
+    cursor:pointer;
+    font-weight:800;
+    letter-spacing:.2px;
+    background: linear-gradient(180deg, #23286a, #1d2140); /* solid-ish gradient */
+  }
+  button:hover{ filter: brightness(1.06); }
+  button:active{ transform: translateY(1px); }
+
+  .row{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+  .note{ font-size:12.5px; line-height:1.35; color:var(--muted); }
+  .status{
+    margin-top:10px;
+    padding:10px 12px;
+    border-radius: 12px;
+    border:1px solid rgba(255,255,255,.12);
+    background: #12152b;           /* opaque status panel */
+    font-size:13.5px;
+    line-height:1.35;
+  }
+  .status .win{ color: var(--hi); font-weight:900; }
+  .status .lose{ color: #ffb0b0; font-weight:900; }
+  .kbd{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 8px;
+    background: #1d2140;           /* opaque */
+    border:1px solid rgba(255,255,255,.14);
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <div class="card">
+      <div class="topbar">
+        <div class="title">
+          <b>Exact Four</b>
+          <span>10×10 • Win with 4-in-a-row • Lose with 3 (not 4) or 5+</span>
+        </div>
+        <div class="turn">
+          Turn:
+          <span id="turnPill" class="pill x">X</span>
+        </div>
+      </div>
+      <div class="boardWrap">
+        <div id="board" class="board" aria-label="Game board"></div>
+      </div>
+    </div>
+
+    <div class="card side">
+      <div class="section">
+        <label for="modeSel">Mode</label>
+        <select id="modeSel">
+          <option value="pvp">Player vs Player</option>
+          <option value="cpu">Player vs CPU</option>
+        </select>
+        <div style="height:10px"></div>
+        <label for="diffSel">CPU Difficulty</label>
+        <select id="diffSel">
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+        <div style="height:10px"></div>
+        <div class="row">
+          <button id="newBtn" type="button">New Game</button>
+          <button id="swapBtn" type="button" title="Swap who goes first">Swap First</button>
+        </div>
+        <div class="status" id="statusBox"></div>
+      </div>
+
+      <div class="section">
+        <div class="note">
+          <b>Rules (after every move):</b><br/>
+          • If you create a <b>4-in-a-row</b>, you <span class="win">win</span> immediately.<br/>
+          • Otherwise, if you create a <b>3-in-a-row</b> you <span class="lose">lose</span>.<br/>
+          • Otherwise, if you create a <b>5+</b> in a row you <span class="lose">lose</span>.<br/>
+          • Lines count in <b>all directions</b>.
+          <div style="height:8px"></div>
+          Tip: Press <span class="kbd">N</span> for New Game.
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const N = 10;
+  const boardEl = document.getElementById('board');
+  const modeSel = document.getElementById('modeSel');
+  const diffSel = document.getElementById('diffSel');
+  const newBtn = document.getElementById('newBtn');
+  const swapBtn = document.getElementById('swapBtn');
+  const statusBox = document.getElementById('statusBox');
+  const turnPill = document.getElementById('turnPill');
+
+  let grid, turn, gameOver, firstPlayer;
+  let vsCPU = false;
+  let cpuPlays = 'O';
+  let lastHighlight = [];
+
+  function idx(r,c){ return r*N + c; }
+  function inb(r,c){ return r>=0 && r<N && c>=0 && c<N; }
+  function setStatus(html){ statusBox.innerHTML = html; }
+
+  function clearHighlights(){
+    for(const i of lastHighlight){
+      const cell = boardEl.children[i];
+      if(cell) cell.classList.remove('hi');
+    }
+    lastHighlight = [];
+  }
+  function addHighlight(cells){
+    clearHighlights();
+    for(const i of cells){
+      const cell = boardEl.children[i];
+      if(cell) cell.classList.add('hi');
+    }
+    lastHighlight = cells.slice();
+  }
+
+  function renderBoard(){
+    boardEl.innerHTML = '';
+    for(let r=0;r<N;r++){
+      for(let c=0;c<N;c++){
+        const d = document.createElement('div');
+        d.className = 'cell';
+        d.dataset.r = r;
+        d.dataset.c = c;
+        d.addEventListener('click', onCellClick);
+        boardEl.appendChild(d);
+      }
+    }
+  }
+
+  function updateCell(r,c){
+    const v = grid[r][c];
+    const cell = boardEl.children[idx(r,c)];
+    cell.innerHTML = '';
+    if(v){
+      const s = document.createElement('div');
+      s.className = 'mark ' + (v === 'X' ? 'x' : 'o');
+      s.textContent = v;
+      cell.appendChild(s);
+    }
+    cell.classList.toggle('disabled', gameOver || v !== null || (vsCPU && turn === cpuPlays));
+  }
+  function updateAllCells(){
+    for(let r=0;r<N;r++) for(let c=0;c<N;c++) updateCell(r,c);
+  }
+
+  function setTurnPill(){
+    turnPill.textContent = turn;
+    turnPill.classList.toggle('x', turn === 'X');
+    turnPill.classList.toggle('o', turn === 'O');
+  }
+
+  function newGame(){
+    grid = Array.from({length:N}, () => Array(N).fill(null));
+    gameOver = false;
+    turn = firstPlayer;
+    clearHighlights();
+    setTurnPill();
+    updateAllCells();
+    setStatus(vsCPU
+      ? `You are <b>${cpuPlays === 'X' ? 'O' : 'X'}</b>. CPU is <b>${cpuPlays}</b>.`
+      : `Player <b>X</b> vs Player <b>O</b>.`);
+    maybeCPUMove();
+  }
+
+  function swapFirst(){
+    firstPlayer = (firstPlayer === 'X') ? 'O' : 'X';
+    if(vsCPU) cpuPlays = (firstPlayer === 'X') ? 'O' : 'X';
+    newGame();
+  }
+
+  function modeChanged(){
+    vsCPU = (modeSel.value === 'cpu');
+    cpuPlays = (firstPlayer === 'X') ? 'O' : 'X';
+    diffSel.disabled = !vsCPU;
+    newGame();
+  }
+
+  function legalMoves(){
+    const moves = [];
+    for(let r=0;r<N;r++) for(let c=0;c<N;c++) if(grid[r][c]===null) moves.push([r,c]);
+    return moves;
+  }
+
+  function neighborsMoves(radius=1){
+    const cand = new Set();
+    let any = false;
+    for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+      if(grid[r][c] !== null){
+        any = true;
+        for(let dr=-radius; dr<=radius; dr++){
+          for(let dc=-radius; dc<=radius; dc++){
+            const rr=r+dr, cc=c+dc;
+            if(inb(rr,cc) && grid[rr][cc]===null) cand.add(rr+','+cc);
+          }
+        }
+      }
+    }
+    if(!any){
+      [[4,4],[4,5],[5,4],[5,5]].forEach(([r,c]) => cand.add(r+','+c));
+    }
+    return Array.from(cand).map(k => k.split(',').map(Number));
+  }
+
+  function countDir(r,c, dr, dc, sym){
+    let rr=r+dr, cc=c+dc, n=0;
+    while(inb(rr,cc) && grid[rr][cc]===sym){ n++; rr+=dr; cc+=dc; }
+    return n;
+  }
+
+  function collectRun(r,c, dr, dc, sym){
+    const a = countDir(r,c, -dr,-dc, sym);
+    const b = countDir(r,c, dr, dc, sym);
+    const len = 1 + a + b;
+    const sr = r - a*dr;
+    const sc = c - a*dc;
+    const cells = [];
+    for(let k=0;k<len;k++) cells.push(idx(sr + k*dr, sc + k*dc));
+    return {len, cells};
+  }
+
+  function analyzeAfterMove(lastR, lastC, sym){
+    const dirPairs = [[1,0],[0,1],[1,1],[1,-1]];
+    const runs = [];
+    const seen = new Set();
+    for(const [dr,dc] of dirPairs){
+      const run = collectRun(lastR,lastC,dr,dc,sym);
+      const key = run.cells.join(',');
+      if(!seen.has(key)){ seen.add(key); runs.push(run); }
+    }
+
+    // IMPORTANT RULES:
+    // - WIN only if you create an EXACT 4-in-a-row somewhere (length == 4).
+    // - If you make 5+ in a row (and no exact-4 elsewhere), you lose.
+    // - If you make 3 in a row (and no exact-4 elsewhere), you lose.
+    // Priority: any exact-4 wins, even if another line is 3 or 5+.
+
+    const winRun = runs.find(r => r.len === 4);
+    if(winRun) return {result:'WIN', highlight: winRun.cells.slice(0,4)};
+
+    const lose3 = runs.find(r => r.len === 3);
+    if(lose3) return {result:'LOSE3', highlight: lose3.cells.slice()};
+
+    const lose5 = runs.find(r => r.len >= 5);
+    if(lose5) return {result:'LOSE5', highlight: lose5.cells.slice(0,5)};
+
+    return {result:'NONE', highlight:[]};
+  }
+
+  function isTerminalForMove(r,c,sym){
+    const a = analyzeAfterMove(r,c,sym);
+    if(a.result === 'WIN') return {terminal:true, score: 1_000_000};
+    if(a.result === 'LOSE3' || a.result === 'LOSE5') return {terminal:true, score:-1_000_000};
+    return {terminal:false, score:0};
+  }
+
+  function applyMove(r,c,sym){ grid[r][c]=sym; }
+  function undoMove(r,c){ grid[r][c]=null; }
+
+  function evalHeuristic(meSym){
+    const opp = (meSym === 'X') ? 'O' : 'X';
+    function scoreFor(player){
+      let s=0;
+      for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+        if(grid[r][c]===player){
+          const dist = Math.abs(r-4.5)+Math.abs(c-4.5);
+          s += (10 - dist);
+        }
+      }
+      const dirPairs = [[1,0],[0,1],[1,1],[1,-1]];
+      for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+        if(grid[r][c]!==player) continue;
+        for(const [dr,dc] of dirPairs){
+          const pr=r-dr, pc=c-dc;
+          if(inb(pr,pc) && grid[pr][pc]===player) continue;
+          let len=0, rr=r, cc=c;
+          while(inb(rr,cc) && grid[rr][cc]===player){ len++; rr+=dr; cc+=dc; }
+          if(len===1) s += 2;
+          else if(len===2) s += 18;
+          else if(len>=4) s += 500;
+        }
+      }
+      return s;
+    }
+    return scoreFor(meSym) - scoreFor(opp)*0.9;
+  }
+
+  function minimax(depth, player, maximizing, alpha, beta, meSym){
+    if(depth===0) return evalHeuristic(meSym);
+    const moves = neighborsMoves(1);
+    if(moves.length===0) return 0;
+
+    if(maximizing){
+      let best=-Infinity;
+      for(const [r,c] of moves){
+        if(grid[r][c]!==null) continue;
+        applyMove(r,c,player);
+        const term = isTerminalForMove(r,c,player);
+        let val;
+        if(term.terminal) val = (player===meSym) ? term.score : -term.score;
+        else val = minimax(depth-1, (player==='X')?'O':'X', false, alpha, beta, meSym);
+        undoMove(r,c);
+        best = Math.max(best, val);
+        alpha = Math.max(alpha, val);
+        if(beta<=alpha) break;
+      }
+      return best;
+    }else{
+      let best=Infinity;
+      for(const [r,c] of moves){
+        if(grid[r][c]!==null) continue;
+        applyMove(r,c,player);
+        const term = isTerminalForMove(r,c,player);
+        let val;
+        if(term.terminal) val = (player===meSym) ? term.score : -term.score;
+        else val = minimax(depth-1, (player==='X')?'O':'X', true, alpha, beta, meSym);
+        undoMove(r,c);
+        best = Math.min(best, val);
+        beta = Math.min(beta, val);
+        if(beta<=alpha) break;
+      }
+      return best;
+    }
+  }
+
+  function cpuChooseMove(){
+    const diff = diffSel.value;
+    const sym = cpuPlays;
+    const opp = (sym === 'X') ? 'O' : 'X';
+    const allMoves = (diff==='hard') ? neighborsMoves(1) : legalMoves();
+    if(allMoves.length===0) return null;
+
+    const moves = allMoves.slice();
+    for(let i=moves.length-1;i>0;i--){
+      const j = (Math.random()*(i+1))|0;
+      [moves[i],moves[j]]=[moves[j],moves[i]];
+    }
+
+    if(diff==='easy') return moves[0];
+
+    for(const [r,c] of moves){
+      if(grid[r][c]!==null) continue;
+      applyMove(r,c,sym);
+      const term = isTerminalForMove(r,c,sym);
+      undoMove(r,c);
+      if(term.terminal && term.score>0) return [r,c];
+    }
+
+    const safe=[];
+    for(const [r,c] of moves){
+      if(grid[r][c]!==null) continue;
+      applyMove(r,c,sym);
+      const term = isTerminalForMove(r,c,sym);
+      undoMove(r,c);
+      if(!(term.terminal && term.score<0)) safe.push([r,c]);
+    }
+
+    const pool = safe.length ? safe : moves;
+    for(const [r,c] of pool){
+      if(grid[r][c]!==null) continue;
+      applyMove(r,c,opp);
+      const term = isTerminalForMove(r,c,opp);
+      undoMove(r,c);
+      if(term.terminal && term.score>0) return [r,c];
+    }
+
+    if(diff==='medium') return (safe.length ? safe : moves)[0];
+
+    let bestMove=null, bestScore=-Infinity;
+    const cand = neighborsMoves(1);
+    for(const [r,c] of cand){
+      if(grid[r][c]!==null) continue;
+      applyMove(r,c,sym);
+      const term = isTerminalForMove(r,c,sym);
+      let score;
+      if(term.terminal) score = term.score;
+      else score = minimax(2, opp, false, -Infinity, Infinity, sym);
+      undoMove(r,c);
+      score += (Math.random()-0.5)*0.001;
+      if(score>bestScore){ bestScore=score; bestMove=[r,c]; }
+    }
+    return bestMove || (safe.length ? safe : moves)[0];
+  }
+
+  function maybeCPUMove(){
+    if(!vsCPU || gameOver) return;
+    if(turn !== cpuPlays) return;
+    setStatus(`CPU is thinking…`);
+    setTimeout(() => {
+      if(gameOver || turn !== cpuPlays) return;
+      const move = cpuChooseMove();
+      if(!move){
+        setStatus(`No moves left. It's a draw.`);
+        gameOver = true;
+        updateAllCells();
+        return;
+      }
+      doMove(move[0], move[1]);
+    }, 160);
+  }
+
+  function finishGame(kind, sym, highlightCells){
+    gameOver = true;
+    addHighlight(highlightCells);
+    updateAllCells();
+    setTurnPill();
+    if(kind==='WIN') setStatus(`<span class="win">Player ${sym} wins!</span> (Made 4-in-a-row)`);
+    else if(kind==='LOSE3') setStatus(`<span class="lose">Player ${sym} loses!</span> (Made 3-in-a-row)`);
+    else if(kind==='LOSE5') setStatus(`<span class="lose">Player ${sym} loses!</span> (Made 5+ in a row)`);
+  }
+
+  function doMove(r,c){
+    if(gameOver) return;
+    if(grid[r][c]!==null) return;
+
+    const sym = turn;
+    applyMove(r,c,sym);
+    updateCell(r,c);
+
+    const analysis = analyzeAfterMove(r,c,sym);
+    if(analysis.result==='WIN'){ finishGame('WIN', sym, analysis.highlight); return; }
+    if(analysis.result==='LOSE3'){ finishGame('LOSE3', sym, analysis.highlight); return; }
+    if(analysis.result==='LOSE5'){ finishGame('LOSE5', sym, analysis.highlight); return; }
+
+    if(legalMoves().length===0){
+      gameOver = true;
+      setStatus(`Board full. It's a draw.`);
+      updateAllCells();
+      return;
+    }
+
+    turn = (turn==='X') ? 'O' : 'X';
+    setTurnPill();
+    updateAllCells();
+
+    if(vsCPU){
+      const human = (cpuPlays==='X') ? 'O' : 'X';
+      setStatus(`You are <b>${human}</b>. CPU is <b>${cpuPlays}</b>.`);
+    }else{
+      setStatus(`Player <b>${turn}</b>'s turn.`);
+    }
+    maybeCPUMove();
+  }
+
+  function onCellClick(e){
+    const cell = e.currentTarget;
+    const r = Number(cell.dataset.r);
+    const c = Number(cell.dataset.c);
+    if(gameOver) return;
+    if(vsCPU && turn===cpuPlays) return;
+    doMove(r,c);
+  }
+
+  newBtn.addEventListener('click', newGame);
+  swapBtn.addEventListener('click', swapFirst);
+  modeSel.addEventListener('change', modeChanged);
+  window.addEventListener('keydown', (e)=>{ if(e.key.toLowerCase()==='n') newGame(); });
+
+  renderBoard();
+  firstPlayer = 'X';
+  vsCPU = (modeSel.value==='cpu');
+  diffSel.disabled = !vsCPU;
+  modeChanged();
+})();
+</script>
+</body>
+</html>
