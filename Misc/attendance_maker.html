@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Click-to-Mark Attendance</title>
+  <style>
+    :root{
+      --bg:#0f1226; --text:#eef1ff; --muted:#b8bfe6; --border:rgba(255,255,255,.12);
+      --shadow: 0 12px 30px rgba(0,0,0,.35); --ok:#6bffb1; --radius:18px;
+    }
+    *{ box-sizing:border-box; } html,body{ height:100%; }
+    body{
+      margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      background: radial-gradient(1200px 700px at 15% 10%, rgba(122,162,255,.18), transparent 50%),
+                  radial-gradient(900px 600px at 90% 30%, rgba(107,255,177,.12), transparent 55%),
+                  var(--bg); color:var(--text);
+    }
+    .wrap{ max-width: 1100px; margin: 0 auto; padding: 22px 16px 40px; }
+    header{ display:flex; gap:14px; margin-bottom:16px; }
+    h1{ margin:0; font-size:22px; }
+    .subtitle{ margin-top:6px; color:var(--muted); font-size:13px; max-width:72ch; }
+    .card{ background: rgba(255,255,255,.04); border:1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .content{ padding:14px; }
+    .grid2{ display:grid; grid-template-columns: 1.15fr .85fr; gap:14px; }
+    @media (max-width:900px){ .grid2{ grid-template-columns:1fr; } }
+    .field{ display:flex; flex-direction:column; gap:8px; }
+    label{ color:var(--muted); font-size:12px; }
+    textarea, input[type="text"], input[type="range"]{
+      width:100%; border:1px solid var(--border); background: rgba(0,0,0,.20); color:var(--text);
+      border-radius:14px; padding:12px; font-size:14px; box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+    }
+    textarea{ min-height:260px; resize:vertical; }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .btn{ border:1px solid var(--border); background: rgba(255,255,255,.06); color:var(--text);
+      padding:10px 12px; border-radius:14px; font-weight:700; cursor:pointer; }
+    .btn.primary{ border-color: rgba(122,162,255,.55); background: rgba(122,162,255,.18); }
+    .btn.ghost{ background: transparent; }
+    .btn:disabled{ opacity:.55; cursor:not-allowed; }
+    .hint,.small{ color:var(--muted); font-size:12px; }
+    .mono{ font-family: ui-monospace, Menlo, Consolas, monospace; font-size:12px; word-break: break-all; }
+    .linkBox{ display:flex; flex-direction:column; gap:10px; padding:12px; border:1px dashed rgba(255,255,255,.22); border-radius:14px; background: rgba(0,0,0,.16); }
+    .radioGroup{ display:grid; gap:10px; margin-top:6px; }
+    .radio{ display:flex; gap:10px; padding:10px; border:1px solid var(--border); border-radius:14px; background: rgba(255,255,255,.04); }
+    .controlsGrid{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px; }
+    @media (max-width:900px){ .controlsGrid{ grid-template-columns:1fr; } }
+    .pickerRow{ display:flex; gap:10px; align-items:center; padding:10px; border:1px solid var(--border); border-radius:14px; background: rgba(255,255,255,.04); }
+    .pickerRow input[type="color"]{ width:44px; height:34px; border:none; background:transparent; padding:0; cursor:pointer; }
+    .ok{ color: rgba(107,255,177,.95); font-weight:750; }
+    /* Student */
+    .studentOnly{ max-width:1400px; margin:0 auto; padding:18px 12px 28px; min-height:100vh; }
+    .studentTitle{ text-align:center; font-weight:900; margin:6px 0 14px; }
+    .nameGrid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap:10px; }
+    .nameTile{ border:1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.05); padding:14px 12px; cursor:pointer;
+      text-align:center; font-weight:850; box-shadow: 0 8px 20px rgba(0,0,0,.22); transition: transform .12s ease, opacity .18s ease;
+      min-height:54px; display:flex; align-items:center; justify-content:center; border-radius:0; }
+    .nameTile.pop{ animation: pop .18s ease-out; } @keyframes pop{ 0%{transform:scale(1)} 55%{transform:scale(1.05)} 100%{transform:scale(1)} }
+    .nameTile.vanish{ animation: vanish .22s ease-in forwards; } @keyframes vanish{ 0%{transform:scale(1);opacity:1} 100%{transform:scale(.72);opacity:0} }
+    .nameTile.present{
+      opacity:.75;
+      cursor:default;
+      flex-direction: column;
+      gap: 6px;
+      padding-top: 12px;
+      padding-bottom: 10px;
+    }
+    .nameTile.present::after{
+      content:"Present";
+      display:block;
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.35px;
+      line-height: 1;
+    }
+    .emptyState{ padding:16px; border:1px solid var(--border); border-radius:16px; background: rgba(0,0,0,.16); color:var(--muted); font-size:13px; }
+  </style>
+</head>
+<body>
+  <main id="teacherApp" style="display:none;">
+    <div class="wrap">
+      <header>
+        <div>
+          <h1>Click-to-Mark Attendance</h1>
+          <div class="subtitle">Paste names → create a share link → students click their name. <span class="small">Refresh resets.</span></div>
+        </div>
+      </header>
+      <div class="card"><div class="content">
+        <div class="grid2">
+          <div class="field">
+            <label>Title</label>
+            <input id="title" type="text" placeholder="e.g. Period 2 • Morning Attendance" />
+            <div class="controlsGrid">
+              <div class="pickerRow"><input type="color" id="titleColor" value="#eef1ff"/><div><b>Title color</b></div></div>
+              <div class="pickerRow"><input type="range" id="titleSize" min="16" max="48" value="26"/><div><b>Title size</b> <span class="small"><span id="titleSizeLabel">26</span>px</span></div></div>
+            </div>
+            <label>Student names (one per line)</label>
+            <textarea id="names" placeholder="Ava\nNoah\nLiam\nSophia"></textarea>
+            <div class="hint">Blank lines are ignored.</div>
+          </div>
+          <div class="field">
+            <label>When a student clicks</label>
+            <div class="radioGroup">
+              <label class="radio"><input type="radio" name="mode" value="fade" checked/> Fade + show Present</label>
+              <label class="radio"><input type="radio" name="mode" value="hide"/> Disappear</label>
+            </div>
+            <div class="controlsGrid">
+              <div class="pickerRow"><input type="color" id="tileColor" value="#2b335e"/><div><b>Tile color</b></div></div>
+              <div class="pickerRow"><input type="color" id="textColor" value="#eef1ff"/><div><b>Name text</b></div></div>
+              <div class="pickerRow"><input type="color" id="bgColor" value="#0f1226"/><div><b>Student background</b></div></div>
+              <label class="radio" style="grid-column:1/-1;"><input type="radio" name="shape" value="rect" checked/> Rectangles (sharp)</label>
+              <label class="radio" style="grid-column:1/-1;"><input type="radio" name="shape" value="oval"/> Ovals (pill)</label>
+            </div>
+            <div class="row">
+              <button class="btn primary" id="buildLink" type="button">Create share link</button>
+              <button class="btn ghost" id="copyLink" type="button" disabled>Copy link</button>
+            </div>
+            <div class="linkBox" id="linkBox" style="display:none;">
+              <div class="small">Share this with students:</div>
+              <div class="mono" id="shareLink"></div>
+              <div class="small" id="linkStats"></div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </main>
+
+  <main id="studentApp" style="display:none;">
+    <div class="studentOnly" id="studentShell">
+      <div class="studentTitle" id="studentTitle" style="display:none;"></div>
+      <div id="studentBody"></div>
+    </div>
+  </main>
+
+<script>
+  const $ = s => document.querySelector(s);
+  const $$ = s => Array.from(document.querySelectorAll(s));
+  const teacherApp = $("#teacherApp"), studentApp = $("#studentApp");
+  const titleIn=$("#title"), titleColorIn=$("#titleColor"), titleSizeIn=$("#titleSize"), titleSizeLabel=$("#titleSizeLabel");
+  const namesTA=$("#names"), buildLinkBtn=$("#buildLink"), copyBtn=$("#copyLink"), linkBox=$("#linkBox"), shareLinkEl=$("#shareLink"), linkStatsEl=$("#linkStats");
+  const tileColorIn=$("#tileColor"), textColorIn=$("#textColor"), bgColorIn=$("#bgColor");
+  const studentShell=$("#studentShell"), studentTitle=$("#studentTitle"), studentBody=$("#studentBody");
+
+  titleSizeLabel.textContent = titleSizeIn.value;
+  titleSizeIn.addEventListener("input", ()=> titleSizeLabel.textContent = titleSizeIn.value);
+
+  function parseNames(raw){ return raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean); }
+  function getMode(){ return ($$('input[name="mode"]').find(r=>r.checked)||{}).value||"fade"; }
+  function getShape(){ return ($$('input[name="shape"]').find(r=>r.checked)||{}).value||"rect"; }
+  function currentBaseUrl(){ return location.origin + location.pathname + location.search; }
+
+  // Base64 helpers (no external libs, works on file:// and offline)
+  function b64EncodeUnicode(str){
+    return btoa(unescape(encodeURIComponent(str)));
+  }
+  function b64DecodeUnicode(str){
+    return decodeURIComponent(escape(atob(str)));
+  }
+
+  function makeShareHash(obj){
+    const payload = JSON.stringify(obj);
+    const b64 = b64EncodeUnicode(payload);
+    return "#d=" + encodeURIComponent(b64);
+  }
+
+  function buildShareLink(){
+    const names = parseNames(namesTA.value);
+    if(!names.length){
+      linkBox.style.display="block";
+      shareLinkEl.textContent="Please enter at least one name.";
+      linkStatsEl.textContent="";
+      copyBtn.disabled=true;
+      return;
+    }
+    const obj = {
+      n:names, m:getMode(), s:getShape(),
+      t:(titleIn.value||"").trim(),
+      bc:(tileColorIn.value||"#2b335e"),
+      tc:(textColorIn.value||"#eef1ff"),
+      bg:(bgColorIn.value||"#0f1226"),
+      tcol:(titleColorIn.value||"#eef1ff"),
+      tsz: parseInt(titleSizeIn.value,10)||26
+    };
+    const hash = makeShareHash(obj);
+    const link = currentBaseUrl() + hash;
+    linkBox.style.display="block";
+    shareLinkEl.textContent=link;
+    const raw = JSON.stringify(obj);
+    linkStatsEl.textContent = `Names: ${names.length} • Payload: ${hash.length-3} chars • Raw JSON: ${raw.length} chars`;
+    copyBtn.disabled=false;
+  }
+
+  buildLinkBtn.addEventListener("click", e=>{ e.preventDefault(); buildShareLink(); });
+
+  copyBtn.addEventListener("click", async e=>{
+    e.preventDefault();
+    const link = shareLinkEl.textContent;
+    let ok=false;
+    try{
+      if(navigator.clipboard && window.isSecureContext){
+        await navigator.clipboard.writeText(link); ok=true;
+      }
+    }catch{}
+    if(!ok){
+      try{
+        const tmp=document.createElement("textarea");
+        tmp.value=link; tmp.style.position="fixed"; tmp.style.opacity="0";
+        document.body.appendChild(tmp); tmp.focus(); tmp.select();
+        ok=document.execCommand("copy"); tmp.remove();
+      }catch{}
+    }
+    if(ok){ copyBtn.textContent="Copied!"; setTimeout(()=>copyBtn.textContent="Copy link",900); }
+    else{ alert("Copy failed. Please select and copy the link manually."); }
+  });
+
+  function readHashData(){
+    const h = location.hash || "";
+    const m = h.match(/(?:^#|[&?])d=([^&]+)/);
+    if(!m) return null;
+    let d = m[1];
+    try{ d = decodeURIComponent(d); }catch{}
+    try{
+      const json = b64DecodeUnicode(d);
+      const obj = JSON.parse(json);
+      const names = Array.isArray(obj.n)? obj.n.map(s=>String(s).trim()).filter(Boolean):[];
+      const mode = (obj.m==="hide")?"hide":"fade";
+      const shape = (obj.s==="oval")?"oval":"rect";
+      const title = (obj.t||"").trim();
+      return {
+        names, mode, shape, title,
+        tile: obj.bc||"#2b335e",
+        text: obj.tc||"#eef1ff",
+        bg: obj.bg||"#0f1226",
+        tcol: obj.tcol|| (obj.tc||"#eef1ff"),
+        tsz: (Number.isFinite(obj.tsz)&&obj.tsz>=12&&obj.tsz<=72)?obj.tsz:26
+      };
+    }catch(e){ return null; }
+  }
+
+  function applyStudentTheme(data){
+    document.body.style.backgroundImage="none";
+    document.body.style.background = data.bg;
+    studentShell.style.background = data.bg;
+  }
+
+  function renderStudent(data){
+    if(!data || !data.names.length){
+      studentTitle.style.display="none";
+      studentBody.innerHTML = `<div class="emptyState">This share link couldn’t be loaded.</div>`;
+      return;
+    }
+    if(data.title){
+      studentTitle.textContent=data.title;
+      studentTitle.style.display="";
+      studentTitle.style.color=data.tcol;
+      studentTitle.style.fontSize=data.tsz+"px";
+    }else studentTitle.style.display="none";
+
+    applyStudentTheme(data);
+    const grid=document.createElement("div"); grid.className="nameGrid";
+
+    data.names.forEach(name=>{
+      const tile=document.createElement("div");
+      tile.className="nameTile";
+      tile.textContent=name;
+      tile.style.background=data.tile;
+      tile.style.color=data.text;
+      tile.style.borderRadius = (data.shape==="oval")?"999px":"0px";
+
+      tile.addEventListener("click", ()=>{
+        if(data.mode==="fade" && tile.classList.contains("present")) return;
+        tile.classList.remove("pop"); void tile.offsetWidth; tile.classList.add("pop");
+        if(data.mode==="hide"){
+          tile.style.pointerEvents="none";
+          tile.classList.add("vanish");
+          tile.addEventListener("animationend", ()=> tile.remove(), {once:true});
+        }else{
+          tile.classList.add("present");
+          tile.style.pointerEvents="none";
+        }
+      });
+      grid.appendChild(tile);
+    });
+    studentBody.innerHTML=""; studentBody.appendChild(grid);
+  }
+
+  function showTeacher(){
+    studentApp.style.display="none"; teacherApp.style.display="";
+    document.body.style.background=""; document.body.style.backgroundImage="";
+  }
+  function showStudent(){ teacherApp.style.display="none"; studentApp.style.display=""; }
+
+  function init(){
+    const data = readHashData();
+    if(data && data.names.length){ showStudent(); renderStudent(data); }
+    else showTeacher();
+  }
+  window.addEventListener("hashchange", init);
+  window.addEventListener("load", init);
+  init();
+</script>
+</body>
+</html>
