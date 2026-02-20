@@ -1,0 +1,878 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Share-a-Wordle (Teacher + Student)</title>
+  <style>
+    :root{
+      --bg:#0f1224;
+      --panel:#171a33;
+      --panel2:#1d2141;
+      --text:#eef1ff;
+      --muted:#b8bfe6;
+      --border:rgba(255,255,255,.12);
+      --shadow:0 16px 40px rgba(0,0,0,.35);
+
+      --tile:#11142a;
+      --tileBorder:rgba(255,255,255,.18);
+
+      --green:#35c86b;
+      --yellow:#d9b44a;
+      --gray:#3b3f5f;
+
+      --key:#2a2e52;
+      --keyText:#eef1ff;
+      --keyBorder:rgba(255,255,255,.14);
+
+      --danger:#ff5b7a;
+      --ok:#7aa2ff;
+    }
+
+    *{ box-sizing:border-box; }
+    html, body{ height:100%; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(1200px 700px at 15% 10%, rgba(122,162,255,.16), transparent 60%),
+                  radial-gradient(900px 600px at 85% 20%, rgba(53,200,107,.10), transparent 55%),
+                  var(--bg);
+      color: var(--text);
+    }
+
+    .wrap{
+      max-width: 980px;
+      margin: 24px auto 40px;
+      padding: 0 16px;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom: 16px;
+    }
+    .brand{
+      display:flex; align-items:baseline; gap:10px;
+    }
+    .brand h1{
+      font-size: 18px;
+      margin:0;
+      letter-spacing:.2px;
+      font-weight:800;
+    }
+    .brand .tag{
+      font-size: 12px;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.03);
+    }
+
+    .panel{
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+    .panel + .panel{ margin-top: 14px; }
+
+    .row{
+      display:flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+
+    label{
+      display:block;
+      font-size: 12px;
+      color: var(--muted);
+      margin: 0 0 6px;
+    }
+
+    input[type="text"], input[type="number"], select{
+      width: 100%;
+      background: var(--panel2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 12px;
+      outline: none;
+      font-size: 15px;
+    }
+    input::placeholder{ color: rgba(184,191,230,.6); }
+    input:focus, select:focus{
+      border-color: rgba(122,162,255,.65);
+      box-shadow: 0 0 0 3px rgba(122,162,255,.18);
+    }
+
+    .field{
+      min-width: 220px;
+      flex: 1 1 260px;
+    }
+    .field.small{ flex: 0 0 180px; min-width: 180px; }
+
+    .btns{
+      display:flex; gap:10px; flex-wrap:wrap;
+      margin-top: 12px;
+    }
+
+    button{
+      background: var(--key);
+      color: var(--keyText);
+      border: 1px solid var(--keyBorder);
+      border-radius: 12px;
+      padding: 11px 14px;
+      font-weight: 800;
+      cursor: pointer;
+      user-select:none;
+      transition: transform .06s ease, background .15s ease, border-color .15s ease, opacity .15s ease;
+    }
+    button:hover{ border-color: rgba(255,255,255,.22); }
+    button:active{ transform: translateY(1px); }
+    button.primary{
+      background: rgba(53,200,107,.18);
+      border-color: rgba(53,200,107,.35);
+    }
+    button.primary:hover{ border-color: rgba(53,200,107,.55); }
+    button.danger{
+      background: rgba(255,91,122,.15);
+      border-color: rgba(255,91,122,.35);
+    }
+    button:disabled{
+      opacity:.55;
+      cursor:not-allowed;
+    }
+
+    .hint{
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 8px;
+      line-height: 1.35;
+    }
+
+    .linkbox{
+      display:flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .linkbox input{
+      flex: 1 1 520px;
+      min-width: 260px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      padding: 10px 12px;
+    }
+
+    .status{
+      margin-top: 10px;
+      font-size: 13px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.03);
+      color: var(--text);
+      line-height: 1.35;
+    }
+    .status.ok{ border-color: rgba(53,200,107,.35); background: rgba(53,200,107,.10); }
+    .status.bad{ border-color: rgba(255,91,122,.40); background: rgba(255,91,122,.10); }
+
+    /* Game */
+    .gameHeader{
+      display:flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .gameHeader .meta{
+      display:flex; gap: 10px; flex-wrap: wrap;
+      align-items:center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.03);
+      padding: 6px 10px;
+      border-radius: 999px;
+    }
+
+    .gridWrap{
+      display:flex;
+      justify-content:center; /* center the grid horizontally */
+      overflow-x:auto;
+      padding-bottom: 8px;
+    }
+
+    .grid{
+      display:grid;
+      gap: 8px;
+      justify-content: center; /* center tiles within grid */
+      align-content: start;
+      padding: 8px 2px 14px;
+    }
+
+    .tile{
+      width: 46px;
+      height: 46px;
+      border-radius: 10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight: 900;
+      font-size: 18px;
+      letter-spacing: .8px;
+      border: 1px solid var(--tileBorder);
+      background: var(--tile);
+      text-transform: uppercase;
+    }
+
+    .tile.filled{
+      border-color: rgba(255,255,255,.24);
+    }
+
+    .tile.green{ background: rgba(53,200,107,.25); border-color: rgba(53,200,107,.55); }
+    .tile.yellow{ background: rgba(217,180,74,.22); border-color: rgba(217,180,74,.55); }
+    .tile.gray{ background: rgba(59,63,95,.55); border-color: rgba(255,255,255,.10); }
+
+    .keyboard{
+      display:flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
+      user-select:none;
+    }
+    .kbRow{
+      display:flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: nowrap;
+    }
+    .key{
+      min-width: 38px;
+      height: 46px;
+      padding: 0 10px;
+      border-radius: 12px;
+      border: 1px solid var(--keyBorder);
+      background: var(--key);
+      color: var(--keyText);
+      font-weight: 900;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      transition: transform .06s ease, border-color .15s ease, background .15s ease;
+      text-transform: uppercase;
+      font-size: 13px;
+    }
+    .key.wide{ min-width: 78px; }
+    .key:hover{ border-color: rgba(255,255,255,.22); }
+    .key:active{ transform: translateY(1px); }
+
+    .key.green{ background: rgba(53,200,107,.22); border-color: rgba(53,200,107,.55); }
+    .key.yellow{ background: rgba(217,180,74,.20); border-color: rgba(217,180,74,.55); }
+    .key.gray{ background: rgba(59,63,95,.65); border-color: rgba(255,255,255,.10); }
+
+    .footerNote{
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .mono{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    @media (max-width: 520px){
+      .tile{ width: 40px; height: 40px; font-size: 16px; }
+      .key{ height: 44px; min-width: 34px; }
+      .key.wide{ min-width: 70px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <h1>Share-a-Wordle</h1>
+        <div class="tag">teacher setup + student game</div>
+      </div>
+      <div class="brand" style="gap:8px;">
+        <div class="tag mono" id="modeTag">loading…</div>
+      </div>
+    </div>
+
+    <div id="teacherPanel" class="panel" style="display:none;">
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+        <div>
+          <div style="font-weight:900; font-size:16px; margin-bottom:4px;">Teacher setup</div>
+          <div class="hint">Type a word (min 5, max 15 letters), pick the number of guesses (5–9), then copy the share link for students.</div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:14px;">
+        <div class="field">
+          <label for="tWord">Secret word (letters only)</label>
+          <input id="tWord" type="text" placeholder="EXAMPLE" maxlength="15" autocomplete="off" />
+          <div class="hint">A–Z only. No spaces or hyphens. We force uppercase automatically.</div>
+        </div>
+
+        <div class="field small">
+          <label for="tGuesses">Guesses</label>
+          <select id="tGuesses">
+            <option>5</option>
+            <option selected>6</option>
+            <option>7</option>
+            <option>8</option>
+            <option>9</option>
+          </select>
+          <div class="hint">Students will get this many tries.</div>
+        </div>
+      </div>
+
+      <div class="btns">
+        <button class="primary" id="btnMake">Create share link</button>
+        <button id="btnTeacherReset" class="danger">Clear</button>
+      </div>
+
+      <div id="teacherStatus" class="status" style="display:none;"></div>
+
+      <div id="linkArea" style="display:none; margin-top:12px;">
+        <div class="linkbox">
+          <input id="shareLink" type="text" readonly />
+          <button id="btnCopy">Copy link</button>
+        </div>
+        <div class="hint">Tip: If you’re running this as a local file, your link will start with <span class="mono">file://</span>. If it’s hosted on a website (like GitHub Pages), it’ll be a normal URL.</div>
+      </div>
+    </div>
+
+    <div id="studentPanel" class="panel" style="display:none;">
+      <div class="gameHeader">
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <div style="font-weight:900; font-size:16px;">Solve the Wordle</div>
+          <div class="meta">
+            <span class="pill">Word length: <b id="wordLen">—</b></span>
+            <span class="pill">Guesses: <b id="guessTotal">—</b></span>
+            <span class="pill">Remaining: <b id="guessRemain">—</b></span>
+          </div>
+        </div>
+        <div class="meta" id="studentMetaRight"></div>
+      </div>
+
+      <div id="studentStatus" class="status" style="display:none;"></div>
+
+      <div class="gridWrap">
+        <div id="grid" class="grid" aria-label="Wordle grid"></div>
+      </div>
+
+      <div class="keyboard" aria-label="On-screen keyboard">
+        <div class="kbRow" id="kbRow1"></div>
+        <div class="kbRow" id="kbRow2"></div>
+        <div class="kbRow" id="kbRow3"></div>
+      </div>
+
+      <div class="footerNote">
+        <b>Rules:</b> Classic Wordle coloring (greens first, then yellows). Duplicate letters are handled the same way Wordle does (based on letter counts).
+        <br />
+        <span id="longWordNote" style="display:none;"><b>Note:</b> Because this word is longer than 10 letters, guesses may be <b>shorter</b> than the word length. (Still letters only.)</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ---------- Utilities ----------
+    function onlyAZ(str){
+      return (str || "").toUpperCase().replace(/[^A-Z]/g, "");
+    }
+
+    function rot13(str){
+      return (str || "").replace(/[A-Za-z]/g, ch => {
+        const c = ch.charCodeAt(0);
+        const base = (c >= 97) ? 97 : 65;
+        return String.fromCharCode(((c - base + 13) % 26) + base);
+      }).toUpperCase();
+    }
+
+    function parseHash(){
+      const h = (location.hash || "").replace(/^#/, "").trim();
+      const out = {};
+      if(!h) return out;
+      for(const part of h.split("&")){
+        const [k, ...rest] = part.split("=");
+        if(!k) continue;
+        out[decodeURIComponent(k)] = decodeURIComponent(rest.join("=") || "");
+      }
+      return out;
+    }
+
+    function buildShareURL(encodedWord, guesses){
+      const base = location.href.split("#")[0];
+      return base + "#w=" + encodeURIComponent(encodedWord) + "&g=" + encodeURIComponent(String(guesses));
+    }
+
+    function setStatus(el, msg, kind){
+      el.style.display = "block";
+      el.classList.remove("ok","bad");
+      if(kind) el.classList.add(kind);
+      el.textContent = msg;
+    }
+
+    function clamp(n, lo, hi){
+      n = Number(n);
+      if(!Number.isFinite(n)) return lo;
+      return Math.max(lo, Math.min(hi, n));
+    }
+
+    // ---------- Wordle evaluation (classic with duplicates) ----------
+    function evaluateGuess(answer, guess, wordLen){
+      answer = answer.toUpperCase();
+      guess = guess.toUpperCase();
+
+      const result = new Array(wordLen).fill("");
+      const ansChars = answer.split("");
+      const guessChars = new Array(wordLen).fill("");
+
+      for(let i=0;i<wordLen;i++){
+        guessChars[i] = (i < guess.length) ? guess[i] : "";
+      }
+
+      const counts = Object.create(null);
+
+      // First pass: greens
+      for(let i=0;i<wordLen;i++){
+        const g = guessChars[i];
+        const a = ansChars[i];
+        if(g && g === a){
+          result[i] = "green";
+        }else{
+          counts[a] = (counts[a] || 0) + 1;
+        }
+      }
+
+      // Second pass: yellows/grays
+      for(let i=0;i<wordLen;i++){
+        if(result[i] === "green") continue;
+        const g = guessChars[i];
+        if(!g){
+          result[i] = "";
+          continue;
+        }
+        if(counts[g] > 0){
+          result[i] = "yellow";
+          counts[g] -= 1;
+        }else{
+          result[i] = "gray";
+        }
+      }
+
+      return result;
+    }
+
+    // ---------- App State ----------
+    const state = {
+      mode: "teacher",
+      answer: "",
+      encoded: "",
+      guessesTotal: 6,
+      wordLen: 0,
+      row: 0,
+      col: 0,
+      boardLetters: [],
+      boardMarks: [],
+      finished: false,
+      allowShortGuesses: false
+    };
+
+    // ---------- DOM ----------
+    const teacherPanel = document.getElementById("teacherPanel");
+    const studentPanel = document.getElementById("studentPanel");
+    const modeTag = document.getElementById("modeTag");
+
+    // Teacher DOM
+    const tWord = document.getElementById("tWord");
+    const tGuesses = document.getElementById("tGuesses");
+    const btnMake = document.getElementById("btnMake");
+    const btnCopy = document.getElementById("btnCopy");
+    const shareLink = document.getElementById("shareLink");
+    const linkArea = document.getElementById("linkArea");
+    const teacherStatus = document.getElementById("teacherStatus");
+    const btnTeacherReset = document.getElementById("btnTeacherReset");
+
+    // Student DOM
+    const gridEl = document.getElementById("grid");
+    const wordLenEl = document.getElementById("wordLen");
+    const guessTotalEl = document.getElementById("guessTotal");
+    const guessRemainEl = document.getElementById("guessRemain");
+    const studentStatus = document.getElementById("studentStatus");
+    const longWordNote = document.getElementById("longWordNote");
+
+    const kbRow1 = document.getElementById("kbRow1");
+    const kbRow2 = document.getElementById("kbRow2");
+    const kbRow3 = document.getElementById("kbRow3");
+
+    // ---------- Keyboard ----------
+    const KB_ROWS = [
+      ["Q","W","E","R","T","Y","U","I","O","P"],
+      ["A","S","D","F","G","H","J","K","L"],
+      ["ENTER","Z","X","C","V","B","N","M","⌫"]
+    ];
+
+    const keyEls = new Map();
+
+    function makeKey(label){
+      const btn = document.createElement("div");
+      btn.className = "key" + ((label === "ENTER" || label === "⌫") ? " wide" : "");
+      btn.textContent = label;
+      btn.tabIndex = 0;
+      btn.setAttribute("role","button");
+      btn.addEventListener("click", () => onKey(label));
+      btn.addEventListener("keydown", (e) => {
+        if(e.key === "Enter" || e.key === " "){
+          e.preventDefault();
+          onKey(label);
+        }
+      });
+      return btn;
+    }
+
+    function buildKeyboard(){
+      kbRow1.innerHTML = ""; kbRow2.innerHTML = ""; kbRow3.innerHTML = "";
+      keyEls.clear();
+      const rows = [kbRow1, kbRow2, kbRow3];
+      for(let r=0;r<KB_ROWS.length;r++){
+        for(const k of KB_ROWS[r]){
+          const el = makeKey(k);
+          rows[r].appendChild(el);
+          if(k.length === 1) keyEls.set(k, el);
+        }
+      }
+    }
+
+    function setKeyColor(letter, color){
+      const el = keyEls.get(letter);
+      if(!el) return;
+
+      const cur = el.classList.contains("green") ? "green" :
+                  el.classList.contains("yellow") ? "yellow" :
+                  el.classList.contains("gray") ? "gray" : "";
+
+      const rank = { "":0, "gray":1, "yellow":2, "green":3 };
+      if(rank[color] > rank[cur]){
+        el.classList.remove("green","yellow","gray");
+        if(color) el.classList.add(color);
+      }
+    }
+
+    // ---------- Grid ----------
+    function initBoard(){
+      state.boardLetters = Array.from({length: state.guessesTotal}, () => Array(state.wordLen).fill(""));
+      state.boardMarks = Array.from({length: state.guessesTotal}, () => Array(state.wordLen).fill(""));
+      state.row = 0;
+      state.col = 0;
+      state.finished = false;
+
+      gridEl.style.gridTemplateColumns = `repeat(${state.wordLen}, 46px)`;
+      gridEl.innerHTML = "";
+
+      for(let r=0;r<state.guessesTotal;r++){
+        for(let c=0;c<state.wordLen;c++){
+          const t = document.createElement("div");
+          t.className = "tile";
+          t.id = `t_${r}_${c}`;
+          t.textContent = "";
+          gridEl.appendChild(t);
+        }
+      }
+
+      updateMeta();
+      clearStudentStatus();
+      buildKeyboard();
+      longWordNote.style.display = state.allowShortGuesses ? "inline" : "none";
+    }
+
+    function tileEl(r,c){
+      return document.getElementById(`t_${r}_${c}`);
+    }
+
+    function paintTile(r,c){
+      const el = tileEl(r,c);
+      if(!el) return;
+      const ch = state.boardLetters[r][c];
+      const mk = state.boardMarks[r][c];
+
+      el.textContent = ch || "";
+      el.classList.toggle("filled", !!ch);
+      el.classList.remove("green","yellow","gray");
+      if(mk) el.classList.add(mk);
+    }
+
+    function repaintRow(r){
+      for(let c=0;c<state.wordLen;c++){
+        paintTile(r,c);
+      }
+    }
+
+    function updateMeta(){
+      wordLenEl.textContent = String(state.wordLen);
+      guessTotalEl.textContent = String(state.guessesTotal);
+      guessRemainEl.textContent = String(Math.max(0, state.guessesTotal - state.row));
+    }
+
+    function clearStudentStatus(){
+      studentStatus.style.display = "none";
+      studentStatus.textContent = "";
+      studentStatus.classList.remove("ok","bad");
+    }
+
+    function showStudentStatus(msg, kind){
+      setStatus(studentStatus, msg, kind);
+    }
+
+    // ---------- Input Handling ----------
+    function canType(){
+      return state.mode === "student" && !state.finished;
+    }
+
+    function onKey(label){
+      if(!canType()) return;
+
+      if(label === "ENTER"){
+        submitGuess();
+        return;
+      }
+      if(label === "⌫"){
+        backspace();
+        return;
+      }
+      if(label.length === 1 && label >= "A" && label <= "Z"){
+        addLetter(label);
+      }
+    }
+
+    function addLetter(letter){
+      if(state.finished) return;
+      if(state.col >= state.wordLen) return;
+      state.boardLetters[state.row][state.col] = letter;
+      state.col += 1;
+      paintTile(state.row, state.col-1);
+      clearStudentStatus();
+    }
+
+    function backspace(){
+      if(state.finished) return;
+      if(state.col <= 0) return;
+      state.col -= 1;
+      state.boardLetters[state.row][state.col] = "";
+      paintTile(state.row, state.col);
+      clearStudentStatus();
+    }
+
+    function currentGuessString(){
+      return state.boardLetters[state.row].join("").replace(/[^A-Z]/g,"");
+    }
+
+    function submitGuess(){
+      if(state.finished) return;
+
+      const guess = currentGuessString();
+      const minLen = state.allowShortGuesses ? 1 : state.wordLen;
+
+      if(guess.length < minLen){
+        showStudentStatus(state.allowShortGuesses
+          ? "Type at least 1 letter, then press ENTER."
+          : `Guess must be exactly ${state.wordLen} letters.`, "bad");
+        return;
+      }
+      if(!state.allowShortGuesses && guess.length !== state.wordLen){
+        showStudentStatus(`Guess must be exactly ${state.wordLen} letters.`, "bad");
+        return;
+      }
+
+      const marks = evaluateGuess(state.answer, guess, state.wordLen);
+      for(let c=0;c<state.wordLen;c++){
+        state.boardMarks[state.row][c] = marks[c];
+      }
+      repaintRow(state.row);
+
+      for(let c=0;c<state.wordLen;c++){
+        const ch = state.boardLetters[state.row][c];
+        const mk = state.boardMarks[state.row][c];
+        if(ch && mk) setKeyColor(ch, mk);
+      }
+
+      const win = (guess.length === state.wordLen && guess === state.answer);
+
+      state.row += 1;
+      state.col = 0;
+      updateMeta();
+
+      if(win){
+        state.finished = true;
+        showStudentStatus(`✅ You got it! The word was ${state.answer}.`, "ok");
+        return;
+      }
+
+      if(state.row >= state.guessesTotal){
+        state.finished = true;
+        showStudentStatus(`❌ Out of guesses. The word was ${state.answer}.`, "bad");
+        return;
+      }
+    }
+
+    window.addEventListener("keydown", (e) => {
+      if(!canType()) return;
+
+      const k = e.key;
+      if(k === "Enter"){
+        e.preventDefault();
+        onKey("ENTER");
+        return;
+      }
+      if(k === "Backspace"){
+        e.preventDefault();
+        onKey("⌫");
+        return;
+      }
+      if(k && k.length === 1){
+        const up = k.toUpperCase();
+        if(up >= "A" && up <= "Z"){
+          e.preventDefault();
+          onKey(up);
+        }
+      }
+    });
+
+    // ---------- Mode Switching ----------
+    function showTeacher(){
+      state.mode = "teacher";
+      modeTag.textContent = "TEACHER MODE";
+      teacherPanel.style.display = "block";
+      studentPanel.style.display = "none";
+      linkArea.style.display = "none";
+      teacherStatus.style.display = "none";
+      tWord.value = "";
+      tGuesses.value = "6";
+      tWord.focus();
+    }
+
+    function showStudent(encodedWord, guesses){
+      state.mode = "student";
+      modeTag.textContent = "STUDENT MODE";
+      teacherPanel.style.display = "none";
+      studentPanel.style.display = "block";
+
+      const decoded = rot13(encodedWord || "");
+      const cleaned = onlyAZ(decoded);
+
+      if(!cleaned){
+        showTeacher();
+        setStatus(teacherStatus, "No valid word found in the link. Enter a word to create a share link.", "bad");
+        return;
+      }
+
+      state.answer = cleaned;
+      state.encoded = encodedWord;
+      state.wordLen = cleaned.length;
+      state.guessesTotal = clamp(guesses, 5, 9);
+
+      state.allowShortGuesses = state.wordLen > 10;
+
+      initBoard();
+      updateMeta();
+      clearStudentStatus();
+    }
+
+    // ---------- Teacher Actions ----------
+    btnMake.addEventListener("click", () => {
+      const wordRaw = tWord.value || "";
+      const cleaned = onlyAZ(wordRaw);
+      const guesses = clamp(tGuesses.value, 5, 9);
+
+      if(!cleaned){
+        setStatus(teacherStatus, "Please enter a word using letters A–Z only.", "bad");
+        linkArea.style.display = "none";
+        return;
+      }
+      if(cleaned.length < 5){
+        setStatus(teacherStatus, "Word must be at least 5 letters long.", "bad");
+        linkArea.style.display = "none";
+        return;
+      }
+      if(cleaned.length > 15){
+        setStatus(teacherStatus, "Max word length is 15 letters.", "bad");
+        linkArea.style.display = "none";
+        return;
+      }
+
+      const encoded = rot13(cleaned);
+      const url = buildShareURL(encoded, guesses);
+
+      shareLink.value = url;
+      linkArea.style.display = "block";
+      setStatus(teacherStatus, `Share link created. Word length: ${cleaned.length}. Guesses: ${guesses}.`, "ok");
+      shareLink.focus();
+      shareLink.select();
+    });
+
+    btnCopy.addEventListener("click", async () => {
+      const txt = shareLink.value || "";
+      if(!txt) return;
+      try{
+        await navigator.clipboard.writeText(txt);
+        setStatus(teacherStatus, "Copied to clipboard.", "ok");
+      }catch(err){
+        try{
+          shareLink.focus();
+          shareLink.select();
+          document.execCommand("copy");
+          setStatus(teacherStatus, "Copied to clipboard.", "ok");
+        }catch(e2){
+          setStatus(teacherStatus, "Copy failed. You can still select the link and copy it manually.", "bad");
+        }
+      }
+    });
+
+    btnTeacherReset.addEventListener("click", () => {
+      tWord.value = "";
+      tGuesses.value = "6";
+      linkArea.style.display = "none";
+      teacherStatus.style.display = "none";
+      tWord.focus();
+    });
+
+    tWord.addEventListener("input", () => {
+      const before = tWord.value;
+      const cleaned = onlyAZ(before).slice(0,15);
+      if(before !== cleaned) tWord.value = cleaned;
+    });
+
+    // ---------- Boot ----------
+    function boot(){
+      const params = parseHash();
+      const w = params.w || "";
+      const g = params.g || "6";
+
+      if(w){
+        showStudent(w, g);
+      }else{
+        showTeacher();
+      }
+    }
+
+    boot();
+    window.addEventListener("hashchange", boot);
+  </script>
+</body>
+</html>
