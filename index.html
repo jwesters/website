@@ -1,9 +1,9 @@
-<!DOCTYPE html>  
-<html lang="en">     
-<head>        
-<meta charset="UTF-8" /> 
-<meta name="viewport" content="width=device-width, initial-scale=1" /> 
-<title>https://github.com/jwesters/ Website Repo</title>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>jwesters website</title>
 <style>
   :root { color-scheme: light; }
   body { font-family: Arial, sans-serif; padding: 28px; background:#f7f7f7; }
@@ -21,245 +21,147 @@
   a:hover { text-decoration:underline; }
   .muted { color:#777; font-weight:400; margin-left:6px; font-size: 0.9em; }
   .icon { display:inline-block; width: 22px; }
-  .nested { padding-left: 14px; }
-  .root-files { margin: 6px 0 14px; border: 1px solid #eee; border-radius: 10px; background:#fafafa; }
-  .root-files ul { padding-bottom: 6px; }
+  .nested { padding-left: 14px; padding-bottom: 8px; }
   .footer { margin-top: 14px; font-size: 0.95em; color:#666; }
 </style>
 </head>
 <body>
-  <h1>
-    <a href="https://github.com/jwesters/website" target="_blank" rel="noopener noreferrer">
-      https://github.com/jwesters/ Website Repo
-    </a>
-  </h1>
-  <p>Auto-generated list of HTML files in this repository (folder tree & sorted).</p>
-
+  <h1>jwesters website</h1><p><br>
   <div class="panel">
-    <div id="status" class="muted">Loading…</div>
-    <div id="groups"></div>
-    <div id="lastUpdated" class="footer"></div>
-  </div>
+    <div id="status" class="muted"></div>
 
-<script>
-(() => {
-  const OWNER = "jwesters";
-  const REPO  = "website";
-  const SITE_URL = `https://${OWNER}.github.io/${REPO}`;
-  const API_BASE = `https://api.github.com/repos/${OWNER}/${REPO}/contents`;
-
-  // ✅ Options
-  const HIDE_ROOT_INDEX_HTML = true;   // hides "/index.html" only
-  const HIDE_ALL_INDEX_HTML  = false;  // hide every ".../index.html" if true
-
-  // ✅ Hide any .html file if "NSFW" appears anywhere in the filename (case-insensitive)
-  const HIDE_NSFw_ANYWHERE_IN_FILENAME = true;
-
-  // --- Icon mapping (folder/file keywords -> emoji)
-  const ICON_RULES = [
-    { re: /(tetris)/i, icon: "🧱" },
-    { re: /(hangman)/i, icon: "🪓" },
-    { re: /(maze)/i, icon: "🧩" },
-    { re: /(qr|qrcode)/i, icon: "🔳" },
-    { re: /(wordle|numdle|dle)/i, icon: "🟩" },
-    { re: /(card|deck)/i, icon: "🃏" },
-    { re: /(clock|time)/i, icon: "⏰" },
-    { re: /(math|quiz)/i, icon: "➗" },
-    { re: /(game|play)/i, icon: "🎮" },
-    { re: /(index)/i, icon: "🏠" },
-  ];
-  const DEFAULT_FOLDER_ICON = "📁";
-  const DEFAULT_FILE_ICON   = "📄";
-
-  const statusEl = document.getElementById("status");
-  const groupsEl = document.getElementById("groups");
-  const lastUpdatedEl = document.getElementById("lastUpdated");
-
-  function iconFor(name, isDir) {
-    const hit = ICON_RULES.find(r => r.re.test(name));
-    if (hit) return hit.icon;
-    return isDir ? DEFAULT_FOLDER_ICON : DEFAULT_FILE_ICON;
-  }
-
-  // --- Tree model
-  // node = { name, path, files: [{name,path}], dirs: Map<string,node> }
-  const tree = { name: "", path: "", files: [], dirs: new Map() };
-
-  function getOrCreateDir(parent, dirName, fullPath) {
-    if (!parent.dirs.has(dirName)) {
-      parent.dirs.set(dirName, { name: dirName, path: fullPath, files: [], dirs: new Map() });
-    }
-    return parent.dirs.get(dirName);
-  }
-
-  function addFileToTree(filePath) {
-    const parts = filePath.split("/").filter(Boolean);
-    const fileName = parts.pop();
-    let node = tree;
-    let accum = "";
-    for (const dir of parts) {
-      accum = accum ? `${accum}/${dir}` : dir;
-      node = getOrCreateDir(node, dir, accum);
-    }
-    node.files.push({ name: fileName, path: filePath });
-  }
-
-  function filenameContainsNSFW(filename) {
-    return filename.toLowerCase().includes("nsfw");
-  }
-
-  function shouldHide(filePath) {
-    const lowerPath = filePath.toLowerCase();
-    const filename = (filePath.split("/").pop() || "").toLowerCase();
-
-    if (HIDE_ALL_INDEX_HTML && lowerPath.endsWith("/index.html")) return true;
-    if (HIDE_ROOT_INDEX_HTML && lowerPath === "index.html") return true;
-
-    if (HIDE_NSFw_ANYWHERE_IN_FILENAME && filenameContainsNSFW(filename)) return true;
-
-    return false;
-  }
-
-  // Recursively walk the repo using the Contents API
-  async function fetchFiles(path = "") {
-    const url = path ? `${API_BASE}/${encodeURIComponent(path)}` : API_BASE;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`GitHub API error: ${res.status} ${res.statusText}`);
-    const items = await res.json();
-
-    for (const item of items) {
-      if (item.type === "dir") {
-        await fetchFiles(item.path);
-      } else if (item.type === "file" && item.name.toLowerCase().endsWith(".html")) {
-        if (!shouldHide(item.path)) addFileToTree(item.path);
-      }
-    }
-  }
-
-  function sortAlpha(a, b) {
-    return a.localeCompare(b, undefined, { sensitivity: "base" });
-  }
-
-  function countHtmlInSubtree(node) {
-    let count = node.files.length;
-    for (const child of node.dirs.values()) count += countHtmlInSubtree(child);
-    return count;
-  }
-
-  function pruneEmptyDirs(node) {
-    // Remove directories that contain no html files anywhere below them
-    for (const [name, child] of Array.from(node.dirs.entries())) {
-      pruneEmptyDirs(child);
-      if (countHtmlInSubtree(child) === 0) node.dirs.delete(name);
-    }
-  }
-
-  function buildFileList(files) {
-    const ul = document.createElement("ul");
-    files.sort((a, b) => sortAlpha(a.name, b.name));
-
-    for (const f of files) {
-      const li = document.createElement("li");
-      const a = document.createElement("a");
-      a.href = `${SITE_URL}/${f.path}`;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      a.innerHTML = `<span class="icon">${iconFor(f.path, false)}</span>${f.name}`;
-      li.appendChild(a);
-      ul.appendChild(li);
-    }
-    return ul;
-  }
-
-  function renderDir(node, openByDefault = false, depth = 0) {
-    const details = document.createElement("details");
-    details.open = openByDefault;
-
-    const total = countHtmlInSubtree(node);
-    const summary = document.createElement("summary");
-    summary.innerHTML = `<span class="icon">${iconFor(node.name, true)}</span>${node.name} <span class="muted">(${total})</span>`;
-    details.appendChild(summary);
-
-    const wrap = document.createElement("div");
-    wrap.className = "nested";
-
-    // Files directly in this folder
-    if (node.files.length) {
-      wrap.appendChild(buildFileList(node.files));
-    }
-
-    // Subfolders
-    const subfolderNames = Array.from(node.dirs.keys()).sort(sortAlpha);
-    for (const subName of subfolderNames) {
-      const child = node.dirs.get(subName);
-      wrap.appendChild(renderDir(child, false, depth + 1));
-    }
-
-    details.appendChild(wrap);
-    return details;
-  }
-
-  function buildUI() {
-    statusEl.textContent = "";
-    groupsEl.innerHTML = "";
-
-    pruneEmptyDirs(tree);
-
-    // Root files (no "Root folder" section — just a plain list at top if any)
-    if (tree.files.length) {
-      const box = document.createElement("div");
-      box.className = "root-files";
-      box.appendChild(buildFileList(tree.files));
-      groupsEl.appendChild(box);
-    }
-
-    // Top-level folders
-    const topFolders = Array.from(tree.dirs.keys()).sort(sortAlpha);
-    for (const name of topFolders) {
-      const node = tree.dirs.get(name);
-      // closed by default; you can change to true if you want first folder opened
-      groupsEl.appendChild(renderDir(node, false, 0));
-    }
-
-    const totalCount = tree.files.length + topFolders.reduce((sum, n) => sum + countHtmlInSubtree(tree.dirs.get(n)), 0);
-    if (totalCount === 0) {
-      statusEl.textContent = "No HTML files found.";
-    }
-  }
-
-  async function setLastUpdated() {
-    // Show the last commit date that touched THIS index.html (matches “uploaded to GitHub” best)
-    const url = `https://api.github.com/repos/${OWNER}/${REPO}/commits?path=index.html&per_page=1`;
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`GitHub API error: ${res.status} ${res.statusText}`);
-      const data = await res.json();
-      const iso = data?.[0]?.commit?.committer?.date || data?.[0]?.commit?.author?.date;
-      if (!iso) throw new Error("No commit date found.");
-
-      const d = new Date(iso);
-      const formatted = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "long", day: "numeric" }).format(d);
-      lastUpdatedEl.textContent = `Last updated: ${formatted} `;
-    } catch (e) {
-      console.warn(e);
-      lastUpdatedEl.textContent = "Last updated: (unavailable)";
-    }
-  }
-
-  (async () => {
-    try {
-      statusEl.textContent = "Loading…";
-      await fetchFiles("");
-      buildUI();
-      await setLastUpdated();
-    } catch (err) {
-      console.error(err);
-      statusEl.textContent = "Failed to load files. Check the browser console for details.";
-      lastUpdatedEl.textContent = "";
-    }
-  })();
-})();
-</script>
-
+    <details><summary><span class="icon">🟩</span>DLE_and_ThisOrThat_Games <span class="muted">(10)</span></summary><div class="nested"><details><summary><span class="icon">📁</span>BillboardNumberOnes <span class="muted">(1)</span></summary><div class="nested"><ul>
+<li><a href="DLE_and_ThisOrThat_Games/BillboardNumberOnes/BillboardNumberOne.html" target="_blank" rel="noopener noreferrer"><span class="icon">🟩</span>BillboardNumberOne.html</a></li>
+</ul></div></details>
+<details><summary><span class="icon">📁</span>HockeyStats <span class="muted">(1)</span></summary><div class="nested"><ul>
+<li><a href="DLE_and_ThisOrThat_Games/HockeyStats/HockeyStats.html" target="_blank" rel="noopener noreferrer"><span class="icon">🟩</span>HockeyStats.html</a></li>
+</ul></div></details>
+<details><summary><span class="icon">📁</span>RealCityOrNot <span class="muted">(1)</span></summary><div class="nested"><ul>
+<li><a href="DLE_and_ThisOrThat_Games/RealCityOrNot/RealCityOrNot.html" target="_blank" rel="noopener noreferrer"><span class="icon">🟩</span>RealCityOrNot.html</a></li>
+</ul></div></details>
+<details><summary><span class="icon">📁</span>SoccerStats <span class="muted">(1)</span></summary><div class="nested"><ul>
+<li><a href="DLE_and_ThisOrThat_Games/SoccerStats/SoccerStats.html" target="_blank" rel="noopener noreferrer"><span class="icon">🟩</span>SoccerStats.html</a></li>
+</ul></div></details>
+<details><summary><span class="icon">🎮</span>WeightGame <span class="muted">(1)</span></summary><div class="nested"><ul>
+<li><a href="DLE_and_ThisOrThat_Games/WeightGame/WeightGame.html" target="_blank" rel="noopener noreferrer"><span class="icon">🟩</span>WeightGame.html</a></li>
+</ul></div></details>
+<ul>
+<li><a href="DLE_and_ThisOrThat_Games/binaryDLE.html" target="_blank" rel="noopener noreferrer"><span class="icon">🟩</span>binaryDLE.html</a></li>
+<li><a href="DLE_and_ThisOrThat_Games/CanPrices.html" target="_blank" rel="noopener noreferrer"><span class="icon">🟩</span>CanPrices.html</a></li>
+<li><a href="DLE_and_ThisOrThat_Games/CityPop.html" target="_blank" rel="noopener noreferrer"><span class="icon">🟩</span>CityPop.html</a></li>
+<li><a href="DLE_and_ThisOrThat_Games/numdle.html" target="_blank" rel="noopener noreferrer"><span class="icon">🟩</span>numdle.html</a></li>
+<li><a href="DLE_and_ThisOrThat_Games/polygon_guess.html" target="_blank" rel="noopener noreferrer"><span class="icon">🟩</span>polygon_guess.html</a></li>
+</ul></div></details>
+<details><summary><span class="icon">➗</span>Math_Games <span class="muted">(13)</span></summary><div class="nested"><details><summary><span class="icon">➗</span>MathBingo <span class="muted">(2)</span></summary><div class="nested"><ul>
+<li><a href="Math_Games/MathBingo/BingoCardGenerator.html" target="_blank" rel="noopener noreferrer"><span class="icon">🃏</span>BingoCardGenerator.html</a></li>
+<li><a href="Math_Games/MathBingo/MathBingo.html" target="_blank" rel="noopener noreferrer"><span class="icon">➗</span>MathBingo.html</a></li>
+</ul></div></details>
+<details><summary><span class="icon">➗</span>MathFacts <span class="muted">(5)</span></summary><div class="nested"><ul>
+<li><a href="Math_Games/MathFacts/AlgFactsCountUp.html" target="_blank" rel="noopener noreferrer"><span class="icon">➗</span>AlgFactsCountUp.html</a></li>
+<li><a href="Math_Games/MathFacts/FactsCountDown.html" target="_blank" rel="noopener noreferrer"><span class="icon">➗</span>FactsCountDown.html</a></li>
+<li><a href="Math_Games/MathFacts/FactsCountUp.html" target="_blank" rel="noopener noreferrer"><span class="icon">➗</span>FactsCountUp.html</a></li>
+<li><a href="Math_Games/MathFacts/OperationMemory.html" target="_blank" rel="noopener noreferrer"><span class="icon">➗</span>OperationMemory.html</a></li>
+<li><a href="Math_Games/MathFacts/OperationsGames.html" target="_blank" rel="noopener noreferrer"><span class="icon">➗</span>OperationsGames.html</a></li>
+</ul></div></details>
+<ul>
+<li><a href="Math_Games/15-TicTacToe.html" target="_blank" rel="noopener noreferrer"><span class="icon">➗</span>15-TicTacToe.html</a></li>
+<li><a href="Math_Games/7dice.html" target="_blank" rel="noopener noreferrer"><span class="icon">➗</span>7dice.html</a></li>
+<li><a href="Math_Games/CartesianTicTacToe.html" target="_blank" rel="noopener noreferrer"><span class="icon">➗</span>CartesianTicTacToe.html</a></li>
+<li><a href="Math_Games/Divisibility-rules-2-10.html" target="_blank" rel="noopener noreferrer"><span class="icon">➗</span>Divisibility-rules-2-10.html</a></li>
+<li><a href="Math_Games/Math-Crossword.html" target="_blank" rel="noopener noreferrer"><span class="icon">➗</span>Math-Crossword.html</a></li>
+<li><a href="Math_Games/PEDMASgame.html" target="_blank" rel="noopener noreferrer"><span class="icon">➗</span>PEDMASgame.html</a></li>
+</ul></div></details>
+<details><summary><span class="icon">📁</span>Misc <span class="muted">(19)</span></summary><div class="nested"><details><summary><span class="icon">📁</span>ELA <span class="muted">(8)</span></summary><div class="nested"><ul>
+<li><a href="Misc/ELA/Acrostic-Poem-Builder.html" target="_blank" rel="noopener noreferrer"><span class="icon">📄</span>Acrostic-Poem-Builder.html</a></li>
+<li><a href="Misc/ELA/create_a_wordle.html" target="_blank" rel="noopener noreferrer"><span class="icon">🟩</span>create_a_wordle.html</a></li>
+<li><a href="Misc/ELA/fry-speak-check-300.html" target="_blank" rel="noopener noreferrer"><span class="icon">📄</span>fry-speak-check-300.html</a></li>
+<li><a href="Misc/ELA/haiku-checker.html" target="_blank" rel="noopener noreferrer"><span class="icon">📄</span>haiku-checker.html</a></li>
+<li><a href="Misc/ELA/PWIM_Shareable_Link_Annotator.html" target="_blank" rel="noopener noreferrer"><span class="icon">📄</span>PWIM_Shareable_Link_Annotator.html</a></li>
+<li><a href="Misc/ELA/RAFT_Randomizer.html" target="_blank" rel="noopener noreferrer"><span class="icon">📄</span>RAFT_Randomizer.html</a></li>
+<li><a href="Misc/ELA/Spelling-Test-Audio.html" target="_blank" rel="noopener noreferrer"><span class="icon">✎</span>Spelling-Test-Audio.html</a></li>
+<li><a href="Misc/ELA/word_scrambler_maker.html" target="_blank" rel="noopener noreferrer"><span class="icon">📄</span>word_scrambler_maker.html</a></li>
+</ul></div></details>
+<details><summary><span class="icon">➗</span>Math <span class="muted">(3)</span></summary><div class="nested"><ul>
+<li><a href="Misc/Math/10frames.html" target="_blank" rel="noopener noreferrer"><span class="icon">➗</span>10frames.html</a></li>
+<li><a href="Misc/Math/magic-square-generator.html" target="_blank" rel="noopener noreferrer"><span class="icon">➗</span>magic-square-generator.html</a></li>
+<li><a href="Misc/Math/Math_Questions_Generator.html" target="_blank" rel="noopener noreferrer"><span class="icon">➗</span>Math_Questions_Generator.html</a></li>
+</ul></div></details>
+<details><summary><span class="icon">📁</span>Random <span class="muted">(2)</span></summary><div class="nested"><ul>
+<li><a href="Misc/Random/dice_roller.html" target="_blank" rel="noopener noreferrer"><span class="icon">📄</span>dice_roller.html</a></li>
+<li><a href="Misc/Random/Random_Card.html" target="_blank" rel="noopener noreferrer"><span class="icon">🃏</span>Random_Card.html</a></li>
+</ul></div></details>
+<ul>
+<li><a href="Misc/attendance_maker.html" target="_blank" rel="noopener noreferrer"><span class="icon">📄</span>attendance_maker.html</a></li>
+<li><a href="Misc/pitch_higher_quiz.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎵</span>pitch_higher_quiz.html</a></li>
+<li><a href="Misc/QR_Creator.html" target="_blank" rel="noopener noreferrer"><span class="icon">🔳</span>QR_Creator.html</a></li>
+<li><a href="Misc/rorschach.html" target="_blank" rel="noopener noreferrer"><span class="icon">📄</span>rorschach.html</a></li>
+<li><a href="Misc/scattergories.html" target="_blank" rel="noopener noreferrer"><span class="icon">📄</span>scattergories.html</a></li>
+<li><a href="Misc/WordSearchGenerator.html" target="_blank" rel="noopener noreferrer"><span class="icon">📄</span>WordSearchGenerator.html</a></li>
+</ul></div></details>
+<details><summary><span class="icon">🎮</span>Misc_Games <span class="muted">(38)</span></summary><div class="nested"><details><summary><span class="icon">♔</span>ChessGames <span class="muted">(4)</span></summary><div class="nested"><ul>
+<li><a href="Misc_Games/ChessGames/knight-tour-multiplayer.html" target="_blank" rel="noopener noreferrer"><span class="icon">♔</span>knight-tour-multiplayer.html</a></li>
+<li><a href="Misc_Games/ChessGames/knights-tour-blocked.html" target="_blank" rel="noopener noreferrer"><span class="icon">♔</span>knights-tour-blocked.html</a></li>
+<li><a href="Misc_Games/ChessGames/misere-chess-self-checkmate.html" target="_blank" rel="noopener noreferrer"><span class="icon">♔</span>misere-chess-self-checkmate.html</a></li>
+<li><a href="Misc_Games/ChessGames/misere-chess960-self-checkmate.html" target="_blank" rel="noopener noreferrer"><span class="icon">♔</span>misere-chess960-self-checkmate.html</a></li>
+</ul></div></details>
+<details><summary><span class="icon">🪓</span>Hangman <span class="muted">(1)</span></summary><div class="nested"><ul>
+<li><a href="Misc_Games/Hangman/Hangman.html" target="_blank" rel="noopener noreferrer"><span class="icon">🪓</span>Hangman.html</a></li>
+</ul></div></details>
+<details><summary><span class="icon">🧩</span>Mazes <span class="muted">(2)</span></summary><div class="nested"><ul>
+<li><a href="Misc_Games/Mazes/Maze_Creator.html" target="_blank" rel="noopener noreferrer"><span class="icon">🧩</span>Maze_Creator.html</a></li>
+<li><a href="Misc_Games/Mazes/Maze_Creator_Game.html" target="_blank" rel="noopener noreferrer"><span class="icon">🧩</span>Maze_Creator_Game.html</a></li>
+</ul></div></details>
+<details><summary><span class="icon">🎮</span>Strategy_Games <span class="muted">(15)</span></summary><div class="nested"><ul>
+<li><a href="Misc_Games/Strategy_Games/anti-dots-and-boxes.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>anti-dots-and-boxes.html</a></li>
+<li><a href="Misc_Games/Strategy_Games/antiSOS.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>antiSOS.html</a></li>
+<li><a href="Misc_Games/Strategy_Games/Ataxx_Clone.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>Ataxx_Clone.html</a></li>
+<li><a href="Misc_Games/Strategy_Games/black-hole.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>black-hole.html</a></li>
+<li><a href="Misc_Games/Strategy_Games/bomb_hunt_minesweeper.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>bomb_hunt_minesweeper.html</a></li>
+<li><a href="Misc_Games/Strategy_Games/bridgit.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>bridgit.html</a></li>
+<li><a href="Misc_Games/Strategy_Games/classic_minesweeper.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>classic_minesweeper.html</a></li>
+<li><a href="Misc_Games/Strategy_Games/dots-and-boxes.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>dots-and-boxes.html</a></li>
+<li><a href="Misc_Games/Strategy_Games/HexaSudoku.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>HexaSudoku.html</a></li>
+<li><a href="Misc_Games/Strategy_Games/HexVariants.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>HexVariants.html</a></li>
+<li><a href="Misc_Games/Strategy_Games/hold-the-line.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>hold-the-line.html</a></li>
+<li><a href="Misc_Games/Strategy_Games/NIM.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>NIM.html</a></li>
+<li><a href="Misc_Games/Strategy_Games/Obstruction.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>Obstruction.html</a></li>
+<li><a href="Misc_Games/Strategy_Games/ShikakuBlanks.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>ShikakuBlanks.html</a></li>
+<li><a href="Misc_Games/Strategy_Games/tetromino-battleship.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>tetromino-battleship.html</a></li>
+</ul></div></details>
+<details><summary><span class="icon">🎮</span>TicTacToeGames <span class="muted">(8)</span></summary><div class="nested"><ul>
+<li><a href="Misc_Games/TicTacToeGames/exact-four-10x10.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>exact-four-10x10.html</a></li>
+<li><a href="Misc_Games/TicTacToeGames/expandable-tic-tac-toe-4inarow.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>expandable-tic-tac-toe-4inarow.html</a></li>
+<li><a href="Misc_Games/TicTacToeGames/order-and-chaos.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>order-and-chaos.html</a></li>
+<li><a href="Misc_Games/TicTacToeGames/row_call.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>row_call.html</a></li>
+<li><a href="Misc_Games/TicTacToeGames/TicTacToe_7x7.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>TicTacToe_7x7.html</a></li>
+<li><a href="Misc_Games/TicTacToeGames/ultimate_tic_tac_toe.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>ultimate_tic_tac_toe.html</a></li>
+<li><a href="Misc_Games/TicTacToeGames/ultimate_tic_tac_toe_4x4_3inarow.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>ultimate_tic_tac_toe_4x4_3inarow.html</a></li>
+<li><a href="Misc_Games/TicTacToeGames/ultimate_tic_tac_toe_5x5.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>ultimate_tic_tac_toe_5x5.html</a></li>
+</ul></div></details>
+<ul>
+<li><a href="Misc_Games/antiSimon.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>antiSimon.html</a></li>
+<li><a href="Misc_Games/CrazyJezzball.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>CrazyJezzball.html</a></li>
+<li><a href="Misc_Games/drop67.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>drop67.html</a></li>
+<li><a href="Misc_Games/ghost_vs_pacman.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>ghost_vs_pacman.html</a></li>
+<li><a href="Misc_Games/LineDraw.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>LineDraw.html</a></li>
+<li><a href="Misc_Games/pong.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>pong.html</a></li>
+<li><a href="Misc_Games/SIM.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>SIM.html</a></li>
+<li><a href="Misc_Games/word-ladder.html" target="_blank" rel="noopener noreferrer"><span class="icon">🎮</span>word-ladder.html</a></li>
+</ul></div></details>
+<details><summary><span class="icon">🧱</span>Tetris_Games <span class="muted">(7)</span></summary><div class="nested"><details><summary><span class="icon">🧱</span>typing_tetris <span class="muted">(1)</span></summary><div class="nested"><ul>
+<li><a href="Tetris_Games/typing_tetris/Typing_Test.html" target="_blank" rel="noopener noreferrer"><span class="icon">🧱</span>Typing_Test.html</a></li>
+</ul></div></details>
+<ul>
+<li><a href="Tetris_Games/Rotate_Tetris.html" target="_blank" rel="noopener noreferrer"><span class="icon">🧱</span>Rotate_Tetris.html</a></li>
+<li><a href="Tetris_Games/Tetris_Left_to_Right.html" target="_blank" rel="noopener noreferrer"><span class="icon">🧱</span>Tetris_Left_to_Right.html</a></li>
+<li><a href="Tetris_Games/Tetris_No_Rotate.html" target="_blank" rel="noopener noreferrer"><span class="icon">🧱</span>Tetris_No_Rotate.html</a></li>
+<li><a href="Tetris_Games/Tetris_Random.html" target="_blank" rel="noopener noreferrer"><span class="icon">🧱</span>Tetris_Random.html</a></li>
+<li><a href="Tetris_Games/Tetris_Reverse_Gravity.html" target="_blank" rel="noopener noreferrer"><span class="icon">🧱</span>Tetris_Reverse_Gravity.html</a></li>
+<li><a href="Tetris_Games/Tetris_Right_to_Left.html" target="_blank" rel="noopener noreferrer"><span class="icon">🧱</span>Tetris_Right_to_Left.html</a></li>
+</ul></div></details>
+    <p><br>
+    <b>Generated: February 20, 2026</b>
+  </div><p>
+  <p><br><a href="https://github.com/jwesters/website">jwesters github repo</font><br>
 </body>
 </html>
