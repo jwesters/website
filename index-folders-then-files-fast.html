@@ -109,11 +109,22 @@
   }
 
   function shouldHide(filePath) {
-    const lowerPath = filePath.toLowerCase();
-    const filename = (filePath.split("/").pop() || "").toLowerCase();
+    const p = String(filePath || "");
+    const lowerPath = p.toLowerCase();
+    const filename = (p.split("/").pop() || "").toLowerCase();
 
     if (HIDE_ALL_INDEX_HTML && lowerPath.endsWith("/index.html")) return true;
     if (HIDE_ROOT_INDEX_HTML && lowerPath === "index.html") return true;
+
+    // Hide THIS index page so it doesn't show up in the listing
+    try {
+      const current = decodeURIComponent(location.pathname.split("/").pop() || "").toLowerCase();
+      if (current && lowerPath === current) return true;
+      if (current && lowerPath.endsWith("/" + current)) return true;
+    } catch (e) {}
+
+    // Optional: hide other index*.html at the repo root (index-anything.html)
+    if (!p.includes("/") && filename.startsWith("index") && filename.endsWith(".html")) return true;
 
     if (HIDE_NSFw_ANYWHERE_IN_FILENAME && filenameContainsNSFW(filename)) return true;
 
@@ -296,13 +307,26 @@
 
     pruneEmptyDirs(tree);
 
-    // Root files (no "Root folder" section — just a plain list at top if any)
+    // Top-level folders FIRST
+    const topFolders = Array.from(tree.dirs.keys()).sort(sortAlpha);
+    for (const name of topFolders) {
+      const node = tree.dirs.get(name);
+      groupsEl.appendChild(renderDir(node, false, 0));
+    }
+
+    // Root-level files LAST
     if (tree.files.length) {
       const box = document.createElement("div");
       box.className = "root-files";
       box.appendChild(buildFileList(tree.files));
       groupsEl.appendChild(box);
     }
+
+    const totalCount = tree.files.length + topFolders.reduce((sum, n) => sum + countHtmlInSubtree(tree.dirs.get(n)), 0);
+    if (totalCount === 0) {
+      statusEl.textContent = "No HTML files found.";
+    }
+  }
 
     // Top-level folders
     const topFolders = Array.from(tree.dirs.keys()).sort(sortAlpha);
