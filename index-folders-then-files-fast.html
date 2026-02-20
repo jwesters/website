@@ -122,12 +122,17 @@
 
   // Recursively walk the repo using the Contents API
   async function fetchFiles() {
-    // Fast + reliable: resolve the branch to a tree SHA, then fetch the full tree in one go.
-    // This avoids slow folder-by-folder crawling AND avoids errors when BRANCH isn't a tree SHA.
+    // Fast + reliable: resolve a branch to a tree SHA, then fetch the full tree in one go.
+    // Robust behavior:
+    // - If BRANCH is set but doesn't exist, we fall back to the repo's default_branch.
+    // - We surface the actual error message on the page (not just in console).
     statusEl.textContent = "Loading…";
 
     async function ghFetch(url) {
-      const res = await fetch(url, { cache: "no-store" });
+      const res = await fetch(url, {
+        cache: "no-store",
+        headers: { "Accept": "application/vnd.github+json" }
+      });
       if (!res.ok) {
         const remaining = res.headers.get("x-ratelimit-remaining");
         const reset = res.headers.get("x-ratelimit-reset");
@@ -136,36 +141,48 @@
           const mins = Math.max(1, Math.ceil((resetMs - Date.now()) / 60000));
           throw new Error(`GitHub API rate limit hit. Try again in about ${mins} minute(s), or open the page while logged into GitHub.`);
         }
-        const text = await res.text().catch(()=> "");
-        throw new Error(`GitHub API error: ${res.status} ${res.statusText}${text ? " — " + text : ""}`);
+        let msg = `GitHub API error: ${res.status} ${res.statusText}`;
+        try {
+          const j = await res.json();
+          if (j && j.message) msg += ` — ${j.message}`;
+        } catch (e) {}
+        throw new Error(msg);
       }
       return res.json();
     }
 
     // 1) Get repo info (default branch)
     const repoInfo = await ghFetch(`https://api.github.com/repos/${OWNER}/${REPO}`);
-    const branch = BRANCH || repoInfo.default_branch || "main";
+    const defaultBranch = repoInfo.default_branch || "main";
 
-    // 2) Resolve branch -> commit SHA
+    // Prefer BRANCH if set, otherwise default
+    let branch = (typeof BRANCH === "string" && BRANCH.trim()) ? BRANCH.trim() : defaultBranch;
+
+    // 2) Resolve branch -> commit SHA (if invalid, fall back to defaultBranch)
+    async function resolveCommitSha(branchName) {
+      const ref = await ghFetch(`https://api.github.com/repos/${OWNER}/${REPO}/git/refs/heads/${encodeURIComponent(branchName)}`);
+      return ref && ref.object && ref.object.sha ? ref.object.sha : null;
+    }
+
     let commitSha = null;
     try {
-      const ref = await ghFetch(`https://api.github.com/repos/${OWNER}/${REPO}/git/refs/heads/${encodeURIComponent(branch)}`);
-      commitSha = ref && ref.object && ref.object.sha ? ref.object.sha : null;
+      commitSha = await resolveCommitSha(branch);
     } catch (e) {
-      commitSha = null;
+      if (branch !== defaultBranch) {
+        branch = defaultBranch;
+        commitSha = await resolveCommitSha(branch);
+      } else {
+        throw e;
+      }
     }
 
     // 3) Resolve commit SHA -> tree SHA
-    let treeSha = null;
-    if (commitSha) {
-      const commit = await ghFetch(`https://api.github.com/repos/${OWNER}/${REPO}/git/commits/${commitSha}`);
-      treeSha = commit && commit.tree && commit.tree.sha ? commit.tree.sha : null;
-    }
+    const commit = await ghFetch(`https://api.github.com/repos/${OWNER}/${REPO}/git/commits/${commitSha}`);
+    const treeSha = commit && commit.tree && commit.tree.sha ? commit.tree.sha : null;
+    if (!treeSha) throw new Error("Could not resolve repository tree SHA.");
 
-    // 4) Fetch the full tree (fallback to branch value if needed)
-    const treeId = treeSha || commitSha || branch;
-    const data = await ghFetch(`https://api.github.com/repos/${OWNER}/${REPO}/git/trees/${encodeURIComponent(treeId)}?recursive=1`);
-
+    // 4) Fetch the full tree
+    const data = await ghFetch(`https://api.github.com/repos/${OWNER}/${REPO}/git/trees/${encodeURIComponent(treeSha)}?recursive=1`);
     if (!data || !Array.isArray(data.tree)) throw new Error("Unexpected GitHub API response.");
 
     let found = 0;
@@ -174,9 +191,13 @@
         if (!shouldHide(entry.path)) {
           addFileToTree(entry.path);
           found++;
-          if (found % 300 === 0) statusEl.textContent = `Loading… (${found} files found)`;
+          if (found % 400 === 0) statusEl.textContent = `Loading… (${found} files found)`;
         }
       }
+    }
+
+    if (data.truncated) {
+      statusEl.textContent = `Loaded (${found} files). Repo is large; list may be incomplete.`;
     }
   }
 
@@ -209,7 +230,7 @@
       await setLastUpdated();
     } catch (err) {
       console.error(err);
-      statusEl.textContent = "Failed to load files. Check the browser console for details.";
+      statusEl.textContent = "Failed to load files: " + (err && err.message ? err.message : String(err));
       lastUpdatedEl.textContent = "";
     }
   })();
