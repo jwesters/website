@@ -122,174 +122,40 @@
 
   // Recursively walk the repo using the Contents API
   async function fetchFiles() {
-    // Crawl the repo using the GitHub "contents" API, but do it with a small amount of concurrency
-    // so large repos don't feel like they're "stuck" for ages.
-    const MAX_CONCURRENCY = 8;
-    const queue = [""];        // directory paths to fetch
-    let inFlight = 0;
-    let fetchedDirs = 0;
+    // SUPER FAST PATH: use Git Trees API to fetch the whole repo tree in ONE request.
+    // This avoids folder-by-folder crawling (which can feel stuck).
+    // GitHub can cap extremely large trees, but for typical classroom repos this is ideal.
+    const url = `https://api.github.com/repos/${OWNER}/${REPO}/git/trees/${encodeURIComponent(BRANCH)}?recursive=1`;
+    statusEl.textContent = "Loading…";
 
-    // Simple helper to fetch a directory listing
-    async function fetchDir(path) {
-      const url = path ? `${API_BASE}/${encodeURIComponent(path)}` : API_BASE;
-      const res = await fetch(url, { cache: "no-store" });
-
-      if (!res.ok) {
-        // Try to surface rate-limit info nicely
-        const remaining = res.headers.get("x-ratelimit-remaining");
-        const reset = res.headers.get("x-ratelimit-reset");
-        if (res.status === 403 && remaining === "0" && reset) {
-          const resetMs = Number(reset) * 1000;
-          const mins = Math.max(1, Math.ceil((resetMs - Date.now()) / 60000));
-          throw new Error(`GitHub API rate limit hit. Try again in about ${mins} minute(s), or open the page while logged into GitHub.`);
-        }
-        throw new Error(`GitHub API error: ${res.status} ${res.statusText}`);
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) {
+      const remaining = res.headers.get("x-ratelimit-remaining");
+      const reset = res.headers.get("x-ratelimit-reset");
+      if (res.status === 403 && remaining === "0" && reset) {
+        const resetMs = Number(reset) * 1000;
+        const mins = Math.max(1, Math.ceil((resetMs - Date.now()) / 60000));
+        throw new Error(`GitHub API rate limit hit. Try again in about ${mins} minute(s), or open the page while logged into GitHub.`);
       }
-      return await res.json();
+      throw new Error(`GitHub API error: ${res.status} ${res.statusText}`);
     }
 
-    return await new Promise((resolve, reject) => {
-      const pump = () => {
-        // Update a lightweight progress indicator
-        statusEl.textContent = `Loading… (folders scanned: ${fetchedDirs})`;
+    const data = await res.json();
+    if (!data || !Array.isArray(data.tree)) throw new Error("Unexpected GitHub API response.");
 
-        // If done
-        if (queue.length === 0 && inFlight === 0) {
-          resolve();
-          return;
+    let found = 0;
+    for (const entry of data.tree) {
+      if (entry.type === "blob" && typeof entry.path === "string" && entry.path.toLowerCase().endsWith(".html")) {
+        if (!shouldHide(entry.path)) {
+          addFileToTree(entry.path);
+          found++;
+          if (found % 300 === 0) statusEl.textContent = `Loading… (${found} files found)`;
         }
-
-        // Launch more work
-        while (inFlight < MAX_CONCURRENCY && queue.length) {
-          const path = queue.shift();
-          inFlight++;
-
-          fetchDir(path).then(items => {
-            fetchedDirs++;
-
-            for (const item of items) {
-              if (item.type === "dir") {
-                queue.push(item.path);
-              } else if (item.type === "file" && item.name.toLowerCase().endsWith(".html")) {
-                if (!shouldHide(item.path)) addFileToTree(item.path);
-              }
-            }
-          }).catch(reject).finally(() => {
-            inFlight--;
-            pump();
-          });
-        }
-      };
-
-      pump();
-    });
-  }
-
-
-
-  function sortAlpha(a, b) {
-    return a.localeCompare(b, undefined, { sensitivity: "base" });
-  }
-
-  function countHtmlInSubtree(node) {
-    let count = node.files.length;
-    for (const child of node.dirs.values()) count += countHtmlInSubtree(child);
-    return count;
-  }
-
-  function pruneEmptyDirs(node) {
-    // Remove directories that contain no html files anywhere below them
-    for (const [name, child] of Array.from(node.dirs.entries())) {
-      pruneEmptyDirs(child);
-      if (countHtmlInSubtree(child) === 0) node.dirs.delete(name);
+      }
     }
   }
 
-  function buildFileList(files) {
-    const ul = document.createElement("ul");
-    files.sort((a, b) => sortAlpha(a.name, b.name));
 
-    for (const f of files) {
-      const li = document.createElement("li");
-      const a = document.createElement("a");
-      a.href = `${SITE_URL}/${f.path}`;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      a.innerHTML = `<span class="icon">${iconFor(f.path, false)}</span>${f.name}`;
-      li.appendChild(a);
-      ul.appendChild(li);
-    }
-    return ul;
-  }
-
-  function renderDir(node, openByDefault = false, depth = 0) {
-    const details = document.createElement("details");
-    details.open = openByDefault;
-
-    const total = countHtmlInSubtree(node);
-    const summary = document.createElement("summary");
-    summary.innerHTML = `<span class="icon">${iconFor(node.name, true)}</span>${node.name} <span class="muted">(${total})</span>`;
-    details.appendChild(summary);
-
-    const wrap = document.createElement("div");
-    wrap.className = "nested";
-
-    // Subfolders FIRST (so you see folders-in-folders before files)
-    const subfolderNames = Array.from(node.dirs.keys()).sort(sortAlpha);
-    for (const subName of subfolderNames) {
-      const child = node.dirs.get(subName);
-      wrap.appendChild(renderDir(child, false, depth + 1));
-    }
-
-    // Files directly in this folder (shown AFTER subfolders)
-    if (node.files.length) {
-      wrap.appendChild(buildFileList(node.files));
-    }
-
-    details.appendChild(wrap);
-    return details;
-  }
-
-  function buildUI() {
-    statusEl.textContent = "";
-    groupsEl.innerHTML = "";
-
-    pruneEmptyDirs(tree);
-
-    // Top-level folders FIRST
-    const topFolders = Array.from(tree.dirs.keys()).sort(sortAlpha);
-    for (const name of topFolders) {
-      const node = tree.dirs.get(name);
-      groupsEl.appendChild(renderDir(node, false, 0));
-    }
-
-    // Root files LAST (so folders come before files)
-    if (tree.files.length) {
-      const box = document.createElement("div");
-      box.className = "root-files";
-      box.appendChild(buildFileList(tree.files));
-      groupsEl.appendChild(box);
-    }
-
-    const totalCount = tree.files.length + topFolders.reduce((sum, n) => sum + countHtmlInSubtree(tree.dirs.get(n)), 0);
-    if (totalCount === 0) {
-      statusEl.textContent = "No HTML files found.";
-    }
-  }
-
-    // Top-level folders
-    const topFolders = Array.from(tree.dirs.keys()).sort(sortAlpha);
-    for (const name of topFolders) {
-      const node = tree.dirs.get(name);
-      // closed by default; you can change to true if you want first folder opened
-      groupsEl.appendChild(renderDir(node, false, 0));
-    }
-
-    const totalCount = tree.files.length + topFolders.reduce((sum, n) => sum + countHtmlInSubtree(tree.dirs.get(n)), 0);
-    if (totalCount === 0) {
-      statusEl.textContent = "No HTML files found.";
-    }
-  }
 
   async function setLastUpdated() {
     // Show the last commit date that touched THIS index.html (matches “uploaded to GitHub” best)
