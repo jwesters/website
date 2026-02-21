@@ -1,0 +1,856 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Lying Number Guess</title>
+  <style>
+    :root{
+      --bg:#0f1224;
+      --card:#171a33;
+      --card2:#12152c;
+      --text:#eef1ff;
+      --muted:#b8bfe6;
+      --accent:#7aa2ff;
+      --danger:#ff6b6b;
+      --good:#6bffb1;
+      --border:rgba(255,255,255,.12);
+      --shadow: 0 14px 40px rgba(0,0,0,.45);
+      --radius: 18px;
+    }
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(1200px 700px at 20% 10%, rgba(122,162,255,.18), transparent 60%),
+                  radial-gradient(900px 600px at 85% 75%, rgba(107,255,177,.12), transparent 60%),
+                  var(--bg);
+      color: var(--text);
+    }
+    .wrap{
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 22px 14px 44px;
+    }
+    .title{
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap: 12px;
+      margin: 8px 0 18px;
+    }
+    h1{
+      font-size: clamp(22px, 3vw, 34px);
+      margin: 0;
+      letter-spacing: .2px;
+    }
+    .subtitle{
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 6px;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    @media (min-width: 860px){
+      .grid{
+        grid-template-columns: 360px 1fr;
+        align-items:start;
+      }
+    }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .cardHeader{
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0,0,0,.12);
+    }
+    .cardHeader h2{
+      margin:0;
+      font-size: 16px;
+      letter-spacing:.2px;
+    }
+    .cardBody{
+      padding: 14px;
+    }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    label{
+      display:block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    input[type="number"], input[type="text"]{
+      width:100%;
+      padding: 12px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.25);
+      color: var(--text);
+      outline: none;
+      font-size: 16px;
+    }
+    input[type="number"]:focus, input[type="text"]:focus{
+      border-color: rgba(122,162,255,.65);
+      box-shadow: 0 0 0 3px rgba(122,162,255,.18);
+    }
+    .btn{
+      appearance:none;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(122,162,255,.16);
+      color: var(--text);
+      padding: 11px 12px;
+      border-radius: 12px;
+      font-weight: 650;
+      cursor:pointer;
+      transition: transform .06s ease, background .12s ease, border-color .12s ease;
+      user-select:none;
+    }
+    .btn:hover{ background: rgba(122,162,255,.22); }
+    .btn:active{ transform: translateY(1px); }
+    .btn.secondary{
+      background: rgba(255,255,255,.06);
+    }
+    .btn.danger{
+      background: rgba(255,107,107,.14);
+      border-color: rgba(255,107,107,.25);
+    }
+    .btn.danger:hover{ background: rgba(255,107,107,.20); }
+    .btn.good{
+      background: rgba(107,255,177,.14);
+      border-color: rgba(107,255,177,.25);
+    }
+    .btn.good:hover{ background: rgba(107,255,177,.20); }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.18);
+      color: var(--muted);
+      font-size: 13px;
+      white-space:nowrap;
+    }
+    .pill strong{ color: var(--text); font-weight: 750; }
+    .status{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .hintBox{
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px dashed rgba(255,255,255,.18);
+      background: rgba(0,0,0,.20);
+      margin-top: 10px;
+    }
+    .hintBox .kicker{
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .hint{
+      padding: 10px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,107,107,.22);
+      background: rgba(255,107,107,.10);
+      margin: 8px 0;
+      line-height: 1.25rem;
+    }
+    .hint .lieTag{
+      display:inline-block;
+      font-size: 11px;
+      letter-spacing:.5px;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(255,107,107,.18);
+      border: 1px solid rgba(255,107,107,.22);
+      margin-right: 8px;
+    }
+    .truth{
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .msg{
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      margin-top: 10px;
+      line-height: 1.25rem;
+    }
+    .msg.good{
+      border-color: rgba(107,255,177,.25);
+      background: rgba(107,255,177,.10);
+    }
+    .msg.bad{
+      border-color: rgba(255,107,107,.25);
+      background: rgba(255,107,107,.10);
+    }
+
+    table{
+      width:100%;
+      border-collapse: collapse;
+      overflow:hidden;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.14);
+    }
+    thead th{
+      text-align:left;
+      font-size: 12px;
+      color: var(--muted);
+      padding: 10px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.14);
+    }
+    tbody td{
+      padding: 10px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      vertical-align: top;
+      font-size: 14px;
+      line-height: 1.2rem;
+    }
+    tbody tr:last-child td{ border-bottom:none; }
+    .mono{ font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .small{ font-size: 12px; color: var(--muted); }
+    .hide{ display:none !important; }
+  
+    body.hideTruth .truth{ display:none; }
+    body.hideTruth .truthLine{ display:none; }
+
+  
+    #logWrap{
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="title">
+      <div>
+        <h1>Lying Guess‑the‑Number</h1>
+        <div class="subtitle">Every hint is a lie — but the lies are always logically consistent.</div>
+      </div>
+      <div class="status" id="statusPills"></div>
+    </div>
+
+    <div class="grid">
+      <div class="card" id="leftCard">
+        <div class="cardHeader">
+          <h2 id="leftTitle">Start</h2>
+        </div>
+        <div class="cardBody">
+
+          <!-- Start Screen -->
+          <div id="startScreen">
+            <label for="maxN">Maximum number (1–100000)</label>
+            <input id="maxN" type="number" inputmode="numeric" min="1" max="100000" step="1" value="100" />
+            <div class="row" style="margin-top:12px;">
+              <button class="btn good" id="startBtn">Start Game</button>
+            </div>
+            <div class="msg" id="startMsg" style="display:none;"></div>
+            <div class="small" style="margin-top:10px;">
+              Hints include comparisons, parity, primality, multiples, and the ones digit.
+            </div>
+          </div>
+
+          <!-- Game Controls -->
+          <div id="gameControls" class="hide">
+            <label for="guessIn">Your guess</label>
+            <input id="guessIn" type="number" inputmode="numeric" step="1" />
+            <div class="row" style="margin-top:12px;">
+              <button class="btn" id="guessBtn">Submit Guess</button>
+              <button class="btn secondary" id="newBtn">New Game</button>
+              <button class="btn danger" id="giveUpBtn">Give Up</button>
+            </div>
+            <div class="row" style="margin-top:12px; justify-content:space-between;">
+              <label style="display:flex; align-items:center; gap:10px; margin:0; cursor:pointer;">
+                <input type="checkbox" id="revealTruthToggle" style="width:18px; height:18px;" />
+                <span style="color:var(--muted); font-size:13px;">Reveal truths</span>
+              </label>
+              <span class="small">Lies shown always. Truths are optional.</span>
+            </div>
+
+            <div class="msg" id="gameMsg" style="display:none;"></div>
+
+            <div class="hintBox" id="hintBox" style="display:none;">
+              <div class="kicker">Two lies:</div>
+              <div id="hintList"></div>
+            </div>
+          </div>
+
+          <!-- End Screen -->
+          <div id="endScreen" class="hide">
+            <div class="msg good" id="endMsg"></div>
+            <div class="row" style="margin-top:12px;">
+              <button class="btn secondary" id="playAgainBtn">Play Again</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="cardHeader">
+          <h2>Guess Log</h2>
+        </div>
+        <div class="cardBody">
+          <div class="small" style="margin-bottom:10px;">
+            The log shows each lie and (in smaller text) the truth you can infer by flipping it.
+          </div>
+          <div id="logWrap">
+            <div class="msg">Start a game to begin logging guesses.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ---------- State ----------
+  let maxN = null;
+  let secret = null;
+  let guessCount = 0;
+  let log = []; // {i, guess, hints:[{lie, truth, type}]}
+  let gameOver = false;
+  let recentHintTypes = []; // keep last few types to encourage variety
+
+  // ---------- Elements ----------
+  const statusPills = document.getElementById("statusPills");
+
+  const leftTitle = document.getElementById("leftTitle");
+  const startScreen = document.getElementById("startScreen");
+  const gameControls = document.getElementById("gameControls");
+  const endScreen = document.getElementById("endScreen");
+
+  const maxNInput = document.getElementById("maxN");
+  const startBtn = document.getElementById("startBtn");
+  const startMsg = document.getElementById("startMsg");
+
+  const guessIn = document.getElementById("guessIn");
+  const guessBtn = document.getElementById("guessBtn");
+  const newBtn = document.getElementById("newBtn");
+  const giveUpBtn = document.getElementById("giveUpBtn");
+  const revealTruthToggle = document.getElementById("revealTruthToggle");
+  const gameMsg = document.getElementById("gameMsg");
+
+  const hintBox = document.getElementById("hintBox");
+  const hintList = document.getElementById("hintList");
+
+  const endMsg = document.getElementById("endMsg");
+  const playAgainBtn = document.getElementById("playAgainBtn");
+
+  const logWrap = document.getElementById("logWrap");
+
+  // ---------- Utils ----------
+  function clampInt(n, lo, hi){
+    n = Number(n);
+    if (!Number.isFinite(n)) return null;
+    n = Math.trunc(n);
+    if (n < lo || n > hi) return null;
+    return n;
+  }
+
+  function randInt(lo, hiInclusive){
+    return Math.floor(Math.random() * (hiInclusive - lo + 1)) + lo;
+  }
+
+  function isPrime(n){
+    n = Math.trunc(n);
+    if (n <= 1) return false;
+    if (n === 2) return true;
+    if (n % 2 === 0) return false;
+    const r = Math.floor(Math.sqrt(n));
+    for (let i = 3; i <= r; i += 2){
+      if (n % i === 0) return false;
+    }
+    return true;
+  }
+
+  function onesDigit(n){ return Math.abs(n) % 10; }
+
+  function setPills(){
+    statusPills.innerHTML = "";
+    if (maxN !== null && secret !== null && !gameOver){
+      statusPills.appendChild(makePill("Range", `1–${maxN}`));
+      statusPills.appendChild(makePill("Guesses", `${guessCount}`));
+    } else if (gameOver && maxN !== null){
+      statusPills.appendChild(makePill("Range", `1–${maxN}`));
+      statusPills.appendChild(makePill("Guesses", `${guessCount}`));
+      statusPills.appendChild(makePill("Secret", `${secret}`));
+    }
+  }
+
+  function makePill(label, value){
+    const d = document.createElement("div");
+    d.className = "pill";
+    d.innerHTML = `${label}: <strong class="mono">${escapeHtml(value)}</strong>`;
+    return d;
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  function show(el){ el.classList.remove("hide"); }
+  function hide(el){ el.classList.add("hide"); }
+
+  function showMsg(el, text, cls){
+    el.style.display = "block";
+    el.className = "msg" + (cls ? " " + cls : "");
+    el.textContent = text;
+  }
+  function clearMsg(el){
+    el.style.display = "none";
+    el.textContent = "";
+  }
+
+  // ---------- Hint generation (always false statements) ----------
+  // Each hint is an atomic proposition whose opposite is definitely true.
+  function lieHintCompare(guess){
+    if (secret > guess){
+      // false statement:
+      return {
+        type: "compare",
+        lie: `The number is less than ${guess}.`,
+        truth: `Truth: the number is greater than ${guess}.`
+      };
+    } else { // secret < guess (equal handled earlier)
+      return {
+        type: "compare",
+        lie: `The number is greater than ${guess}.`,
+        truth: `Truth: the number is less than ${guess}.`
+      };
+    }
+  }
+
+  function lieHintParity(){
+    const even = (secret % 2 === 0);
+    return even
+      ? { type:"parity", lie:"The number is odd.", truth:"Truth: the number is even." }
+      : { type:"parity", lie:"The number is even.", truth:"Truth: the number is odd." };
+  }
+
+  function lieHintPrime(){
+    const p = isPrime(secret);
+    return p
+      ? { type:"prime", lie:"The number is not prime.", truth:"Truth: the number is prime." }
+      : { type:"prime", lie:"The number is prime.", truth:"Truth: the number is not prime." };
+  }
+
+  function lieHintMultiple(){
+    // Choose k between 2 and floor(maxN/2). Always produce a false statement.
+    const hi = Math.floor(maxN / 2);
+    if (hi < 2) return null;
+
+    // Try several random k values for variety.
+    for (let tries = 0; tries < 50; tries++){
+      const k = randInt(2, hi);
+      const divides = (secret % k === 0);
+
+      // Make the statement false:
+      if (divides){
+        return {
+          type:"multiple",
+          lie:`The number is not a multiple of ${k}.`,
+          truth:`Truth: the number is a multiple of ${k}.`
+        };
+      } else {
+        return {
+          type:"multiple",
+          lie:`The number is a multiple of ${k}.`,
+          truth:`Truth: the number is not a multiple of ${k}.`
+        };
+      }
+    }
+
+    // Fallback scan
+    for (let k = 2; k <= hi; k++){
+      const divides = (secret % k === 0);
+      if (divides){
+        return { type:"multiple", lie:`The number is not a multiple of ${k}.`, truth:`Truth: the number is a multiple of ${k}.` };
+      }
+      if (!divides){
+        return { type:"multiple", lie:`The number is a multiple of ${k}.`, truth:`Truth: the number is not a multiple of ${k}.` };
+      }
+    }
+    return null;
+  }
+
+  function lieHintOnesDigitParity(){
+    const d = onesDigit(secret);
+    const even = (d % 2 === 0);
+    return even
+      ? { type:"ones", lie:"The ones digit is odd.", truth:"Truth: the ones digit is even." }
+      : { type:"ones", lie:"The ones digit is even.", truth:"Truth: the ones digit is odd." };
+  }
+
+  function lieHintOnesDigitIs(){
+    const d = onesDigit(secret);
+    let x = randInt(0, 9);
+    if (x === d) x = (x + randInt(1,9)) % 10;
+    return {
+      type:"onesExact",
+      lie:`The ones digit is ${x}.`,
+      truth:`Truth: the ones digit is not ${x}.`
+    };
+  }
+
+  function lieHintOnesDigitInSet(){
+    const d = onesDigit(secret);
+    // Create a 3-number set that does NOT include d
+    const set = new Set();
+    while (set.size < 3){
+      const x = randInt(0,9);
+      if (x !== d) set.add(x);
+    }
+    const arr = [...set].sort((a,b)=>a-b);
+    return {
+      type:"onesSet",
+      lie:`The ones digit is one of {${arr.join(", ")}}.`,
+      truth:`Truth: the ones digit is not in {${arr.join(", ")}}.`
+    };
+  }
+
+  function lieHintModulo(){
+    // Mod statement: "n mod m = r" (always false)
+    const m = randInt(3, 12);
+    const r = ((secret % m) + m) % m;
+    let rp = randInt(0, m-1);
+    if (rp === r) rp = (rp + 1) % m;
+    return {
+      type:"mod",
+      lie:`The remainder when dividing by ${m} is ${rp}.`,
+      truth:`Truth: the remainder when dividing by ${m} is ${r}.`
+    };
+  }
+
+  function lieHintBetween(){
+    // Make a false "between" statement for variety.
+    // Pick a range [L,U] that does NOT contain secret, then lie "it is between".
+    if (maxN <= 3) return null;
+    for (let tries = 0; tries < 40; tries++){
+      const width = randInt(2, Math.min(20, maxN-1));
+      let L = randInt(1, maxN - width);
+      let U = L + width;
+      if (secret < L || secret > U){
+        return {
+          type:"between",
+          lie:`The number is between ${L} and ${U} (inclusive).`,
+          truth:`Truth: the number is not between ${L} and ${U}.`
+        };
+      }
+    }
+    // fallback: choose a range above or below secret
+    if (secret > 2){
+      const U = Math.max(1, secret - 1);
+      const L = Math.max(1, U - 2);
+      return {
+        type:"between",
+        lie:`The number is between ${L} and ${U} (inclusive).`,
+        truth:`Truth: the number is not between ${L} and ${U}.`
+      };
+    } else {
+      const L = Math.min(maxN, secret + 1);
+      const U = Math.min(maxN, L + 2);
+      return {
+        type:"between",
+        lie:`The number is between ${L} and ${U} (inclusive).`,
+        truth:`Truth: the number is not between ${L} and ${U}.`
+      };
+    }
+  }
+
+
+  function getTwoLies(guess){
+    // Always include one comparison lie so the game stays steadily solvable.
+    const h1 = lieHintCompare(guess);
+
+    const pool = [
+      () => lieHintParity(),
+      () => lieHintPrime(),
+      () => lieHintMultiple(),
+      () => lieHintOnesDigitParity(),
+      () => lieHintOnesDigitIs(),
+      () => lieHintOnesDigitInSet(),
+      () => lieHintModulo(),
+      () => lieHintBetween()
+    ];
+
+    // Encourage variety: avoid repeating the same type too often.
+    const avoid = new Set(recentHintTypes.slice(-3)); // last 3 types
+    avoid.add(h1.type);
+
+    // Build candidate list (valid and not avoided if possible)
+    const candidates = [];
+    const fallback = [];
+    for (const fn of pool){
+      const h = fn();
+      if (!h) continue;
+      if (h.type === h1.type) continue;
+      fallback.push(h);
+      if (!avoid.has(h.type)) candidates.push(h);
+    }
+
+    let h2 = null;
+    if (candidates.length > 0){
+      h2 = candidates[randInt(0, candidates.length - 1)];
+    } else if (fallback.length > 0){
+      h2 = fallback[randInt(0, fallback.length - 1)];
+    } else {
+      h2 = lieHintParity();
+    }
+
+    // Track hint types used (excluding compare, so variety focuses on the "extra" hint)
+    recentHintTypes.push(h2.type);
+    if (recentHintTypes.length > 10) recentHintTypes = recentHintTypes.slice(-10);
+
+    return [h1, h2];
+  }
+
+  // ---------- Rendering ----------
+  function renderHints(hints){
+    hintList.innerHTML = "";
+    for (const h of hints){
+      const div = document.createElement("div");
+      div.className = "hint";
+      div.innerHTML = `<span class="lieTag">LIE</span>${escapeHtml(h.lie)}
+        <div class="truth truthLine">${escapeHtml(h.truth)}</div>`;
+      hintList.appendChild(div);
+    }
+    hintBox.style.display = "block";
+  }
+
+  function renderLog(){
+    if (log.length === 0){
+      logWrap.innerHTML = `<div class="msg">No guesses yet.</div>`;
+      return;
+    }
+    // Newest first
+    const rows = [...log].slice().reverse().map(entry => {
+      const hA = entry.hints[0];
+      const hB = entry.hints[1];
+      return `<tr>
+        <td class="mono">${entry.i}</td>
+        <td class="mono">${entry.guess}</td>
+        <td>
+          <div><span class="mono">1)</span> ${escapeHtml(hA.lie)}</div>
+          <div class="small truthLine">${escapeHtml(hA.truth)}</div>
+          <div style="height:6px"></div>
+          <div><span class="mono">2)</span> ${escapeHtml(hB.lie)}</div>
+          <div class="small truthLine">${escapeHtml(hB.truth)}</div>
+        </td>
+      </tr>`;
+    }).join("");
+
+    logWrap.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th style="width:70px;">#</th>
+            <th style="width:110px;">Guess</th>
+            <th>Hints (lies + inferred truths)</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  function setLeftTitle(text){
+    leftTitle.textContent = text;
+  }
+
+  // ---------- Game flow ----------
+  function resetToStart(){
+    document.body.classList.add('hideTruth');
+    if (revealTruthToggle) revealTruthToggle.checked = false;
+
+    maxN = null;
+    secret = null;
+    guessCount = 0;
+    log = [];
+    gameOver = false;
+
+    setLeftTitle("Start");
+    show(startScreen);
+    hide(gameControls);
+    hide(endScreen);
+    clearMsg(startMsg);
+    clearMsg(gameMsg);
+
+    // Truth visibility
+    document.body.classList.toggle('hideTruth', !(revealTruthToggle && revealTruthToggle.checked));
+    hintBox.style.display = "none";
+    guessIn.value = "";
+    guessIn.removeAttribute("min");
+    guessIn.removeAttribute("max");
+    logWrap.innerHTML = `<div class="msg">Start a game to begin logging guesses.</div>`;
+    setPills();
+  }
+
+  function startGame(){
+    const val = clampInt(maxNInput.value, 1, 100000);
+    if (val === null){
+      showMsg(startMsg, "Please enter a whole number from 1 to 100000.", "bad");
+      return;
+    }
+    clearMsg(startMsg);
+
+    maxN = val;
+    secret = randInt(1, maxN);
+    guessCount = 0;
+    log = [];
+    gameOver = false;
+
+    setLeftTitle("Guess");
+    hide(startScreen);
+    show(gameControls);
+    hide(endScreen);
+    hintBox.style.display = "none";
+    clearMsg(gameMsg);
+
+    // Truth visibility
+    document.body.classList.toggle('hideTruth', !(revealTruthToggle && revealTruthToggle.checked));
+
+    guessIn.value = "";
+    guessIn.setAttribute("min", "1");
+    guessIn.setAttribute("max", String(maxN));
+    guessIn.focus();
+
+    renderLog();
+    setPills();
+  }
+
+  function endGame(won){
+    gameOver = true;
+    hide(gameControls);
+    show(endScreen);
+    setLeftTitle("Finished");
+    hintBox.style.display = "none";
+
+    const msg = won
+      ? `You got it! The number was ${secret}.`
+      : `You gave up. The number was ${secret}.`;
+    endMsg.textContent = msg + ` Total guesses: ${guessCount}.`;
+    setPills();
+  }
+
+  function submitGuess(){
+    if (gameOver) return;
+    if (maxN === null || secret === null) return;
+
+    const g = clampInt(guessIn.value, 1, maxN);
+    if (g === null){
+      showMsg(gameMsg, `Enter a whole number from 1 to ${maxN}.`, "bad");
+      return;
+    }
+    clearMsg(gameMsg);
+
+    // Truth visibility
+    document.body.classList.toggle('hideTruth', !(revealTruthToggle && revealTruthToggle.checked));
+
+    guessCount += 1;
+
+    if (g === secret){
+      log.push({
+        i: guessCount,
+        guess: g,
+        hints: [
+          { type:"win", lie:"(No hints — correct guess.)", truth:"", },
+          { type:"win", lie:"", truth:"", }
+        ]
+      });
+      renderLog();
+      endGame(true);
+      return;
+    }
+
+    const hints = getTwoLies(g);
+    log.push({ i: guessCount, guess: g, hints });
+
+    renderHints(hints);
+    renderLog();
+    setPills();
+
+    // Small feedback
+    showMsg(gameMsg, "Nope — here are two lies to mislead you.", "");
+    guessIn.select();
+    guessIn.focus();
+  }
+
+  function giveUp(){
+    if (maxN === null || secret === null || gameOver) return;
+    endGame(false);
+    renderLog();
+  }
+
+  // ---------- Events ----------
+  startBtn.addEventListener("click", startGame);
+  maxNInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") startGame();
+  });
+
+  guessBtn.addEventListener("click", submitGuess);
+  guessIn.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submitGuess();
+  });
+
+  newBtn.addEventListener("click", () => {
+    // Restart with same maxN (if exists), otherwise go to start
+    if (maxN !== null){
+      maxNInput.value = String(maxN);
+      startGame();
+    } else {
+      resetToStart();
+    }
+  });
+
+  giveUpBtn.addEventListener("click", giveUp);
+
+  if (revealTruthToggle){
+    revealTruthToggle.addEventListener("change", () => {
+      document.body.classList.toggle("hideTruth", !revealTruthToggle.checked);
+    });
+  }
+
+  playAgainBtn.addEventListener("click", () => {
+    if (maxN !== null) {
+      maxNInput.value = String(maxN);
+      startGame();
+    } else {
+      resetToStart();
+    }
+  });
+
+  // Init
+  resetToStart();
+})();
+</script>
+</body>
+</html>

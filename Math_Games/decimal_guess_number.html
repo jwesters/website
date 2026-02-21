@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Decimal Guess-the-Number</title>
+  <style>
+    :root{
+      --bg:#0f1224;
+      --card:#171a33;
+      --text:#eef1ff;
+      --muted:#b8bfe6;
+      --accent:#7aa2ff;
+      --good:#6bffb1;
+      --danger:#ff6b6b;
+      --border:rgba(255,255,255,.12);
+      --shadow: 0 14px 40px rgba(0,0,0,.45);
+      --radius: 18px;
+    }
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(1200px 700px at 20% 10%, rgba(122,162,255,.18), transparent 60%),
+                  radial-gradient(900px 600px at 85% 75%, rgba(107,255,177,.12), transparent 60%),
+                  var(--bg);
+      color: var(--text);
+    }
+    .wrap{ max-width: 980px; margin: 0 auto; padding: 22px 14px 44px; }
+    .title{ display:flex; align-items:baseline; justify-content:space-between; gap: 12px; margin: 8px 0 18px; }
+    h1{ font-size: clamp(22px, 3vw, 34px); margin: 0; letter-spacing: .2px; }
+    .subtitle{ color: var(--muted); font-size: 14px; margin-top: 6px; }
+    .status{ display:flex; flex-wrap:wrap; gap: 8px; margin-top: 10px; justify-content:flex-end; }
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 6px 10px; border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.18);
+      color: var(--muted); font-size: 13px; white-space:nowrap;
+    }
+    .pill strong{ color: var(--text); font-weight: 750; }
+    .grid{ display:grid; grid-template-columns: 1fr; gap: 14px; }
+    @media (min-width: 860px){
+      .grid{ grid-template-columns: 360px 1fr; align-items:start; }
+    }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .cardHeader{
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0,0,0,.12);
+    }
+    .cardHeader h2{ margin:0; font-size: 16px; letter-spacing:.2px; }
+    .cardBody{ padding: 14px; }
+
+    label{ display:block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    select, input[type="number"]{
+      width:100%;
+      padding: 12px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: #171a33; /* solid, non-transparent */
+      color: var(--text);
+      outline: none;
+      font-size: 16px;
+    }
+    select:focus, input[type="number"]:focus{
+      border-color: rgba(122,162,255,.65);
+      box-shadow: 0 0 0 3px rgba(122,162,255,.18);
+    }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .btn{
+      appearance:none;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(122,162,255,.16);
+      color: var(--text);
+      padding: 11px 12px;
+      border-radius: 12px;
+      font-weight: 650;
+      cursor:pointer;
+      transition: transform .06s ease, background .12s ease, border-color .12s ease;
+      user-select:none;
+    }
+    .btn:hover{ background: rgba(122,162,255,.22); }
+    .btn:active{ transform: translateY(1px); }
+    .btn.good{
+      background: rgba(107,255,177,.14);
+      border-color: rgba(107,255,177,.25);
+    }
+    .btn.good:hover{ background: rgba(107,255,177,.20); }
+
+    .msg{
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      margin-top: 10px;
+      line-height: 1.25rem;
+    }
+    .msg.bad{
+      border-color: rgba(255,107,107,.25);
+      background: rgba(255,107,107,.10);
+    }
+    .msg.good{
+      border-color: rgba(107,255,177,.25);
+      background: rgba(107,255,177,.10);
+    }
+
+    table{
+      width:100%;
+      border-collapse: collapse;
+      overflow:hidden;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.14);
+    }
+    thead th{
+      text-align:left;
+      font-size: 12px;
+      color: var(--muted);
+      padding: 10px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.14);
+    }
+    tbody td{
+      padding: 10px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      vertical-align: top;
+      font-size: 14px;
+      line-height: 1.2rem;
+    }
+    tbody tr:last-child td{ border-bottom:none; }
+    .mono{ font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .small{ font-size: 12px; color: var(--muted); }
+    .hide{ display:none !important; }
+    #logWrap{ max-height: 70vh; overflow-y:auto; }
+  
+    select option{
+      background: #171a33;
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="title">
+      <div>
+        <h1>Decimal Guess-the-Number</h1>
+        <div class="subtitle">Pick the precision, then guess a number from <span class="mono">0</span> to <span class="mono">100</span>.</div>
+      </div>
+      <div class="status" id="statusPills"></div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="cardHeader">
+          <h2 id="leftTitle">Start</h2>
+        </div>
+        <div class="cardBody">
+
+          <div id="startScreen">
+            <label for="precisionSel">Precision</label>
+            <select id="precisionSel">
+              <option value="0">Integer</option>
+              <option value="1">Tenths (0.1)</option>
+              <option value="2">Hundredths (0.01)</option>
+              <option value="3">Thousandths (0.001)</option>
+            </select>
+            <div class="row" style="margin-top:12px;">
+              <button class="btn good" id="startBtn">Start Game</button>
+            </div>
+            <div class="msg bad" id="startMsg" style="display:none;"></div>
+            <div class="small" style="margin-top:10px;">
+              You can type any decimal — it will be treated using the selected precision.
+            </div>
+          </div>
+
+          <div id="gameScreen" class="hide">
+            <label for="guessIn">Your guess</label>
+            <input id="guessIn" type="number" inputmode="decimal" />
+            <div class="row" style="margin-top:12px;">
+              <button class="btn" id="guessBtn">Submit Guess</button>
+              <button class="btn" id="newBtn">New Game</button>
+            </div>
+            <div class="msg" id="gameMsg" style="display:none;"></div>
+          </div>
+
+          <div id="endScreen" class="hide">
+            <div class="msg good" id="endMsg"></div>
+            <div class="row" style="margin-top:12px;">
+              <button class="btn" id="playAgainBtn">Play Again</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="cardHeader">
+          <h2>Guess Log</h2>
+        </div>
+        <div class="cardBody">
+          <div class="small" style="margin-bottom:10px;">Newest guesses appear at the top.</div>
+          <div id="logWrap"><div class="msg">Start a game to begin logging guesses.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+
+  // State (use integers under the hood to avoid floating issues)
+  let scale = 1;         // 1, 10, 100, 1000
+  let dp = 0;            // decimals
+  let secretInt = null;  // integer in [0..100*scale]
+  let guessCount = 0;
+  let log = [];          // {i, guessStr, hint}
+
+  // Elements
+  const statusPills = document.getElementById("statusPills");
+  const leftTitle = document.getElementById("leftTitle");
+
+  const startScreen = document.getElementById("startScreen");
+  const gameScreen  = document.getElementById("gameScreen");
+  const endScreen   = document.getElementById("endScreen");
+
+  const precisionSel = document.getElementById("precisionSel");
+  const startBtn = document.getElementById("startBtn");
+  const startMsg = document.getElementById("startMsg");
+
+  const guessIn = document.getElementById("guessIn");
+  const guessBtn = document.getElementById("guessBtn");
+  const newBtn = document.getElementById("newBtn");
+  const gameMsg = document.getElementById("gameMsg");
+
+  const endMsg = document.getElementById("endMsg");
+  const playAgainBtn = document.getElementById("playAgainBtn");
+
+  const logWrap = document.getElementById("logWrap");
+
+  // Utils
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
+  function show(el){ el.classList.remove("hide"); }
+  function hide(el){ el.classList.add("hide"); }
+  function showMsg(el, text, cls){
+    el.style.display = "block";
+    el.className = "msg" + (cls ? " " + cls : "");
+    el.textContent = text;
+  }
+  function clearMsg(el){ el.style.display = "none"; el.textContent = ""; }
+
+  function randInt(lo, hi){ return Math.floor(Math.random() * (hi - lo + 1)) + lo; }
+
+  function formatInt(nInt){
+    const val = nInt / scale;
+    return val.toFixed(dp);
+  }
+
+  function parseGuessToInt(){
+    const raw = guessIn.value;
+    const v = Number(raw);
+    if (!Number.isFinite(v)) return null;
+    if (v < 0 || v > 100) return null;
+    // Treat as selected precision: round to nearest grid point
+    const gi = Math.round(v * scale);
+    // Clamp to ensure within bounds after rounding
+    if (gi < 0) return 0;
+    if (gi > 100 * scale) return 100 * scale;
+    return gi;
+  }
+
+  function setGuessInputStep(){
+    const step = (1 / scale);
+    guessIn.min = "0";
+    guessIn.max = "100";
+    guessIn.step = String(step);
+    guessIn.value = "";
+  }
+
+  function setPills(){
+    statusPills.innerHTML = "";
+    if (secretInt === null) return;
+
+    const p1 = document.createElement("div");
+    p1.className = "pill";
+    const label = dp === 0 ? "Integer" : `${dp} dp`;
+    p1.innerHTML = `Mode: <strong class="mono">${escapeHtml(label)}</strong>`;
+    statusPills.appendChild(p1);
+
+    const p2 = document.createElement("div");
+    p2.className = "pill";
+    p2.innerHTML = `Guesses: <strong class="mono">${guessCount}</strong>`;
+    statusPills.appendChild(p2);
+  }
+
+  function renderLog(){
+    if (log.length === 0){
+      logWrap.innerHTML = `<div class="msg">No guesses yet.</div>`;
+      return;
+    }
+    const rows = [...log].slice().reverse().map(e => `
+      <tr>
+        <td class="mono" style="width:70px;">${e.i}</td>
+        <td class="mono" style="width:160px;">${escapeHtml(e.guessStr)}</td>
+        <td>${escapeHtml(e.hint)}</td>
+      </tr>
+    `).join("");
+
+    logWrap.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Guess</th>
+            <th>Hint</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  function resetToStart(){
+    scale = 1;
+    dp = 0;
+    secretInt = null;
+    guessCount = 0;
+    log = [];
+
+    leftTitle.textContent = "Start";
+    show(startScreen);
+    hide(gameScreen);
+    hide(endScreen);
+    clearMsg(startMsg);
+    clearMsg(gameMsg);
+
+    logWrap.innerHTML = `<div class="msg">Start a game to begin logging guesses.</div>`;
+    statusPills.innerHTML = "";
+  }
+
+  function startGame(){
+    const val = Number(precisionSel.value);
+    if (![0,1,2,3].includes(val)){
+      showMsg(startMsg, "Please choose a precision.", "bad");
+      return;
+    }
+    clearMsg(startMsg);
+
+    dp = val;
+    scale = Math.pow(10, dp);
+    secretInt = randInt(0, 100 * scale); // inclusive
+    guessCount = 0;
+    log = [];
+
+    leftTitle.textContent = "Guess";
+    hide(startScreen);
+    show(gameScreen);
+    hide(endScreen);
+
+    setGuessInputStep();
+    clearMsg(gameMsg);
+
+    renderLog();
+    setPills();
+    guessIn.focus();
+  }
+
+  function submitGuess(){
+    if (secretInt === null) return;
+
+    const gi = parseGuessToInt();
+    if (gi === null){
+      showMsg(gameMsg, "Enter a number from 0 to 100.", "bad");
+      return;
+    }
+    clearMsg(gameMsg);
+
+    guessCount += 1;
+
+    const guessStr = formatInt(gi);
+    let hint = "";
+
+    if (gi < secretInt) hint = "Higher";
+    else if (gi > secretInt) hint = "Lower";
+    else hint = "Correct!";
+
+    log.push({ i: guessCount, guessStr, hint });
+    renderLog();
+    setPills();
+
+    if (gi === secretInt){
+      leftTitle.textContent = "Finished";
+      hide(gameScreen);
+      show(endScreen);
+      const secretStr = formatInt(secretInt);
+      endMsg.textContent = `You got it! The number was ${secretStr}. Total guesses: ${guessCount}.`;
+      return;
+    }
+
+    showMsg(gameMsg, hint + " — try again.", "");
+    guessIn.select();
+    guessIn.focus();
+  }
+
+  // Events
+  startBtn.addEventListener("click", startGame);
+  precisionSel.addEventListener("keydown", e => { if (e.key === "Enter") startGame(); });
+
+  guessBtn.addEventListener("click", submitGuess);
+  guessIn.addEventListener("keydown", e => { if (e.key === "Enter") submitGuess(); });
+
+  newBtn.addEventListener("click", () => startGame());
+  playAgainBtn.addEventListener("click", () => startGame());
+
+  // Init
+  resetToStart();
+})();
+</script>
+</body>
+</html>
