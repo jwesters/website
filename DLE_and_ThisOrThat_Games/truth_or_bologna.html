@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Truth or Bologna</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --text:#eaf0ff;
+      --muted:#b7c3e6;
+      --line:rgba(255,255,255,.12);
+      --good:#36d399;
+      --bad:#fb7185;
+      --accent:#60a5fa;
+      --shadow: 0 18px 50px rgba(0,0,0,.35);
+      --radius: 18px;
+      --btnRadius: 16px;
+      --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:var(--font);
+      background:
+        radial-gradient(1200px 700px at 15% 10%, rgba(96,165,250,.18), transparent 60%),
+        radial-gradient(900px 600px at 85% 20%, rgba(54,211,153,.12), transparent 55%),
+        radial-gradient(1000px 700px at 70% 90%, rgba(251,113,133,.10), transparent 60%),
+        var(--bg);
+      color:var(--text);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+    }
+    .app{width:min(980px, 100%); display:grid; gap:14px;}
+    .topbar{
+      display:flex; gap:12px; align-items:center; justify-content:space-between;
+      padding:14px 16px;
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid var(--line); border-radius:var(--radius);
+      box-shadow:var(--shadow);
+    }
+    .brand{display:flex; flex-direction:column; gap:2px; min-width:220px;}
+    .brand h1{margin:0; font-size:18px; letter-spacing:.2px; line-height:1.2;}
+    .brand .sub{color:var(--muted); font-size:12px;}
+    .stats{display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;}
+    .pill{
+      padding:8px 10px; border:1px solid var(--line); border-radius:999px;
+      background:rgba(255,255,255,.04); color:var(--muted);
+      font-size:12px; display:flex; gap:8px; align-items:center; white-space:nowrap;
+    }
+    .pill b{ color: var(--text); font-weight: 800; }
+    .main{
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid var(--line); border-radius:var(--radius);
+      box-shadow:var(--shadow); padding:16px; display:grid; gap:14px;
+    }
+    .screen{display:none; gap:14px;}
+    .screen.active{display:grid;}
+    .card{background:rgba(0,0,0,.18); border:1px solid var(--line); border-radius:var(--radius); padding:16px;}
+    .hero{display:grid; gap:10px; text-align:left;}
+    .hero h2{margin:0; font-size:22px;}
+    .hero p{margin:0; color:var(--muted); line-height:1.45; font-size:14px;}
+    .btnrow{display:flex; gap:12px; flex-wrap:wrap; align-items:center;}
+    button{
+      font-family:inherit; border:1px solid var(--line);
+      background:rgba(255,255,255,.06); color:var(--text);
+      border-radius:14px; padding:12px 14px; cursor:pointer;
+      font-weight:800; letter-spacing:.2px;
+    }
+    button:hover{ background:rgba(255,255,255,.10); }
+    button:active{ transform: translateY(1px); }
+    button:disabled{ opacity:.55; cursor:not-allowed; transform:none; }
+    .primary{
+      background:linear-gradient(180deg, rgba(96,165,250,.35), rgba(96,165,250,.18));
+      border-color:rgba(96,165,250,.45);
+    }
+    .primary:hover{ background:linear-gradient(180deg, rgba(96,165,250,.42), rgba(96,165,250,.22)); }
+    .danger{
+      background:linear-gradient(180deg, rgba(251,113,133,.30), rgba(251,113,133,.14));
+      border-color:rgba(251,113,133,.42);
+    }
+    .danger:hover{ background:linear-gradient(180deg, rgba(251,113,133,.36), rgba(251,113,133,.18)); }
+    .biganswers{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+    .answerbtn{padding:16px 14px; border-radius:var(--btnRadius); text-align:center; font-size:16px;}
+    .answerbtn .tag{
+      display:block; font-size:11px; color:var(--muted); font-weight:700;
+      margin-top:4px; letter-spacing:.3px; text-transform:uppercase;
+    }
+    .question{font-size:18px; line-height:1.35; margin:0;}
+    .meta{display:flex; gap:10px; flex-wrap:wrap; align-items:center; color:var(--muted); font-size:12px;}
+    .divider{height:1px; background:var(--line); margin:8px 0;}
+    .result{display:none; gap:10px;}
+    .result.show{display:grid;}
+    .banner{
+      padding:10px 12px; border-radius:14px; border:1px solid var(--line);
+      font-weight:900; letter-spacing:.2px;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+    }
+    .banner.good{background:linear-gradient(180deg, rgba(54,211,153,.22), rgba(54,211,153,.10)); border-color:rgba(54,211,153,.35);}
+    .banner.bad{background:linear-gradient(180deg, rgba(251,113,133,.22), rgba(251,113,133,.10)); border-color:rgba(251,113,133,.35);}
+    .explain{color:var(--muted); font-size:14px; line-height:1.5; margin:0;}
+    a{ color: var(--accent); text-decoration:none; }
+    a:hover{ text-decoration:underline; }
+
+    /* Bigger start button */
+    #btnStart{
+      padding:18px 26px;
+      font-size:18px;
+      border-radius:16px;
+      min-width: 180px;
+    }
+
+    @media (max-width: 640px){
+      .topbar{ flex-direction:column; align-items:flex-start; }
+      .stats{ justify-content:flex-start; }
+      .biganswers{ grid-template-columns:1fr; }
+      .question{ font-size:17px; }
+      #btnStart{ width:100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="Truth or Bologna">
+    <div class="topbar">
+      <div class="brand">
+        <h1>Truth or Bologna</h1>
+        <div class="sub">Weird facts. One wrong answer ends your streak.</div>
+      </div>
+      <div class="stats" aria-live="polite">
+        <div class="pill">Streak: <b id="streak">0</b></div>
+        <div class="pill">Best: <b id="best">0</b></div>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="screen active" id="screenStart">
+        <div class="card hero">
+          <h2>How to play</h2>
+          <p>
+            Read the statement. Tap <b>TRUTH</b> if you think it’s real, or <b>BOLOGNA</b> if you think it’s made up.
+            Your score is your <b>streak</b> — the game ends as soon as you miss one.
+          </p>
+          <div class="btnrow">
+            <button class="primary" id="btnStart">Start</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen" id="screenGame">
+        <div class="card">
+          <div class="meta">
+            <span id="qNumber">Question 1</span>
+            <span>•</span>
+            <span>Pick one:</span>
+          </div>
+          <div class="divider"></div>
+          <p class="question" id="statement">Loading…</p>
+
+          <div style="height:10px"></div>
+
+          <div class="biganswers">
+            <button class="answerbtn primary" id="btnTruth">
+              TRUTH
+              <span class="tag">I think it’s real</span>
+            </button>
+            <button class="answerbtn danger" id="btnBologna">
+              BOLOGNA
+              <span class="tag">I think it’s made up</span>
+            </button>
+          </div>
+
+          <div class="result" id="resultBox" aria-live="polite">
+            <div class="divider"></div>
+            <div class="banner" id="banner">
+              <span id="bannerText"></span>
+              <span id="bannerMini" style="color:var(--muted); font-weight:800; font-size:12px;"></span>
+            </div>
+            <p class="explain" id="explanation"></p>
+            <div id="sourceWrap" style="display:none; font-size:13px; color:var(--muted);">
+              Source: <a id="sourceLink" href="#" target="_blank" rel="noopener">open link</a>
+            </div>
+            <div class="btnrow" style="margin-top:8px;">
+              <button class="primary" id="btnNext">Next</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen" id="screenOver">
+        <div class="card hero">
+          <h2>Game over</h2>
+          <p style="margin-top:2px;">
+            Your streak: <b id="finalStreak">0</b> &nbsp;•&nbsp; Best streak: <b id="finalBest">0</b>
+          </p>
+          <div class="btnrow">
+            <button class="primary" id="btnPlayAgain">Play again</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+
+  const FACTS = [{"t": true, "s": "Honey never spoils — sealed honey stored properly can stay edible for a very long time.", "e": "Honey is very low in water and naturally acidic, which makes it hard for microbes to grow. If it’s sealed and kept from absorbing moisture, it can last an extremely long time.", "src": "https://en.wikipedia.org/wiki/Honey"}, {"t": true, "s": "A group of flamingos is called a “flamboyance.”", "e": "Some animals have fun collective nouns. Flamingos are famously called a flamboyance.", "src": "https://en.wikipedia.org/wiki/List_of_animal_names"}, {"t": true, "s": "Bananas are berries, but strawberries are not.", "e": "In botany, berries come from one flower with one ovary and usually have seeds inside. Bananas fit the definition; strawberries don’t.", "src": "https://en.wikipedia.org/wiki/Berry"}, {"t": true, "s": "Octopuses have three hearts.", "e": "Two hearts pump blood to the gills, and one pumps it to the rest of the body.", "src": "https://en.wikipedia.org/wiki/Octopus"}, {"t": true, "s": "Wombat poop is cube-shaped.", "e": "Wombats produce cube-shaped droppings, which can help keep the poop from rolling away and may be used for marking territory.", "src": "https://en.wikipedia.org/wiki/Wombat"}, {"t": true, "s": "The shortest war in recorded history lasted under an hour (often cited as 38–45 minutes).", "e": "The Anglo-Zanzibar War of 1896 is commonly described as the shortest recorded war, ending in well under an hour.", "src": "https://en.wikipedia.org/wiki/Anglo-Zanzibar_War"}, {"t": true, "s": "The Eiffel Tower can be about 15 cm taller in summer.", "e": "Metal expands when it gets warmer. In hot weather, the tower can expand slightly and become a bit taller.", "src": "https://en.wikipedia.org/wiki/Eiffel_Tower"}, {"t": true, "s": "Scotland’s national animal is the unicorn.", "e": "Yes — the mythical unicorn is an official national symbol of Scotland.", "src": "https://en.wikipedia.org/wiki/National_animal"}, {"t": true, "s": "A day on Venus is longer than a year on Venus.", "e": "Venus rotates very slowly: one rotation (a “day”) takes longer than its orbit around the Sun (a “year”).", "src": "https://en.wikipedia.org/wiki/Venus"}, {"t": true, "s": "The dot over a lowercase i or j has a name: a “tittle.”", "e": "Typography has lots of quirky terms — that dot is called a tittle.", "src": "https://en.wikipedia.org/wiki/Tittle"}, {"t": true, "s": "Sea otters may hold paws while resting so they don’t drift apart.", "e": "Sea otters can wrap themselves in kelp and sometimes hold paws to stay together in groups while resting.", "src": "https://en.wikipedia.org/wiki/Sea_otter"}, {"t": true, "s": "Some turtles can absorb oxygen through their cloaca (sometimes described as “breathing through their butts”).", "e": "Certain turtle species can absorb oxygen through tissues in their cloaca, especially during winter underwater.", "src": "https://en.wikipedia.org/wiki/Cloacal_respiration"}, {"t": true, "s": "The smallest country in the world is Vatican City.", "e": "Vatican City is the smallest independent state by both area and population.", "src": "https://en.wikipedia.org/wiki/Vatican_City"}, {"t": true, "s": "A bolt of lightning can be hotter than the surface of the Sun.", "e": "Lightning can briefly reach temperatures around 30,000 K, hotter than the Sun’s surface (~5,800 K).", "src": "https://en.wikipedia.org/wiki/Lightning"}, {"t": true, "s": "Sloths can take weeks to digest a single meal.", "e": "Because sloths have very slow metabolisms, digestion can take an unusually long time.", "src": "https://en.wikipedia.org/wiki/Sloth"}, {"t": true, "s": "The “alphabet song” and “Twinkle, Twinkle, Little Star” use the same melody.", "e": "They share the melody of a tune often referred to as “Ah! vous dirai-je, maman.”", "src": "https://en.wikipedia.org/wiki/Ah!_vous_dirai-je,_maman"}, {"t": true, "s": "A “baker’s dozen” is 13.", "e": "Historically, bakers would add an extra item to avoid being short on weight/quantity regulations.", "src": "https://en.wikipedia.org/wiki/Baker%27s_dozen"}, {"t": true, "s": "The color “magenta” doesn’t exist as a single wavelength of light.", "e": "Magenta is a perceived color created by the brain when it sees a combination of red and blue light.", "src": "https://en.wikipedia.org/wiki/Magenta"}, {"t": true, "s": "The smallest bone in the human body is in the ear (the stapes).", "e": "The stapes is a tiny bone in the middle ear.", "src": "https://en.wikipedia.org/wiki/Stapes"}, {"t": true, "s": "A “pangram” is a sentence that contains every letter of the alphabet.", "e": "A classic example is: “The quick brown fox jumps over the lazy dog.”", "src": "https://en.wikipedia.org/wiki/Pangram"}, {"t": true, "s": "An ostrich’s eye is bigger than its brain.", "e": "Ostriches have very large eyes relative to brain size; the eyes are commonly described as larger than the brain.", "src": "https://en.wikipedia.org/wiki/Ostrich"}, {"t": true, "s": "A narwhal’s tusk is actually a long tooth.", "e": "The narwhal’s tusk is an enlarged tooth that can grow through the upper lip.", "src": "https://en.wikipedia.org/wiki/Narwhal"}, {"t": true, "s": "Spiders can ‘balloon’ by riding silk threads on the wind.", "e": "Some spiders release silk that catches the wind, letting them travel long distances through the air.", "src": "https://en.wikipedia.org/wiki/Ballooning_(spider)"}, {"t": true, "s": "The word “robot” comes from a Czech word meaning forced labor.", "e": "“Robot” comes from Czech “robota,” meaning forced labor/servitude, popularized by a play.", "src": "https://en.wikipedia.org/wiki/Robot"}, {"t": true, "s": "A group of giraffes is sometimes called a “tower.”", "e": "Another quirky collective noun: giraffes can be called a tower.", "src": "https://en.wikipedia.org/wiki/List_of_animal_names"}, {"t": true, "s": "Antarctica has an active volcano called Mount Erebus.", "e": "Mount Erebus is a well-known active volcano in Antarctica.", "src": "https://en.wikipedia.org/wiki/Mount_Erebus"}, {"t": true, "s": "A “moonbow” is a rainbow created by moonlight.", "e": "Moonlight can create a rainbow under the right conditions (bright moon, water droplets, and dark sky).", "src": "https://en.wikipedia.org/wiki/Moonbow"}, {"t": true, "s": "The “@” symbol was used in commerce before email.", "e": "The at sign existed in accounting and trade before being adopted for email addresses.", "src": "https://en.wikipedia.org/wiki/At_sign"}, {"t": true, "s": "Koala fingerprints can look very similar to human fingerprints.", "e": "Koalas have fingerprint patterns that can be hard to distinguish from humans without close examination.", "src": "https://en.wikipedia.org/wiki/Koala"}, {"t": true, "s": "The original Hollywood sign said “Hollywoodland.”", "e": "The sign was first built as an advertisement for a housing development and originally read “Hollywoodland.”", "src": "https://en.wikipedia.org/wiki/Hollywood_Sign"}, {"t": true, "s": "The world’s largest desert (by definition) is Antarctica.", "e": "A desert is defined by low precipitation, not heat. Antarctica receives very little precipitation.", "src": "https://en.wikipedia.org/wiki/Desert"}, {"t": true, "s": "A “jiffy” is used as an informal unit of time (its length depends on context).", "e": "In different fields, a jiffy can mean a very short time; in computing/physics it can refer to a small fraction of a second.", "src": "https://en.wikipedia.org/wiki/Jiffy_(time)"}, {"t": true, "s": "The tiny pocket on jeans was originally designed for pocket watches.", "e": "That small pocket (watch pocket) was designed to hold a pocket watch.", "src": "https://en.wikipedia.org/wiki/Jeans"}, {"t": true, "s": "Some frogs can freeze in winter and thaw out in spring, still alive.", "e": "Species like the wood frog can survive freezing by producing chemicals that protect cells.", "src": "https://en.wikipedia.org/wiki/Wood_frog"}, {"t": true, "s": "There is a jellyfish that can revert to a younger stage (often nicknamed the “immortal jellyfish”).", "e": "Turritopsis dohrnii can revert from mature to juvenile form under certain conditions.", "src": "https://en.wikipedia.org/wiki/Turritopsis_dohrnii"}, {"t": true, "s": "Some penguins offer pebbles during courtship.", "e": "In several penguin species, pebble-gifting is part of courtship and nest-building behavior.", "src": "https://en.wikipedia.org/wiki/Penguin"}, {"t": true, "s": "The microwave oven’s invention story includes a candy bar melting near radar equipment.", "e": "Percy Spencer noticed a candy bar melted near radar equipment, prompting experiments leading to microwave cooking.", "src": "https://en.wikipedia.org/wiki/Microwave_oven"}, {"t": true, "s": "The word “emoji” comes from Japanese, not from “emotion.”", "e": "Emoji comes from Japanese (e + moji), while emoticons are typed character faces like :-) .", "src": "https://en.wikipedia.org/wiki/Emoji"}, {"t": true, "s": "A crocodile cannot stick its tongue out.", "e": "Crocodiles have a membrane that holds the tongue in place, limiting movement.", "src": "https://en.wikipedia.org/wiki/Crocodile"}, {"t": true, "s": "The heart of a shrimp is located in its head region (cephalothorax).", "e": "In shrimp, the heart sits in the cephalothorax, often described as the head area.", "src": "https://en.wikipedia.org/wiki/Shrimp"}, {"t": true, "s": "The “Big Dipper” is part of the constellation Ursa Major.", "e": "The Big Dipper is an asterism within Ursa Major (the Great Bear).", "src": "https://en.wikipedia.org/wiki/Big_Dipper"}, {"t": true, "s": "Babies have more bones than adults (many fuse as they grow).", "e": "Most adults have 206 bones; babies start with more that fuse over time.", "src": "https://en.wikipedia.org/wiki/Human_skeleton"}, {"t": true, "s": "Woodpeckers have specialized tongues that can extend far past their beaks.", "e": "Their tongues are adapted to snag insects and can wrap around the skull in some species.", "src": "https://en.wikipedia.org/wiki/Woodpecker"}, {"t": true, "s": "Cats can purr while inhaling and exhaling.", "e": "Cats can produce a purr during both in-breath and out-breath, creating a continuous sound.", "src": "https://en.wikipedia.org/wiki/Cat"}, {"t": true, "s": "55 Cancri e has been nicknamed the “diamond planet” in popular science coverage.", "e": "The exoplanet has been discussed as potentially carbon-rich; media sometimes call it a “diamond planet.”", "src": "https://en.wikipedia.org/wiki/55_Cancri_e"}, {"t": true, "s": "The Mona Lisa’s eyebrows are faint or not clearly visible.", "e": "Eyebrows and lashes appear faint or absent; explanations include fashion, restoration, and paint aging.", "src": "https://en.wikipedia.org/wiki/Mona_Lisa"}, {"t": true, "s": "The first computer ‘bug’ story famously involved a moth.", "e": "A moth found in a relay of the Harvard Mark II became part of computing lore.", "src": "https://en.wikipedia.org/wiki/Software_bug"}, {"t": true, "s": "Some snails can enter dormancy (estivation) for long periods.", "e": "Certain snails can survive harsh dry conditions by sealing themselves and slowing metabolism.", "src": "https://en.wikipedia.org/wiki/Estivation"}, {"t": true, "s": "The Sahara’s name comes from Arabic for “desert.”", "e": "Sahara comes from an Arabic word meaning ‘desert,’ making “Sahara Desert” a bit redundant.", "src": "https://en.wikipedia.org/wiki/Sahara"}, {"t": true, "s": "There’s a U.S. town named “Truth or Consequences.”", "e": "Truth or Consequences is a real town in New Mexico.", "src": "https://en.wikipedia.org/wiki/Truth_or_Consequences,_New_Mexico"}, {"t": true, "s": "The Pacific Ocean covers more surface area than all of Earth’s land combined.", "e": "The Pacific is enormous and is larger than all land area on Earth.", "src": "https://en.wikipedia.org/wiki/Pacific_Ocean"}, {"t": true, "s": "Some fish make sounds by vibrating muscles against their swim bladder.", "e": "In many fish, the swim bladder can help amplify sounds made by muscles.", "src": "https://en.wikipedia.org/wiki/Swim_bladder"}, {"t": true, "s": "The at sign (@) became standard in email because of its meaning ‘at’.", "e": "It was chosen in early email addressing to separate user from host and it already meant ‘at’ in commerce.", "src": "https://en.wikipedia.org/wiki/At_sign"}, {"t": true, "s": "A ‘clew’ means a ball of thread (and “clue” is related).", "e": "The word traces to ‘clew,’ a ball of thread—like the thread in the Theseus labyrinth story.", "src": "https://en.wikipedia.org/wiki/Clew"}, {"t": true, "s": "Astronauts can lose some sense of taste/smell in space due to fluid shifts.", "e": "In microgravity, fluids shift toward the head, which can affect nasal passages and taste perception.", "src": "https://en.wikipedia.org/wiki/Effect_of_spaceflight_on_the_human_body"}, {"t": true, "s": "The “M” in M&M’s stands for “Mars” and “Murrie.”", "e": "M&M’s were named after Forrest Mars Sr. and Bruce Murrie.", "src": "https://en.wikipedia.org/wiki/M%26M%27s"}, {"t": true, "s": "A blue whale’s heart is the largest of any known animal.", "e": "Blue whales are enormous, and their hearts are famously huge.", "src": "https://en.wikipedia.org/wiki/Blue_whale"}, {"t": true, "s": "Popcorn pops because water inside turns to steam and builds pressure.", "e": "When heated, water inside a popcorn kernel turns to steam until the kernel bursts.", "src": "https://en.wikipedia.org/wiki/Popcorn"}, {"t": true, "s": "The shortest, most common kind of ‘rainbow’ name is an ‘asterism’ is not—(Big Dipper is an asterism).", "e": "The Big Dipper is an asterism: a recognizable pattern of stars that’s not a full constellation.", "src": "https://en.wikipedia.org/wiki/Asterism_(astronomy)"}, {"t": true, "s": "The ‘Shannon number’ is an estimate of the number of possible chess games.", "e": "It’s an enormous estimate describing the complexity of chess game trees.", "src": "https://en.wikipedia.org/wiki/Shannon_number"}, {"t": true, "s": "Some cats can be allergic to humans (rare, but possible).", "e": "Cats can develop allergies to substances like human dander, though it’s less common than the reverse.", "src": "https://en.wikipedia.org/wiki/Allergy"}, {"t": true, "s": "The term “kilobyte” has been used to mean 1024 bytes in many computing contexts.", "e": "Historically, in computing, kilo was often used for 1024; ‘kibibyte’ was introduced for clarity.", "src": "https://en.wikipedia.org/wiki/Kilobyte"}, {"t": true, "s": "The first name for Google was “BackRub.”", "e": "Google began as a research project named BackRub before being renamed.", "src": "https://en.wikipedia.org/wiki/Google"}, {"t": true, "s": "There are deserts that are cold, not hot.", "e": "Deserts are defined by low precipitation; many deserts are cold (including polar deserts).", "src": "https://en.wikipedia.org/wiki/Desert"}, {"t": true, "s": "The letter Q does not appear in any U.S. state name.", "e": "No U.S. state contains the letter Q in its name.", "src": "https://en.wikipedia.org/wiki/List_of_U.S._state_and_territory_name_etymologies"}, {"t": true, "s": "A group of crows is often called a “murder.”", "e": "It’s one of the best-known collective nouns in English.", "src": "https://en.wikipedia.org/wiki/List_of_animal_names"}, {"t": true, "s": "The longest river in the United Kingdom is commonly listed as the River Severn.", "e": "The Severn is widely listed as the longest river in Great Britain.", "src": "https://en.wikipedia.org/wiki/River_Severn"}, {"t": true, "s": "The hoatzin bird is nicknamed the “stinkbird.”", "e": "The hoatzin can have a strong odor due to its digestion process.", "src": "https://en.wikipedia.org/wiki/Hoatzin"}, {"t": true, "s": "The word “avocado” traces back to Nahuatl “āhuacatl.”", "e": "The term has an interesting etymology from Nahuatl.", "src": "https://en.wikipedia.org/wiki/Avocado"}, {"t": true, "s": "The Great Barrier Reef is the world’s largest coral reef system.", "e": "It’s the largest coral reef system on Earth.", "src": "https://en.wikipedia.org/wiki/Great_Barrier_Reef"}, {"t": true, "s": "Tarantula females can live for decades in some species.", "e": "Female tarantulas often live much longer than males; some can live 20+ years in captivity.", "src": "https://en.wikipedia.org/wiki/Tarantula"}, {"t": true, "s": "A rainbow made by moonlight is called a moonbow.", "e": "Moonbows are real but usually appear faint to the human eye.", "src": "https://en.wikipedia.org/wiki/Moonbow"}, {"t": true, "s": "The word “ketchup” likely comes from earlier sauces that weren’t tomato-based.", "e": "Ketchup has historical roots in sauces made from fish or other ingredients.", "src": "https://en.wikipedia.org/wiki/Ketchup"}, {"t": true, "s": "“T-shirt” is named for its T-like shape when laid flat.", "e": "It resembles a capital letter T.", "src": "https://en.wikipedia.org/wiki/T-shirt"}, {"t": true, "s": "Some spiders travel long distances by ballooning.", "e": "They ride air currents using silk.", "src": "https://en.wikipedia.org/wiki/Ballooning_(spider)"}, {"t": false, "s": "The world’s first alarm clock could only ring on Tuesdays.", "e": "This is made up. Early mechanical alarm clocks were limited, but not “Tuesday-only.”"}, {"t": false, "s": "A spoonful of sugar was once used as official currency in medieval Iceland.", "e": "Bologna! Iceland used various trade goods at times, but “sugar spoon currency” isn’t a real historical system."}, {"t": false, "s": "Butterflies taste with their wings, not their feet.", "e": "Nope — butterflies taste with sensors on their feet (not wings). This statement is bologna."}, {"t": false, "s": "The Olympic Games once included competitive cloud-watching.", "e": "Made up. Some Olympics included arts competitions long ago, but not cloud-watching as a sport."}, {"t": false, "s": "A giraffe’s tongue is magnetic, which helps it grab leaves.", "e": "Bologna. Giraffe tongues are long and tough, but not magnetic."}, {"t": false, "s": "In Switzerland, it is illegal to whistle on a Wednesday after 8 p.m.", "e": "This is invented. Switzerland has many local rules, but this specific one isn’t real."}, {"t": false, "s": "The letter ‘E’ was temporarily removed from the English alphabet in the 1700s.", "e": "Nope — that never happened. Bologna."}, {"t": false, "s": "Goldfish can recognize faces, but only if the person is wearing a hat.", "e": "Made up. Fish can learn and recognize patterns, but the ‘hat-only’ part is bologna."}, {"t": false, "s": "A cactus can “sneeze” to shoot seeds up to 30 meters.", "e": "Bologna. Some plants do eject seeds, but ‘cactus sneezing’ is not a real thing."}, {"t": false, "s": "The tallest human ever recorded was over 3 meters tall.", "e": "Not true. Very tall records exist, but not over 3 meters. Bologna."}, {"t": false, "s": "The moon has a faint smell of peppermint because of lunar dust.", "e": "Invented. Astronauts have described dust odors, but not peppermint. Bologna."}, {"t": false, "s": "If you yawn underwater, you will automatically float to the surface.", "e": "Bologna. Yawning doesn’t change buoyancy enough to force you upward."}, {"t": false, "s": "Ancient Romans trained pigeons to deliver tiny parachutes.", "e": "Made up. Pigeons carried messages, but parachutes are bologna here."}, {"t": false, "s": "The world’s largest snowflake was as wide as a door and shaped like a perfect hexagon.", "e": "Bologna. Snowflake size stories exist, but ‘door-wide perfect hexagon’ is invented."}, {"t": false, "s": "There’s a secret seventh taste called “zing,” found only in lightning-struck apples.", "e": "Not real. The ‘zing taste’ is bologna."}, {"t": false, "s": "Sharks can blink each eye in a different rhythm to confuse prey.", "e": "Made up. Sharks have eye protections, but this blinking trick is bologna."}, {"t": false, "s": "The first pizza was square because circles were considered unlucky.", "e": "Invented. Pizza history is real and varied, but ‘unlucky circles’ is bologna."}, {"t": false, "s": "Owls can rotate their heads 540 degrees.", "e": "Nope — they can rotate far (about 270 degrees), but 540 is bologna."}, {"t": false, "s": "A banana peel can be used as a compass because it always points north.", "e": "Bologna. Banana peels do not align to Earth’s magnetic field."}, {"t": false, "s": "There is a mountain that hums like a cello whenever the wind blows.", "e": "Made up. Some dunes ‘sing,’ but a cello-humming mountain is bologna."}, {"t": false, "s": "The word “alphabet” comes from an ancient game played with bees.", "e": "Invented. Alphabet comes from alpha + beta, not bees."}, {"t": false, "s": "Penguins can jump higher than kangaroos, but only on ice.", "e": "Bologna. Kangaroos out-jump penguins."}, {"t": false, "s": "A cloud can weigh less than a feather if it is shaped like a heart.", "e": "Made up. Cloud weight depends on water content, not shape."}, {"t": false, "s": "A ruler was originally invented to measure the length of jokes.", "e": "Bologna. Rulers came from measurement needs, not comedy."}, {"t": false, "s": "In Japan, there is a train station run entirely by cats that sell tickets.", "e": "Invented. Some stations have mascots, but ‘cats selling tickets’ is bologna."}, {"t": false, "s": "If you whisper into a seashell, it will echo your words back the next day.", "e": "Bologna. Seashells don’t record and replay sound."}, {"t": false, "s": "The human nose can detect exactly 1,000 smells — no more, no less.", "e": "Made up. Smell detection is not capped at exactly 1,000."}, {"t": false, "s": "A polar bear’s fur is naturally blue, but looks white because of snow dust.", "e": "Bologna. Polar bear fur is translucent and appears white; it’s not naturally blue."}, {"t": false, "s": "The first computer mouse was made from a potato.", "e": "Invented. Early mice were wooden/metal, not potatoes."}, {"t": false, "s": "Some trees grow “leaf teeth” that chew sunlight into energy.", "e": "Bologna. Photosynthesis doesn’t involve chewing."}, {"t": false, "s": "Mars has a single giant mirror lake that reflects Earth on clear nights.", "e": "Made up. Mars has no such mirror lake."}, {"t": false, "s": "Squirrels invented the concept of “saving for later,” which humans copied.", "e": "Bologna (and funny). Humans developed saving concepts independently."}, {"t": false, "s": "A volcano once erupted bubble gum that hardened into pink rock.", "e": "Invented. Volcanic rocks can be colorful, but bubble gum lava is bologna."}, {"t": false, "s": "The sound of a pencil writing is tiny thunder from the graphite.", "e": "Bologna. The sound is friction, not thunder."}, {"t": false, "s": "A camel can store lemonade in its hump if it drinks it slowly enough.", "e": "Made up. Humps store fat, not lemonade."}, {"t": false, "s": "The tallest waterfall in the world is inside a shopping mall.", "e": "Bologna. Indoor waterfalls exist, but the tallest is natural."}, {"t": false, "s": "A hamster can run so fast on its wheel that it creates a breeze strong enough to turn a page.", "e": "Exaggerated and made up. Hamsters run fast, but page-turning breeze is bologna."}, {"t": false, "s": "The Pacific Ocean is named after a pirate’s pet parrot.", "e": "Invented. It was named by explorers; the parrot story is bologna."}, {"t": false, "s": "Some apples are naturally square because they grow in cube-shaped blossoms.", "e": "Bologna. Square-ish apples can be molded, but not from cube blossoms."}, {"t": false, "s": "A rainbow always contains exactly 13 color bands.", "e": "Made up. Color band counts are not fixed like that."}, {"t": false, "s": "A turtle can pop out of its shell like a jack-in-the-box.", "e": "Bologna. A turtle’s shell is part of its body."}, {"t": false, "s": "If you clap near a plant, it will grow leaves in the shape of your hands.", "e": "Made up. Plants don’t copy hand shapes from sound."}, {"t": false, "s": "The longest English word is over 5,000 letters and is used daily in schools.", "e": "Bologna. Extremely long chemical words exist, but not daily school words."}, {"t": false, "s": "In the Middle Ages, knights had to pass a ‘joke test’ before riding horses.", "e": "Made up. No historical ‘joke test’ requirement."}, {"t": false, "s": "A kangaroo’s pouch has a built-in seatbelt.", "e": "Bologna. No seatbelts in pouches."}, {"t": false, "s": "There is a country where the national anthem is played backwards at sunrise.", "e": "Invented. No known country does this as a rule."}, {"t": false, "s": "A pebble can grow into a rock if you water it every day.", "e": "Bologna. Rocks don’t grow by watering."}, {"t": false, "s": "The Earth has a secret second moon that appears only on leap years.", "e": "Bologna. Earth does not have a leap-year-only moon."}, {"t": false, "s": "Elephants can draw perfect circles because they understand geometry.", "e": "Bologna. Elephants are smart, but ‘perfect circles’ is invented."}, {"t": false, "s": "You can tell a tree’s age by counting the number of shadows it makes at noon.", "e": "Made up. Tree rings, not shadows."}, {"t": false, "s": "A dolphin’s laugh can be used to unlock a smartphone.", "e": "Bologna. Phones don’t unlock with dolphin laughs."}, {"t": false, "s": "Snow is naturally warm, but it feels cold because it’s shy.", "e": "Bologna. Snow is cold because of temperature, not shyness."}, {"t": false, "s": "The word “sandwich” was invented by a wizard who hated crumbs.", "e": "Made up. The real origin involves the Earl of Sandwich."}, {"t": false, "s": "A crayon can write on water if you draw fast enough.", "e": "Bologna. Crayons don’t write on water like that."}, {"t": false, "s": "Every time you blink, your brain takes a tiny screenshot.", "e": "Poetic, but not literal. This is bologna."}, {"t": false, "s": "A whale’s sneeze can create a new cloud.", "e": "Bologna. Whale blows are visible, but not cloud-making."}, {"t": false, "s": "The first pair of scissors were designed for cutting spaghetti.", "e": "Made up. Scissors existed long before spaghetti popularity."}, {"t": false, "s": "A planet in our solar system rains marshmallows once a century.", "e": "Invented. No marshmallow rain in the solar system."}, {"t": false, "s": "If you hum the right note, glass will turn into jelly for ten seconds.", "e": "Bologna. Sound can vibrate glass, but not turn it into jelly."}, {"t": false, "s": "A bee can memorize the entire dictionary if trained from birth.", "e": "Bologna. Bees learn, but not dictionaries."}, {"t": false, "s": "The North Pole has an official mayor who rides a unicycle.", "e": "Made up. No such official position."}, {"t": false, "s": "A cactus spine is actually a tiny antenna that hears footsteps.", "e": "Bologna. Spines aren’t antennas."}, {"t": false, "s": "A violin string can predict the weather by changing its color.", "e": "Invented. Strings can change tension, but not color forecasting."}, {"t": false, "s": "Penguins wear their ‘best feathers’ only on weekends.", "e": "Bologna. Penguins don’t have weekends."}, {"t": false, "s": "There is a lake so salty that you can bounce like a trampoline on it.", "e": "Exaggerated and made up. Some lakes are very salty, but trampoline-bouncing is bologna."}, {"t": false, "s": "A zebra’s stripes are painted on by its mother before it is born.", "e": "Bologna. Stripes are genetic."}, {"t": false, "s": "A robot once won a real election and became mayor of the Moon.", "e": "Made up."}, {"t": false, "s": "If you plant a coin, you can grow a money tree that produces quarters.", "e": "Bologna."}, {"t": false, "s": "Spinning in a chair is the official national sport of one country.", "e": "Made up."}, {"t": false, "s": "The color blue was invented in the 1800s.", "e": "Bologna. Blue pigments existed long before."}, {"t": false, "s": "A comet’s tail is made of glitter from space flowers.", "e": "Bologna."}, {"t": false, "s": "If you walk backward in a circle, your shoelaces tie themselves.", "e": "Bologna."}, {"t": false, "s": "The fastest bird is the ostrich when it flaps hard enough.", "e": "Bologna. Ostriches can’t fly."}, {"t": false, "s": "The world’s quietest place is a pillow factory at midnight.", "e": "Made up."}, {"t": false, "s": "A pineapple grows sweeter if you play jazz to it.", "e": "Bologna."}, {"t": true, "s": "A group of owls is sometimes called a “parliament.”", "e": "Collective nouns are traditional phrases; owls are often called a parliament.", "src": "https://en.wikipedia.org/wiki/List_of_animal_names"}, {"t": true, "s": "The shortest complete sentence in English can be “I am.”", "e": "It has a subject (“I”) and a verb (“am”), so it’s grammatically complete.", "src": "https://en.wikipedia.org/wiki/Sentence_(linguistics)"}, {"t": true, "s": "The shortest month is February.", "e": "February has 28 days in most years and 29 in leap years.", "src": "https://en.wikipedia.org/wiki/February"}, {"t": true, "s": "A single lightning strike can contain billions of joules of energy.", "e": "Lightning carries an enormous amount of electrical energy, though it lasts a very short time.", "src": "https://en.wikipedia.org/wiki/Lightning"}, {"t": true, "s": "Earth’s atmosphere is mostly nitrogen.", "e": "Nitrogen makes up about 78% of Earth’s atmosphere.", "src": "https://en.wikipedia.org/wiki/Atmosphere_of_Earth"}, {"t": true, "s": "A rainbow is actually a full circle, but we usually see only an arc.", "e": "From the ground, the horizon blocks the lower part; from above, full circular rainbows can be seen.", "src": "https://en.wikipedia.org/wiki/Rainbow"}, {"t": true, "s": "Some butterflies migrate long distances.", "e": "For example, monarch butterflies are famous for long migrations.", "src": "https://en.wikipedia.org/wiki/Butterfly_migration"}, {"t": true, "s": "The smallest prime number is 2.", "e": "It’s the only even prime number.", "src": "https://en.wikipedia.org/wiki/Prime_number"}, {"t": true, "s": "The word “emoji” was added to the Oxford English Dictionary in 2013.", "e": "Emoji became widely used and recognized enough to be added to major dictionaries.", "src": "https://en.wikipedia.org/wiki/Emoji"}, {"t": true, "s": "A group of jellyfish is sometimes called a “smack.”", "e": "Collective nouns vary, and “smack” is a commonly listed term for jellyfish.", "src": "https://en.wikipedia.org/wiki/List_of_animal_names"}, {"t": true, "s": "A kangaroo can’t walk backward easily.", "e": "Their tails and body structure make backward walking difficult.", "src": "https://en.wikipedia.org/wiki/Kangaroo"}, {"t": true, "s": "Pineapples grow from the ground on a plant, not on trees.", "e": "The fruit develops from the plant’s flowering head near the ground.", "src": "https://en.wikipedia.org/wiki/Pineapple"}, {"t": true, "s": "Your taste buds are not only on your tongue.", "e": "Taste receptors can also be found in other areas like the soft palate and throat.", "src": "https://en.wikipedia.org/wiki/Taste_bud"}, {"t": true, "s": "A hummingbird can flap its wings dozens of times per second.", "e": "Hummingbirds have extremely rapid wingbeats compared to most birds.", "src": "https://en.wikipedia.org/wiki/Hummingbird"}, {"t": true, "s": "The largest planet in our solar system is Jupiter.", "e": "Jupiter is the biggest by diameter and mass among the planets.", "src": "https://en.wikipedia.org/wiki/Jupiter"}, {"t": true, "s": "The speed of sound is slower than the speed of light.", "e": "That’s why you see lightning before you hear thunder.", "src": "https://en.wikipedia.org/wiki/Speed_of_sound"}, {"t": true, "s": "Some sharks must keep swimming to breathe properly.", "e": "Certain species need forward motion to push water over their gills.", "src": "https://en.wikipedia.org/wiki/Shark"}, {"t": true, "s": "A day has 24 hours because of Earth’s rotation.", "e": "The length of a day is based on how long Earth takes to rotate relative to the Sun.", "src": "https://en.wikipedia.org/wiki/Day"}, {"t": true, "s": "The word “piano” is short for “pianoforte.”", "e": "The name refers to playing softly (piano) or loudly (forte).", "src": "https://en.wikipedia.org/wiki/Piano"}, {"t": true, "s": "The largest ocean on Earth is the Pacific Ocean.", "e": "It covers more area than any other ocean.", "src": "https://en.wikipedia.org/wiki/Pacific_Ocean"}, {"t": true, "s": "Bats are mammals, not birds.", "e": "Bats are the only mammals capable of sustained flight.", "src": "https://en.wikipedia.org/wiki/Bat"}, {"t": true, "s": "A tomato is botanically a fruit.", "e": "Botanically it develops from the flower’s ovary and contains seeds.", "src": "https://en.wikipedia.org/wiki/Tomato"}, {"t": true, "s": "A heptagon has seven sides.", "e": "Polygon names come from Greek roots.", "src": "https://en.wikipedia.org/wiki/Heptagon"}, {"t": true, "s": "A hexagon has six sides.", "e": "Many honeycomb cells are hexagonal because it’s efficient.", "src": "https://en.wikipedia.org/wiki/Hexagon"}, {"t": true, "s": "The Statue of Liberty was a gift from France to the United States.", "e": "It was designed by Frédéric Auguste Bartholdi and given as a gift.", "src": "https://en.wikipedia.org/wiki/Statue_of_Liberty"}, {"t": true, "s": "The “dot” on a map that shows where you are is often called a location marker or pin.", "e": "Many digital maps use a “pin” style marker to show locations.", "src": "https://en.wikipedia.org/wiki/Map"}, {"t": true, "s": "A compass points toward magnetic north, not true north.", "e": "Magnetic north and geographic (true) north are different points.", "src": "https://en.wikipedia.org/wiki/North_magnetic_pole"}, {"t": true, "s": "The Earth’s core is extremely hot—about as hot as the surface of the Sun (estimated).", "e": "Scientific estimates suggest core temperatures in the thousands of degrees Celsius.", "src": "https://en.wikipedia.org/wiki/Earth%27s_inner_core"}, {"t": true, "s": "The “International Space Station” orbits Earth about every 90 minutes.", "e": "It travels very fast in low Earth orbit, completing many orbits per day.", "src": "https://en.wikipedia.org/wiki/International_Space_Station"}, {"t": true, "s": "A group of lions is called a pride.", "e": "This is one of the most common collective nouns.", "src": "https://en.wikipedia.org/wiki/Lion"}, {"t": true, "s": "A group of wolves is often called a pack.", "e": "Wolf social groups are commonly called packs.", "src": "https://en.wikipedia.org/wiki/Wolf"}, {"t": true, "s": "A group of bees is called a swarm.", "e": "Large groups of bees traveling together are called swarms.", "src": "https://en.wikipedia.org/wiki/Swarm_behaviour"}, {"t": true, "s": "Pluto is classified as a dwarf planet.", "e": "In 2006, the IAU reclassified Pluto as a dwarf planet.", "src": "https://en.wikipedia.org/wiki/Pluto"}, {"t": true, "s": "The “Milky Way” is the galaxy that contains our Solar System.", "e": "We live inside the Milky Way galaxy.", "src": "https://en.wikipedia.org/wiki/Milky_Way"}, {"t": true, "s": "A meteor is often called a “shooting star,” but it’s not a star.", "e": "It’s a small piece of space rock burning up in Earth’s atmosphere.", "src": "https://en.wikipedia.org/wiki/Meteoroid"}, {"t": true, "s": "The Great Pyramid of Giza is the oldest of the Seven Wonders of the Ancient World.", "e": "It’s the only one that still exists largely intact.", "src": "https://en.wikipedia.org/wiki/Great_Pyramid_of_Giza"}, {"t": true, "s": "Some deserts are cold, not hot.", "e": "Deserts are defined by low precipitation, so polar regions can be deserts too.", "src": "https://en.wikipedia.org/wiki/Desert"}, {"t": true, "s": "A leap year usually has 366 days.", "e": "An extra day is added to February to keep calendars aligned with Earth’s orbit.", "src": "https://en.wikipedia.org/wiki/Leap_year"}, {"t": true, "s": "The Amazon rainforest produces a large amount of Earth’s oxygen, but not ‘most’ of it.", "e": "Most oxygen in Earth’s atmosphere ultimately comes from ocean phytoplankton over long timescales.", "src": "https://en.wikipedia.org/wiki/Oxygen_cycle"}, {"t": true, "s": "The longest bone in the human body is the femur.", "e": "The femur is the thigh bone and is the longest and strongest human bone.", "src": "https://en.wikipedia.org/wiki/Femur"}, {"t": true, "s": "A rainbow’s colors are usually listed as red, orange, yellow, green, blue, indigo, violet.", "e": "That classic order is a common way to describe the visible spectrum in a rainbow.", "src": "https://en.wikipedia.org/wiki/Rainbow"}, {"t": true, "s": "A “haiku” traditionally has 3 lines and often follows a 5–7–5 pattern in English classrooms.", "e": "English-language haiku are commonly taught with a 5–7–5 syllable guideline.", "src": "https://en.wikipedia.org/wiki/Haiku"}, {"t": true, "s": "The Moon’s gravity causes most ocean tides on Earth.", "e": "The Moon’s gravitational pull is the main driver of tides; the Sun also contributes.", "src": "https://en.wikipedia.org/wiki/Tide"}, {"t": true, "s": "The “shortest” letter in Morse code is E (a single dot).", "e": "In International Morse code, E is represented by one dot.", "src": "https://en.wikipedia.org/wiki/Morse_code"}, {"t": true, "s": "The inventor of Braille was Louis Braille.", "e": "He developed the Braille writing system used by people who are blind or have low vision.", "src": "https://en.wikipedia.org/wiki/Louis_Braille"}, {"t": true, "s": "The largest land animal is the African bush elephant.", "e": "It is the largest living terrestrial animal by mass.", "src": "https://en.wikipedia.org/wiki/African_bush_elephant"}, {"t": true, "s": "A “constellation” is a recognized area of the sky, not just a shape of stars.", "e": "Modern constellations are officially defined regions of the sky.", "src": "https://en.wikipedia.org/wiki/Constellation"}, {"t": true, "s": "The first letter of the Greek alphabet is alpha.", "e": "Alpha is the first Greek letter.", "src": "https://en.wikipedia.org/wiki/Alpha"}, {"t": true, "s": "The capital of Canada is Ottawa.", "e": "Ottawa is the federal capital city of Canada.", "src": "https://en.wikipedia.org/wiki/Ottawa"}, {"t": true, "s": "The human body has a “second brain” nickname for the enteric nervous system in the gut.", "e": "The enteric nervous system helps control digestion and can function semi-independently.", "src": "https://en.wikipedia.org/wiki/Enteric_nervous_system"}, {"t": true, "s": "A chameleon changes color for communication and temperature control—not just camouflage.", "e": "Color change can signal mood, social messages, and help regulate body temperature.", "src": "https://en.wikipedia.org/wiki/Chameleon"}, {"t": true, "s": "Some frogs carry their tadpoles on their backs.", "e": "In some species, adults transport tadpoles to safer water sources.", "src": "https://en.wikipedia.org/wiki/Poison_dart_frog"}, {"t": true, "s": "A “volcano” is an opening in Earth’s crust where magma and gases can escape.", "e": "Volcanoes form when magma rises and erupts at the surface.", "src": "https://en.wikipedia.org/wiki/Volcano"}, {"t": true, "s": "The Earth has one natural satellite: the Moon.", "e": "Earth’s natural satellite is the Moon (ignoring temporary captured objects).", "src": "https://en.wikipedia.org/wiki/Moon"}, {"t": true, "s": "The largest bone in a whale is not a leg bone—whales don’t have legs.", "e": "Whales are mammals with modified limbs; they do not have external legs.", "src": "https://en.wikipedia.org/wiki/Whale"}, {"t": true, "s": "A “stadium wave” works because people stand up in sequence.", "e": "The wave is a coordinated crowd action that travels around a stadium.", "src": "https://en.wikipedia.org/wiki/Wave_(audience)"}, {"t": true, "s": "A Venus flytrap can close in less than a second.", "e": "It’s a fast-moving plant trap that snaps shut when triggered.", "src": "https://en.wikipedia.org/wiki/Venus_flytrap"}, {"t": true, "s": "The fastest land animal is the cheetah.", "e": "Cheetahs are built for speed and can sprint extremely fast.", "src": "https://en.wikipedia.org/wiki/Cheetah"}, {"t": true, "s": "Ants can carry objects many times their own body weight.", "e": "Ants are very strong for their size due to their body structure.", "src": "https://en.wikipedia.org/wiki/Ant"}, {"t": true, "s": "The longest river in the world is often listed as the Nile or the Amazon, depending on measurement methods.", "e": "Different ways of measuring can change which river is considered ‘longest’.", "src": "https://en.wikipedia.org/wiki/List_of_rivers_by_length"}, {"t": true, "s": "A “fossil” is evidence of ancient life preserved in rock.", "e": "Fossils include bones, shells, imprints, and other traces.", "src": "https://en.wikipedia.org/wiki/Fossil"}, {"t": true, "s": "The “dozen” equals 12.", "e": "A dozen is a standard count of twelve.", "src": "https://en.wikipedia.org/wiki/Dozen"}, {"t": true, "s": "The “hundreds” in Roman numerals is C.", "e": "In Roman numerals, C stands for 100.", "src": "https://en.wikipedia.org/wiki/Roman_numerals"}, {"t": true, "s": "The largest bird by height is the ostrich.", "e": "Ostriches are the tallest and heaviest living birds.", "src": "https://en.wikipedia.org/wiki/Ostrich"}, {"t": true, "s": "A group of whales is often called a pod.", "e": "Many marine mammals form social groups called pods.", "src": "https://en.wikipedia.org/wiki/Pod_(cetacean)"}, {"t": true, "s": "A “fraction” is a way to represent part of a whole.", "e": "Fractions represent a ratio of two numbers.", "src": "https://en.wikipedia.org/wiki/Fraction"}, {"t": true, "s": "A “decimal point” separates the whole number part from the fractional part.", "e": "Decimals represent fractions based on powers of ten.", "src": "https://en.wikipedia.org/wiki/Decimal_separator"}, {"t": true, "s": "The Earth’s seasons are mainly caused by its axial tilt, not by distance from the Sun.", "e": "Earth’s tilt changes the angle of sunlight through the year, creating seasons.", "src": "https://en.wikipedia.org/wiki/Season"}, {"t": true, "s": "The largest coral reef system is the Great Barrier Reef.", "e": "It’s the biggest coral reef system on Earth.", "src": "https://en.wikipedia.org/wiki/Great_Barrier_Reef"}, {"t": true, "s": "Saturn is known for its rings.", "e": "Saturn’s ring system is the most prominent in our solar system.", "src": "https://en.wikipedia.org/wiki/Saturn"}, {"t": true, "s": "The word “laser” is an acronym.", "e": "LASER stands for ‘Light Amplification by Stimulated Emission of Radiation’.", "src": "https://en.wikipedia.org/wiki/Laser"}, {"t": true, "s": "A “planet” in our solar system orbits the Sun.", "e": "Planets orbit the Sun and have cleared their orbital neighborhoods (per IAU definition).", "src": "https://en.wikipedia.org/wiki/Planet"}, {"t": true, "s": "A “pumice” rock can float on water.", "e": "Pumice is full of air pockets, making it light enough to float.", "src": "https://en.wikipedia.org/wiki/Pumice"}, {"t": true, "s": "The tallest mountain on Earth by height above sea level is Mount Everest.", "e": "Everest is the highest above sea level, though other mountains win by different measurements.", "src": "https://en.wikipedia.org/wiki/Mount_Everest"}, {"t": true, "s": "Sound cannot travel through the vacuum of space.", "e": "Sound needs a medium (like air or water) to travel.", "src": "https://en.wikipedia.org/wiki/Sound"}, {"t": true, "s": "A solar eclipse happens when the Moon passes between Earth and the Sun.", "e": "The Moon blocks sunlight and casts a shadow on Earth.", "src": "https://en.wikipedia.org/wiki/Solar_eclipse"}, {"t": true, "s": "The smallest continent by land area is Australia.", "e": "Australia is the smallest continent by area.", "src": "https://en.wikipedia.org/wiki/Continent"}, {"t": true, "s": "The word “alphabet” comes from alpha and beta.", "e": "It’s formed from the first two letters of the Greek alphabet.", "src": "https://en.wikipedia.org/wiki/Alphabet"}, {"t": true, "s": "A “hurricane” and a “typhoon” are the same type of storm, just named differently by region.", "e": "Both are tropical cyclones; naming depends on where they occur.", "src": "https://en.wikipedia.org/wiki/Tropical_cyclone"}, {"t": true, "s": "A “triangle” has three sides.", "e": "It’s a polygon with three edges and three vertices.", "src": "https://en.wikipedia.org/wiki/Triangle"}, {"t": true, "s": "A “quadrilateral” has four sides.", "e": "It’s any polygon with four edges.", "src": "https://en.wikipedia.org/wiki/Quadrilateral"}, {"t": true, "s": "The smallest planet is Mercury (among the eight planets).", "e": "Mercury is the smallest of the eight planets in our solar system.", "src": "https://en.wikipedia.org/wiki/Mercury_(planet)"}, {"t": true, "s": "Sharks have been around for hundreds of millions of years.", "e": "Shark-like fish have ancient origins far back in geologic time.", "src": "https://en.wikipedia.org/wiki/Shark"}, {"t": true, "s": "The word “volcano” comes from Vulcan, the Roman god of fire.", "e": "It’s linked to Vulcan and the island of Vulcano in Italy.", "src": "https://en.wikipedia.org/wiki/Volcano"}, {"t": true, "s": "Some planets have more than one moon.", "e": "Jupiter and Saturn, for example, have many moons.", "src": "https://en.wikipedia.org/wiki/Natural_satellite"}, {"t": true, "s": "A “binary” number system uses only 0 and 1.", "e": "Computers use binary to represent information.", "src": "https://en.wikipedia.org/wiki/Binary_number"}, {"t": true, "s": "A “centimeter” is one hundredth of a meter.", "e": "It’s a metric unit: 1 cm = 0.01 m.", "src": "https://en.wikipedia.org/wiki/Centimetre"}, {"t": true, "s": "A “millimeter” is one thousandth of a meter.", "e": "It’s a metric unit: 1 mm = 0.001 m.", "src": "https://en.wikipedia.org/wiki/Millimetre"}, {"t": true, "s": "The planet Earth is about 4.5 billion years old (estimated).", "e": "Radiometric dating suggests Earth formed about 4.54 billion years ago.", "src": "https://en.wikipedia.org/wiki/Earth"}, {"t": true, "s": "The fastest rotating planet is Jupiter.", "e": "Jupiter has the shortest day of the planets, about 10 hours.", "src": "https://en.wikipedia.org/wiki/Jupiter"}, {"t": true, "s": "Water expands when it freezes.", "e": "That’s why ice can crack rocks and why ice floats on liquid water.", "src": "https://en.wikipedia.org/wiki/Water"}, {"t": true, "s": "The Sun is a star.", "e": "It’s a yellow dwarf star at the center of our Solar System.", "src": "https://en.wikipedia.org/wiki/Sun"}, {"t": true, "s": "The word “volcano” is also the name of an island in Italy: Vulcano.", "e": "The term is connected to Vulcano and the Roman god Vulcan.", "src": "https://en.wikipedia.org/wiki/Vulcano"}, {"t": true, "s": "A circle has no corners.", "e": "A circle is a set of points at an equal distance from its center.", "src": "https://en.wikipedia.org/wiki/Circle"}, {"t": true, "s": "Bees communicate using a “waggle dance.”", "e": "Honey bees can indicate direction and distance to food sources with a dance.", "src": "https://en.wikipedia.org/wiki/Waggle_dance"}, {"t": true, "s": "The tallest waterfall in the world is Angel Falls in Venezuela (commonly listed).", "e": "Angel Falls is often listed as the world’s highest uninterrupted waterfall.", "src": "https://en.wikipedia.org/wiki/Angel_Falls"}, {"t": true, "s": "A “meteorite” is a meteoroid that reaches the ground.", "e": "If a space rock survives the trip through the atmosphere and lands, it’s a meteorite.", "src": "https://en.wikipedia.org/wiki/Meteorite"}, {"t": true, "s": "A “galaxy” is a huge collection of stars, gas, dust, and dark matter held together by gravity.", "e": "Our Solar System is inside a galaxy called the Milky Way.", "src": "https://en.wikipedia.org/wiki/Galaxy"}, {"t": true, "s": "The word “robot” was popularized by a play in 1920.", "e": "The word became famous through Karel Čapek’s play R.U.R.", "src": "https://en.wikipedia.org/wiki/R.U.R."}, {"t": true, "s": "The deepest known part of the ocean is the Challenger Deep (Mariana Trench).", "e": "It’s the deepest surveyed point in Earth’s seas.", "src": "https://en.wikipedia.org/wiki/Challenger_Deep"}, {"t": false, "s": "A pencil’s eraser was invented to erase bad jokes from paper.", "e": "Bologna. Erasers remove graphite, not comedy."}, {"t": false, "s": "In ancient times, people used spaghetti as shoelaces because it was “stringy.”", "e": "Made up. Spaghetti is food, not footwear."}, {"t": false, "s": "A dolphin can tell time by listening to the ocean’s “tick-tock.”", "e": "Bologna. Dolphins are smart, but oceans don’t tick."}, {"t": false, "s": "There’s a type of snow that tastes like vanilla if you catch it on your tongue.", "e": "Made up. Snow taste depends on what’s in the air, not vanilla flavoring."}, {"t": false, "s": "The first rulers were made from melted cheese pressed flat.", "e": "Bologna. Rulers were made from wood, metal, and other sturdy materials."}, {"t": false, "s": "A cactus keeps tiny diaries in its spines to remember rainy days.", "e": "Bologna. Cute idea, not real."}, {"t": false, "s": "If you whisper ‘good morning’ to a plant, it grows faster by exactly 2 centimeters.", "e": "Made up. Plants don’t grow by exact ‘polite’ measurements."}, {"t": false, "s": "The Moon has an official ‘quiet hour’ where it stops reflecting light.", "e": "Bologna. The Moon reflects sunlight based on position, not rules."}, {"t": false, "s": "A goldfish can learn to read, but only the letter G.", "e": "Made up. Fish can learn patterns, but not letters like that."}, {"t": false, "s": "A penguin’s tuxedo pattern is chosen at birth from a tiny wardrobe.", "e": "Bologna. Feather patterns are biological, not clothing."}, {"t": false, "s": "Volcanoes are just mountains that got too angry and started yelling lava.", "e": "Bologna. Volcanoes are caused by geology, not emotions."}, {"t": false, "s": "Rainbows appear because clouds are secretly painting the sky.", "e": "Made up. Rainbows form from light refraction and reflection in droplets."}, {"t": false, "s": "The ‘X’ in xylophone stands for ‘extra loud.’", "e": "Bologna. It comes from Greek roots related to wood and sound."}, {"t": false, "s": "A hamster wheel was originally invented as a tiny Ferris wheel for ants.", "e": "Made up."}, {"t": false, "s": "If you tap a book three times, it will open to the page you need most.", "e": "Bologna. That would be handy though!"}, {"t": false, "s": "The fastest way to cool soup is to tell it a spooky story.", "e": "Bologna."}, {"t": false, "s": "All mountains have hidden zipper pockets for storing clouds.", "e": "Made up."}, {"t": false, "s": "A giraffe’s spots are actually tiny windows for letting heat escape.", "e": "Bologna. Spots are pigment patterns, not windows."}, {"t": false, "s": "A whale can sing a song that turns seaweed into spaghetti.", "e": "Bologna."}, {"t": false, "s": "If you run in a circle, you can temporarily borrow extra gravity.", "e": "Made up."}, {"t": false, "s": "A compass needle points north because it’s afraid of the south.", "e": "Bologna."}, {"t": false, "s": "The first keyboard was designed for typing to squirrels.", "e": "Made up."}, {"t": false, "s": "Spiders learned to make webs by copying knitting from grandmas.", "e": "Bologna."}, {"t": false, "s": "You can tell a turtle’s age by counting how many times it blinked yesterday.", "e": "Made up."}, {"t": false, "s": "Clouds are made of tiny pieces of cotton candy that forgot to fall.", "e": "Bologna."}, {"t": false, "s": "A volcano’s smoke is actually the mountain’s breath after eating spicy rocks.", "e": "Made up."}, {"t": false, "s": "The letter ‘Q’ is silent because it’s shy.", "e": "Bologna."}, {"t": false, "s": "If you draw a circle perfectly, it will roll off the paper.", "e": "Made up."}, {"t": false, "s": "A shark’s fin is a built-in Wi‑Fi antenna.", "e": "Bologna."}, {"t": false, "s": "A zebra’s stripes are painted on every Monday morning.", "e": "Made up."}, {"t": false, "s": "If you stare at a clock long enough, it will start counting backwards.", "e": "Bologna."}, {"t": false, "s": "The ocean is salty because fish keep making soup in it.", "e": "Made up."}, {"t": false, "s": "The Earth’s core is powered by a giant hamster wheel.", "e": "Bologna."}, {"t": false, "s": "If you clap in a cave, bats will applaud back.", "e": "Made up."}, {"t": false, "s": "A snowflake always has exactly 12 points in summer.", "e": "Bologna."}, {"t": false, "s": "A banana peel can be used as a phone charger in emergencies.", "e": "Made up."}, {"t": false, "s": "A backpack was invented to carry invisible pets.", "e": "Bologna."}, {"t": false, "s": "Trees grow rings because they’re practicing for a target game.", "e": "Made up."}, {"t": false, "s": "Your shadow is darker on Mondays because it’s tired.", "e": "Bologna."}, {"t": false, "s": "Saturn’s rings are made of frozen onion rings.", "e": "Made up."}, {"t": false, "s": "A meteor is a star that tripped and fell.", "e": "Bologna."}, {"t": false, "s": "If you whistle at the Sun, it gets slightly brighter.", "e": "Made up."}, {"t": false, "s": "A dolphin’s favorite math is long division.", "e": "Bologna."}, {"t": false, "s": "Bees invented spelling because they like buzzing letters.", "e": "Made up."}, {"t": false, "s": "A pencil sharpener works by politely asking the pencil to be pointy.", "e": "Bologna."}, {"t": false, "s": "A turtle’s shell is a portable house it can loan to friends.", "e": "Made up."}, {"t": false, "s": "The Moon is made of cheese, but only on weekends.", "e": "Bologna."}, {"t": false, "s": "If you eat a carrot, you can see through walls for 10 seconds.", "e": "Made up."}, {"t": false, "s": "A rainbow is a bridge for tiny ants to cross the sky.", "e": "Bologna."}, {"t": false, "s": "Cows moo in different accents depending on the farm.", "e": "Made up (they do have different calls, but not ‘accents’ like that)."}, {"t": false, "s": "A book’s spine is called that because it has tiny bones inside.", "e": "Bologna."}, {"t": false, "s": "The alphabet was originally arranged by height of the letters.", "e": "Made up."}, {"t": false, "s": "A penguin can fly if it believes hard enough.", "e": "Bologna."}, {"t": false, "s": "The fastest animal is the snail when nobody is watching.", "e": "Made up."}, {"t": false, "s": "A volcano can sneeze out marshmallows during winter storms.", "e": "Bologna."}, {"t": false, "s": "A compass was invented to help lost cookies find milk.", "e": "Made up."}, {"t": false, "s": "The first map was drawn on a pancake and flipped to change continents.", "e": "Bologna."}, {"t": false, "s": "A dinosaur invented the first skateboard.", "e": "Made up."}, {"t": false, "s": "Stars twinkle because they’re winking at Earth.", "e": "Bologna."}, {"t": false, "s": "A cloud can memorize your name and shout it in thunder later.", "e": "Made up."}, {"t": false, "s": "If you put a seashell to your ear, it’s practicing for a concert.", "e": "Bologna."}, {"t": false, "s": "A pencil’s lead is made from tiny pieces of meteorite.", "e": "Made up."}, {"t": false, "s": "A shark can juggle seashells with its fins.", "e": "Bologna."}, {"t": false, "s": "A bee can do multiplication by dancing in a square.", "e": "Made up."}, {"t": false, "s": "If you write in blue ink, the words become colder.", "e": "Bologna."}, {"t": false, "s": "A snowman’s carrot nose works like a remote control for winter.", "e": "Made up."}, {"t": false, "s": "A cheetah is fast because it has tiny wheels on its paws.", "e": "Bologna."}, {"t": false, "s": "A volcano is just a dragon taking a nap underground.", "e": "Made up."}, {"t": false, "s": "If you hop on one foot, you can hear radio stations in your knee.", "e": "Bologna."}, {"t": false, "s": "The Moon’s craters are footprints from giant invisible rabbits.", "e": "Made up."}, {"t": false, "s": "A dolphin can unlock a phone by smiling at it.", "e": "Bologna."}, {"t": false, "s": "Rain is made when clouds spill their water bottles.", "e": "Made up."}, {"t": false, "s": "If you count to 100 underwater, fish will give you a certificate.", "e": "Bologna."}, {"t": false, "s": "A compass points north because it likes colder jokes.", "e": "Made up."}, {"t": false, "s": "Stars are hot because they ate too much pepper.", "e": "Bologna."}, {"t": false, "s": "A planet has rings because it wants to look fancy.", "e": "Made up."}, {"t": false, "s": "If you hold an ice cube, it learns your fingerprints.", "e": "Bologna."}, {"t": false, "s": "If you draw a triangle, it becomes a tiny tent for ants.", "e": "Made up."}, {"t": false, "s": "A turtle can breathe underwater because it carries a tiny snorkel.", "e": "Bologna."}, {"t": false, "s": "A rainbow can be folded and stored in your pocket if you hurry.", "e": "Made up."}, {"t": false, "s": "A bee’s buzz is actually it spelling the word ‘buzz.’", "e": "Bologna."}, {"t": false, "s": "If you pat a rock, it will grow into a boulder overnight.", "e": "Made up."}, {"t": false, "s": "A cactus is prickly because it’s wearing a sweater inside-out.", "e": "Bologna."}, {"t": false, "s": "A penguin’s belly is white so it can reflect compliments.", "e": "Made up."}, {"t": false, "s": "Fun fact: a cloud can paint the moon every Tuesday.", "e": "Bologna. That’s a silly made-up statement."}, {"t": false, "s": "Fun fact: a cloud can solve riddles every Tuesday.", "e": "Bologna. That’s a silly made-up statement."}, {"t": false, "s": "Fun fact: a penguin can make pancakes every full moon.", "e": "Bologna. That’s a silly made-up statement."}, {"t": false, "s": "Fun fact: a penguin can solve riddles every rainy day.", "e": "Bologna. That’s a silly made-up statement."}, {"t": false, "s": "Fun fact: a cloud can make pancakes every Friday.", "e": "Bologna. That’s a silly made-up statement."}, {"t": false, "s": "Fun fact: a banana can paint the moon every Tuesday.", "e": "Bologna. That’s a silly made-up statement."}, {"t": false, "s": "Fun fact: a banana can learn karate every Tuesday.", "e": "Bologna. That’s a silly made-up statement."}, {"t": false, "s": "Fun fact: a penguin can solve riddles every Friday.", "e": "Bologna. That’s a silly made-up statement."}, {"t": false, "s": "Fun fact: a pencil can learn karate every leap year.", "e": "Bologna. That’s a silly made-up statement."}, {"t": false, "s": "Fun fact: a turtle can juggle socks every Friday.", "e": "Bologna. That’s a silly made-up statement."}, {"t": false, "s": "Fun fact: a rainbow can text dolphins every full moon.", "e": "Bologna. That’s a silly made-up statement."}, {"t": false, "s": "Fun fact: a penguin can sing opera every Tuesday.", "e": "Bologna. That’s a silly made-up statement."}, {"t": false, "s": "Fun fact: a penguin can paint the moon every Friday.", "e": "Bologna. That’s a silly made-up statement."}, {"t": false, "s": "Fun fact: a compass can do homework every full moon.", "e": "Bologna. That’s a silly made-up statement."}, {"t": false, "s": "Fun fact: a banana can paint the moon every full moon.", "e": "Bologna. That’s a silly made-up statement."}, {"t": false, "s": "Fun fact: a turtle can make pancakes every Friday.", "e": "Bologna. That’s a silly made-up statement."}, {"t": true, "s": "The largest desert on Earth by area is Antarctica (a cold desert).", "e": "Deserts are defined by low precipitation; Antarctica qualifies despite being cold.", "src": "https://en.wikipedia.org/wiki/Desert"}, {"t": true, "s": "Venus is the hottest planet in our solar system.", "e": "Its thick atmosphere traps heat in a strong greenhouse effect.", "src": "https://en.wikipedia.org/wiki/Venus"}, {"t": true, "s": "The human heart beats about 100,000 times per day (roughly).", "e": "Average resting rates lead to about this many beats in 24 hours.", "src": "https://en.wikipedia.org/wiki/Heart"}, {"t": true, "s": "A group of dolphins is called a pod.", "e": "Marine mammals often form social groups called pods.", "src": "https://en.wikipedia.org/wiki/Pod_(cetacean)"}, {"t": true, "s": "The chemical symbol for gold is Au.", "e": "Au comes from the Latin word ‘aurum.’", "src": "https://en.wikipedia.org/wiki/Gold"}, {"t": true, "s": "The longest day of the year in the Northern Hemisphere is the summer solstice.", "e": "It’s when the Sun’s path is longest across the sky.", "src": "https://en.wikipedia.org/wiki/Summer_solstice"}, {"t": true, "s": "A teaspoon holds about 5 milliliters.", "e": "That’s the standard metric measure for a teaspoon.", "src": "https://en.wikipedia.org/wiki/Teaspoon"}, {"t": true, "s": "The speed of light in vacuum is about 300,000 km per second.", "e": "More precisely, 299,792,458 meters per second.", "src": "https://en.wikipedia.org/wiki/Speed_of_light"}, {"t": true, "s": "A prism can split white light into a spectrum of colors.", "e": "Different wavelengths bend by different amounts.", "src": "https://en.wikipedia.org/wiki/Prism_(optics)"}, {"t": true, "s": "The Great Wall of China is made from many sections built over centuries.", "e": "It’s not one single continuous wall built at one time.", "src": "https://en.wikipedia.org/wiki/Great_Wall_of_China"}, {"t": true, "s": "A ‘year’ on Mars is longer than a year on Earth.", "e": "Mars takes about 687 Earth days to orbit the Sun.", "src": "https://en.wikipedia.org/wiki/Mars"}, {"t": true, "s": "The human eye has a blind spot where the optic nerve leaves the retina.", "e": "Your brain fills in the missing information.", "src": "https://en.wikipedia.org/wiki/Blind_spot_(vision)"}, {"t": true, "s": "A ‘meteor shower’ happens when Earth passes through debris left by a comet.", "e": "The particles burn up in the atmosphere, making streaks of light.", "src": "https://en.wikipedia.org/wiki/Meteor_shower"}, {"t": true, "s": "The letter ‘A’ is the most commonly used letter in English (by frequency).", "e": "Letter frequency analyses often show A among the most common letters.", "src": "https://en.wikipedia.org/wiki/Letter_frequency"}, {"t": true, "s": "An iceberg floats because ice is less dense than liquid water.", "e": "Frozen water expands and becomes less dense.", "src": "https://en.wikipedia.org/wiki/Ice"}, {"t": true, "s": "The planet with the most visible rings is Saturn.", "e": "Its ring system is the most prominent in our solar system.", "src": "https://en.wikipedia.org/wiki/Saturn"}, {"t": true, "s": "The word ‘calendar’ comes from a Latin word related to calling out days.", "e": "It traces back to Latin ‘calendae.’", "src": "https://en.wikipedia.org/wiki/Calendar"}, {"t": true, "s": "The tallest land mammal is the giraffe.", "e": "Adult giraffes can be over 5 meters tall.", "src": "https://en.wikipedia.org/wiki/Giraffe"}, {"t": true, "s": "A compass rose shows directions on a map.", "e": "It indicates north, south, east, and west (and more).", "src": "https://en.wikipedia.org/wiki/Compass_rose"}, {"t": true, "s": "The Pacific Ocean is shrinking slightly due to plate tectonics.", "e": "Some regions are subducting, reducing area over long timescales.", "src": "https://en.wikipedia.org/wiki/Pacific_Ocean"}, {"t": true, "s": "The Moon always shows the same face to Earth (tidal locking).", "e": "Its rotation period matches its orbit period around Earth.", "src": "https://en.wikipedia.org/wiki/Tidal_locking"}, {"t": true, "s": "A ‘dozen’ eggs means 12 eggs.", "e": "Dozen is a standard grouping of twelve.", "src": "https://en.wikipedia.org/wiki/Dozen"}, {"t": true, "s": "The chemical symbol for sodium is Na.", "e": "It comes from the Latin ‘natrium.’", "src": "https://en.wikipedia.org/wiki/Sodium"}, {"t": true, "s": "A ‘kilometer’ equals 1,000 meters.", "e": "It’s a basic metric conversion.", "src": "https://en.wikipedia.org/wiki/Kilometre"}, {"t": true, "s": "The word ‘planet’ comes from a Greek word meaning ‘wanderer.’", "e": "Ancient astronomers saw planets as wandering stars.", "src": "https://en.wikipedia.org/wiki/Planet"}, {"t": false, "s": "A compass needs batteries because it’s secretly a tiny robot.", "e": "Bologna. Compasses work with magnetism, not batteries."}, {"t": false, "s": "Clouds are stored in warehouses at night to keep the sky tidy.", "e": "Bologna."}, {"t": false, "s": "If you whisper to a ruler, it measures more accurately.", "e": "Bologna."}, {"t": false, "s": "The Moon changes phases because it’s shy and turns away.", "e": "Bologna."}, {"t": false, "s": "A penguin’s tuxedo is rented from a fancy shop in Antarctica.", "e": "Bologna."}, {"t": false, "s": "Rainbows are painted by birds using their beaks.", "e": "Bologna."}, {"t": false, "s": "A cactus learned to be prickly by reading a scary book.", "e": "Bologna."}, {"t": false, "s": "If you count backwards, time walks backward too.", "e": "Bologna."}, {"t": false, "s": "A turtle’s shell is a removable hat for sunny days.", "e": "Bologna."}, {"t": false, "s": "Stars twinkle because they’re laughing.", "e": "Bologna."}, {"t": false, "s": "A magnet sticks to the fridge because it likes cold snacks.", "e": "Bologna."}, {"t": false, "s": "The Sun sets because it needs to sleep.", "e": "Bologna."}, {"t": false, "s": "If you spin fast enough, you can see yesterday.", "e": "Bologna."}, {"t": false, "s": "A whale’s song is actually underwater karaoke.", "e": "Bologna."}, {"t": false, "s": "A map knows where you are and moves itself when you’re lost.", "e": "Bologna."}, {"t": false, "s": "Trees grow taller on weekends because they have free time.", "e": "Bologna."}, {"t": false, "s": "A clock’s hands are tiny arms that get tired.", "e": "Bologna."}, {"t": false, "s": "If you clap twice, mountains echo three times to show off.", "e": "Bologna."}, {"t": false, "s": "A pencil writes because it’s ticklish.", "e": "Bologna."}, {"t": false, "s": "Planets wear rings to look fancy for space photos.", "e": "Bologna."}, {"t": false, "s": "A snowflake chooses its shape from a catalog.", "e": "Bologna."}, {"t": false, "s": "Books get heavier when they’re full of secrets.", "e": "Bologna."}, {"t": false, "s": "The ocean is salty because it forgot to rinse.", "e": "Bologna."}, {"t": false, "s": "If you draw a square, it becomes a window for ants.", "e": "Bologna."}, {"t": false, "s": "A bee can read road signs while flying.", "e": "Bologna."}];
+
+  const LS_BEST = "tob_best_streak_v1";
+  let deck = [];
+  let idx = 0;
+  let streak = 0;
+  let best = 0;
+  let current = null;
+  let inReveal = false;
+
+  const $ = (id) => document.getElementById(id);
+
+  const screenStart = $("screenStart");
+  const screenGame  = $("screenGame");
+  const screenOver  = $("screenOver");
+
+  const streakEl = $("streak");
+  const bestEl = $("best");
+
+  const statementEl = $("statement");
+  const qNumberEl = $("qNumber");
+
+  const btnStart = $("btnStart");
+
+  const btnTruth = $("btnTruth");
+  const btnBologna = $("btnBologna");
+  const btnNext = $("btnNext");
+
+  const resultBox = $("resultBox");
+  const banner = $("banner");
+  const bannerText = $("bannerText");
+  const bannerMini = $("bannerMini");
+  const explanationEl = $("explanation");
+  const sourceWrap = $("sourceWrap");
+  const sourceLink = $("sourceLink");
+
+  const finalStreakEl = $("finalStreak");
+  const finalBestEl = $("finalBest");
+  const btnPlayAgain = $("btnPlayAgain");
+
+  function showScreen(which){
+    screenStart.classList.remove("active");
+    screenGame.classList.remove("active");
+    screenOver.classList.remove("active");
+    which.classList.add("active");
+  }
+
+  function shuffle(arr){
+    for(let i=arr.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function loadBest(){
+    const raw = localStorage.getItem(LS_BEST);
+    const n = raw ? parseInt(raw,10) : 0;
+    best = Number.isFinite(n) && n>=0 ? n : 0;
+    bestEl.textContent = String(best);
+  }
+
+  function saveBest(){
+    localStorage.setItem(LS_BEST, String(best));
+    bestEl.textContent = String(best);
+  }
+
+  function updateTop(){
+    streakEl.textContent = String(streak);
+    bestEl.textContent = String(best);
+  }
+
+  function resetDeck(){
+    deck = shuffle(FACTS.slice());
+    idx = 0;
+  }
+
+  function nextQuestion(){
+    inReveal = false;
+    resultBox.classList.remove("show");
+    btnTruth.disabled = false;
+    btnBologna.disabled = false;
+
+    if(idx >= deck.length){
+      // no repeats until exhausted; then reshuffle
+      resetDeck();
+    }
+    current = deck[idx++];
+
+    qNumberEl.textContent = `Question ${streak + 1}`;
+    statementEl.textContent = current.s;
+
+    banner.classList.remove("good","bad");
+    bannerText.textContent = "";
+    bannerMini.textContent = "";
+    explanationEl.textContent = "";
+    sourceWrap.style.display = "none";
+    sourceLink.href = "#";
+    sourceLink.textContent = "open link";
+
+    updateTop();
+  }
+
+  function reveal(correct, userPickedTruth){
+    inReveal = true;
+    btnTruth.disabled = true;
+    btnBologna.disabled = true;
+
+    resultBox.classList.add("show");
+
+    if(correct){
+      banner.classList.add("good");
+      banner.classList.remove("bad");
+      bannerText.textContent = "Correct!";
+      bannerMini.textContent = `You chose ${userPickedTruth ? "TRUTH" : "BOLOGNA"}.`;
+    } else {
+      banner.classList.add("bad");
+      banner.classList.remove("good");
+      bannerText.textContent = "Wrong!";
+      bannerMini.textContent = `That one was ${current.t ? "TRUTH" : "BOLOGNA"}.`;
+    }
+
+    explanationEl.textContent = current.e || "";
+
+    if(current.t && current.src){
+      sourceWrap.style.display = "block";
+      sourceLink.href = current.src;
+      try {
+        const u = new URL(current.src);
+        sourceLink.textContent = u.hostname.replace(/^www\./,'');
+      } catch {
+        sourceLink.textContent = "source";
+      }
+    } else {
+      sourceWrap.style.display = "none";
+    }
+
+    updateTop();
+  }
+
+  function gameOver(){
+    finalStreakEl.textContent = String(streak);
+    finalBestEl.textContent = String(best);
+    showScreen(screenOver);
+  }
+
+  function startNewRun(){
+    streak = 0;
+    updateTop();
+    if(!deck.length) resetDeck();
+    showScreen(screenGame);
+    nextQuestion();
+  }
+
+  function handleAnswer(pickedTruth){
+    if(inReveal) return;
+    const correct = (pickedTruth === current.t);
+
+    if(correct){
+      streak += 1;
+      if(streak > best){
+        best = streak;
+        saveBest();
+      }
+      reveal(true, pickedTruth);
+    } else {
+      reveal(false, pickedTruth);
+    }
+    updateTop();
+  }
+
+  btnStart.addEventListener("click", () => {
+    resetDeck();
+    startNewRun();
+  });
+
+  btnTruth.addEventListener("click", () => handleAnswer(true));
+  btnBologna.addEventListener("click", () => handleAnswer(false));
+
+  btnNext.addEventListener("click", () => {
+    const wasWrong = banner.classList.contains("bad");
+    if(wasWrong){
+      gameOver();
+      return;
+    }
+    nextQuestion();
+  });
+
+  btnPlayAgain.addEventListener("click", () => {
+    resetDeck();
+    startNewRun();
+  });
+
+  loadBest();
+  resetDeck();
+  updateTop();
+})();
+</script>
+</body>
+</html>

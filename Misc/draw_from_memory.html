@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Draw From Memory (Offline Share Fixed)</title>
+</head>
+<body>
+  <!-- Intentionally no <style> tag (inline styles only) for max compatibility with extensions/themes -->
+  <div style="max-width:1200px;margin:0 auto;padding:14px 12px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+    <h1 style="margin:0 0 6px 0;">Draw From Memory</h1>
+    <div style="margin:0 0 14px 0;line-height:1.35;">
+      Watch the <b>Original</b> drawing for a few seconds, then draw it from memory. Click <b>Submit</b> to see results (on a new screen).
+      <br><span style="color:#333;font-size:12px;">Offline note: a “share” can’t include your file path. This app copies a <b>seed fragment</b> (the part after <code>#</code>).</span>
+    </div>
+
+    <div id="errorBox" style="display:none;border:1px solid #c33;background:#fee;padding:10px 12px;margin:12px 0;">
+      <b>Script error:</b>
+      <div id="errorText" style="margin-top:6px;white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;"></div>
+    </div>
+
+    <div id="playScreen">
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px;">
+        <button id="startBtn" style="padding:10px 12px;font-weight:800;">Start</button>
+
+        <label style="font-weight:800;margin-left:6px;">Time:</label>
+        <select id="timeSelect" style="padding:9px 10px;font-weight:800;">
+          <option value="3">3s</option>
+          <option value="5">5s</option>
+          <option value="7">7s</option>
+        </select>
+
+        <span style="margin-left:6px;"><b>Seed:</b> <span id="seedText">—</span></span>
+        <button id="copyBtn" style="padding:10px 12px;font-weight:800;" disabled>Copy share</button>
+        <span id="shareFrag" style="margin-left:6px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:#333;">#</span>
+
+        <span id="status" style="margin-left:8px;"></span>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;">
+        <div style="flex:1 1 520px;min-width:320px;">
+          <div style="font-weight:800;margin:0 0 6px 0;">Original (shows briefly)</div>
+          <canvas id="orig" width="900" height="520"
+                  style="width:100%;max-width:900px;height:auto;border:1px solid #333;display:block;touch-action:none;"></canvas>
+          <div style="margin-top:6px;color:#333;" id="origHint">Press Start.</div>
+        </div>
+
+        <div style="flex:1 1 520px;min-width:320px;">
+          <div style="font-weight:800;margin:0 0 6px 0;">Your drawing</div>
+          <div style="position:relative;max-width:900px;">
+            <canvas id="user" width="900" height="520"
+                    style="width:100%;max-width:900px;height:auto;border:1px solid #333;display:block;touch-action:none;"></canvas>
+            <div id="userCover"
+                 style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;
+                        background:rgba(255,255,255,0.85);padding:12px;font-weight:800;">
+              Start the round first. Then draw after the original disappears.
+            </div>
+          </div>
+
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px;">
+            <button id="clearBtn" style="padding:10px 12px;font-weight:800;" disabled>Clear</button>
+            <button id="submitBtn" style="padding:10px 12px;font-weight:800;" disabled>Submit</button>
+          </div>
+
+          <div style="margin-top:10px;">
+            <b>Score:</b> <span id="score">—</span>
+            &nbsp;&nbsp; <b>Stars:</b> <span id="stars">—</span>
+          </div>
+          <div id="breakdown" style="margin-top:6px;color:#333;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="resultsScreen" style="display:none;">
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:6px 0 12px 0;">
+        <button id="backBtn" style="padding:10px 12px;font-weight:800;">Back</button>
+        <button id="againBtn" style="padding:10px 12px;font-weight:800;">Next drawing</button>
+        <span style="margin-left:8px;"><b>Score:</b> <span id="rScore">—</span> &nbsp;&nbsp; <b>Stars:</b> <span id="rStars">—</span></span>
+      </div>
+      <div id="rBreakdown" style="margin:0 0 10px 0;color:#333;"></div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;">
+        <div style="flex:1 1 360px;min-width:280px;">
+          <div style="font-weight:800;margin:0 0 6px 0;">Original</div>
+          <canvas id="rOrig" width="700" height="460" style="width:100%;max-width:700px;height:auto;border:1px solid #333;display:block;"></canvas>
+        </div>
+        <div style="flex:1 1 360px;min-width:280px;">
+          <div style="font-weight:800;margin:0 0 6px 0;">Yours</div>
+          <canvas id="rUser" width="700" height="460" style="width:100%;max-width:700px;height:auto;border:1px solid #333;display:block;"></canvas>
+        </div>
+        <div style="flex:1 1 360px;min-width:280px;">
+          <div style="font-weight:800;margin:0 0 6px 0;">Overlay</div>
+          <canvas id="rOver" width="700" height="460" style="width:100%;max-width:700px;height:auto;border:1px solid #333;display:block;"></canvas>
+          <div style="margin-top:6px;color:#333;">Overlay: original is faint under your drawing.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:14px;color:#333;font-size:12px;">
+      Tips: Press <b>C</b> to clear (when enabled). Press <b>Enter</b> to submit (when enabled). Works with mouse + touch.
+    </div>
+  </div>
+
+<script>
+(function(){
+  const $ = (id)=>document.getElementById(id);
+
+  const errorBox = $("errorBox");
+  const errorText = $("errorText");
+  function showErr(e){
+    errorText.textContent = (e && (e.stack || e.message)) ? (e.stack || e.message) : String(e);
+    errorBox.style.display = "block";
+  }
+  window.addEventListener("error", (ev)=>{ try{ showErr(ev.error || ev.message || ev); }catch(_){ } });
+
+  try{
+    // --- hash/query parsing + deterministic RNG ---
+    function parseParams(){
+      const out = {};
+      try{
+        const sp = new URLSearchParams(location.search || "");
+        if(sp.get("s")) out.s = sp.get("s");
+        if(sp.get("t")) out.t = sp.get("t");
+      }catch(_){}
+
+      let h = (location.hash||"").replace(/^#/, "").trim();
+      if(!h) return out;
+
+      // seed-only hash
+      if(h.indexOf("=")===-1 && h.indexOf("&")===-1){
+        out.s = h;
+        return out;
+      }
+
+      h = h.replace(/;/g,"&");
+      for(const part of h.split("&")){
+        if(!part) continue;
+        const eq = part.indexOf("=");
+        if(eq===-1) continue;
+        const k = decodeURIComponent(part.slice(0,eq));
+        const v = decodeURIComponent(part.slice(eq+1));
+        out[k]=v;
+      }
+      return out;
+    }
+
+    function setHash(seed, t){
+      const parts = [];
+      if(seed) parts.push("s="+encodeURIComponent(seed));
+      if(t) parts.push("t="+encodeURIComponent(String(t)));
+      location.hash = parts.join("&");
+    }
+
+    function xmur3(str){
+      let h = 1779033703 ^ str.length;
+      for(let i=0;i<str.length;i++){
+        h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+        h = (h << 13) | (h >>> 19);
+      }
+      return function(){
+        h = Math.imul(h ^ (h >>> 16), 2246822507);
+        h = Math.imul(h ^ (h >>> 13), 3266489909);
+        return (h ^= (h >>> 16)) >>> 0;
+      }
+    }
+    function sfc32(a,b,c,d){
+      return function(){
+        a >>>= 0; b >>>= 0; c >>>= 0; d >>>= 0;
+        let t = (a + b) | 0;
+        a = b ^ (b >>> 9);
+        b = (c + (c << 3)) | 0;
+        c = (c << 21) | (c >>> 11);
+        d = (d + 1) | 0;
+        t = (t + d) | 0;
+        c = (c + t) | 0;
+        return (t >>> 0) / 4294967296;
+      }
+    }
+    function rngFromSeed(seed){
+      const fn = xmur3(seed);
+      return sfc32(fn(),fn(),fn(),fn());
+    }
+    function makeSeed(){
+      const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let s = "";
+      for(let i=0;i<10;i++) s += alphabet[Math.floor(Math.random()*alphabet.length)];
+      return s;
+    }
+
+    // --- elements ---
+    const playScreen = $("playScreen");
+    const resultsScreen = $("resultsScreen");
+
+    const startBtn = $("startBtn");
+    const timeSelect = $("timeSelect");
+    const seedText = $("seedText");
+    const copyBtn = $("copyBtn");
+    const shareFrag = $("shareFrag");
+    const statusEl = $("status");
+    const origHint = $("origHint");
+
+    const clearBtn = $("clearBtn");
+    const submitBtn = $("submitBtn");
+    const userCover = $("userCover");
+
+    const scoreEl = $("score");
+    const starsEl = $("stars");
+    const breakdownEl = $("breakdown");
+
+    const backBtn = $("backBtn");
+    const againBtn = $("againBtn");
+    const rScoreEl = $("rScore");
+    const rStarsEl = $("rStars");
+    const rBreakdownEl = $("rBreakdown");
+
+    const orig = $("orig"), user = $("user");
+    const rOrig = $("rOrig"), rUser = $("rUser"), rOver = $("rOver");
+
+    const octx = orig.getContext("2d");
+    const uctx = user.getContext("2d");
+    const ro = rOrig.getContext("2d");
+    const ru = rUser.getContext("2d");
+    const rv = rOver.getContext("2d");
+
+    // --- drawing prompts (30 fixed + random) ---
+    function P(x,y){ return {x,y}; }
+    const built = [
+      [[P(0.20,0.82),P(0.50,0.25),P(0.80,0.82),P(0.20,0.82)],[P(0.30,0.62),P(0.70,0.62)]],
+      [[P(0.18,0.35),P(0.35,0.58),P(0.52,0.38),P(0.66,0.64),P(0.84,0.46)]],
+      [[P(0.30,0.30),P(0.70,0.30),P(0.70,0.72),P(0.30,0.72),P(0.30,0.30)]],
+      [[P(0.20,0.75),P(0.20,0.45),P(0.50,0.25),P(0.80,0.45),P(0.80,0.75),P(0.20,0.75)]],
+      [[P(0.28,0.72),P(0.72,0.72)],[P(0.28,0.72),P(0.50,0.32),P(0.72,0.72)]],
+      [[P(0.50,0.24),P(0.77,0.44),P(0.67,0.76),P(0.33,0.76),P(0.23,0.44),P(0.50,0.24)]],
+      [[P(0.74,0.38),P(0.74,0.66),P(0.50,0.80),P(0.26,0.66),P(0.26,0.38),P(0.50,0.24),P(0.74,0.38)]],
+      [[P(0.78,0.52),P(0.71,0.71),P(0.52,0.78),P(0.33,0.71),P(0.26,0.52),P(0.33,0.33),P(0.52,0.26),P(0.71,0.33),P(0.78,0.52)]],
+      [[P(0.50,0.22),P(0.76,0.67),P(0.24,0.67),P(0.50,0.22)]],
+      [[P(0.24,0.34),P(0.76,0.34),P(0.76,0.74),P(0.24,0.74),P(0.24,0.34)]],
+      [[P(0.28,0.70),P(0.70,0.70),P(0.78,0.36),P(0.36,0.36),P(0.28,0.70)]],
+      [[P(0.30,0.70),P(0.70,0.70),P(0.82,0.40),P(0.18,0.40),P(0.30,0.70)]],
+      [[P(0.50,0.24),P(0.58,0.42),P(0.78,0.42),P(0.62,0.54),P(0.69,0.74),P(0.50,0.62),P(0.31,0.74),P(0.38,0.54),P(0.22,0.42),P(0.42,0.42),P(0.50,0.24)]],
+      [[P(0.78,0.52),P(0.75,0.66),P(0.66,0.75),P(0.52,0.78),P(0.38,0.75),P(0.29,0.66),P(0.26,0.52),P(0.29,0.38),P(0.38,0.29),P(0.52,0.26),P(0.66,0.29),P(0.75,0.38),P(0.78,0.52)]],
+      [[P(0.30,0.78),P(0.50,0.26),P(0.70,0.78)],[P(0.38,0.56),P(0.62,0.56)]],
+      [[P(0.30,0.28),P(0.30,0.78)],[P(0.30,0.28),P(0.70,0.28)],[P(0.30,0.53),P(0.62,0.53)],[P(0.30,0.78),P(0.70,0.78)]],
+      [[P(0.30,0.28),P(0.30,0.78)],[P(0.30,0.28),P(0.70,0.28)],[P(0.30,0.53),P(0.62,0.53)]],
+      [[P(0.30,0.28),P(0.30,0.78)],[P(0.70,0.28),P(0.70,0.78)],[P(0.30,0.53),P(0.70,0.53)]],
+      [[P(0.30,0.28),P(0.30,0.78)],[P(0.30,0.54),P(0.72,0.28)],[P(0.30,0.54),P(0.72,0.78)]],
+      [[P(0.28,0.78),P(0.28,0.28)],[P(0.28,0.28),P(0.50,0.52),P(0.72,0.28)],[P(0.72,0.28),P(0.72,0.78)]],
+      [[P(0.30,0.78),P(0.30,0.28)],[P(0.30,0.28),P(0.70,0.78)],[P(0.70,0.78),P(0.70,0.28)]],
+      [[P(0.30,0.78),P(0.30,0.28)],[P(0.30,0.28),P(0.62,0.28),P(0.70,0.36),P(0.62,0.46),P(0.30,0.46)],[P(0.30,0.46),P(0.72,0.78)]],
+      [[P(0.72,0.32),P(0.52,0.28),P(0.34,0.36),P(0.52,0.50),P(0.70,0.62),P(0.52,0.74),P(0.30,0.70)]],
+      [[P(0.30,0.28),P(0.70,0.28)],[P(0.50,0.28),P(0.50,0.78)]],
+      [[P(0.30,0.28),P(0.50,0.78),P(0.70,0.28)]],
+      [[P(0.24,0.28),P(0.36,0.78),P(0.50,0.42),P(0.64,0.78),P(0.76,0.28)]],
+      [[P(0.30,0.28),P(0.70,0.28),P(0.30,0.78),P(0.70,0.78)]],
+      [[P(0.30,0.36),P(0.44,0.28),P(0.62,0.30),P(0.70,0.40),P(0.30,0.78),P(0.70,0.78)]],
+      [[P(0.32,0.32),P(0.58,0.28),P(0.70,0.40),P(0.56,0.52),P(0.70,0.64),P(0.58,0.76),P(0.32,0.72)]],
+      [[P(0.68,0.28),P(0.68,0.78)],[P(0.32,0.56),P(0.72,0.56)],[P(0.32,0.56),P(0.60,0.28)]],
+    ];
+
+    // --- state ---
+    let phase = "idle"; // idle | showing | drawing | scored
+    let currentSeed = null;
+    let currentDuration = 3;
+    let rng = Math.random;
+    let prompt = null;
+    let timerId = null;
+
+    function refreshShareUI(){
+      if(currentSeed){
+        seedText.textContent = currentSeed;
+        const frag = "#s=" + encodeURIComponent(currentSeed) + "&t=" + encodeURIComponent(String(currentDuration));
+        shareFrag.textContent = frag;
+        copyBtn.disabled = false;
+      }else{
+        seedText.textContent = "—";
+        shareFrag.textContent = "#";
+        copyBtn.disabled = true;
+      }
+    }
+
+    function showResults(on){
+      if(on){
+        playScreen.style.display="none";
+        resultsScreen.style.display="block";
+        window.scrollTo(0,0);
+      }else{
+        resultsScreen.style.display="none";
+        playScreen.style.display="block";
+        window.scrollTo(0,0);
+      }
+    }
+
+
+    // --- small math helpers ---
+    function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+    function lerp(a,b,t){ return a + (b-a)*t; }
+
+    // --- canvas helpers ---
+    function clearCtx(ctx){ ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height); }
+    function drawGrid(ctx){
+      clearCtx(ctx);
+      ctx.save();
+      ctx.strokeStyle = "#e6e6e6";
+      ctx.lineWidth = 1;
+      const step = Math.round(Math.min(ctx.canvas.width, ctx.canvas.height) / 10);
+      for(let x=step; x<ctx.canvas.width; x+=step){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,ctx.canvas.height); ctx.stroke(); }
+      for(let y=step; y<ctx.canvas.height; y+=step){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(ctx.canvas.width,y); ctx.stroke(); }
+      ctx.restore();
+    }
+
+    function bbox(strokes){
+      let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity,any=false;
+      for(const st of strokes){ for(const p of st){ any=true; minX=Math.min(minX,p.x); minY=Math.min(minY,p.y); maxX=Math.max(maxX,p.x); maxY=Math.max(maxY,p.y);} }
+      return any?{minX,minY,maxX,maxY}:null;
+    }
+
+    function renderNormalized(ctx, strokes, alpha=1, color="#000", lineW=6, drawBgGrid=true){
+      if(drawBgGrid) drawGrid(ctx); else clearCtx(ctx);
+      const b=bbox(strokes); if(!b) return;
+      const w=ctx.canvas.width, h=ctx.canvas.height;
+      const pad=0.10*Math.min(w,h);
+      const bw=b.maxX-b.minX, bh=b.maxY-b.minY;
+      const s=Math.min((w-2*pad)/(bw||1e-6),(h-2*pad)/(bh||1e-6));
+      const offX=(w-bw*s)/2 - b.minX*s;
+      const offY=(h-bh*s)/2 - b.minY*s;
+
+      ctx.save();
+      ctx.globalAlpha=alpha;
+      ctx.strokeStyle=color;
+      ctx.lineWidth=lineW;
+      ctx.lineCap="round"; ctx.lineJoin="round";
+      for(const st of strokes){
+        if(st.length<2) continue;
+        ctx.beginPath();
+        ctx.moveTo(offX+st[0].x*s, offY+st[0].y*s);
+        for(let i=1;i<st.length;i++) ctx.lineTo(offX+st[i].x*s, offY+st[i].y*s);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawNormalizedOn(ctx, strokes, alpha=1, color="#000", lineW=6){
+      const b=bbox(strokes); if(!b) return;
+      const w=ctx.canvas.width, h=ctx.canvas.height;
+      const pad=0.10*Math.min(w,h);
+      const bw=b.maxX-b.minX, bh=b.maxY-b.minY;
+      const s=Math.min((w-2*pad)/(bw||1e-6),(h-2*pad)/(bh||1e-6));
+      const offX=(w-bw*s)/2 - b.minX*s;
+      const offY=(h-bh*s)/2 - b.minY*s;
+
+      ctx.save();
+      ctx.globalAlpha=alpha;
+      ctx.strokeStyle=color;
+      ctx.lineWidth=lineW;
+      ctx.lineCap="round"; ctx.lineJoin="round";
+      for(const st of strokes){
+        if(st.length<2) continue;
+        ctx.beginPath();
+        ctx.moveTo(offX+st[0].x*s, offY+st[0].y*s);
+        for(let i=1;i<st.length;i++) ctx.lineTo(offX+st[i].x*s, offY+st[i].y*s);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // --- deterministic prompt selection ---
+    function randomSimple(){
+      const strokes=[];
+      const ns=1+Math.floor(rng()*3);
+      for(let s=0;s<ns;s++){
+        const pts=[];
+        let x=0.2+rng()*0.6;
+        let y=0.2+rng()*0.6;
+        pts.push(P(x,y));
+        const np=2+Math.floor(rng()*4);
+        for(let i=1;i<np;i++){
+          x=clamp(x+(rng()*0.30-0.15),0.10,0.90);
+          y=clamp(y+(rng()*0.30-0.15),0.10,0.90);
+          pts.push(P(x,y));
+        }
+        strokes.push(pts);
+      }
+      // occasionally add a small box
+      if(rng()<0.25){
+        const cx=0.30+rng()*0.40, cy=0.30+rng()*0.40, rr=0.10+rng()*0.10;
+        strokes.push([P(cx-rr,cy-rr),P(cx+rr,cy-rr),P(cx+rr,cy+rr),P(cx-rr,cy+rr),P(cx-rr,cy-rr)]);
+      }
+      return strokes;
+    }
+
+    function pickPrompt(){
+      if(rng() < 0.70){
+        const idx = Math.floor(rng()*built.length);
+        // deep copy
+        return built[idx].map(st=>st.map(p=>({x:p.x,y:p.y})));
+      }
+      return randomSimple();
+    }
+
+    // --- user capture ---
+    const drawState = { enabled:false, strokes:[], cur:null, down:false };
+
+    function pointFromEvent(ev, canvas){
+      const r = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / r.width;
+      const scaleY = canvas.height / r.height;
+      return { x: (ev.clientX - r.left)*scaleX, y: (ev.clientY - r.top)*scaleY };
+    }
+
+    function redrawUser(){
+      drawGrid(uctx);
+      uctx.save();
+      uctx.strokeStyle="#000";
+      uctx.lineWidth=6;
+      uctx.lineCap="round"; uctx.lineJoin="round";
+      for(const st of drawState.strokes){
+        if(st.length<2) continue;
+        uctx.beginPath();
+        uctx.moveTo(st[0].x, st[0].y);
+        for(let i=1;i<st.length;i++) uctx.lineTo(st[i].x, st[i].y);
+        uctx.stroke();
+      }
+      if(drawState.cur && drawState.cur.length>=2){
+        uctx.beginPath();
+        uctx.moveTo(drawState.cur[0].x, drawState.cur[0].y);
+        for(let i=1;i<drawState.cur.length;i++) uctx.lineTo(drawState.cur[i].x, drawState.cur[i].y);
+        uctx.stroke();
+      }
+      uctx.restore();
+    }
+
+    user.addEventListener("pointerdown",(ev)=>{
+      if(!drawState.enabled) return;
+      user.setPointerCapture?.(ev.pointerId);
+      drawState.down=true;
+      drawState.cur=[pointFromEvent(ev,user)];
+      redrawUser();
+      ev.preventDefault();
+    },{passive:false});
+
+    user.addEventListener("pointermove",(ev)=>{
+      if(!drawState.enabled || !drawState.down || !drawState.cur) return;
+      const p=pointFromEvent(ev,user);
+      const last=drawState.cur[drawState.cur.length-1];
+      const dx=p.x-last.x, dy=p.y-last.y;
+      if(dx*dx+dy*dy<3) return;
+      drawState.cur.push(p);
+      redrawUser();
+      ev.preventDefault();
+    },{passive:false});
+
+    function endStroke(ev){
+      if(!drawState.enabled) return;
+      if(drawState.down && drawState.cur && drawState.cur.length>=2) drawState.strokes.push(drawState.cur);
+      drawState.down=false; drawState.cur=null;
+      redrawUser();
+      ev.preventDefault();
+    }
+    user.addEventListener("pointerup", endStroke, {passive:false});
+    user.addEventListener("pointercancel", endStroke, {passive:false});
+
+    function clearUser(){
+      drawState.strokes=[]; drawState.cur=null; drawState.down=false;
+      redrawUser();
+    }
+    function userHasInk(){ return drawState.strokes.some(s=>s.length>=2); }
+    function toNormUser(){
+      const w=user.width, h=user.height;
+      return drawState.strokes.map(st=>st.map(p=>({x:p.x/w, y:p.y/h})));
+    }
+
+    // --- scoring (balanced) ---
+    function flatten(strokes){ return strokes.filter(st=>st.length>=2).map(st=>st.map(p=>({x:p.x,y:p.y}))); }
+    function polyLen(poly){ let L=0; for(let i=1;i<poly.length;i++) L+=Math.hypot(poly[i].x-poly[i-1].x, poly[i].y-poly[i-1].y); return L; }
+    function resample(poly,n){
+      if(poly.length<2) return [];
+      const L=polyLen(poly);
+      if(L<1e-9) return Array.from({length:n},()=>({x:poly[0].x,y:poly[0].y}));
+      const step=L/(n-1);
+      const out=[{x:poly[0].x,y:poly[0].y}];
+      let dist=0, a=poly[0], j=1, b=poly[1], seg=Math.hypot(b.x-a.x,b.y-a.y);
+      for(let k=1;k<n-1;k++){
+        const target=k*step;
+        while(dist+seg<target && j<poly.length-1){
+          dist+=seg; a=b; j++; b=poly[j]; seg=Math.hypot(b.x-a.x,b.y-a.y);
+        }
+        const t=seg<1e-9?0:(target-dist)/seg;
+        out.push({x:lerp(a.x,b.x,t), y:lerp(a.y,b.y,t)});
+      }
+      out.push({x:poly[poly.length-1].x,y:poly[poly.length-1].y});
+      return out;
+    }
+    function resampleAll(strokes,N=84){
+      const polys=flatten(strokes);
+      const ls=polys.map(polyLen);
+      const total=ls.reduce((a,b)=>a+b,0);
+      if(total<1e-6){
+        const b=bbox(strokes) || {minX:.5,maxX:.5,minY:.5,maxY:.5};
+        const cx=(b.minX+b.maxX)/2, cy=(b.minY+b.maxY)/2;
+        return Array.from({length:N},()=>({x:cx,y:cy}));
+      }
+      let alloc=ls.map(L=>Math.max(2, Math.round(N*(L/total))));
+      let sum=alloc.reduce((a,b)=>a+b,0);
+      while(sum>N){
+        let idx=-1,best=-1;
+        for(let i=0;i<alloc.length;i++) if(alloc[i]>2 && alloc[i]>best){best=alloc[i]; idx=i;}
+        if(idx<0) break; alloc[idx]--; sum--;
+      }
+      while(sum<N){
+        let idx=0,best=-1;
+        for(let i=0;i<ls.length;i++) if(ls[i]>best){best=ls[i]; idx=i;}
+        alloc[idx]++; sum++;
+      }
+      const out=[];
+      for(let i=0;i<polys.length;i++) out.push(...resample(polys[i],alloc[i]));
+      return out.slice(0,N);
+    }
+    function normPts(pts){
+      let cx=0,cy=0; for(const p of pts){cx+=p.x;cy+=p.y;} cx/=pts.length; cy/=pts.length;
+      const c=pts.map(p=>({x:p.x-cx,y:p.y-cy}));
+      let rms=0; for(const p of c) rms += p.x*p.x + p.y*p.y;
+      rms = Math.sqrt(rms/c.length) || 1e-9;
+      return c.map(p=>({x:p.x/rms,y:p.y/rms}));
+    }
+    function meanDist(a,b){
+      const n=Math.min(a.length,b.length); let s=0;
+      for(let i=0;i<n;i++) s += Math.hypot(a[i].x-b[i].x, a[i].y-b[i].y);
+      return s/n;
+    }
+    function sizeScore(o,u,tol=0.62){
+      const bo=bbox(o), bu=bbox(u);
+      if(!bo||!bu) return 0;
+      const ow=bo.maxX-bo.minX, oh=bo.maxY-bo.minY;
+      const uw=bu.maxX-bu.minX, uh=bu.maxY-bu.minY;
+      if(ow<1e-6||oh<1e-6||uw<1e-6||uh<1e-6) return 0;
+      const sw=1-clamp(Math.abs(uw/ow-1)/tol,0,1);
+      const sh=1-clamp(Math.abs(uh/oh-1)/tol,0,1);
+      return Math.sqrt(sw*sh);
+    }
+    function shapeScore(o,u){
+      const A=normPts(resampleAll(o,84));
+      const B=normPts(resampleAll(u,84));
+      const d=Math.min(meanDist(A,B), meanDist(A,[...B].reverse()));
+      return clamp(Math.exp(-1.25*d),0,1);
+    }
+    function combined(o,u){
+      const ss=sizeScore(o,u,0.62);
+      const sh=shapeScore(o,u);
+      let total = 0.30*ss + 0.70*sh;
+      const bu=bbox(u);
+      if(bu){
+        const area=(bu.maxX-bu.minX)*(bu.maxY-bu.minY);
+        if(area>0.01) total=clamp(total+0.06,0,1);
+      }
+      return {total,ss,sh};
+    }
+    function stars(pct){
+      const s=Math.round(clamp(pct/20,0,5));
+      return "★★★★★".slice(0,s) + "☆☆☆☆☆".slice(0,5-s);
+    }
+
+    // --- phase control ---
+    function setPhase(p){
+      phase=p;
+      if(timerId){ clearTimeout(timerId); timerId=null; }
+
+      if(p==="idle"){
+        statusEl.textContent="";
+        origHint.textContent="Press Start.";
+        startBtn.disabled=false;
+        clearBtn.disabled=true;
+        submitBtn.disabled=true;
+        userCover.style.display="flex";
+        drawState.enabled=false;
+        prompt=null;
+        scoreEl.textContent="—"; starsEl.textContent="—"; breakdownEl.textContent="";
+        drawGrid(octx);
+        clearUser();
+        showResults(false);
+      }
+      if(p==="showing"){
+        startBtn.disabled=true;
+        clearBtn.disabled=true;
+        submitBtn.disabled=true;
+        drawState.enabled=false;
+        userCover.style.display="flex";
+        origHint.textContent="Memorize the drawing.";
+      }
+      if(p==="drawing"){
+        startBtn.disabled=true;
+        clearBtn.disabled=false;
+        submitBtn.disabled=false;
+        drawState.enabled=true;
+        userCover.style.display="none";
+        origHint.textContent="Now draw what you remember.";
+        statusEl.textContent="Draw now!";
+      }
+      if(p==="scored"){
+        startBtn.disabled=true;
+        clearBtn.disabled=true;
+        submitBtn.disabled=true;
+        drawState.enabled=false;
+        statusEl.textContent="Submitted.";
+      }
+    }
+
+    function startRound(){
+      // duration
+      currentDuration = parseInt((timeSelect && timeSelect.value) || String(currentDuration) || "3", 10);
+      if(!(currentDuration===3||currentDuration===5||currentDuration===7)) currentDuration = 3;
+
+      // seed
+      if(!currentSeed){
+        currentSeed = makeSeed();
+      }
+      // update hash + UI
+      setHash(currentSeed, currentDuration);
+      refreshShareUI();
+
+      // deterministic prompt for this seed
+      rng = rngFromSeed(currentSeed);
+      prompt = pickPrompt();
+
+      clearUser();
+      setPhase("showing");
+
+      let t=currentDuration;
+      const tick=()=>{
+        statusEl.textContent = "Watch… ("+t+")";
+        renderNormalized(octx, prompt, 1, "#000", 6, true);
+        if(t<=1){
+          timerId = setTimeout(()=>{
+            drawGrid(octx); // hide original
+            setPhase("drawing");
+          }, 250);
+          return;
+        }
+        t--;
+        timerId = setTimeout(tick, 1000);
+      };
+      tick();
+    }
+
+    function submit(){
+      if(phase!=="drawing") return;
+      if(!userHasInk()){
+        statusEl.textContent="Draw something first 🙂";
+        return;
+      }
+      const userNorm = toNormUser();
+      const {total,ss,sh} = combined(prompt, userNorm);
+      const pct = Math.round(total*100);
+
+      scoreEl.textContent = pct + "%";
+      starsEl.textContent = stars(pct);
+      breakdownEl.textContent = "Breakdown: Size " + Math.round(ss*100) + "% • Shape " + Math.round(sh*100) + "% • Final = 30% size + 70% shape (+ bonus).";
+
+      renderNormalized(ro, prompt, 1, "#000", 6, true);
+      renderNormalized(ru, userNorm, 1, "#000", 6, true);
+
+      drawGrid(rv);
+      drawNormalizedOn(rv, prompt, 0.25, "#008aa8", 6);
+      drawNormalizedOn(rv, userNorm, 1.0, "#000", 6);
+
+      rScoreEl.textContent = pct + "%";
+      rStarsEl.textContent = stars(pct);
+      rBreakdownEl.textContent = "Breakdown: Size " + Math.round(ss*100) + "% • Shape " + Math.round(sh*100) + "%.";
+
+      setPhase("scored");
+      showResults(true);
+    }
+
+    function next(){
+      // new seed for next round
+      currentSeed = null;
+      rng = Math.random;
+      prompt = null;
+      setHash("", currentDuration);
+      refreshShareUI();
+      setPhase("idle");
+    }
+
+    function copyShare(){
+      if(!currentSeed) return;
+      // ensure hash + UI are up to date
+      setHash(currentSeed, currentDuration);
+      refreshShareUI();
+
+      // Copy the full URL (includes #s=...&t=...)
+      const textToCopy = location.href;
+
+      const okMsg = "Full link copied!";
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(textToCopy).then(()=>{
+          statusEl.textContent = okMsg;
+          setTimeout(()=>{ if(phase!=="drawing") statusEl.textContent=""; }, 1200);
+        }).catch(()=>fallback(textToCopy));
+      }else{
+        fallback(textToCopy);
+      }
+
+      function fallback(text){
+        const ta=document.createElement("textarea");
+        ta.value=text;
+        ta.style.position="fixed"; ta.style.left="-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        try{ document.execCommand("copy"); statusEl.textContent=okMsg; }
+        catch(e){ statusEl.textContent="Couldn't copy automatically. Use the address bar URL."; }
+        document.body.removeChild(ta);
+        setTimeout(()=>{ if(phase!=="drawing") statusEl.textContent=""; }, 1500);
+      }
+    }
+
+    // --- events ---
+    startBtn.addEventListener("click", startRound);
+    clearBtn.addEventListener("click", ()=>{ clearUser(); statusEl.textContent="Cleared."; });
+    submitBtn.addEventListener("click", submit);
+    copyBtn.addEventListener("click", copyShare);
+
+    backBtn.addEventListener("click", ()=>showResults(false));
+    againBtn.addEventListener("click", next);
+
+    timeSelect.addEventListener("change", ()=>{
+      const v = String(timeSelect.value);
+      if(v==="3"||v==="5"||v==="7") currentDuration = parseInt(v,10);
+      if(currentSeed) setHash(currentSeed, currentDuration);
+      refreshShareUI();
+    });
+
+    window.addEventListener("keydown",(e)=>{
+      if((e.key==="c"||e.key==="C") && !clearBtn.disabled) clearBtn.click();
+      if(e.key==="Enter" && !submitBtn.disabled) submitBtn.click();
+    });
+
+    // --- init ---
+    drawGrid(octx);
+    redrawUser();
+    showResults(false);
+    setPhase("idle");
+
+    const params = parseParams();
+    if(params.t && (params.t==="3"||params.t==="5"||params.t==="7")){
+      currentDuration = parseInt(params.t,10);
+      timeSelect.value = String(currentDuration);
+    }
+    if(params.s){
+      currentSeed = String(params.s).toUpperCase();
+      statusEl.textContent = "Seed loaded. Click Start.";
+    }
+    if(currentSeed) setHash(currentSeed, currentDuration);
+    refreshShareUI();
+
+  }catch(e){
+    showErr(e);
+  }
+})();
+</script>
+</body>
+</html>
