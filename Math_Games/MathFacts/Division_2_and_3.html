@@ -305,7 +305,7 @@
     }
     .resultRow{
       display:grid;
-      grid-template-columns:1fr 1fr;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
       gap:12px;
     }
     .resultCard{
@@ -382,6 +382,20 @@
             </div>
           </div>
 
+          <div class="optionsCard" id="scoreCard" style="gap:12px;">
+            <div style="font-weight:1000; font-size:16px; text-align:center;">Local Records</div>
+            <div class="resultRow">
+              <div class="resultCard">
+                <div class="k">High score</div>
+                <div class="v" id="bestScoreDisplay">0 / 10</div>
+              </div>
+              <div class="resultCard">
+                <div class="k">Best time</div>
+                <div class="v" id="bestTimeDisplay">—</div>
+              </div>
+            </div>
+          </div>
+
           <details class="teacher" id="teacherDetails">
             <summary>
               <span>Teacher Options</span>
@@ -443,6 +457,7 @@
                 <div class="stat" id="progressStat">1 / 10</div>
                 <div class="stat" id="correctStat">Correct: 0</div>
                 <div class="stat" id="wrongStat">Wrong: 0</div>
+                <div class="stat" id="timeStat">Time: 0:00</div>
               </div>
             </div>
 
@@ -488,6 +503,14 @@
                 <div class="k">Accuracy</div>
                 <div class="v" id="resultAcc">0%</div>
               </div>
+              <div class="resultCard">
+                <div class="k">Time</div>
+                <div class="v" id="resultTime">0:00</div>
+              </div>
+              <div class="resultCard">
+                <div class="k">Best time</div>
+                <div class="v" id="resultBestTime">—</div>
+              </div>
             </div>
 
             <div class="footerBtns">
@@ -524,6 +547,7 @@
   const progressStat = document.getElementById("progressStat");
   const correctStat = document.getElementById("correctStat");
   const wrongStat = document.getElementById("wrongStat");
+  const timeStat = document.getElementById("timeStat");
   const questionText = document.getElementById("questionText");
   const answerInput = document.getElementById("answerInput");
   const submitBtn = document.getElementById("submitBtn");
@@ -537,6 +561,10 @@
   const resultTotal = document.getElementById("resultTotal");
   const resultAcc = document.getElementById("resultAcc");
   const playAgainBtn = document.getElementById("playAgainBtn");
+  const bestScoreDisplay = document.getElementById("bestScoreDisplay");
+  const bestTimeDisplay = document.getElementById("bestTimeDisplay");
+  const resultTime = document.getElementById("resultTime");
+  const resultBestTime = document.getElementById("resultBestTime");
   const menuBtn = document.getElementById("menuBtn");
 
   let difficulty = "easy";
@@ -547,6 +575,9 @@
   let correct = 0;
   let wrong = 0;
   let current = null;
+  let startTime = 0;
+  let timerId = null;
+  let elapsedMs = 0;
 
   function randInt(min, max){
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -565,6 +596,58 @@
     return (s || "").replace(/\D+/g, "");
   }
 
+
+  function formatTime(ms){
+    const totalSeconds = Math.max(0, Math.round(ms / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  function getStorageKey(){
+    return `division_${difficulty}_${TOTAL}_${advanceOnWrong ? "adv" : "stay"}`;
+  }
+
+  function readRecord(){
+    try{
+      const raw = localStorage.getItem(getStorageKey());
+      if(!raw) return { bestScore: 0, bestTimeMs: null };
+      const data = JSON.parse(raw);
+      return {
+        bestScore: Number.isFinite(data.bestScore) ? data.bestScore : 0,
+        bestTimeMs: Number.isFinite(data.bestTimeMs) ? data.bestTimeMs : null
+      };
+    }catch(err){
+      return { bestScore: 0, bestTimeMs: null };
+    }
+  }
+
+  function writeRecord(record){
+    try{
+      localStorage.setItem(getStorageKey(), JSON.stringify(record));
+    }catch(err){}
+  }
+
+  function updateRecordDisplays(){
+    const record = readRecord();
+    bestScoreDisplay.textContent = `${record.bestScore} / ${TOTAL}`;
+    bestTimeDisplay.textContent = record.bestTimeMs == null ? "—" : formatTime(record.bestTimeMs);
+    resultBestTime.textContent = record.bestTimeMs == null ? "—" : formatTime(record.bestTimeMs);
+  }
+
+  function refreshTimer(){
+    elapsedMs = startTime ? (Date.now() - startTime) : 0;
+    timeStat.textContent = `Time: ${formatTime(elapsedMs)}`;
+  }
+
+  function stopTimer(){
+    if(timerId){
+      clearInterval(timerId);
+      timerId = null;
+    }
+    refreshTimer();
+  }
+
   function updateStats(){
     progressStat.textContent = `${Math.min(questionIndex + 1, TOTAL)} / ${TOTAL}`;
     correctStat.textContent = `Correct: ${correct}`;
@@ -578,6 +661,7 @@
     countButtons.forEach(btn => btn.classList.toggle("active", Number(btn.dataset.count) === n));
     tCount.value = String(n);
     updateShareLink();
+    updateRecordDisplays();
   }
 
   function setAdvance(v){
@@ -585,6 +669,7 @@
     advButtons.forEach(btn => btn.classList.toggle("active", (btn.dataset.adv === "yes") === advanceOnWrong));
     tAdvance.value = advanceOnWrong ? "yes" : "no";
     updateShareLink();
+    updateRecordDisplays();
   }
 
   function setDifficulty(v){
@@ -592,6 +677,7 @@
     diffButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.diff === difficulty));
     tDifficulty.value = difficulty;
     updateShareLink();
+    updateRecordDisplays();
   }
 
   function makeQuestion(){
@@ -639,21 +725,46 @@
     hide(resultScreen);
     show(gameScreen);
 
+    updateRecordDisplays();
+    startTime = Date.now();
+    elapsedMs = 0;
+    refreshTimer();
+    if(timerId) clearInterval(timerId);
+    timerId = setInterval(refreshTimer, 250);
+
     loadNextQuestion();
   }
 
   function finishGame(){
+    stopTimer();
     hide(gameScreen);
     show(resultScreen);
 
     const total = correct + wrong;
     const acc = total === 0 ? 0 : Math.round((correct / total) * 100);
 
+    let record = readRecord();
+    let bestScore = record.bestScore;
+    let bestTimeMs = record.bestTimeMs;
+
+    if(correct > bestScore){
+      bestScore = correct;
+    }
+    if(correct === TOTAL){
+      if(bestTimeMs == null || elapsedMs < bestTimeMs){
+        bestTimeMs = elapsedMs;
+      }
+    }
+
+    writeRecord({ bestScore, bestTimeMs });
+    updateRecordDisplays();
+
     resultHeadline.textContent = `${correct} correct`;
     resultCorrect.textContent = String(correct);
     resultWrong.textContent = String(wrong);
     resultTotal.textContent = String(total);
     resultAcc.textContent = `${acc}%`;
+    resultTime.textContent = formatTime(elapsedMs);
   }
 
   function nextQuestionOrFinish(){
@@ -694,6 +805,7 @@
   }
 
   function goMenu(){
+    stopTimer();
     hide(gameScreen);
     hide(resultScreen);
     show(menuScreen);
@@ -810,6 +922,8 @@
   }
 
   applyQueryDefaults();
+  updateRecordDisplays();
+  timeStat.textContent = "Time: 0:00";
 })();
 </script>
 </body>
