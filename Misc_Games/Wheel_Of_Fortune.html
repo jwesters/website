@@ -1,0 +1,341 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Classroom Wheel Game</title>
+<style>
+body{font-family:Arial,sans-serif;margin:0;background:linear-gradient(#eef4ff,#fff);color:#1f2937}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+.card{background:#fff;border:1px solid #d1d5db;border-radius:18px;box-shadow:0 8px 24px rgba(0,0,0,.06)}
+h1{text-align:center}
+#setup{max-width:760px;margin:28px auto;padding:24px;text-align:center}
+input,select,button{padding:12px;font-size:16px;border-radius:10px;border:1px solid #d1d5db;margin:6px}
+button{cursor:pointer}
+.primary{background:#2563eb;color:#fff;border-color:#2563eb}
+#game{display:none}
+.top{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}
+@media(max-width:900px){.top{grid-template-columns:1fr}}
+.panel{padding:16px}
+#roundInfo,#category,#message{text-align:center;font-weight:700}
+#message{min-height:24px;color:#6b7280}
+#board{margin:16px auto 0;display:flex;flex-direction:column;align-items:center;gap:6px;max-width:900px}
+.boardRow{display:flex;flex-wrap:nowrap;justify-content:center;gap:6px}
+.tile{width:42px;height:54px;border:2px solid #1f2937;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:700}
+.space{width:18px;height:54px;background:transparent}
+#wheelCanvas{display:block;margin:auto;max-width:100%}
+#spinResult{text-align:center;font-size:1.2rem;font-weight:700;margin-top:8px}
+#controls,#letters{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:12px}
+.letter{width:42px;height:42px;font-weight:700}
+.used{background:#d1d5db}
+#players{margin-top:14px;display:grid;gap:8px}
+.playerRow{padding:10px 12px;border:1px solid #d1d5db;border-radius:12px;display:flex;justify-content:space-between;background:#fafafa}
+.current{outline:3px solid #bfdbfe;background:#eff6ff}
+</style></head><body><div class="wrap">
+<div id="setup" class="card"><h1>🎡 Classroom Wheel Game</h1><div>Three rounds. School-safe puzzles.</div><div><label>Players: <select id="numPlayers"><option value="1">1 Player</option><option value="2">2 Players</option><option value="3">3 Players</option></select></label></div><div><input id="p1" placeholder="Player 1 Name"><input id="p2" placeholder="Player 2 Name (optional)"><input id="p3" placeholder="Player 3 Name (optional)"></div><button class="primary" onclick="startGame()">Start Game</button></div>
+<div id="game"><h1>🎡 Classroom Wheel Game</h1><div class="top"><div class="card panel"><div id="roundInfo"></div><div id="category"></div><div id="message"></div><div id="board"></div><div id="letters"></div><div style="text-align:center;color:#6b7280;margin-top:12px">Consonants require a spin. Vowels require buying one for $250.</div></div><div class="card panel"><canvas id="wheelCanvas" width="360" height="360"></canvas><div id="spinResult">Hold the Spin button, then release</div><div id="powerWrap" style="max-width:260px;margin:8px auto 0"><div style="height:12px;background:#e5e7eb;border-radius:999px;overflow:hidden"><div id="powerBar" style="height:100%;width:0%;background:#2563eb"></div></div><div id="powerText" style="text-align:center;color:#6b7280;margin-top:6px;font-size:.95rem">Spin power: 0%</div></div><div id="controls"><button id="spinBtn" class="primary">Hold to Spin</button><button id="buyBtn" onclick="buyVowel()">Buy Vowel ($250)</button><button id="solveBtn" onclick="solvePuzzle()">Solve</button></div><div id="players"></div></div></div></div></div>
+<script>
+const PUZZLES=[{"phrase": "THE SOLAR SYSTEM", "category": "Science"}, {"phrase": "WATER CYCLE", "category": "Science"}, {"phrase": "PHOTOSYNTHESIS", "category": "Science"}, {"phrase": "MAGNETIC FIELD", "category": "Science"}, {"phrase": "CHEMICAL REACTION", "category": "Science"}, {"phrase": "HUMAN SKELETON", "category": "Science"}, {"phrase": "THE PACIFIC OCEAN", "category": "Geography"}, {"phrase": "MOUNT EVEREST", "category": "Geography"}, {"phrase": "THE GREAT LAKES", "category": "Geography"}, {"phrase": "ANCIENT EGYPT", "category": "History"}, {"phrase": "ROMAN EMPIRE", "category": "History"}, {"phrase": "WORLD GEOGRAPHY", "category": "Geography"}, {"phrase": "READING A GOOD BOOK", "category": "School"}, {"phrase": "SCIENCE EXPERIMENT", "category": "School"}, {"phrase": "MATHEMATICS CLASS", "category": "School"}, {"phrase": "SCHOOL LIBRARY", "category": "School"}, {"phrase": "PRACTICE MAKES PERFECT", "category": "Phrase"}, {"phrase": "BETTER LATE THAN NEVER", "category": "Phrase"}, {"phrase": "BACK TO SQUARE ONE", "category": "Phrase"}, {"phrase": "THINK OUTSIDE THE BOX", "category": "Phrase"}, {"phrase": "BREAK A LEG", "category": "Phrase"}, {"phrase": "ONCE IN A BLUE MOON", "category": "Phrase"}, {"phrase": "THE AMAZON RIVER", "category": "Geography"}, {"phrase": "VOLCANIC ERUPTION", "category": "Science"}, {"phrase": "ELECTRIC CURRENT", "category": "Science"}, {"phrase": "GLOBAL WARMING", "category": "Science"}, {"phrase": "THE GREAT WALL", "category": "History"}, {"phrase": "UNITED NATIONS", "category": "History"}, {"phrase": "FOREST ECOSYSTEM", "category": "Nature"}, {"phrase": "RAINY DAY RECESS", "category": "School"}, {"phrase": "MY ANCIENT CHALLENGE", "category": "School"}, {"phrase": "OUR MATH DISCOVERY", "category": "Nature"}, {"phrase": "OUR FOREST PROJECT", "category": "Geography"}, {"phrase": "THE OCEAN PROJECT", "category": "Science"}, {"phrase": "OUR HISTORY PROJECT", "category": "School"}, {"phrase": "OUR PLANET EXPERIMENT", "category": "School"}, {"phrase": "THE NATURE EXPERIMENT", "category": "Nature"}, {"phrase": "A FOREST ADVENTURE", "category": "Nature"}, {"phrase": "MY HISTORY PROJECT", "category": "Geography"}, {"phrase": "THE SCIENCE EXPLORATION", "category": "History"}, {"phrase": "A OCEAN PROJECT", "category": "Science"}, {"phrase": "A SPACE PROJECT", "category": "Phrase"}, {"phrase": "OUR ANCIENT DISCOVERY", "category": "History"}, {"phrase": "MY ANCIENT INVESTIGATION", "category": "Nature"}, {"phrase": "THE SCIENCE STORY", "category": "Science"}, {"phrase": "OUR SPACE PROJECT", "category": "Science"}, {"phrase": "OUR MATH EXPLORATION", "category": "History"}, {"phrase": "OUR SPACE STORY", "category": "History"}, {"phrase": "OUR PLANET PROJECT", "category": "School"}, {"phrase": "THE HISTORY INVESTIGATION", "category": "Phrase"}, {"phrase": "THE ANCIENT PROJECT", "category": "Phrase"}, {"phrase": "THE ANCIENT ADVENTURE", "category": "Science"}, {"phrase": "MY HISTORY INVESTIGATION", "category": "Phrase"}, {"phrase": "A FOREST CHALLENGE", "category": "History"}, {"phrase": "OUR FOREST EXPERIMENT", "category": "Science"}, {"phrase": "THE FOREST EXPERIMENT", "category": "Phrase"}, {"phrase": "THE PLANET STORY", "category": "School"}, {"phrase": "MY MATH INVESTIGATION", "category": "History"}, {"phrase": "OUR PLANET PROJECT", "category": "Nature"}, {"phrase": "THE MATH EXPERIMENT", "category": "School"}, {"phrase": "A MATH ADVENTURE", "category": "Phrase"}, {"phrase": "MY HISTORY STORY", "category": "Phrase"}, {"phrase": "THE NATURE ADVENTURE", "category": "History"}, {"phrase": "THE SPACE CHALLENGE", "category": "Science"}, {"phrase": "A FOREST DISCOVERY", "category": "Science"}, {"phrase": "THE MATH EXPERIMENT", "category": "Phrase"}, {"phrase": "OUR MATH CHALLENGE", "category": "Nature"}, {"phrase": "THE PLANET CHALLENGE", "category": "School"}, {"phrase": "OUR GLOBAL PROJECT", "category": "Geography"}, {"phrase": "A SPACE CHALLENGE", "category": "Phrase"}, {"phrase": "OUR GLOBAL DISCOVERY", "category": "Phrase"}, {"phrase": "MY FOREST EXPLORATION", "category": "School"}, {"phrase": "OUR PLANET INVESTIGATION", "category": "History"}, {"phrase": "A ANCIENT EXPLORATION", "category": "Geography"}, {"phrase": "A GLOBAL ADVENTURE", "category": "Phrase"}, {"phrase": "MY NATURE PROJECT", "category": "History"}, {"phrase": "OUR FOREST DISCOVERY", "category": "History"}, {"phrase": "OUR NATURE DISCOVERY", "category": "Geography"}, {"phrase": "A OCEAN INVESTIGATION", "category": "School"}, {"phrase": "MY FOREST CHALLENGE", "category": "Science"}, {"phrase": "MY SCIENCE DISCOVERY", "category": "Science"}, {"phrase": "MY GLOBAL CHALLENGE", "category": "Science"}, {"phrase": "MY OCEAN ADVENTURE", "category": "School"}, {"phrase": "OUR OCEAN DISCOVERY", "category": "Phrase"}, {"phrase": "A FOREST PROJECT", "category": "Geography"}, {"phrase": "OUR ANCIENT ADVENTURE", "category": "History"}, {"phrase": "A ANCIENT ADVENTURE", "category": "Science"}, {"phrase": "THE PLANET ADVENTURE", "category": "Science"}, {"phrase": "OUR MATH INVESTIGATION", "category": "Nature"}, {"phrase": "OUR GLOBAL PROJECT", "category": "History"}, {"phrase": "THE ANCIENT DISCOVERY", "category": "Geography"}, {"phrase": "MY OCEAN EXPLORATION", "category": "Science"}, {"phrase": "OUR ANCIENT EXPERIMENT", "category": "Nature"}, {"phrase": "THE SCIENCE CHALLENGE", "category": "Phrase"}, {"phrase": "A MATH PROJECT", "category": "Science"}, {"phrase": "OUR ANCIENT ADVENTURE", "category": "Science"}, {"phrase": "A HISTORY ADVENTURE", "category": "Geography"}, {"phrase": "OUR PLANET INVESTIGATION", "category": "Phrase"}, {"phrase": "THE SCIENCE ADVENTURE", "category": "Science"}, {"phrase": "MY FOREST EXPERIMENT", "category": "Geography"}, {"phrase": "OUR FOREST EXPLORATION", "category": "School"}, {"phrase": "THE GLOBAL EXPLORATION", "category": "Nature"}, {"phrase": "THE FOREST INVESTIGATION", "category": "School"}, {"phrase": "THE FOREST PROJECT", "category": "School"}, {"phrase": "OUR SPACE EXPLORATION", "category": "Phrase"}, {"phrase": "A MATH DISCOVERY", "category": "Geography"}, {"phrase": "OUR PLANET INVESTIGATION", "category": "History"}, {"phrase": "THE SCIENCE ADVENTURE", "category": "School"}, {"phrase": "OUR SPACE INVESTIGATION", "category": "Nature"}, {"phrase": "OUR ANCIENT CHALLENGE", "category": "Geography"}, {"phrase": "THE MATH INVESTIGATION", "category": "Science"}, {"phrase": "MY HISTORY EXPLORATION", "category": "Geography"}, {"phrase": "THE PLANET STORY", "category": "Geography"}, {"phrase": "A NATURE CHALLENGE", "category": "Phrase"}, {"phrase": "THE PLANET STORY", "category": "Nature"}, {"phrase": "A OCEAN PROJECT", "category": "History"}, {"phrase": "THE HISTORY CHALLENGE", "category": "Science"}, {"phrase": "MY SPACE STORY", "category": "Science"}, {"phrase": "MY MATH EXPERIMENT", "category": "Geography"}, {"phrase": "MY PLANET CHALLENGE", "category": "History"}, {"phrase": "OUR MATH CHALLENGE", "category": "Science"}, {"phrase": "MY SPACE EXPERIMENT", "category": "Science"}, {"phrase": "OUR PLANET ADVENTURE", "category": "Science"}, {"phrase": "THE SCIENCE EXPERIMENT", "category": "Nature"}, {"phrase": "OUR NATURE CHALLENGE", "category": "Nature"}, {"phrase": "MY ANCIENT INVESTIGATION", "category": "Nature"}, {"phrase": "OUR MATH INVESTIGATION", "category": "Science"}, {"phrase": "THE ANCIENT EXPLORATION", "category": "Nature"}, {"phrase": "A OCEAN ADVENTURE", "category": "Geography"}, {"phrase": "THE PLANET CHALLENGE", "category": "Geography"}, {"phrase": "A PLANET DISCOVERY", "category": "Phrase"}, {"phrase": "A OCEAN EXPLORATION", "category": "Science"}, {"phrase": "THE PLANET ADVENTURE", "category": "School"}, {"phrase": "A SPACE INVESTIGATION", "category": "Nature"}, {"phrase": "OUR GLOBAL ADVENTURE", "category": "Geography"}, {"phrase": "THE NATURE ADVENTURE", "category": "Phrase"}, {"phrase": "OUR ANCIENT PROJECT", "category": "Geography"}, {"phrase": "A ANCIENT ADVENTURE", "category": "Nature"}, {"phrase": "OUR FOREST EXPLORATION", "category": "Science"}, {"phrase": "THE SPACE ADVENTURE", "category": "Geography"}, {"phrase": "MY SPACE INVESTIGATION", "category": "Geography"}, {"phrase": "MY SCIENCE CHALLENGE", "category": "Phrase"}, {"phrase": "THE NATURE EXPLORATION", "category": "History"}, {"phrase": "MY ANCIENT EXPLORATION", "category": "Phrase"}, {"phrase": "OUR MATH ADVENTURE", "category": "History"}, {"phrase": "MY SPACE PROJECT", "category": "Phrase"}, {"phrase": "MY PLANET EXPLORATION", "category": "School"}, {"phrase": "THE PLANET PROJECT", "category": "Science"}, {"phrase": "MY FOREST EXPLORATION", "category": "Nature"}, {"phrase": "MY ANCIENT PROJECT", "category": "Science"}, {"phrase": "A NATURE INVESTIGATION", "category": "Science"}, {"phrase": "THE PLANET INVESTIGATION", "category": "Nature"}, {"phrase": "THE HISTORY DISCOVERY", "category": "Geography"}, {"phrase": "MY OCEAN EXPLORATION", "category": "Geography"}, {"phrase": "OUR OCEAN EXPLORATION", "category": "Nature"}, {"phrase": "A SCIENCE CHALLENGE", "category": "History"}, {"phrase": "THE SCIENCE DISCOVERY", "category": "Geography"}, {"phrase": "OUR MATH INVESTIGATION", "category": "Science"}, {"phrase": "MY SPACE DISCOVERY", "category": "School"}, {"phrase": "THE GLOBAL EXPLORATION", "category": "History"}, {"phrase": "MY PLANET EXPLORATION", "category": "Phrase"}, {"phrase": "THE SPACE INVESTIGATION", "category": "Geography"}, {"phrase": "THE SPACE EXPLORATION", "category": "Science"}, {"phrase": "THE NATURE STORY", "category": "Phrase"}, {"phrase": "THE SCIENCE ADVENTURE", "category": "Science"}, {"phrase": "MY MATH PROJECT", "category": "School"}, {"phrase": "MY OCEAN CHALLENGE", "category": "Science"}, {"phrase": "OUR HISTORY PROJECT", "category": "Nature"}, {"phrase": "A OCEAN EXPLORATION", "category": "School"}, {"phrase": "A OCEAN EXPERIMENT", "category": "History"}, {"phrase": "A HISTORY ADVENTURE", "category": "Geography"}, {"phrase": "THE MATH PROJECT", "category": "Science"}, {"phrase": "MY NATURE EXPERIMENT", "category": "Geography"}, {"phrase": "MY ANCIENT STORY", "category": "Science"}, {"phrase": "MY FOREST EXPERIMENT", "category": "Geography"}, {"phrase": "A SCIENCE ADVENTURE", "category": "School"}, {"phrase": "THE FOREST STORY", "category": "History"}, {"phrase": "THE SCIENCE DISCOVERY", "category": "Nature"}, {"phrase": "A ANCIENT EXPERIMENT", "category": "Science"}, {"phrase": "THE SCIENCE CHALLENGE", "category": "History"}, {"phrase": "MY OCEAN CHALLENGE", "category": "Geography"}, {"phrase": "OUR FOREST STORY", "category": "Phrase"}, {"phrase": "A FOREST CHALLENGE", "category": "School"}, {"phrase": "OUR GLOBAL STORY", "category": "Phrase"}, {"phrase": "OUR OCEAN EXPLORATION", "category": "Nature"}, {"phrase": "MY MATH PROJECT", "category": "School"}, {"phrase": "MY PLANET ADVENTURE", "category": "Phrase"}, {"phrase": "MY GLOBAL INVESTIGATION", "category": "Science"}, {"phrase": "OUR ANCIENT EXPLORATION", "category": "Science"}, {"phrase": "A SPACE INVESTIGATION", "category": "Science"}, {"phrase": "MY SCIENCE DISCOVERY", "category": "Science"}, {"phrase": "A SPACE STORY", "category": "Nature"}, {"phrase": "MY OCEAN EXPERIMENT", "category": "Science"}, {"phrase": "OUR FOREST CHALLENGE", "category": "Geography"}, {"phrase": "A FOREST EXPLORATION", "category": "Phrase"}, {"phrase": "OUR OCEAN PROJECT", "category": "Nature"}, {"phrase": "THE PLANET CHALLENGE", "category": "History"}, {"phrase": "A GLOBAL ADVENTURE", "category": "Science"}, {"phrase": "MY GLOBAL EXPLORATION", "category": "School"}, {"phrase": "A SCIENCE EXPLORATION", "category": "Science"}, {"phrase": "THE FOREST INVESTIGATION", "category": "Nature"}, {"phrase": "THE MATH STORY", "category": "Geography"}, {"phrase": "OUR HISTORY CHALLENGE", "category": "Geography"}, {"phrase": "OUR SPACE EXPERIMENT", "category": "Geography"}, {"phrase": "MY FOREST STORY", "category": "History"}, {"phrase": "A PLANET ADVENTURE", "category": "Geography"}, {"phrase": "THE NATURE INVESTIGATION", "category": "Nature"}, {"phrase": "OUR MATH DISCOVERY", "category": "Nature"}, {"phrase": "THE PLANET INVESTIGATION", "category": "Science"}, {"phrase": "MY OCEAN ADVENTURE", "category": "Phrase"}, {"phrase": "A OCEAN EXPERIMENT", "category": "Geography"}, {"phrase": "THE ANCIENT INVESTIGATION", "category": "Geography"}, {"phrase": "THE GLOBAL PROJECT", "category": "School"}, {"phrase": "THE SPACE EXPERIMENT", "category": "Science"}, {"phrase": "MY GLOBAL PROJECT", "category": "School"}, {"phrase": "A HISTORY INVESTIGATION", "category": "History"}, {"phrase": "OUR OCEAN ADVENTURE", "category": "School"}, {"phrase": "OUR MATH EXPERIMENT", "category": "Geography"}, {"phrase": "THE PLANET EXPERIMENT", "category": "School"}, {"phrase": "A HISTORY EXPLORATION", "category": "History"}, {"phrase": "A FOREST STORY", "category": "Geography"}, {"phrase": "A FOREST INVESTIGATION", "category": "Geography"}, {"phrase": "A MATH PROJECT", "category": "Nature"}, {"phrase": "THE ANCIENT CHALLENGE", "category": "History"}, {"phrase": "A PLANET EXPERIMENT", "category": "History"}, {"phrase": "THE SPACE EXPLORATION", "category": "School"}, {"phrase": "THE HISTORY EXPLORATION", "category": "History"}, {"phrase": "A SPACE DISCOVERY", "category": "School"}, {"phrase": "OUR PLANET STORY", "category": "Phrase"}, {"phrase": "THE HISTORY CHALLENGE", "category": "Phrase"}, {"phrase": "A HISTORY INVESTIGATION", "category": "Nature"}, {"phrase": "OUR MATH EXPLORATION", "category": "Phrase"}, {"phrase": "A SCIENCE ADVENTURE", "category": "History"}, {"phrase": "MY NATURE PROJECT", "category": "Phrase"}, {"phrase": "OUR MATH EXPERIMENT", "category": "Phrase"}, {"phrase": "OUR GLOBAL DISCOVERY", "category": "Phrase"}, {"phrase": "OUR ANCIENT CHALLENGE", "category": "School"}, {"phrase": "A NATURE EXPERIMENT", "category": "Science"}, {"phrase": "A PLANET INVESTIGATION", "category": "Phrase"}, {"phrase": "THE SCIENCE DISCOVERY", "category": "Science"}, {"phrase": "MY SCIENCE DISCOVERY", "category": "Science"}, {"phrase": "MY ANCIENT PROJECT", "category": "History"}, {"phrase": "THE FOREST EXPERIMENT", "category": "Geography"}, {"phrase": "OUR OCEAN ADVENTURE", "category": "School"}, {"phrase": "OUR HISTORY INVESTIGATION", "category": "Science"}, {"phrase": "MY OCEAN EXPLORATION", "category": "Science"}, {"phrase": "OUR HISTORY INVESTIGATION", "category": "History"}, {"phrase": "THE PLANET EXPERIMENT", "category": "History"}, {"phrase": "OUR HISTORY CHALLENGE", "category": "School"}, {"phrase": "MY SPACE DISCOVERY", "category": "Geography"}, {"phrase": "OUR PLANET CHALLENGE", "category": "Phrase"}, {"phrase": "OUR OCEAN STORY", "category": "Geography"}, {"phrase": "THE NATURE CHALLENGE", "category": "Phrase"}, {"phrase": "MY SPACE EXPLORATION", "category": "History"}, {"phrase": "THE SPACE CHALLENGE", "category": "History"}, {"phrase": "A NATURE STORY", "category": "Science"}, {"phrase": "MY HISTORY PROJECT", "category": "School"}, {"phrase": "A MATH CHALLENGE", "category": "School"}, {"phrase": "OUR ANCIENT EXPERIMENT", "category": "Nature"}, {"phrase": "THE OCEAN CHALLENGE", "category": "Science"}, {"phrase": "THE PLANET CHALLENGE", "category": "History"}, {"phrase": "MY OCEAN ADVENTURE", "category": "History"}, {"phrase": "A NATURE EXPLORATION", "category": "Geography"}, {"phrase": "THE HISTORY CHALLENGE", "category": "Geography"}, {"phrase": "OUR PLANET INVESTIGATION", "category": "Geography"}, {"phrase": "THE SPACE EXPERIMENT", "category": "History"}, {"phrase": "MY HISTORY ADVENTURE", "category": "Phrase"}, {"phrase": "A PLANET INVESTIGATION", "category": "Phrase"}, {"phrase": "MY ANCIENT CHALLENGE", "category": "History"}, {"phrase": "MY HISTORY PROJECT", "category": "School"}, {"phrase": "THE OCEAN EXPLORATION", "category": "Geography"}, {"phrase": "A ANCIENT ADVENTURE", "category": "School"}, {"phrase": "A NATURE INVESTIGATION", "category": "Science"}, {"phrase": "OUR HISTORY STORY", "category": "Phrase"}, {"phrase": "A HISTORY STORY", "category": "Science"}, {"phrase": "MY GLOBAL INVESTIGATION", "category": "Science"}, {"phrase": "THE NATURE EXPERIMENT", "category": "School"}, {"phrase": "OUR HISTORY CHALLENGE", "category": "Science"}, {"phrase": "THE PLANET EXPLORATION", "category": "Phrase"}, {"phrase": "MY PLANET CHALLENGE", "category": "History"}, {"phrase": "A MATH DISCOVERY", "category": "Geography"}, {"phrase": "A PLANET EXPLORATION", "category": "Phrase"}, {"phrase": "MY FOREST ADVENTURE", "category": "History"}, {"phrase": "THE SPACE ADVENTURE", "category": "Science"}, {"phrase": "A SCIENCE DISCOVERY", "category": "History"}, {"phrase": "MY PLANET ADVENTURE", "category": "Phrase"}, {"phrase": "THE GLOBAL EXPLORATION", "category": "Phrase"}, {"phrase": "THE OCEAN EXPERIMENT", "category": "Phrase"}, {"phrase": "THE GLOBAL CHALLENGE", "category": "History"}, {"phrase": "A OCEAN INVESTIGATION", "category": "Science"}, {"phrase": "MY PLANET DISCOVERY", "category": "Geography"}, {"phrase": "MY SCIENCE PROJECT", "category": "Phrase"}, {"phrase": "A SPACE PROJECT", "category": "School"}, {"phrase": "OUR FOREST ADVENTURE", "category": "History"}, {"phrase": "OUR HISTORY CHALLENGE", "category": "School"}, {"phrase": "A FOREST INVESTIGATION", "category": "History"}, {"phrase": "OUR MATH EXPERIMENT", "category": "Geography"}, {"phrase": "MY FOREST STORY", "category": "Nature"}, {"phrase": "A HISTORY STORY", "category": "School"}, {"phrase": "OUR OCEAN DISCOVERY", "category": "School"}, {"phrase": "OUR SPACE CHALLENGE", "category": "Nature"}, {"phrase": "A OCEAN CHALLENGE", "category": "Science"}, {"phrase": "A MATH INVESTIGATION", "category": "Nature"}, {"phrase": "OUR PLANET DISCOVERY", "category": "Geography"}, {"phrase": "A FOREST PROJECT", "category": "Geography"}, {"phrase": "THE ANCIENT CHALLENGE", "category": "Nature"}, {"phrase": "A HISTORY CHALLENGE", "category": "Science"}, {"phrase": "OUR NATURE DISCOVERY", "category": "Geography"}, {"phrase": "THE HISTORY STORY", "category": "History"}, {"phrase": "MY PLANET DISCOVERY", "category": "Nature"}, {"phrase": "MY GLOBAL EXPLORATION", "category": "Nature"}, {"phrase": "OUR MATH CHALLENGE", "category": "Geography"}, {"phrase": "OUR OCEAN DISCOVERY", "category": "School"}, {"phrase": "OUR HISTORY EXPERIMENT", "category": "Phrase"}, {"phrase": "OUR PLANET EXPERIMENT", "category": "School"}, {"phrase": "A FOREST PROJECT", "category": "History"}, {"phrase": "A SPACE PROJECT", "category": "Geography"}, {"phrase": "A FOREST DISCOVERY", "category": "School"}, {"phrase": "OUR ANCIENT CHALLENGE", "category": "Geography"}, {"phrase": "OUR HISTORY CHALLENGE", "category": "School"}, {"phrase": "MY SCIENCE PROJECT", "category": "Science"}, {"phrase": "A OCEAN EXPERIMENT", "category": "History"}, {"phrase": "OUR SCIENCE EXPERIMENT", "category": "Nature"}, {"phrase": "THE NATURE STORY", "category": "Science"}, {"phrase": "OUR HISTORY PROJECT", "category": "Science"}, {"phrase": "MY OCEAN PROJECT", "category": "Phrase"}, {"phrase": "THE MATH CHALLENGE", "category": "Phrase"}, {"phrase": "OUR SCIENCE PROJECT", "category": "Geography"}, {"phrase": "A GLOBAL INVESTIGATION", "category": "School"}, {"phrase": "A FOREST PROJECT", "category": "Nature"}, {"phrase": "MY HISTORY INVESTIGATION", "category": "Science"}, {"phrase": "THE NATURE EXPERIMENT", "category": "Phrase"}, {"phrase": "MY PLANET EXPLORATION", "category": "Geography"}, {"phrase": "A OCEAN EXPERIMENT", "category": "Geography"}, {"phrase": "MY OCEAN EXPERIMENT", "category": "Nature"}, {"phrase": "A SCIENCE CHALLENGE", "category": "History"}, {"phrase": "A ANCIENT ADVENTURE", "category": "Phrase"}, {"phrase": "OUR HISTORY EXPERIMENT", "category": "School"}, {"phrase": "A NATURE CHALLENGE", "category": "Phrase"}, {"phrase": "THE SPACE INVESTIGATION", "category": "Nature"}, {"phrase": "THE OCEAN EXPLORATION", "category": "History"}, {"phrase": "A NATURE DISCOVERY", "category": "History"}, {"phrase": "OUR GLOBAL EXPERIMENT", "category": "History"}, {"phrase": "OUR ANCIENT PROJECT", "category": "Geography"}, {"phrase": "THE HISTORY EXPERIMENT", "category": "Nature"}, {"phrase": "THE ANCIENT STORY", "category": "School"}, {"phrase": "OUR ANCIENT DISCOVERY", "category": "Science"}, {"phrase": "THE FOREST PROJECT", "category": "Science"}, {"phrase": "OUR SCIENCE EXPERIMENT", "category": "Phrase"}, {"phrase": "OUR OCEAN STORY", "category": "Phrase"}, {"phrase": "THE NATURE DISCOVERY", "category": "History"}, {"phrase": "A HISTORY PROJECT", "category": "Phrase"}, {"phrase": "MY NATURE STORY", "category": "History"}, {"phrase": "OUR PLANET ADVENTURE", "category": "Phrase"}, {"phrase": "OUR FOREST CHALLENGE", "category": "Nature"}, {"phrase": "THE SCIENCE INVESTIGATION", "category": "Nature"}, {"phrase": "A NATURE DISCOVERY", "category": "Geography"}, {"phrase": "OUR NATURE ADVENTURE", "category": "Phrase"}, {"phrase": "MY SCIENCE PROJECT", "category": "Science"}, {"phrase": "OUR FOREST STORY", "category": "Geography"}, {"phrase": "OUR GLOBAL EXPERIMENT", "category": "History"}, {"phrase": "OUR HISTORY INVESTIGATION", "category": "Geography"}, {"phrase": "THE GLOBAL CHALLENGE", "category": "History"}, {"phrase": "MY SPACE EXPLORATION", "category": "Science"}, {"phrase": "THE ANCIENT ADVENTURE", "category": "Nature"}, {"phrase": "THE PLANET STORY", "category": "Geography"}, {"phrase": "MY MATH ADVENTURE", "category": "Nature"}, {"phrase": "THE OCEAN ADVENTURE", "category": "Nature"}, {"phrase": "MY HISTORY INVESTIGATION", "category": "Phrase"}, {"phrase": "A GLOBAL DISCOVERY", "category": "Geography"}, {"phrase": "OUR PLANET STORY", "category": "History"}, {"phrase": "MY NATURE PROJECT", "category": "History"}, {"phrase": "OUR NATURE ADVENTURE", "category": "Nature"}, {"phrase": "MY ANCIENT INVESTIGATION", "category": "Phrase"}, {"phrase": "MY NATURE EXPERIMENT", "category": "Science"}, {"phrase": "OUR SPACE CHALLENGE", "category": "Phrase"}, {"phrase": "MY HISTORY STORY", "category": "Phrase"}, {"phrase": "A SPACE ADVENTURE", "category": "Science"}, {"phrase": "A FOREST ADVENTURE", "category": "Geography"}, {"phrase": "A PLANET PROJECT", "category": "School"}, {"phrase": "OUR HISTORY EXPERIMENT", "category": "History"}, {"phrase": "A PLANET EXPERIMENT", "category": "Phrase"}, {"phrase": "A SCIENCE STORY", "category": "Phrase"}, {"phrase": "MY OCEAN STORY", "category": "School"}, {"phrase": "MY MATH PROJECT", "category": "Phrase"}, {"phrase": "MY HISTORY EXPLORATION", "category": "Nature"}, {"phrase": "MY HISTORY STORY", "category": "Geography"}, {"phrase": "MY FOREST CHALLENGE", "category": "Geography"}, {"phrase": "MY ANCIENT ADVENTURE", "category": "History"}, {"phrase": "A SCIENCE EXPERIMENT", "category": "Phrase"}, {"phrase": "THE SCIENCE CHALLENGE", "category": "Science"}, {"phrase": "A MATH EXPERIMENT", "category": "Science"}, {"phrase": "MY SCIENCE STORY", "category": "Phrase"}, {"phrase": "A MATH PROJECT", "category": "History"}, {"phrase": "A PLANET PROJECT", "category": "School"}, {"phrase": "THE SCIENCE PROJECT", "category": "Nature"}, {"phrase": "MY HISTORY DISCOVERY", "category": "Nature"}, {"phrase": "OUR ANCIENT DISCOVERY", "category": "School"}, {"phrase": "OUR SPACE INVESTIGATION", "category": "School"}, {"phrase": "OUR GLOBAL PROJECT", "category": "School"}, {"phrase": "MY GLOBAL PROJECT", "category": "Science"}, {"phrase": "THE OCEAN ADVENTURE", "category": "School"}, {"phrase": "THE PLANET EXPERIMENT", "category": "School"}, {"phrase": "THE HISTORY INVESTIGATION", "category": "Nature"}, {"phrase": "THE SCIENCE DISCOVERY", "category": "Geography"}, {"phrase": "OUR HISTORY PROJECT", "category": "Nature"}, {"phrase": "MY MATH DISCOVERY", "category": "Phrase"}, {"phrase": "OUR PLANET INVESTIGATION", "category": "Science"}, {"phrase": "THE GLOBAL EXPERIMENT", "category": "Geography"}, {"phrase": "OUR FOREST EXPERIMENT", "category": "History"}, {"phrase": "THE MATH STORY", "category": "Nature"}, {"phrase": "MY HISTORY ADVENTURE", "category": "History"}, {"phrase": "OUR OCEAN CHALLENGE", "category": "Phrase"}, {"phrase": "OUR HISTORY EXPERIMENT", "category": "Science"}, {"phrase": "THE GLOBAL DISCOVERY", "category": "Phrase"}, {"phrase": "OUR SCIENCE INVESTIGATION", "category": "History"}, {"phrase": "MY SPACE ADVENTURE", "category": "Geography"}, {"phrase": "THE ANCIENT STORY", "category": "Geography"}, {"phrase": "A GLOBAL DISCOVERY", "category": "Nature"}, {"phrase": "MY NATURE EXPERIMENT", "category": "Science"}, {"phrase": "THE FOREST STORY", "category": "History"}, {"phrase": "MY ANCIENT EXPLORATION", "category": "History"}, {"phrase": "THE HISTORY INVESTIGATION", "category": "Science"}, {"phrase": "A ANCIENT CHALLENGE", "category": "Nature"}, {"phrase": "OUR NATURE PROJECT", "category": "School"}, {"phrase": "MY SPACE EXPERIMENT", "category": "Geography"}, {"phrase": "THE SCIENCE CHALLENGE", "category": "Geography"}, {"phrase": "MY MATH EXPERIMENT", "category": "Phrase"}, {"phrase": "A NATURE EXPERIMENT", "category": "School"}, {"phrase": "A MATH CHALLENGE", "category": "Nature"}, {"phrase": "THE HISTORY CHALLENGE", "category": "Science"}, {"phrase": "THE GLOBAL PROJECT", "category": "Phrase"}, {"phrase": "A FOREST ADVENTURE", "category": "Science"}, {"phrase": "OUR NATURE PROJECT", "category": "Geography"}, {"phrase": "A OCEAN DISCOVERY", "category": "Science"}, {"phrase": "MY SPACE PROJECT", "category": "School"}, {"phrase": "A NATURE EXPLORATION", "category": "School"}, {"phrase": "OUR SPACE INVESTIGATION", "category": "School"}, {"phrase": "MY GLOBAL STORY", "category": "School"}, {"phrase": "A OCEAN STORY", "category": "Phrase"}, {"phrase": "A PLANET CHALLENGE", "category": "Geography"}, {"phrase": "MY GLOBAL DISCOVERY", "category": "Science"}, {"phrase": "THE MATH INVESTIGATION", "category": "History"}, {"phrase": "MY GLOBAL PROJECT", "category": "School"}, {"phrase": "A GLOBAL EXPLORATION", "category": "Geography"}, {"phrase": "MY MATH STORY", "category": "Phrase"}, {"phrase": "OUR PLANET ADVENTURE", "category": "History"}, {"phrase": "THE SCIENCE EXPERIMENT", "category": "History"}, {"phrase": "THE HISTORY EXPERIMENT", "category": "Phrase"}, {"phrase": "THE OCEAN STORY", "category": "School"}, {"phrase": "A SPACE INVESTIGATION", "category": "Geography"}, {"phrase": "THE ANCIENT INVESTIGATION", "category": "Geography"}, {"phrase": "OUR PLANET PROJECT", "category": "Geography"}, {"phrase": "OUR HISTORY DISCOVERY", "category": "School"}, {"phrase": "MY OCEAN EXPLORATION", "category": "Phrase"}, {"phrase": "MY SPACE STORY", "category": "Geography"}, {"phrase": "A OCEAN EXPLORATION", "category": "History"}, {"phrase": "MY PLANET STORY", "category": "Nature"}, {"phrase": "THE FOREST CHALLENGE", "category": "Geography"}, {"phrase": "THE OCEAN CHALLENGE", "category": "Phrase"}, {"phrase": "A FOREST INVESTIGATION", "category": "Science"}, {"phrase": "THE GLOBAL EXPERIMENT", "category": "Phrase"}, {"phrase": "A FOREST INVESTIGATION", "category": "School"}, {"phrase": "MY FOREST DISCOVERY", "category": "School"}, {"phrase": "OUR SPACE EXPLORATION", "category": "History"}, {"phrase": "A HISTORY INVESTIGATION", "category": "Nature"}, {"phrase": "MY GLOBAL INVESTIGATION", "category": "Science"}, {"phrase": "MY FOREST PROJECT", "category": "Nature"}, {"phrase": "OUR ANCIENT CHALLENGE", "category": "Nature"}, {"phrase": "THE NATURE EXPLORATION", "category": "Nature"}, {"phrase": "A HISTORY EXPERIMENT", "category": "Nature"}, {"phrase": "THE OCEAN INVESTIGATION", "category": "Science"}, {"phrase": "MY MATH CHALLENGE", "category": "Phrase"}, {"phrase": "OUR SCIENCE DISCOVERY", "category": "Phrase"}, {"phrase": "A MATH EXPLORATION", "category": "Phrase"}, {"phrase": "A MATH CHALLENGE", "category": "Geography"}, {"phrase": "THE OCEAN EXPLORATION", "category": "Science"}, {"phrase": "A GLOBAL INVESTIGATION", "category": "School"}, {"phrase": "MY OCEAN CHALLENGE", "category": "Phrase"}, {"phrase": "THE MATH CHALLENGE", "category": "Geography"}, {"phrase": "OUR GLOBAL INVESTIGATION", "category": "School"}, {"phrase": "OUR OCEAN STORY", "category": "Science"}, {"phrase": "A SPACE STORY", "category": "Nature"}, {"phrase": "OUR PLANET STORY", "category": "Science"}, {"phrase": "THE HISTORY DISCOVERY", "category": "Science"}, {"phrase": "MY GLOBAL ADVENTURE", "category": "School"}, {"phrase": "A NATURE EXPERIMENT", "category": "History"}, {"phrase": "THE MATH CHALLENGE", "category": "Geography"}, {"phrase": "THE OCEAN STORY", "category": "History"}, {"phrase": "A HISTORY INVESTIGATION", "category": "History"}, {"phrase": "A PLANET EXPERIMENT", "category": "Science"}, {"phrase": "MY FOREST EXPLORATION", "category": "Nature"}, {"phrase": "OUR ANCIENT CHALLENGE", "category": "Phrase"}, {"phrase": "THE SCIENCE CHALLENGE", "category": "Science"}, {"phrase": "A SCIENCE EXPERIMENT", "category": "History"}, {"phrase": "MY OCEAN PROJECT", "category": "Nature"}, {"phrase": "MY MATH EXPERIMENT", "category": "School"}, {"phrase": "THE HISTORY EXPERIMENT", "category": "Phrase"}, {"phrase": "A SPACE DISCOVERY", "category": "History"}, {"phrase": "A GLOBAL STORY", "category": "School"}], VOWELS=["A","E","I","O","U"], COMMON=["R","S","T","L","N","E","D","H","C","M","P"], WHEEL=[100,150,200,250,300,350,400,450,500,600,700,800,"BANKRUPT","LOSE TURN","PRIZE"];
+let players=[], currentPlayer=0, round=1, puzzle="", category="", revealed=[], usedLetters=new Set(), wheelValue=null, prizeValue=0, prizeCarried=false, rotation=0, spinning=false, roundEnded=false, turnState="awaitSpin";
+const canvas=document.getElementById("wheelCanvas"), ctx=canvas.getContext("2d");
+
+function speak(m){document.getElementById("message").textContent=m;}
+function beep(freq=440,dur=.12,type="sine",gain=.03){try{const ac=new(window.AudioContext||window.webkitAudioContext)(),o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.value=freq;g.gain.value=gain;o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+dur);}catch(e){}}
+
+function startGame(){
+  const count=parseInt(document.getElementById("numPlayers").value,10);
+  const names=[document.getElementById("p1").value.trim()||"Player 1",document.getElementById("p2").value.trim()||"CPU 1",document.getElementById("p3").value.trim()||"CPU 2"];
+  players=[];
+  for(let i=0;i<count;i++) players.push({name:names[i],score:0,roundScore:0,cpu:i>0});
+  currentPlayer=0; round=1;
+  document.getElementById("setup").style.display="none";
+  document.getElementById("game").style.display="block";
+  buildLetterButtons(); drawWheel(); startRound();
+}
+
+function startRound(){
+  roundEnded=false; prizeValue=0; prizeCarried=false; wheelValue=null; turnState="awaitSpin"; usedLetters=new Set(); players.forEach(p=>p.roundScore=0);
+  const chosen=PUZZLES[Math.floor(Math.random()*PUZZLES.length)];
+  puzzle=chosen.phrase; category=chosen.category;
+  revealed=Array.from(puzzle).map(ch=>ch===" ");
+  document.getElementById("roundInfo").textContent=`Round ${round} of 3`;
+  document.getElementById("category").textContent=`Category: ${category}`;
+  document.getElementById("spinResult").textContent="Hold the Spin button, then release"; updatePowerUI(0);
+  resetLetterButtons(); drawBoard(); updatePlayers(); updateControlStates(); speak(`${players[currentPlayer].name}, spin the wheel.`); maybeCpuTurn();
+}
+
+function buildRowsFromPuzzle(text,max=14){
+  const words=text.split(" ");
+  const rows=[];
+  let current="";
+  for(const word of words){
+    if(!current){ current=word; }
+    else if((current+" "+word).length<=max){ current += " " + word; }
+    else { rows.push(current); current=word; }
+  }
+  if(current) rows.push(current);
+  return rows;
+}
+
+function drawBoard(){
+  const board=document.getElementById("board");
+  board.innerHTML="";
+  const rows=buildRowsFromPuzzle(puzzle,14);
+  let globalIndex=0;
+
+  for(const rowText of rows){
+    const row=document.createElement("div");
+    row.className="boardRow";
+
+    for(let i=0;i<rowText.length;i++){
+      const ch=rowText[i];
+      const el=document.createElement("div");
+      if(ch===" "){
+        el.className="space";
+      }else{
+        el.className="tile";
+        while(globalIndex < puzzle.length && puzzle[globalIndex]===" "){ globalIndex++; }
+        el.textContent = revealed[globalIndex] ? puzzle[globalIndex] : "";
+        globalIndex++;
+      }
+      row.appendChild(el);
+    }
+
+    board.appendChild(row);
+
+    while(globalIndex < puzzle.length && puzzle[globalIndex]===" "){ globalIndex++; }
+  }
+}
+
+function buildLetterButtons(){
+  const box=document.getElementById("letters"); box.innerHTML="";
+  for(let i=65;i<=90;i++){
+    const letter=String.fromCharCode(i), b=document.createElement("button");
+    b.className="letter"; b.textContent=letter; b.dataset.letter=letter; b.onclick=()=>handleLetter(letter); box.appendChild(b);
+  }
+}
+function resetLetterButtons(){document.querySelectorAll(".letter").forEach(btn=>{btn.disabled=false; btn.classList.remove("used");});}
+function updateLetterButtons(){document.querySelectorAll(".letter").forEach(btn=>{const letter=btn.dataset.letter, used=usedLetters.has(letter); btn.classList.toggle("used",used); if(used||spinning||roundEnded){btn.disabled=true; return;} if(turnState==="awaitConsonant") btn.disabled=VOWELS.includes(letter); else if(turnState==="awaitVowel") btn.disabled=!VOWELS.includes(letter); else btn.disabled=true; });}
+
+function drawWheel(){
+  const cx=180,cy=180,radius=150,wedge=2*Math.PI/WHEEL.length; ctx.clearRect(0,0,canvas.width,canvas.height);
+  for(let i=0;i<WHEEL.length;i++){
+    const start=rotation+i*wedge,end=start+wedge;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,radius,start,end); ctx.closePath();
+    const colors=["#60a5fa","#34d399","#fbbf24","#f472b6","#a78bfa","#fb7185","#22d3ee","#f59e0b"];
+    ctx.fillStyle=colors[i%colors.length]; ctx.fill(); ctx.strokeStyle="#111827"; ctx.lineWidth=2; ctx.stroke();
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(start+wedge/2); ctx.textAlign="right"; ctx.fillStyle="#111827"; ctx.font="bold 13px Arial"; ctx.fillText(String(WHEEL[i]),radius-14,5); ctx.restore();
+  }
+  ctx.beginPath(); ctx.moveTo(cx,8); ctx.lineTo(cx-14,34); ctx.lineTo(cx+14,34); ctx.closePath(); ctx.fillStyle="#dc2626"; ctx.fill();
+  ctx.beginPath(); ctx.arc(cx,cy,18,0,Math.PI*2); ctx.fillStyle="#fff"; ctx.fill(); ctx.strokeStyle="#111827"; ctx.stroke();
+}
+function getTargetRotationForIndex(index){
+  const wedge=2*Math.PI/WHEEL.length;
+  const pointerAngle=-Math.PI/2;
+  const wedgeCenter=index*wedge + wedge/2;
+  return pointerAngle - wedgeCenter;
+}
+function normalizeRotationForDisplay(angle){
+  const full=2*Math.PI;
+  angle = angle % full;
+  if(angle < 0) angle += full;
+  return angle;
+}
+
+let holdStart=0;
+let holdActive=false;
+let holdAnim=null;
+
+function updatePowerUI(power){
+  const pct=Math.round(power*100);
+  const bar=document.getElementById("powerBar");
+  const txt=document.getElementById("powerText");
+  if(bar) bar.style.width=pct+"%";
+  if(txt) txt.textContent=`Spin power: ${pct}%`;
+}
+
+function performSpin(power){
+  if(spinning||roundEnded) return;
+  if(turnState!=="awaitSpin"){speak("You need to use your current turn first."); return;}
+
+  power=Math.max(0, Math.min(1, power));
+  spinning=true;
+  updateControlStates();
+  speak(`${players[currentPlayer].name} spins the wheel...`);
+  beep(320,.08,"triangle",.02);
+
+  const targetIndex=Math.floor(Math.random()*WHEEL.length);
+  wheelValue=WHEEL[targetIndex];
+
+  const full=2*Math.PI;
+  const startRot=rotation;
+  const baseTarget=getTargetRotationForIndex(targetIndex);
+
+  let delta = baseTarget - startRot;
+  while(delta <= 0){ delta += full; }
+
+  const extraTurns = Math.floor(3 + power*5);
+  const endRot = startRot + delta + full*extraTurns;
+
+  const startTime=performance.now();
+  const duration=1600 + power*1400;
+
+  function frame(now){
+    const t=Math.min(1,(now-startTime)/duration);
+    const eased=1-Math.pow(1-t,3);
+    rotation=startRot+(endRot-startRot)*eased;
+    drawWheel();
+    if(t<1){
+      requestAnimationFrame(frame);
+    }else{
+      rotation=endRot;
+      drawWheel();
+      spinning=false;
+      document.getElementById("spinResult").textContent=`Spin result: ${wheelValue}`;
+      updatePowerUI(power);
+      resolveSpin();
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+function startHoldSpin(ev){
+  if(ev) ev.preventDefault();
+  if(spinning||roundEnded) return;
+  if(turnState!=="awaitSpin"){speak("You need to use your current turn first."); return;}
+  holdActive=true;
+  holdStart=performance.now();
+  updatePowerUI(0);
+  speak("Hold to build spin power, then release.");
+  if(holdAnim) cancelAnimationFrame(holdAnim);
+
+  function tick(){
+    if(!holdActive) return;
+    const power=Math.min(1, Math.max(0, performance.now()-holdStart)/1800);
+    updatePowerUI(power);
+    holdAnim=requestAnimationFrame(tick);
+  }
+  holdAnim=requestAnimationFrame(tick);
+}
+
+function releaseHoldSpin(ev){
+  if(ev) ev.preventDefault();
+  if(!holdActive) return;
+  holdActive=false;
+  if(holdAnim) cancelAnimationFrame(holdAnim);
+  const power=Math.min(1, Math.max(0, performance.now()-holdStart)/1800);
+  performSpin(power);
+}
+
+function autoSpin(){
+  performSpin(0.45 + Math.random()*0.45);
+}
+
+function resolveSpin(){
+  if(wheelValue==="BANKRUPT"){beep(180,.18,"sawtooth",.03); players[currentPlayer].roundScore=0; updatePlayers(); speak("Bankrupt!"); setTimeout(nextTurn,700); return;}
+  if(wheelValue==="LOSE TURN"){beep(180,.15,"square",.03); speak("Lose a turn."); setTimeout(nextTurn,700); return;}
+  if(wheelValue==="PRIZE"){prizeValue=1000+Math.floor(Math.random()*19)*500; prizeCarried=true; beep(720,.12,"triangle",.03); document.getElementById("spinResult").textContent=`Spin result: PRIZE ($${prizeValue} if you win the round)`; turnState="awaitConsonant"; speak("Pick a consonant."); updateControlStates(); maybeCpuTurn(); return;}
+  beep(520,.10,"sine",.025); turnState="awaitConsonant"; speak("Pick a consonant."); updateControlStates(); maybeCpuTurn();
+}
+function handleLetter(letter){
+  if(spinning||roundEnded||usedLetters.has(letter)) return;
+  if(turnState==="awaitSpin"){speak("You need to spin before guessing a consonant."); return;}
+  if(turnState==="awaitConsonant"&&VOWELS.includes(letter)){speak("You cannot guess a vowel after spinning. Buy a vowel instead."); return;}
+  if(turnState==="awaitVowel"&&!VOWELS.includes(letter)){speak("You bought a vowel, so pick a vowel."); return;}
+  usedLetters.add(letter);
+  const matches=[];
+  for(let i=0;i<puzzle.length;i++) if(puzzle[i]===letter) matches.push(i);
+  if(matches.length>0){
+    matches.forEach(i=>revealed[i]=true); drawBoard(); updateLetterButtons();
+    if(VOWELS.includes(letter)){beep(660,.08,"sine",.025); speak(`There ${matches.length===1?"is":"are"} ${matches.length} ${letter}.`); turnState="awaitSpin";}
+    else {beep(760,.08,"triangle",.025); const award=(typeof wheelValue==="number"?wheelValue:0)*matches.length; players[currentPlayer].roundScore+=award; updatePlayers(); speak(`There ${matches.length===1?"is":"are"} ${matches.length} ${letter}. You earned $${award}.`); turnState="awaitSpin";}
+    if(revealed.every(Boolean)){finishRoundByReveal(); return;}
+  } else {beep(210,.12,"square",.03); speak(`No ${letter}.`); setTimeout(nextTurn,650); return;}
+  updateControlStates(); maybeCpuTurn();
+}
+function buyVowel(){
+  if(spinning||roundEnded) return;
+  const p=players[currentPlayer];
+  if(turnState!=="awaitSpin"){speak("You can only buy a vowel at the start of your turn, before spinning."); return;}
+  if(p.roundScore<250){speak("Not enough money to buy a vowel."); return;}
+  p.roundScore-=250; updatePlayers(); turnState="awaitVowel"; beep(600,.08,"sine",.02); speak("Pick a vowel."); updateControlStates(); maybeCpuTurn();
+}
+function normalize(s){return String(s).toUpperCase().replace(/[^A-Z ]/g,"").replace(/\s+/g," ").trim();}
+function solvePuzzle(){
+  if(spinning||roundEnded) return;
+  const guess=prompt("Enter the full puzzle:","");
+  if(guess===null) return;
+  if(normalize(guess)===normalize(puzzle)) finishRoundBySolve();
+  else {beep(190,.14,"square",.03); speak("Incorrect solve."); setTimeout(nextTurn,650);}
+}
+function finishRoundBySolve(){revealed=Array.from(puzzle).map(ch=>ch===" "?true:true); drawBoard(); if(prizeCarried) players[currentPlayer].roundScore+=prizeValue; updatePlayers(); beep(880,.12,"triangle",.03); speak(prizeCarried?`Solved! Prize added: $${prizeValue}.`:"Solved!"); endRound();}
+function finishRoundByReveal(){if(prizeCarried) players[currentPlayer].roundScore+=prizeValue; updatePlayers(); beep(880,.12,"triangle",.03); speak(prizeCarried?`Round complete! Prize added: $${prizeValue}.`:"Round complete!"); endRound();}
+function endRound(){
+  roundEnded=true;
+  players[currentPlayer].score += players[currentPlayer].roundScore;
+  updatePlayers();
+  updateControlStates();
+  setTimeout(()=>{
+    round+=1;
+    if(round>3) endGame();
+    else startRound();
+  },1200);
+}
+function nextTurn(){if(roundEnded) return; currentPlayer=(currentPlayer+1)%players.length; wheelValue=null; turnState="awaitSpin"; updatePlayers(); updateControlStates(); speak(`${players[currentPlayer].name}, your turn.`); maybeCpuTurn();}
+function maybeCpuTurn(){if(!players[currentPlayer].cpu||spinning||roundEnded) return; setTimeout(()=>{if(!players[currentPlayer].cpu||spinning||roundEnded) return; cpuAct();},850);}
+function cpuAct(){
+  const p=players[currentPlayer], visibleRatio=revealed.filter(Boolean).length/revealed.length, unrevealedLetters=Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZ").filter(ch=>!usedLetters.has(ch));
+  if(turnState==="awaitSpin"){
+    if(visibleRatio>.72&&Math.random()<.28){if(Math.random()<.65) finishRoundBySolve(); else solvePuzzleCpuWrong(); return;}
+    const canBuy=p.score>=250, remainingVowels=unrevealedLetters.filter(ch=>VOWELS.includes(ch));
+    if(canBuy&&remainingVowels.length>0&&Math.random()<.22){buyVowel(); return;}
+    autoSpin(); return;
+  }
+  if(turnState==="awaitVowel"){
+    const vowelChoices=unrevealedLetters.filter(ch=>VOWELS.includes(ch));
+    if(!vowelChoices.length){nextTurn(); return;}
+    handleLetter(vowelChoices[Math.floor(Math.random()*vowelChoices.length)]); return;
+  }
+  if(turnState==="awaitConsonant"){
+    const consonants=unrevealedLetters.filter(ch=>!VOWELS.includes(ch));
+    if(!consonants.length){nextTurn(); return;}
+    const preferred=consonants.filter(ch=>COMMON.includes(ch)), pool=preferred.length&&Math.random()<.7?preferred:consonants;
+    handleLetter(pool[Math.floor(Math.random()*pool.length)]);
+  }
+}
+function solvePuzzleCpuWrong(){speak("CPU tried to solve and missed."); beep(190,.14,"square",.03); setTimeout(nextTurn,700);}
+function updatePlayers(){
+  const box=document.getElementById("players"); box.innerHTML="";
+  players.forEach((p,idx)=>{
+    const row=document.createElement("div");
+    row.className="playerRow"+(idx===currentPlayer?" current":"");
+    row.innerHTML=`<div><strong>${idx===currentPlayer?"▶ ":""}${p.name}</strong> ${p.cpu?'<span style="font-size:.85rem;padding:4px 8px;border-radius:999px;background:#e5e7eb">CPU</span>':''}</div><div><strong>Total: $${p.score}</strong><div style="font-size:.9rem;color:#6b7280">Round: $${p.roundScore}</div></div>`;
+    box.appendChild(row);
+  });
+}
+function updateControlStates(){
+  const humanTurn=!players[currentPlayer].cpu;
+  document.getElementById("spinBtn").disabled=!humanTurn||spinning||roundEnded||turnState!=="awaitSpin";
+  document.getElementById("buyBtn").disabled=!humanTurn||spinning||roundEnded||turnState!=="awaitSpin"||players[currentPlayer].roundScore<250;
+  document.getElementById("solveBtn").disabled=!humanTurn||spinning||roundEnded;
+  updateLetterButtons();
+}
+function endGame(){
+  const sorted=[...players].sort((a,b)=>b.score-a.score), winner=sorted[0], bestKey="wheel_classroom_best_score", oldBest=parseInt(localStorage.getItem(bestKey)||"0",10);
+  if(winner.score>oldBest) localStorage.setItem(bestKey,String(winner.score));
+  const best=parseInt(localStorage.getItem(bestKey)||"0",10);
+  alert(`Winner: ${winner.name} with $${winner.score}\nBest local winning score: $${best}`);
+  location.reload();
+}
+drawWheel();
+const spinBtn=document.getElementById("spinBtn");
+if(spinBtn){
+  spinBtn.addEventListener("pointerdown", startHoldSpin);
+  spinBtn.addEventListener("pointerup", releaseHoldSpin);
+  spinBtn.addEventListener("pointerleave", releaseHoldSpin);
+  spinBtn.addEventListener("pointercancel", releaseHoldSpin);
+  spinBtn.addEventListener("mousedown", startHoldSpin);
+  spinBtn.addEventListener("mouseup", releaseHoldSpin);
+  spinBtn.addEventListener("mouseleave", releaseHoldSpin);
+  spinBtn.addEventListener("touchstart", startHoldSpin, {passive:false});
+  spinBtn.addEventListener("touchend", releaseHoldSpin, {passive:false});
+  spinBtn.addEventListener("touchcancel", releaseHoldSpin, {passive:false});
+}
+document.addEventListener("mouseup", releaseHoldSpin);
+document.addEventListener("touchend", releaseHoldSpin, {passive:false});
+</script></body></html>
