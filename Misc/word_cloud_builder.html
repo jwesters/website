@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Word Cloud Builder</title>
+  <style>
+    :root{
+      --bg:#f4f7fb;
+      --card:#ffffff;
+      --ink:#1f2937;
+      --muted:#6b7280;
+      --line:#d7e0ea;
+      --accent:#2b6cb0;
+      --accent2:#4c51bf;
+      --good:#2f855a;
+      --bad:#c53030;
+      --shadow:0 10px 28px rgba(31,41,55,.08);
+      --radius:20px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Arial, Helvetica, sans-serif;
+      background:linear-gradient(180deg,#eef4fb 0%, #f8fbff 100%);
+      color:var(--ink);
+    }
+    .wrap{
+      max-width:1200px;
+      margin:0 auto;
+      padding:24px 18px 40px;
+    }
+    .title{
+      text-align:center;
+      font-size:clamp(28px,4vw,42px);
+      font-weight:800;
+      letter-spacing:.2px;
+      margin:6px 0 8px;
+      color:#17324d;
+    }
+    .subtitle{
+      text-align:center;
+      color:var(--muted);
+      margin:0 0 22px;
+      font-size:16px;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns:380px 1fr;
+      gap:18px;
+    }
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:18px;
+    }
+    .section-title{
+      margin:0 0 12px;
+      font-size:21px;
+      font-weight:800;
+      color:#17324d;
+    }
+    .sub{
+      font-size:13px;
+      color:var(--muted);
+      margin-top:-4px;
+      margin-bottom:12px;
+      line-height:1.45;
+    }
+    label{
+      display:block;
+      font-weight:700;
+      margin:12px 0 6px;
+      color:#204060;
+    }
+    textarea, input[type="text"], input[type="number"], select{
+      width:100%;
+      border:1px solid #c9d5e2;
+      border-radius:14px;
+      padding:11px 12px;
+      font-size:15px;
+      background:#fff;
+      color:var(--ink);
+    }
+    textarea{
+      min-height:190px;
+      resize:vertical;
+      line-height:1.35;
+    }
+    input[type="file"]{
+      width:100%;
+      border:1px dashed #9fb5cb;
+      background:#f8fbff;
+      border-radius:14px;
+      padding:12px;
+    }
+    .toggle-row, .mini-grid, .btn-row{
+      display:grid;
+      gap:10px;
+    }
+    .toggle-row{
+      grid-template-columns:1fr;
+      margin-top:10px;
+    }
+    .mini-grid{
+      grid-template-columns:1fr 1fr;
+      margin-top:8px;
+    }
+    .triple-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr;
+      gap:10px;
+      margin-top:8px;
+    }
+    .check{
+      display:flex;
+      align-items:flex-start;
+      gap:10px;
+      border:1px solid #d9e3ee;
+      border-radius:14px;
+      padding:10px 12px;
+      background:#fbfdff;
+    }
+    .check input{
+      margin-top:3px;
+      transform:scale(1.15);
+    }
+    .check span{
+      font-size:14px;
+      line-height:1.3;
+      color:#29435c;
+      font-weight:600;
+    }
+    .btn-row{
+      grid-template-columns:1fr 1fr;
+      margin-top:16px;
+    }
+    button{
+      border:none;
+      border-radius:16px;
+      padding:13px 14px;
+      font-size:15px;
+      font-weight:800;
+      cursor:pointer;
+      transition:transform .05s ease, filter .18s ease;
+    }
+    button:hover{ filter:brightness(1.03); }
+    button:active{ transform:translateY(1px); }
+    .primary{
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      color:#fff;
+    }
+    .secondary{
+      background:#e8f0fb;
+      color:#204060;
+      border:1px solid #c8d7ea;
+    }
+    .danger{
+      background:#fff2f2;
+      color:var(--bad);
+      border:1px solid #f1c4c4;
+    }
+    .status{
+      min-height:22px;
+      margin-top:10px;
+      font-size:14px;
+      font-weight:700;
+      color:var(--muted);
+    }
+    .status.good{ color:var(--good); }
+    .status.bad{ color:var(--bad); }
+    .toolbar{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:12px;
+    }
+    .toolbar-left{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      align-items:center;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      background:#f4f8fd;
+      border:1px solid #d7e4f1;
+      border-radius:999px;
+      padding:8px 12px;
+      font-size:14px;
+      font-weight:700;
+      color:#29506f;
+    }
+    .canvas-wrap{
+      border:1px solid #d7e0ea;
+      border-radius:18px;
+      overflow:hidden;
+      background:
+        radial-gradient(circle at 25% 20%, #ffffff 0%, #f8fbff 45%, #f3f8fd 100%);
+    }
+    canvas{
+      display:block;
+      width:100%;
+      height:auto;
+      background:transparent;
+    }
+    .bottom-grid{
+      margin-top:14px;
+      display:grid;
+      grid-template-columns:1.1fr .9fr;
+      gap:14px;
+    }
+    .stats{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:10px;
+    }
+    .stat{
+      background:#f8fbff;
+      border:1px solid #dde9f4;
+      border-radius:16px;
+      padding:12px;
+      text-align:center;
+    }
+    .stat .big{
+      font-size:24px;
+      font-weight:900;
+      color:#17324d;
+      display:block;
+    }
+    .stat .small{
+      font-size:12px;
+      color:var(--muted);
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.5px;
+    }
+    .listbox{
+      max-height:260px;
+      overflow:auto;
+      border:1px solid #dce6f0;
+      border-radius:16px;
+      padding:10px 12px;
+      background:#fbfdff;
+    }
+    .wordrow{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      padding:6px 0;
+      border-bottom:1px dashed #e2eaf2;
+      font-size:14px;
+    }
+    .wordrow:last-child{ border-bottom:none; }
+    .wordrow .w{ font-weight:700; color:#17324d; }
+    .wordrow .c{ color:#56728e; font-weight:700; }
+    .clicked{
+      background:#eef6ff;
+      border:1px solid #cfe3fb;
+      border-radius:16px;
+      padding:12px 14px;
+      font-size:15px;
+      color:#21425d;
+    }
+    .footer-note{
+      margin-top:10px;
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.45;
+    }
+    @media (max-width: 940px){
+      .grid{ grid-template-columns:1fr; }
+      .bottom-grid{ grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="title">Word Cloud Builder</h1>
+    <p class="subtitle">Paste text or upload a PDF, then build a classroom-friendly word cloud from the most important words.</p>
+
+    <div class="grid">
+      <section class="card">
+        <h2 class="section-title">Source</h2>
+        <div class="sub">Use pasted text or a PDF file. The app uses only one source at a time.</div>
+
+        <label for="textInput">Paste text</label>
+        <textarea id="textInput" placeholder="Paste an article, story, lesson, notes, or any text here..."></textarea>
+
+        <label for="pdfInput">Or upload a PDF</label>
+        <input id="pdfInput" type="file" accept="application/pdf" />
+
+        <div class="toggle-row">
+          <label>Filtering options</label>
+          <div class="check"><input id="useStopwords" type="checkbox" checked /><span>Remove common words (the, and, because, their, etc.)</span></div>
+          <div class="check"><input id="preferNouns" type="checkbox" checked /><span>Prioritize subject-specific words and noun-like terms</span></div>
+          <div class="check"><input id="dropShort" type="checkbox" checked /><span>Ignore very short words</span></div>
+        </div>
+
+        <label for="customExclude">Custom exclude words</label>
+        <input id="customExclude" type="text" placeholder="example: student, school, chapter, said" />
+
+        <div class="mini-grid">
+          <div>
+            <label for="maxWords">Number of words</label>
+            <input id="maxWords" type="number" min="10" max="150" step="1" value="50" />
+          </div>
+          <div>
+            <label for="minLength">Minimum word length</label>
+            <input id="minLength" type="number" min="1" max="20" step="1" value="4" />
+          </div>
+        </div>
+
+        <div class="triple-grid">
+          <div>
+            <label for="stylePreset">Style</label>
+            <select id="stylePreset">
+              <option value="classroom" selected>Classroom</option>
+              <option value="calm">Calm</option>
+              <option value="bright">Bright</option>
+              <option value="forest">Forest</option>
+              <option value="mono">Monochrome</option>
+            </select>
+          </div>
+          <div>
+            <label for="layoutMode">Layout</label>
+            <select id="layoutMode">
+              <option value="mixed" selected>Mixed</option>
+              <option value="horizontal">Mostly horizontal</option>
+              <option value="vertical">More vertical</option>
+            </select>
+          </div>
+          <div>
+            <label for="shapeMode">Shape</label>
+            <select id="shapeMode">
+              <option value="ellipse" selected>Oval</option>
+              <option value="rectangle">Rectangle</option>
+              <option value="diamond">Diamond</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="primary" id="generateBtn">Generate Word Cloud</button>
+          <button class="secondary" id="downloadBtn">Download PNG</button>
+          <button class="secondary" id="sampleBtn">Use Sample Text</button>
+          <button class="danger" id="clearBtn">Clear</button>
+        </div>
+
+        <div id="status" class="status">Ready.</div>
+        <div class="footer-note">
+          PDF reading uses the browser plus a PDF library loaded from a public CDN. If your browser blocks internet access, pasted text will still work.
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <div class="pill">Click a word to see its count</div>
+            <div class="pill" id="sourcePill">Source: none</div>
+          </div>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="cloudCanvas" width="900" height="620"></canvas>
+        </div>
+
+        <div class="bottom-grid">
+          <div>
+            <h3 class="section-title" style="font-size:18px;margin-top:12px;">At a glance</h3>
+            <div class="stats">
+              <div class="stat"><span class="big" id="uniqueCount">0</span><span class="small">Unique Words</span></div>
+              <div class="stat"><span class="big" id="shownCount">0</span><span class="small">Words Shown</span></div>
+              <div class="stat"><span class="big" id="totalCount">0</span><span class="small">Total Counted</span></div>
+            </div>
+            <div class="clicked" id="clickedInfo" style="margin-top:12px;">No word selected yet.</div>
+          </div>
+
+          <div>
+            <h3 class="section-title" style="font-size:18px;margin-top:12px;">Top words</h3>
+            <div class="listbox" id="topWordsList"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.3.136/pdf.min.mjs" type="module"></script>
+  <script type="module">
+    import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.3.136/pdf.min.mjs";
+
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.3.136/pdf.worker.min.mjs";
+
+    const textInput = document.getElementById("textInput");
+    const pdfInput = document.getElementById("pdfInput");
+    const customExclude = document.getElementById("customExclude");
+    const useStopwords = document.getElementById("useStopwords");
+    const preferNouns = document.getElementById("preferNouns");
+    const dropShort = document.getElementById("dropShort");
+    const maxWords = document.getElementById("maxWords");
+    const minLength = document.getElementById("minLength");
+    const stylePreset = document.getElementById("stylePreset");
+    const layoutMode = document.getElementById("layoutMode");
+    const shapeMode = document.getElementById("shapeMode");
+    const generateBtn = document.getElementById("generateBtn");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const sampleBtn = document.getElementById("sampleBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const statusEl = document.getElementById("status");
+    const canvas = document.getElementById("cloudCanvas");
+    const ctx = canvas.getContext("2d");
+    const sourcePill = document.getElementById("sourcePill");
+    const clickedInfo = document.getElementById("clickedInfo");
+    const uniqueCount = document.getElementById("uniqueCount");
+    const shownCount = document.getElementById("shownCount");
+    const totalCount = document.getElementById("totalCount");
+    const topWordsList = document.getElementById("topWordsList");
+
+    let currentPdfText = "";
+    let currentRenderedWords = [];
+
+    const STOPWORDS = new Set([
+      "a","about","above","across","after","afterward","again","against","all","almost","alone","along","already","also","although",
+      "always","am","among","amongst","an","and","another","any","anybody","anyhow","anyone","anything","anyway","anywhere","are",
+      "around","as","at","be","became","because","become","becomes","becoming","been","before","beforehand","being","below","beside",
+      "besides","between","beyond","both","but","by","can","cannot","could","did","do","does","doing","done","down","during","each",
+      "either","enough","especially","etc","even","ever","every","everybody","everyone","everything","everywhere","few","for","former",
+      "formerly","from","further","had","has","have","having","he","her","here","hers","herself","him","himself","his","how","however",
+      "i","if","in","indeed","into","is","it","its","itself","just","keep","keeps","kept","least","less","let","like","made","make",
+      "many","may","me","meanwhile","might","mine","more","moreover","most","mostly","much","must","my","myself","namely","neither",
+      "never","nevertheless","next","no","nobody","none","noone","nor","not","nothing","now","nowhere","of","off","often","on","once",
+      "one","only","onto","or","other","others","otherwise","our","ours","ourselves","out","over","own","perhaps","rather","same","seem",
+      "seemed","seeming","seems","several","she","should","since","so","some","somebody","someone","something","sometime","sometimes",
+      "somewhere","still","such","than","that","the","their","theirs","them","themselves","then","there","thereafter","thereby",
+      "therefore","therein","thereupon","these","they","this","those","through","throughout","thus","to","too","toward","towards","under",
+      "until","up","upon","us","very","was","we","well","were","what","whatever","when","whence","whenever","where","whereafter",
+      "whereas","whereby","wherein","whereupon","wherever","whether","which","while","who","whoever","whole","whom","whose","why","will",
+      "with","within","without","would","yes","yet","you","your","yours","yourself","yourselves",
+      "chapter","page","pages","student","students","teacher","teachers","class","classes","school","schools","mr","mrs","ms","dr"
+    ]);
+
+    const ACADEMIC_GENERIC = new Set([
+      "thing","things","people","person","area","areas","part","parts","type","types","kind","kinds","idea","ideas","example","examples",
+      "fact","facts","group","groups","system","systems","problem","problems","question","questions","answer","answers","year","years",
+      "day","days","way","ways","time","times","place","places","work","works","number","numbers","information","text","texts"
+    ]);
+
+    const palettes = {
+      classroom: ["#1f4e79","#2b6cb0","#4c51bf","#2f855a","#b7791f","#9b2c2c"],
+      calm: ["#46627f","#5c7c99","#7fa1b8","#91a8a4","#6d7f73","#56708e"],
+      bright: ["#2b6cb0","#d97706","#c53030","#2f855a","#6b46c1","#0f766e"],
+      forest: ["#2f5233","#4f772d","#31572c","#90a955","#606c38","#283618"],
+      mono: ["#1f2937","#374151","#4b5563","#6b7280","#111827","#334155"]
+    };
+
+    function setStatus(msg, kind=""){
+      statusEl.textContent = msg;
+      statusEl.className = "status" + (kind ? " " + kind : "");
+    }
+
+    function normalizeQuotes(text){
+      return text
+        .replace(/[“”]/g,'"')
+        .replace(/[‘’]/g,"'")
+        .replace(/[–—]/g," ")
+        .replace(/[^\p{L}\p{N}'-]+/gu," ");
+    }
+
+    function tokenize(text){
+      const cleaned = normalizeQuotes(text);
+      return cleaned
+        .split(/\s+/)
+        .map(w => w.trim())
+        .filter(Boolean);
+    }
+
+    function nounishScore(word){
+      let score = 0;
+      if (/^[A-Za-z][A-Za-z'-]*$/.test(word)) score += 1;
+      if (word.length >= 5) score += 1;
+      if (word.length >= 8) score += 1;
+      if (/tion$|sion$|ment$|ness$|ity$|ism$|ist$|ship$|ence$|ance$|er$|or$|hood$|age$|ery$|ry$|ics$|logy$|graphy$|scope$|phobia$|nomy$/i.test(word)) score += 2;
+      if (/ing$|ed$|ly$/i.test(word)) score -= 2;
+      if (/ous$|ful$|able$|ible$|al$|ive$/i.test(word)) score -= 1;
+      if (ACADEMIC_GENERIC.has(word.toLowerCase())) score -= 2;
+      return score;
+    }
+
+    function buildFrequency(text){
+      const words = tokenize(text);
+      const excludes = new Set(
+        customExclude.value
+          .split(",")
+          .map(w => w.trim().toLowerCase())
+          .filter(Boolean)
+      );
+
+      const counts = new Map();
+      let total = 0;
+
+      for (let raw of words){
+        let word = raw.replace(/^[-']+|[-']+$/g, "");
+        if (!word) continue;
+        const lower = word.toLowerCase();
+
+        if (!/[a-z]/i.test(word)) continue;
+        if (useStopwords.checked && STOPWORDS.has(lower)) continue;
+        if (excludes.has(lower)) continue;
+        if (dropShort.checked && lower.length < Number(minLength.value || 4)) continue;
+        if (/^\d+$/.test(lower)) continue;
+        if (lower.length <= 1) continue;
+
+        total += 1;
+
+        const prev = counts.get(word) || { count:0, lower, nounScore:nounishScore(word) };
+        prev.count += 1;
+        counts.set(word, prev);
+      }
+
+      let arr = [...counts.entries()].map(([word, data]) => ({
+        word,
+        count: data.count,
+        lower: data.lower,
+        nounScore: data.nounScore,
+        weight: data.count + (preferNouns.checked ? Math.max(0, data.nounScore) * 0.45 : 0)
+      }));
+
+      arr.sort((a,b)=>{
+        if (b.weight !== a.weight) return b.weight - a.weight;
+        if (b.count !== a.count) return b.count - a.count;
+        return a.word.localeCompare(b.word);
+      });
+
+      return {
+        totalCounted: total,
+        unique: arr.length,
+        words: arr.slice(0, Number(maxWords.value || 50))
+      };
+    }
+
+    function inShape(x, y, cx, cy, width, height, mode){
+      const dx = x - cx;
+      const dy = y - cy;
+      if (mode === "rectangle"){
+        return Math.abs(dx) <= width/2 && Math.abs(dy) <= height/2;
+      }
+      if (mode === "diamond"){
+        return (Math.abs(dx)/(width/2) + Math.abs(dy)/(height/2)) <= 1;
+      }
+      return ((dx*dx)/((width/2)*(width/2)) + (dy*dy)/((height/2)*(height/2))) <= 1;
+    }
+
+    function intersects(a,b){
+      return !(a.x + a.w/2 < b.x - b.w/2 ||
+               a.x - a.w/2 > b.x + b.w/2 ||
+               a.y + a.h/2 < b.y - b.h/2 ||
+               a.y - a.h/2 > b.y + b.h/2);
+    }
+
+    function chooseAngle(index){
+      const mode = layoutMode.value;
+      if (mode === "horizontal") return Math.random() < 0.88 ? 0 : Math.PI/2;
+      if (mode === "vertical") return Math.random() < 0.55 ? Math.PI/2 : 0;
+      return Math.random() < 0.75 ? 0 : Math.PI/2;
+    }
+
+    function clearCanvas(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      const g = ctx.createLinearGradient(0,0,canvas.width,canvas.height);
+      g.addColorStop(0,"#ffffff");
+      g.addColorStop(1,"#f3f8fd");
+      ctx.fillStyle = g;
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+    }
+
+    function renderCloud(items){
+      clearCanvas();
+      currentRenderedWords = [];
+      const palette = palettes[stylePreset.value] || palettes.classroom;
+      if (!items.length){
+        ctx.fillStyle = "#6b7280";
+        ctx.font = "bold 28px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("No words to show.", canvas.width/2, canvas.height/2 - 6);
+        ctx.font = "16px Arial";
+        ctx.fillText("Try different text or adjust the filters.", canvas.width/2, canvas.height/2 + 24);
+        return;
+      }
+
+      const maxCount = items[0].count || 1;
+      const minCount = items[items.length-1].count || 1;
+      const cX = canvas.width / 2;
+      const cY = canvas.height / 2;
+      const shapeW = canvas.width * 0.88;
+      const shapeH = canvas.height * 0.82;
+
+      items.forEach((item, i) => {
+        const scale = (item.count - minCount) / Math.max(1, (maxCount - minCount));
+        const fontSize = Math.round(18 + scale * 44 + Math.max(0, item.nounScore) * 1.2);
+        const angle = chooseAngle(i);
+
+        ctx.save();
+        ctx.font = `bold ${fontSize}px Arial`;
+        const metrics = ctx.measureText(item.word);
+        ctx.restore();
+
+        const baseW = Math.ceil(metrics.width + 8);
+        const baseH = Math.ceil(fontSize + 6);
+
+        const box = {
+          text: item.word,
+          count: item.count,
+          fontSize,
+          angle,
+          color: palette[i % palette.length],
+          w: angle === 0 ? baseW : baseH,
+          h: angle === 0 ? baseH : baseW,
+          x: cX,
+          y: cY
+        };
+
+        let placed = false;
+        const maxSteps = 3200;
+        for (let step=0; step<maxSteps; step++){
+          const t = step * 0.33;
+          const x = cX + (4.0 * t) * Math.cos(t);
+          const y = cY + (3.0 * t) * Math.sin(t);
+
+          box.x = x;
+          box.y = y;
+
+          if (!inShape(x, y, cX, cY, shapeW, shapeH, shapeMode.value)) continue;
+
+          let hit = false;
+          for (const other of currentRenderedWords){
+            if (intersects(box, other)){
+              hit = true;
+              break;
+            }
+          }
+          if (!hit){
+            currentRenderedWords.push({...box});
+            placed = true;
+            break;
+          }
+        }
+
+        if (!placed && currentRenderedWords.length < 8){
+          // allow a few big ones in simpler positions
+          const fallback = [
+            [cX, cY],[cX-150,cY-80],[cX+160,cY+65],[cX-180,cY+120],[cX+120,cY-130]
+          ];
+          for (const [fx,fy] of fallback){
+            box.x = fx; box.y = fy;
+            if (!inShape(fx, fy, cX, cY, shapeW, shapeH, shapeMode.value)) continue;
+            let hit = false;
+            for (const other of currentRenderedWords){
+              if (intersects(box, other)){ hit = true; break; }
+            }
+            if (!hit){
+              currentRenderedWords.push({...box});
+              break;
+            }
+          }
+        }
+      });
+
+      currentRenderedWords.forEach(box => {
+        ctx.save();
+        ctx.translate(box.x, box.y);
+        ctx.rotate(box.angle);
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = box.color;
+        ctx.font = `bold ${box.fontSize}px Arial`;
+        ctx.fillText(box.text, 0, 0);
+        ctx.restore();
+      });
+    }
+
+    function renderList(items){
+      topWordsList.innerHTML = "";
+      if (!items.length){
+        topWordsList.innerHTML = '<div class="wordrow"><span class="w">No words</span><span class="c">0</span></div>';
+        return;
+      }
+      items.slice(0, 30).forEach(item => {
+        const row = document.createElement("div");
+        row.className = "wordrow";
+        row.innerHTML = `<span class="w">${escapeHtml(item.word)}</span><span class="c">${item.count}</span>`;
+        topWordsList.appendChild(row);
+      });
+    }
+
+    function escapeHtml(s){
+      return s.replace(/[&<>"']/g, ch => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+      }[ch]));
+    }
+
+    function updateStats(result){
+      uniqueCount.textContent = String(result.unique);
+      shownCount.textContent = String(result.words.length);
+      totalCount.textContent = String(result.totalCounted);
+      renderList(result.words);
+    }
+
+    function getActiveText(){
+      const typed = textInput.value.trim();
+      if (typed) return { source:"pasted text", text:typed };
+      if (currentPdfText.trim()) return { source:"PDF", text:currentPdfText };
+      return { source:"none", text:"" };
+    }
+
+    async function parsePdfFile(file){
+      const data = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data }).promise;
+      let allText = "";
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++){
+        const page = await pdf.getPage(pageNum);
+        const content = await page.getTextContent();
+        const pageText = content.items.map(item => item.str).join(" ");
+        allText += "\n" + pageText;
+      }
+      return allText;
+    }
+
+    async function handlePdfChange(){
+      const file = pdfInput.files?.[0];
+      if (!file){
+        currentPdfText = "";
+        if (!textInput.value.trim()) sourcePill.textContent = "Source: none";
+        return;
+      }
+
+      if (textInput.value.trim()){
+        textInput.value = "";
+      }
+
+      setStatus("Reading PDF...", "good");
+      sourcePill.textContent = "Source: PDF";
+      try{
+        currentPdfText = await parsePdfFile(file);
+        setStatus(`PDF loaded: ${file.name}`, "good");
+      }catch(err){
+        console.error(err);
+        currentPdfText = "";
+        setStatus("Could not read that PDF in the browser.", "bad");
+      }
+    }
+
+    function generate(){
+      const active = getActiveText();
+      sourcePill.textContent = "Source: " + active.source;
+
+      if (!active.text.trim()){
+        setStatus("Please paste text or upload a PDF first.", "bad");
+        renderCloud([]);
+        updateStats({unique:0, words:[], totalCounted:0});
+        return;
+      }
+
+      const result = buildFrequency(active.text);
+      updateStats(result);
+      renderCloud(result.words);
+      setStatus(`Generated ${result.words.length} words from ${active.source}.`, "good");
+      clickedInfo.textContent = "Click a word in the cloud to see its count.";
+    }
+
+    function clearAll(){
+      textInput.value = "";
+      pdfInput.value = "";
+      currentPdfText = "";
+      customExclude.value = "";
+      sourcePill.textContent = "Source: none";
+      clickedInfo.textContent = "No word selected yet.";
+      setStatus("Cleared.", "good");
+      updateStats({unique:0, words:[], totalCounted:0});
+      renderCloud([]);
+    }
+
+    function loadSample(){
+      textInput.value = `The water cycle moves water through evaporation, condensation, precipitation, and collection.
+      Sunlight warms lakes, rivers, and oceans. Water vapour rises into the atmosphere and cools.
+      Clouds form when tiny droplets gather. Precipitation returns water to Earth as rain or snow.
+      Runoff carries water into streams and rivers. Groundwater seeps through soil and rock.
+      Weather, climate, temperature, atmosphere, storm systems, and seasonal patterns shape environments.`;
+      pdfInput.value = "";
+      currentPdfText = "";
+      sourcePill.textContent = "Source: pasted text";
+      setStatus("Sample text loaded.", "good");
+      generate();
+    }
+
+    function downloadPng(){
+      const link = document.createElement("a");
+      link.download = "word-cloud.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+
+    canvas.addEventListener("click", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const mx = (e.clientX - rect.left) * scaleX;
+      const my = (e.clientY - rect.top) * scaleY;
+
+      for (let i=currentRenderedWords.length-1; i>=0; i--){
+        const w = currentRenderedWords[i];
+        const dx = mx - w.x;
+        const dy = my - w.y;
+        const cos = Math.cos(-w.angle);
+        const sin = Math.sin(-w.angle);
+        const rx = dx * cos - dy * sin;
+        const ry = dx * sin + dy * cos;
+        if (Math.abs(rx) <= w.w/2 && Math.abs(ry) <= w.h/2){
+          clickedInfo.innerHTML = `<strong>${escapeHtml(w.text)}</strong> appears <strong>${w.count}</strong> time${w.count===1?"":"s"}.`;
+          return;
+        }
+      }
+    });
+
+    textInput.addEventListener("input", () => {
+      if (textInput.value.trim()){
+        pdfInput.value = "";
+        currentPdfText = "";
+        sourcePill.textContent = "Source: pasted text";
+      } else if (!pdfInput.files?.length){
+        sourcePill.textContent = "Source: none";
+      }
+    });
+
+    pdfInput.addEventListener("change", handlePdfChange);
+    generateBtn.addEventListener("click", generate);
+    downloadBtn.addEventListener("click", downloadPng);
+    sampleBtn.addEventListener("click", loadSample);
+    clearBtn.addEventListener("click", clearAll);
+
+    renderCloud([]);
+    renderList([]);
+  </script>
+</body>
+</html>
