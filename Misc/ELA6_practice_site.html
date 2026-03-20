@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ELA 6 Final Master Build</title>
+<style>
+:root {
+  --panel:#fff; --ink:#183153; --muted:#5f6f82; --accent:#2d6cdf; --accent2:#e9f1ff;
+  --good:#107c41; --bad:#b3261e; --border:#dbe4f0; --bg1:#f7faff; --bg2:#eef4fb;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(180deg,var(--bg1),var(--bg2));color:var(--ink)}
+.wrap{max-width:1140px;margin:0 auto;padding:24px}
+.hero,.card{background:var(--panel);border:1px solid var(--border);border-radius:22px;box-shadow:0 10px 28px rgba(24,49,83,.08)}
+.hero{padding:24px;margin-bottom:18px}
+.card{padding:16px}
+h1{margin:0 0 8px 0;font-size:2.15rem}
+.sub{color:var(--muted);line-height:1.55;margin-bottom:18px;white-space:pre-line}
+.controls{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:14px}
+label{display:block;font-weight:700;margin-bottom:8px}
+select,button{width:100%;padding:13px 14px;border-radius:14px;border:1px solid #c9d7ea;font-size:1rem;background:#fff;color:var(--ink)}
+button{background:var(--accent);color:#fff;border:none;font-weight:700;cursor:pointer}
+.hint{margin-top:10px;color:var(--muted);font-size:.95rem;white-space:pre-line}
+.quizShell{display:none;margin-top:18px}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.pill{background:var(--accent2);color:var(--accent);border:1px solid #cfe0ff;border-radius:999px;padding:8px 12px;font-weight:700}
+.question{margin-bottom:16px}
+.question h3{margin:0 0 10px 0;font-size:1.05rem;line-height:1.48;white-space:pre-line}
+.choice{display:block;padding:10px 12px;margin:8px 0;border:1px solid var(--border);border-radius:14px;background:#fbfdff}
+.choice input{margin-right:10px}
+.bottomBar{position:sticky;bottom:10px;background:rgba(244,247,251,.95);backdrop-filter:blur(6px);padding-top:8px}
+.small{font-size:.92rem;color:var(--muted)}
+.counts{margin-top:16px;font-size:.95rem;color:var(--muted);line-height:1.5}
+.goodBox{background:#edf9f1;border:1px solid #ccebd6;color:#107c41;border-radius:16px;padding:18px;font-weight:700}
+@media (max-width:860px){.controls{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <h1>ELA 6 Practice</h1>
+    <div class="sub">Final master build.
+This version uses cleaned ExamBank-style questions plus grounded alternates.
+Passage sets stay locked together.
+Vocabulary includes science curriculum terms, but the area is simply called Vocabulary.
+Area practice gives 10 questions.
+Full Curriculum gives 10 or 25 questions.
+No duplicate questions appear within the same generated test.</div>
+
+    <div class="controls">
+      <div class="card">
+        <label for="areaSelect">Practice Area</label>
+        <select id="areaSelect"></select>
+        <div class="hint" id="countHint">Area practice: 10 questions per area.</div>
+      </div>
+      <div class="card">
+        <label for="countSelect">Number of Questions</label>
+        <select id="countSelect">
+          <option value="10">10</option>
+          <option value="25">25</option>
+        </select>
+        <div class="hint">Only Full Curriculum can use 25.</div>
+      </div>
+      <div class="card">
+        <label>&nbsp;</label>
+        <button id="startBtn" type="button">Generate Practice Questions</button>
+        <div class="hint">Passage bundles are kept together.
+Exact totals stay at 10 or 25.</div>
+      </div>
+    </div>
+
+    <div class="counts"><strong>Question counts</strong><br>Reading Comprehension: 30<br>Vocabulary: 50<br>Word Study: 34<br>Grammar & Usage: 34<br>Writing Conventions: 16<br>Spelling: 45<br>Reading Comprehension Locked Sets: 8<br>Full Curriculum Total (including locked sets as 4 questions each): 241</div>
+  </div>
+
+  <div id="quizShell" class="quizShell">
+    <div class="toolbar">
+      <div class="pill" id="setInfo">Ready</div>
+      <div class="small">All questions appear on one page.</div>
+    </div>
+    <div id="quizContainer"></div>
+    <div class="bottomBar">
+      <button id="submitBtn" type="button">Submit Questions</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const AREA_BANK = {"Reading Comprehension": [{"q": "Poetry Month Celebration: Students cut shapes, wrote poems, and coloured with markers while Mrs. Brown prepared candy. What is the main idea or main event of the passage?", "choices": ["Mrs. Brown had candy.", "Students were preparing for a Poetry Month celebration.", "Markers are better than crayons.", "The classroom was too quiet."], "answer": 1}, {"q": "Spring time is the best time: blossoms covered the trees, daffodils were blooming, and teens were outside enjoying the warm weather. What is the main idea or main event of the passage?", "choices": ["Flowers were blooming.", "Tim likes to wear shorts.", "The teens were happy to be outside in the spring.", "The boys wanted to play football."], "answer": 2}, {"q": "Making Do With What You Have: Tommy and Stephanie wanted red and yellow paint, but only green, blue, and brown were available. What is the main idea or main event of the passage?", "choices": ["It was a terrible rainy day.", "The kids decided to make the best of the situation.", "Tommy likes yellow paint best.", "Stephanie was upset all afternoon."], "answer": 1}, {"q": "Extreme Wingsuit Flying explains how people use a wingsuit to glide through the air from an aircraft or a high point. What is the main idea or main event of the passage?", "choices": ["Wingsuits are always blue.", "Wingsuit flying is a newer extreme sport.", "Pilots never use parachutes.", "A wingsuit is the same as a winter coat."], "answer": 1}, {"q": "If your mother is holding a bag filled with large towels and sunscreen, what can you infer?", "choices": ["You are going skiing.", "You are going to the beach.", "You are going to a library.", "You are going to a skating rink."], "answer": 1}, {"q": "The sounds of our voices startled a squirrel. My father and I enjoyed spending the day on the trails. It was a good thing we packed a tire patch kit. The son and father are most likely:", "choices": ["hiking", "biking", "hunting", "motorcycle riding"], "answer": 1}, {"q": "Children ran and shouted. Girls jumped rope, and boys threw a ball in the grass. A mother stood near a swing. The event being described is:", "choices": ["a day at a park", "a race at school", "recess during school", "a science experiment"], "answer": 0}, {"q": "The teacher told the students to put all of their books under their desks. Cookies, cupcakes, and juice were on the table. Students waited for the games to begin. The event being described is:", "choices": ["a lesson on making snacks", "a science experiment", "a class party", "a test"], "answer": 2}, {"q": "A paper football landed on Mrs. Jackson's desk while she was grading low history test scores. Steven said he was trying to make her smile. What best describes the change in the classroom?", "choices": ["It became even more tense.", "It turned from tense to cheerful.", "It became completely silent.", "It ended with detention for everyone."], "answer": 1}, {"q": "Outside the window, we could see the large stag with his huge rack of antlers. Which sentence best explains the meaning of stag in this context?", "choices": ["It is a type of deer.", "It is a kind of boat.", "It is a musical instrument.", "It is a weather event."], "answer": 0}, {"q": "A man wearing a suit suggested that Marilyn and Bob check out the new arrowhead display. The first exhibit was of beautiful ancient vases from Egypt. Marilyn and Bob are at:", "choices": ["a movie", "a museum", "a carnival", "a department store"], "answer": 1}, {"q": "The crop circles that appeared in our field were quite elaborate. Tommy and his friends had spent countless hours last night on this prank. What does this detail tell you about the crop circles?", "choices": ["They were simple and messy.", "They were carefully planned.", "They happened by accident.", "They were caused by animals."], "answer": 1}, {"q": "A newer extreme sport is called wingsuit flying. The suit shapes the human body into an airfoil or wing. Which detail best supports the idea that a wingsuit helps a person glide?", "choices": ["It is sewn with bright fabric.", "It has fabric between the arms and legs.", "It is worn only indoors.", "It is made of wool."], "answer": 1}, {"q": "In one paragraph, Bella waited at the windows, barked when the family came home, and loved snuggling on laps. What is the main idea?", "choices": ["Bella liked barking at strangers.", "Bella was a perfect family dog.", "Bella only liked one family member.", "Bella stayed outside all day."], "answer": 1}, {"q": "A paragraph explains that transient luminous events include sprites, blue jets, and elves. What is the main idea?", "choices": ["Elves are not real.", "There are several kinds of transient luminous events.", "Blue jets are always dangerous.", "Sprites only happen in winter."], "answer": 1}, {"q": "A local article explains that more trees were planted along sidewalks and in parks, and shaded places stayed cooler during summer. What is the main idea?", "choices": ["Sidewalks should never be sunny.", "Planting trees can make hot places more comfortable.", "Summer is the longest season.", "Trees stop all heat."], "answer": 1}, {"q": "The school garden grew tomatoes, carrots, and lettuce. Students measured the plants each Friday and recorded the results in a chart. Which sentence best states the main idea?", "choices": ["Students only planted lettuce.", "Charts should be used every Friday.", "Students are tracking the growth of the school garden.", "Tomatoes always grow faster than carrots."], "answer": 2}, {"q": "During the storm, the lights flickered twice before going out. Dad brought flashlights to the kitchen, and Mom found extra blankets. What can you infer?", "choices": ["The family is preparing for a power outage.", "The family is getting ready for a birthday party.", "The storm has completely ended.", "The lights are becoming brighter."], "answer": 0}, {"q": "Jordan and Eli both enjoy reading after school. Jordan prefers mysteries and graphic novels, while Eli chooses biographies and books about animals. Which sentence best describes them?", "choices": ["They dislike reading.", "They have different reading tastes but share a reading habit.", "They only read at school.", "They choose exactly the same books."], "answer": 1}, {"q": "At the science fair, Maya explained evaporation, condensation, and precipitation with a labeled diagram. Which detail best supports the idea that Maya was prepared?", "choices": ["She stood near her project.", "She used a labeled diagram to explain the process.", "The fair happened at school.", "She wore a blue shirt."], "answer": 1}, {"q": "Before going on a long hike, Jordan packed water, snacks, a map, and a first-aid kit. He checked the weather and told his family where he would be. What can you infer about Jordan?", "choices": ["He is careless.", "He is responsible.", "He dislikes hiking.", "He forgot to prepare."], "answer": 1}, {"q": "The town added more trees to parks and sidewalks. By summer, shaded areas stayed cooler. Why did the town add more trees?", "choices": ["To make hot areas more comfortable.", "To hide the sidewalks.", "To make summer longer.", "To stop people from walking."], "answer": 0}, {"q": "A class compared two articles about wolves. One focused on hunting in packs, and the other explained how wolves communicate. What was the class most likely doing?", "choices": ["Learning about different aspects of wolves.", "Practising multiplication facts.", "Training a dog.", "Watching a cartoon."], "answer": 0}, {"q": "Ava brought a reusable water bottle, packed lunch in containers, and used both sides of her paper. What idea does the paragraph mostly support?", "choices": ["Small habits can reduce waste.", "Paper should never be used.", "Containers are only for lunch.", "Water bottles create the most garbage."], "answer": 0}, {"q": "Which statement best describes the main idea of Poetry Month Celebration?", "choices": ["Students were preparing for a Poetry Month celebration.", "Mrs. Brown ran out of candy.", "No one wanted to write poetry.", "The room was empty."], "answer": 0}, {"q": "Which sentence best explains the lesson in Making Do With What You Have?", "choices": ["People should wait for perfect supplies.", "Good ideas can still happen with limited materials.", "Rain ruins every activity.", "Only brown paint is useful."], "answer": 1}, {"q": "What can a reader conclude from the paragraph about Jordan's hike preparation?", "choices": ["Planning ahead improves safety.", "Maps are not important.", "Flashlights are never needed.", "Weather forecasts are not useful."], "answer": 0}, {"q": "What is the best inference from the power outage paragraph?", "choices": ["The family ignores storms.", "The family knows how to prepare for an emergency.", "The family is celebrating a holiday.", "The family is leaving town immediately."], "answer": 1}, {"q": "Which sentence best summarizes the school garden paragraph?", "choices": ["Students are measuring and recording plant growth.", "Only carrots were planted.", "Charts are difficult to read.", "Friday is the best day of the week."], "answer": 0}, {"q": "What is the best summary of the paragraph about Jordan and Eli?", "choices": ["They read the same books every week.", "They enjoy reading but prefer different kinds of books.", "They never visit the library.", "They only read on Fridays."], "answer": 1}], "Vocabulary": [{"q": "In the sentence, what does the word “confer” mean?\n\nStephanie and Jordan like to confer every day after school.", "choices": ["dance", "discuss", "wrestle", "dishonor"], "answer": 1}, {"q": "Which sentence best shows the meaning of “confer”?", "choices": ["Stephanie and Jordan like to confer every day after school.", "The word confer is the name of a city.", "I wrote the word confer ten times on a page.", "Confer is always a colour."], "answer": 0}, {"q": "In the sentence, what does the word “tarnished” mean?\n\nThe jewelry was tarnished but it was still beautiful.", "choices": ["broken", "sparkly", "polished", "discolored"], "answer": 3}, {"q": "Which sentence best shows the meaning of “tarnished”?", "choices": ["The jewelry was tarnished but it was still beautiful.", "The word tarnished is the name of a city.", "I wrote the word tarnished ten times on a page.", "Tarnished is always a colour."], "answer": 0}, {"q": "In the sentence, what does the word “adjacent” mean?\n\nThe city swimming pool was adjacent to Shawn's house.", "choices": ["nearby", "colourful", "separate", "far away"], "answer": 0}, {"q": "Which sentence best shows the meaning of “adjacent”?", "choices": ["The city swimming pool was adjacent to Shawn's house.", "The word adjacent is the name of a city.", "I wrote the word adjacent ten times on a page.", "Adjacent is always a colour."], "answer": 0}, {"q": "In the sentence, what does the word “gaudy” mean?\n\nThe multiple bracelets and necklaces with huge earrings looked rather gaudy and cheap.", "choices": ["dull", "flashy", "tiny", "quiet"], "answer": 1}, {"q": "Which sentence best shows the meaning of “gaudy”?", "choices": ["The multiple bracelets and necklaces with huge earrings looked rather gaudy and cheap.", "The word gaudy is the name of a city.", "I wrote the word gaudy ten times on a page.", "Gaudy is always a colour."], "answer": 0}, {"q": "In the sentence, what does the word “lackluster” mean?\n\nThe beige carpet, couch, and walls were rather lackluster.", "choices": ["dull", "flashy", "dusty", "beautiful"], "answer": 0}, {"q": "Which sentence best shows the meaning of “lackluster”?", "choices": ["The beige carpet, couch, and walls were rather lackluster.", "The word lackluster is the name of a city.", "I wrote the word lackluster ten times on a page.", "Lackluster is always a colour."], "answer": 0}, {"q": "In the sentence, what does the word “mellow” mean?\n\nAfter all of these years, the grumpy old man has grown rather mellow.", "choices": ["calm", "angry", "busy", "harsh"], "answer": 0}, {"q": "Which sentence best shows the meaning of “mellow”?", "choices": ["After all of these years, the grumpy old man has grown rather mellow.", "The word mellow is the name of a city.", "I wrote the word mellow ten times on a page.", "Mellow is always a colour."], "answer": 0}, {"q": "In the sentence, what does the word “frenzy” mean?\n\nSharon's cleaning frenzy resulted in a spotless home for her family party.", "choices": ["dusting", "method", "outburst of activity", "calmness"], "answer": 2}, {"q": "Which sentence best shows the meaning of “frenzy”?", "choices": ["Sharon's cleaning frenzy resulted in a spotless home for her family party.", "The word frenzy is the name of a city.", "I wrote the word frenzy ten times on a page.", "Frenzy is always a colour."], "answer": 0}, {"q": "In the sentence, what does the word “pathetic” mean?\n\nMandy's pathetic attempt at dieting was a disaster.", "choices": ["easy", "weak", "difficult", "muscular"], "answer": 1}, {"q": "Which sentence best shows the meaning of “pathetic”?", "choices": ["Mandy's pathetic attempt at dieting was a disaster.", "The word pathetic is the name of a city.", "I wrote the word pathetic ten times on a page.", "Pathetic is always a colour."], "answer": 0}, {"q": "In the sentence, what does the word “development” mean?\n\nHis frequent trips to the park were an interesting development.", "choices": ["rare event", "heated argument", "change", "occasion"], "answer": 2}, {"q": "Which sentence best shows the meaning of “development”?", "choices": ["His frequent trips to the park were an interesting development.", "The word development is the name of a city.", "I wrote the word development ten times on a page.", "Development is always a colour."], "answer": 0}, {"q": "In the sentence, what does the word “transport” mean?\n\nThe company transported books from the warehouse to the library.", "choices": ["translated", "copied", "moved from one place to another", "painted"], "answer": 2}, {"q": "Which sentence best shows the meaning of “transport”?", "choices": ["The company transported books from the warehouse to the library.", "The word transport is the name of a city.", "I wrote the word transport ten times on a page.", "Transport is always a colour."], "answer": 0}, {"q": "In the sentence, what does the word “photosynthesis” mean?\n\nPlants use photosynthesis to make food.", "choices": ["making food using light", "water freezing", "cloud formation", "animal movement"], "answer": 0}, {"q": "Which sentence best shows the meaning of “photosynthesis”?", "choices": ["Plants use photosynthesis to make food.", "The word photosynthesis is the name of a city.", "I wrote the word photosynthesis ten times on a page.", "Photosynthesis is always a colour."], "answer": 0}, {"q": "In the sentence, what does the word “evaporation” mean?\n\nEvaporation slowly made the puddle disappear after the sunny afternoon.", "choices": ["liquid turning into gas", "gas turning into liquid", "rain falling", "solid melting"], "answer": 0}, {"q": "Which sentence best shows the meaning of “evaporation”?", "choices": ["Evaporation slowly made the puddle disappear after the sunny afternoon.", "The word evaporation is the name of a city.", "I wrote the word evaporation ten times on a page.", "Evaporation is always a colour."], "answer": 0}, {"q": "In the sentence, what does the word “condensation” mean?\n\nWater drops formed on the cold glass because of condensation.", "choices": ["gas turning into liquid", "liquid turning into gas", "solid becoming liquid", "rain stopping"], "answer": 0}, {"q": "Which sentence best shows the meaning of “condensation”?", "choices": ["Water drops formed on the cold glass because of condensation.", "The word condensation is the name of a city.", "I wrote the word condensation ten times on a page.", "Condensation is always a colour."], "answer": 0}, {"q": "In the sentence, what does the word “habitat” mean?\n\nThe wetland provides a habitat for frogs, ducks, and insects.", "choices": ["an organism's home", "a type of microscope", "a weather map", "a planet"], "answer": 0}, {"q": "Which sentence best shows the meaning of “habitat”?", "choices": ["The wetland provides a habitat for frogs, ducks, and insects.", "The word habitat is the name of a city.", "I wrote the word habitat ten times on a page.", "Habitat is always a colour."], "answer": 0}, {"q": "In the sentence, what does the word “ecosystem” mean?\n\nA pond ecosystem includes water, fish, plants, sunlight, and soil.", "choices": ["a single animal", "living and nonliving things interacting", "a kind of machine", "one cloud"], "answer": 1}, {"q": "Which sentence best shows the meaning of “ecosystem”?", "choices": ["A pond ecosystem includes water, fish, plants, sunlight, and soil.", "The word ecosystem is the name of a city.", "I wrote the word ecosystem ten times on a page.", "Ecosystem is always a colour."], "answer": 0}, {"q": "In the sentence, what does the word “organism” mean?\n\nA tree is an organism because it is a living thing.", "choices": ["a living thing", "a machine", "a layer of rock", "a chart"], "answer": 0}, {"q": "Which sentence best shows the meaning of “organism”?", "choices": ["A tree is an organism because it is a living thing.", "The word organism is the name of a city.", "I wrote the word organism ten times on a page.", "Organism is always a colour."], "answer": 0}, {"q": "In the sentence, what does the word “gravity” mean?\n\nGravity pulls objects toward Earth.", "choices": ["a force pulling objects", "a form of light", "a type of rock", "a writing style"], "answer": 0}, {"q": "Which sentence best shows the meaning of “gravity”?", "choices": ["Gravity pulls objects toward Earth.", "The word gravity is the name of a city.", "I wrote the word gravity ten times on a page.", "Gravity is always a colour."], "answer": 0}, {"q": "In the sentence, what does the word “precipitation” mean?\n\nRain, snow, sleet, and hail are all forms of precipitation.", "choices": ["temperature", "precipitation", "evaporation", "sunlight"], "answer": 1}, {"q": "Which sentence best shows the meaning of “precipitation”?", "choices": ["Rain, snow, sleet, and hail are all forms of precipitation.", "The word precipitation is the name of a city.", "I wrote the word precipitation ten times on a page.", "Precipitation is always a colour."], "answer": 0}, {"q": "In the sentence, what does the word “temperature” mean?\n\nThe temperature dropped below zero overnight.", "choices": ["how hot or cold something is", "the speed of the wind", "the amount of rain", "the colour of a liquid"], "answer": 0}, {"q": "Which sentence best shows the meaning of “temperature”?", "choices": ["The temperature dropped below zero overnight.", "The word temperature is the name of a city.", "I wrote the word temperature ten times on a page.", "Temperature is always a colour."], "answer": 0}, {"q": "In the sentence, what does the word “manual” mean?\n\nMy grandmother kept a manual typewriter in her closet for her letter writing.", "choices": ["made by hand", "noisy", "broken", "automatic"], "answer": 0}, {"q": "Which sentence best shows the meaning of “manual”?", "choices": ["My grandmother kept a manual typewriter in her closet for her letter writing.", "The word manual is the name of a city.", "I wrote the word manual ten times on a page.", "Manual is always a colour."], "answer": 0}, {"q": "Choose the best definition for the word “confer.”", "choices": ["dance", "discuss", "wrestle", "dishonor"], "answer": 1}, {"q": "Choose the best definition for the word “tarnished.”", "choices": ["broken", "sparkly", "polished", "discolored"], "answer": 3}, {"q": "Choose the best definition for the word “adjacent.”", "choices": ["nearby", "colourful", "separate", "far away"], "answer": 0}, {"q": "Choose the best definition for the word “gaudy.”", "choices": ["dull", "flashy", "tiny", "quiet"], "answer": 1}, {"q": "Choose the best definition for the word “lackluster.”", "choices": ["dull", "flashy", "dusty", "beautiful"], "answer": 0}, {"q": "Choose the best definition for the word “mellow.”", "choices": ["calm", "angry", "busy", "harsh"], "answer": 0}, {"q": "Choose the best definition for the word “frenzy.”", "choices": ["dusting", "method", "outburst of activity", "calmness"], "answer": 2}, {"q": "Choose the best definition for the word “pathetic.”", "choices": ["easy", "weak", "difficult", "muscular"], "answer": 1}, {"q": "Choose the best definition for the word “development.”", "choices": ["rare event", "heated argument", "change", "occasion"], "answer": 2}, {"q": "Choose the best definition for the word “transport.”", "choices": ["translated", "copied", "moved from one place to another", "painted"], "answer": 2}], "Word Study": [{"q": "What does the word part “sub-” mean?", "choices": ["under", "sound", "colour", "small"], "answer": 0}, {"q": "Which word contains a part that means “under”?", "choices": ["submarine", "preview", "teacher", "careless"], "answer": 0}, {"q": "What does the word part “re-” mean?", "choices": ["again", "sound", "colour", "small"], "answer": 0}, {"q": "Which word contains a part that means “again”?", "choices": ["rewrite", "subsoil", "blanket", "winter"], "answer": 0}, {"q": "What does the word part “anti-” mean?", "choices": ["against", "sound", "colour", "small"], "answer": 0}, {"q": "Which word contains a part that means “against”?", "choices": ["antifreeze", "sunrise", "backyard", "dishcloth"], "answer": 0}, {"q": "What does the word part “bio” mean?", "choices": ["life", "sound", "colour", "small"], "answer": 0}, {"q": "Which word contains a part that means “life”?", "choices": ["biology", "tractor", "lantern", "winter"], "answer": 0}, {"q": "What does the word part “geo” mean?", "choices": ["earth", "sound", "colour", "small"], "answer": 0}, {"q": "Which word contains a part that means “earth”?", "choices": ["geology", "musician", "ticket", "forest"], "answer": 0}, {"q": "What does the word part “therm” mean?", "choices": ["heat", "sound", "colour", "small"], "answer": 0}, {"q": "Which word contains a part that means “heat”?", "choices": ["thermometer", "painter", "journal", "garden"], "answer": 0}, {"q": "What does the word part “aqua” mean?", "choices": ["water", "sound", "colour", "small"], "answer": 0}, {"q": "Which word contains a part that means “water”?", "choices": ["aquarium", "camera", "canyon", "cabinet"], "answer": 0}, {"q": "What does the word part “photo” mean?", "choices": ["light", "sound", "colour", "small"], "answer": 0}, {"q": "Which word contains a part that means “light”?", "choices": ["photograph", "subway", "bedroom", "teacher"], "answer": 0}, {"q": "What does the word part “struct” mean?", "choices": ["build", "sound", "colour", "small"], "answer": 0}, {"q": "Which word contains a part that means “build”?", "choices": ["construction", "enjoy", "forest", "ticket"], "answer": 0}, {"q": "What does the word part “trans” mean?", "choices": ["across", "sound", "colour", "small"], "answer": 0}, {"q": "Which word contains a part that means “across”?", "choices": ["transport", "sunrise", "classroom", "window"], "answer": 0}, {"q": "What does the word part “port” mean?", "choices": ["carry", "sound", "colour", "small"], "answer": 0}, {"q": "Which word contains a part that means “carry”?", "choices": ["transport", "backyard", "school", "careless"], "answer": 0}, {"q": "What does the word part “logy” mean?", "choices": ["study of", "sound", "colour", "small"], "answer": 0}, {"q": "Which word contains a part that means “study of”?", "choices": ["geology", "building", "snowfall", "backpack"], "answer": 0}, {"q": "What does the word part “spect” mean?", "choices": ["to see", "sound", "colour", "small"], "answer": 0}, {"q": "Which word contains a part that means “to see”?", "choices": ["spectator", "artist", "vocal", "journal"], "answer": 0}, {"q": "Which word is the correct homonym for this sentence?\n\nSharon ______ that she should save her money, but she wanted to buy the cool shoes.", "choices": ["new", "knew"], "answer": 1}, {"q": "Which word is the correct homonym for this sentence?\n\nFor dinner, you need to help me ______ the potatoes.", "choices": ["pair", "pear", "pare"], "answer": 2}, {"q": "Which of these English words was borrowed from the Japanese language?", "choices": ["Café", "Umbrella", "Sushi", "Tunnel"], "answer": 2}, {"q": "Which English word comes from Italian and names a place where people can eat?", "choices": ["Pasta", "Buffet", "Pizzeria", "Restaurant"], "answer": 2}, {"q": "Which of the following words comes from Latin and is related to “hand”?", "choices": ["Manual", "Visible", "Vocal", "Journal"], "answer": 0}, {"q": "The Greek root photo appears in the word photograph. What does photo mean?", "choices": ["drawing", "picture", "light", "time"], "answer": 2}, {"q": "The word biology comes from the Greek root bio. What does bio mean?", "choices": ["earth", "life", "study", "cell"], "answer": 1}, {"q": "A student reads the word geology and wants to understand its meaning. Which two word parts should they examine?", "choices": ["Geo and logy", "Ge and olo", "Geol and ogy", "Ge and ology"], "answer": 0}], "Grammar & Usage": [{"q": "Choose the correct verb.\n\nA few of the children ______ playing baseball in the field at the park.", "choices": ["is", "are", "was", "be"], "answer": 1}, {"q": "Select the correct verb.\n\nA few of the children ______ playing baseball in the field at the park.", "choices": ["is", "are", "was", "be"], "answer": 1}, {"q": "Choose the correct verb.\n\nThe women who made the soup ______ serving the children lunch.", "choices": ["is", "are", "was", "be"], "answer": 1}, {"q": "Select the correct verb.\n\nThe women who made the soup ______ serving the children lunch.", "choices": ["is", "are", "was", "be"], "answer": 1}, {"q": "Choose the correct verb.\n\nAnyone who bakes ______ that cookies are wonderful when they are still warm.", "choices": ["know", "knows", "have known", "knowing"], "answer": 1}, {"q": "Select the correct verb.\n\nAnyone who bakes ______ that cookies are wonderful when they are still warm.", "choices": ["know", "knows", "have known", "knowing"], "answer": 1}, {"q": "Choose the correct verb.\n\nEveryone ______ in gym class.", "choices": ["run", "runs", "running", "have run"], "answer": 1}, {"q": "Select the correct verb.\n\nEveryone ______ in gym class.", "choices": ["run", "runs", "running", "have run"], "answer": 1}, {"q": "Choose the correct sentence.", "choices": ["She go to school every day.", "She goes to school every day.", "She going to school every day.", "She gone to school every day."], "answer": 1}, {"q": "Select the correct sentence.", "choices": ["She go to school every day.", "She goes to school every day.", "She going to school every day.", "She gone to school every day."], "answer": 1}, {"q": "Choose the correct sentence.", "choices": ["The players is ready.", "The players are ready.", "The players am ready.", "The players be ready."], "answer": 1}, {"q": "Select the correct sentence.", "choices": ["The players is ready.", "The players are ready.", "The players am ready.", "The players be ready."], "answer": 1}, {"q": "What type is the following sentence?\n\nPass me the mashed potatoes.", "choices": ["interrogative", "exclamatory", "declarative", "imperative"], "answer": 3}, {"q": "Identify the type of the following sentence?\n\nPass me the mashed potatoes.", "choices": ["interrogative", "exclamatory", "declarative", "imperative"], "answer": 3}, {"q": "What type is the following sentence?\n\nMy older sister just had a baby girl!", "choices": ["interrogative", "exclamatory", "declarative", "imperative"], "answer": 1}, {"q": "Identify the type of the following sentence?\n\nMy older sister just had a baby girl!", "choices": ["interrogative", "exclamatory", "declarative", "imperative"], "answer": 1}, {"q": "What type is the following sentence?\n\nTommy brought his video games to Jason's house.", "choices": ["interrogative", "exclamatory", "declarative", "imperative"], "answer": 2}, {"q": "Identify the type of the following sentence?\n\nTommy brought his video games to Jason's house.", "choices": ["interrogative", "exclamatory", "declarative", "imperative"], "answer": 2}, {"q": "What type is the following sentence?\n\nShelby wondered if she had switched off the power to her straightening iron.", "choices": ["interrogative", "exclamatory", "declarative", "imperative"], "answer": 2}, {"q": "Identify the type of the following sentence?\n\nShelby wondered if she had switched off the power to her straightening iron.", "choices": ["interrogative", "exclamatory", "declarative", "imperative"], "answer": 2}, {"q": "Choose the simple subject.\n\nThe pearl bracelet went perfectly with the necklace and earrings.", "choices": ["bracelet", "necklace", "earrings", "necklace and earrings"], "answer": 0}, {"q": "Select the simple subject.\n\nThe pearl bracelet went perfectly with the necklace and earrings.", "choices": ["bracelet", "necklace", "earrings", "necklace and earrings"], "answer": 0}, {"q": "Choose the complete predicate.\n\nThe family of five sat on the veranda for dinner.", "choices": ["of five", "for dinner", "on the veranda", "sat on the veranda for dinner"], "answer": 3}, {"q": "Select the complete predicate.\n\nThe family of five sat on the veranda for dinner.", "choices": ["of five", "for dinner", "on the veranda", "sat on the veranda for dinner"], "answer": 3}, {"q": "Identify the part of speech of the word “bulldozer” in this sentence:\n\nThe bulldozer dug out our basement in a few hours.", "choices": ["pronoun", "noun", "verb", "adjective"], "answer": 1}, {"q": "Identify the part of speech of the word “pastimes” in this sentence:\n\nOne of Grandpa's favorite pastimes is to work on puzzles.", "choices": ["adverb", "adjective", "noun", "preposition"], "answer": 2}, {"q": "Identify the part of speech of the word “kerchief” in this sentence:\n\nMy grandmother's kerchief was folded neatly in the drawer.", "choices": ["noun", "preposition", "conjunction", "interjection"], "answer": 0}, {"q": "Identify the part of speech of the word “skillful” in this sentence:\n\nThe skillful referee made fair calls throughout the game.", "choices": ["adverb", "adjective", "noun", "preposition"], "answer": 1}, {"q": "He climbed the hill. He swam the lake. Which coordinating conjunction would work best to connect the two related ideas?", "choices": ["and", "nor", "for", "yet"], "answer": 0}, {"q": "Jane wanted to go swimming; yet there was nowhere to swim. Which word in the sentence is the coordinating conjunction?", "choices": ["nowhere", "wanted", "yet", "there"], "answer": 2}, {"q": "What is the comparative adjective form of good?", "choices": ["gooder", "more good", "better", "best"], "answer": 2}, {"q": "What is the comparative adjective form of dry?", "choices": ["dryer", "drier", "driest", "more dry"], "answer": 1}, {"q": "What is the superlative adjective form of far?", "choices": ["farer", "further", "farthest", "more far"], "answer": 2}, {"q": "What is the superlative adjective form of dry?", "choices": ["drier", "driest", "more dry", "drying"], "answer": 1}], "Writing Conventions": [{"q": "Choose which sentence is capitalized correctly.", "choices": ["Tommy and dr. Sam Howe stood near the Library.", "Tommy and Dr. Sam Howe stood near the library.", "Tommy and Dr. Sam Howe stood near the Library.", "Tommy and dr. Sam Howe stood near the library."], "answer": 1}, {"q": "Select which sentence is capitalized correctly.", "choices": ["Tommy and dr. Sam Howe stood near the Library.", "Tommy and Dr. Sam Howe stood near the library.", "Tommy and Dr. Sam Howe stood near the Library.", "Tommy and dr. Sam Howe stood near the library."], "answer": 1}, {"q": "Choose which sentence is capitalized correctly.", "choices": ["We visited Yellowstone national park on Thursday.", "We visited Yellowstone National Park on Thursday.", "We visited yellowstone national park on thursday.", "We visited Yellowstone National park on thursday."], "answer": 1}, {"q": "Select which sentence is capitalized correctly.", "choices": ["We visited Yellowstone national park on Thursday.", "We visited Yellowstone National Park on Thursday.", "We visited yellowstone national park on thursday.", "We visited Yellowstone National park on thursday."], "answer": 1}, {"q": "Fill in the blank with the correct punctuation mark.\n\n\"The swan is a lovely creature ____ living in local ponds and lakes,\" said Mark Mender.", "choices": ["comma", "period", "ellipsis", "parenthesis"], "answer": 0}, {"q": "Fill in the blank with the correct punctuation mark.\n\nBecky is rather bossy ____ and she always likes to be right.", "choices": ["comma", "period", "hyphen", "question mark"], "answer": 0}, {"q": "Fill in the blank with the correct punctuation mark.\n\nWow____ I just got an A on my biology exam. I am so excited.", "choices": ["colon", "period", "comma", "exclamation point"], "answer": 3}, {"q": "When typing a book title, you should:", "choices": ["underline the title", "italicize the title", "put the title in quotation marks", "put the title in quotation marks and underline it"], "answer": 1}, {"q": "When hand writing a book title, you should:", "choices": ["underline the title", "italicize the title", "put the title in quotation marks", "put the title in quotation marks and underline it"], "answer": 0}, {"q": "When hand writing a magazine title, you should:", "choices": ["underline the title", "italicize the title", "put the title in quotation marks", "do nothing special"], "answer": 0}, {"q": "Choose the sentence that is punctuated correctly.", "choices": ["The video gaming system was three hundred and fifty dollars. $350.", "The video gaming system was three hundred and fifty dollars ($350).", "The video gaming system was three hundred and fifty dollars, ($350).", "The video gaming system was three hundred and fifty dollars - ($350)."], "answer": 1}, {"q": "Select the sentence that is punctuated correctly.", "choices": ["The video gaming system was three hundred and fifty dollars. $350.", "The video gaming system was three hundred and fifty dollars ($350).", "The video gaming system was three hundred and fifty dollars, ($350).", "The video gaming system was three hundred and fifty dollars - ($350)."], "answer": 1}, {"q": "When trying to create a pause in the flow of a sentence or omit some words, which punctuation mark can you use?", "choices": ["ellipsis", "semicolon", "hyphen", "colon"], "answer": 0}, {"q": "Which sentence uses a title correctly?", "choices": ["Emily Dickinson's poem \"A Bird Came Down\" is my favourite.", "Emily Dickinson's poem A Bird Came Down is my favourite.", "Emily Dickinson's poem _A Bird Came Down_ is my favourite when handwritten.", "Emily Dickinson's poem, \"A Bird Came Down\" is my favourite."], "answer": 0}, {"q": "Choose which sentence uses a title correctly.", "choices": ["Justin Bieber's album titled \"Never Say Never\" is Jen's favorite.", "Justin Bieber's album titled Never Say Never is Jen's favorite.", "Justin Bieber's album titled 'Never Say Never' is Jen's favorite.", "Justin Bieber's album titled _Never Say Never_ is Jen's favorite when handwritten."], "answer": 0}, {"q": "Select which sentence uses a title correctly.", "choices": ["Justin Bieber's album titled \"Never Say Never\" is Jen's favorite.", "Justin Bieber's album titled Never Say Never is Jen's favorite.", "Justin Bieber's album titled 'Never Say Never' is Jen's favorite.", "Justin Bieber's album titled _Never Say Never_ is Jen's favorite when handwritten."], "answer": 0}], "Spelling": [{"q": "Choose the correctly spelled word.", "choices": ["assignment", "asinemint", "assignmint", "assinement"], "answer": 0}, {"q": "Choose the correctly spelled word.", "choices": ["assignment", "asinemint", "assignmint", "assinement"], "answer": 0}, {"q": "Select the correct spelling for “assignment.”", "choices": ["assignment", "asinemint", "assignmint", "assinement"], "answer": 0}, {"q": "Choose the correctly spelled word.", "choices": ["busseness", "business", "bussines", "buisness"], "answer": 1}, {"q": "Choose the correctly spelled word.", "choices": ["busseness", "business", "bussines", "buisness"], "answer": 1}, {"q": "Select the correct spelling for “business.”", "choices": ["busseness", "business", "bussines", "buisness"], "answer": 1}, {"q": "Choose the correctly spelled word.", "choices": ["apprecaite", "apprieceate", "apreciate", "appreciate"], "answer": 3}, {"q": "Choose the correctly spelled word.", "choices": ["apprecaite", "apprieceate", "apreciate", "appreciate"], "answer": 3}, {"q": "Select the correct spelling for “appreciate.”", "choices": ["apprecaite", "apprieceate", "apreciate", "appreciate"], "answer": 3}, {"q": "Choose the correctly spelled word.", "choices": ["desicion", "decision", "descison", "desecion"], "answer": 1}, {"q": "Choose the correctly spelled word.", "choices": ["desicion", "decision", "descison", "desecion"], "answer": 1}, {"q": "Select the correct spelling for “decision.”", "choices": ["desicion", "decision", "descison", "desecion"], "answer": 1}, {"q": "Choose the correctly spelled word.", "choices": ["accidentally", "acidentally", "acidentaly", "accidantally"], "answer": 0}, {"q": "Choose the correctly spelled word.", "choices": ["accidentally", "acidentally", "acidentaly", "accidantally"], "answer": 0}, {"q": "Select the correct spelling for “accidentally.”", "choices": ["accidentally", "acidentally", "acidentaly", "accidantally"], "answer": 0}, {"q": "Choose the correctly spelled word.", "choices": ["disasterous", "disasteruos", "disasterus", "disastrous"], "answer": 3}, {"q": "Choose the correctly spelled word.", "choices": ["disasterous", "disasteruos", "disasterus", "disastrous"], "answer": 3}, {"q": "Select the correct spelling for “disastrous.”", "choices": ["disasterous", "disasteruos", "disasterus", "disastrous"], "answer": 3}, {"q": "Choose the correctly spelled word.", "choices": ["forecast", "fourcast", "foercast", "forcast"], "answer": 0}, {"q": "Choose the correctly spelled word.", "choices": ["forecast", "fourcast", "foercast", "forcast"], "answer": 0}, {"q": "Select the correct spelling for “forecast.”", "choices": ["forecast", "fourcast", "foercast", "forcast"], "answer": 0}, {"q": "Choose the correctly spelled word.", "choices": ["altogather", "altogether", "altogethre", "all together"], "answer": 1}, {"q": "Choose the correctly spelled word.", "choices": ["altogather", "altogether", "altogethre", "all together"], "answer": 1}, {"q": "Select the correct spelling for “altogether.”", "choices": ["altogather", "altogether", "altogethre", "all together"], "answer": 1}, {"q": "Choose the correctly spelled word.", "choices": ["cupboard", "cubored", "cupbord", "cuboard"], "answer": 0}, {"q": "Choose the correctly spelled word.", "choices": ["cupboard", "cubored", "cupbord", "cuboard"], "answer": 0}, {"q": "Select the correct spelling for “cupboard.”", "choices": ["cupboard", "cubored", "cupbord", "cuboard"], "answer": 0}, {"q": "Choose the correctly spelled word.", "choices": ["acheive", "acheave", "acheve", "achieve"], "answer": 3}, {"q": "Choose the correctly spelled word.", "choices": ["acheive", "acheave", "acheve", "achieve"], "answer": 3}, {"q": "Select the correct spelling for “achieve.”", "choices": ["acheive", "acheave", "acheve", "achieve"], "answer": 3}, {"q": "Choose the correctly spelled word.", "choices": ["temprature", "temperature", "temperture", "tempriture"], "answer": 1}, {"q": "Choose the correctly spelled word.", "choices": ["temprature", "temperature", "temperture", "tempriture"], "answer": 1}, {"q": "Select the correct spelling for “temperature.”", "choices": ["temprature", "temperature", "temperture", "tempriture"], "answer": 1}, {"q": "Choose the correctly spelled word.", "choices": ["ecosistem", "ecosystem", "ekosystem", "ecosytem"], "answer": 1}, {"q": "Choose the correctly spelled word.", "choices": ["ecosistem", "ecosystem", "ekosystem", "ecosytem"], "answer": 1}, {"q": "Select the correct spelling for “ecosystem.”", "choices": ["ecosistem", "ecosystem", "ekosystem", "ecosytem"], "answer": 1}, {"q": "Choose the correctly spelled word.", "choices": ["beautifull", "beautifal", "beautiful", "butiful"], "answer": 2}, {"q": "Choose the correctly spelled word.", "choices": ["beautifull", "beautifal", "beautiful", "butiful"], "answer": 2}, {"q": "Select the correct spelling for “beautiful.”", "choices": ["beautifull", "beautifal", "beautiful", "butiful"], "answer": 2}, {"q": "Choose the correctly spelled word.", "choices": ["becuase", "because", "becase", "beacause"], "answer": 1}, {"q": "Choose the correctly spelled word.", "choices": ["becuase", "because", "becase", "beacause"], "answer": 1}, {"q": "Select the correct spelling for “because.”", "choices": ["becuase", "because", "becase", "beacause"], "answer": 1}, {"q": "Choose the correctly spelled word.", "choices": ["different", "diffrent", "differant", "difrent"], "answer": 0}, {"q": "Choose the correctly spelled word.", "choices": ["different", "diffrent", "differant", "difrent"], "answer": 0}, {"q": "Select the correct spelling for “different.”", "choices": ["different", "diffrent", "differant", "difrent"], "answer": 0}]};
+const PASSAGE_BUNDLES = [{"title": "Money Rocks Set A", "area": "Reading Comprehension", "questions": [{"q": "Read the passage.\n\nMoney Rocks\n\nJack and Timmy found a shiny rock in a cave and thought it might be a diamond. Their mother suggested that they take it to Mr. Thomas, a retired geologist. After examining the rock, he explained that it was quartz and even offered the boys money for it.\n\nWhy did the boys visit Mr. Thomas?", "choices": ["he was their neighbor", "he was a retired geologist", "their mother wanted some peace and quiet", "their mother wanted them to take him cookies"], "answer": 1}, {"q": "Refer to the Money Rocks passage. Why was Timmy shaking with excitement at Mr. Thomas's door?", "choices": ["He wanted to eat the cookies.", "He wanted to know whether the rock was a real diamond.", "He wanted to borrow a book.", "He was afraid of dogs."], "answer": 1}, {"q": "Refer to the Money Rocks passage. What did Mr. Thomas say the rock really was?", "choices": ["diamond", "marble", "quartz", "granite"], "answer": 2}, {"q": "Refer to the Money Rocks passage. What can you infer from the ending of the passage?", "choices": ["The boys will never collect rocks again.", "The boys may start a new hobby.", "Mr. Thomas did not like the boys.", "The boys were angry about the cookies."], "answer": 1}]}, {"title": "Money Rocks Set B", "area": "Reading Comprehension", "questions": [{"q": "Read the passage.\n\nMoney Rocks\n\nJack and Timmy ran home with a shiny rock from a cave, convinced they might be millionaires. Their mother told them to ask Mr. Thomas, a retired geologist, to identify it. He used a magnifying glass, showed them a book on quartz, and bought the rock for his collection.\n\nWhich detail best shows that Mr. Thomas knew a lot about rocks?", "choices": ["He lived next door.", "He owned a magnifying glass and a book on quartz.", "He baked cookies.", "He liked to tell jokes."], "answer": 1}, {"q": "Refer to the Money Rocks passage. What was the boys' first idea about the rock?", "choices": ["It was quartz.", "It was worth nothing.", "It was a diamond.", "It was part of a machine."], "answer": 2}, {"q": "Refer to the Money Rocks passage. Why did the boys run home breathless?", "choices": ["They were late for dinner.", "They had been running after hiking to the cave.", "They were scared of the dark.", "They forgot the cookies."], "answer": 1}, {"q": "Refer to the Money Rocks passage. In the sentence “The rock looked just like the quartz picture in the book,” what helped confirm the rock’s identity?", "choices": ["a weather report", "a map", "a picture in a reference book", "a television program"], "answer": 2}]}, {"title": "Jade and Luna Set", "area": "Reading Comprehension", "questions": [{"q": "Read the passage.\n\nJade and Luna\n\nThe Hook family has two cats with different personalities. Jade is a two-year-old short-hair cat with black fur and bright green eyes. She likes hiding in the garage and swatting at people. Luna is about one year old, has calico fur, and loves to snuggle on the porch swing or on a family member's lap.\n\nWhich cat is a calico?", "choices": ["Jade", "Luna", "both Jade and Luna", "neither Jade nor Luna"], "answer": 1}, {"q": "Refer to the Jade and Luna passage. Which cat likes to hide and swat at people?", "choices": ["Jade", "Luna", "both Jade and Luna", "neither Jade nor Luna"], "answer": 0}, {"q": "Refer to the Jade and Luna passage. Which cat has black fur?", "choices": ["Jade", "Luna", "both Jade and Luna", "neither Jade nor Luna"], "answer": 0}, {"q": "Refer to the Jade and Luna passage. Which cat is the oldest?", "choices": ["Jade", "Luna", "both Jade and Luna", "neither Jade nor Luna"], "answer": 0}]}, {"title": "Grapes and Apples Set", "area": "Reading Comprehension", "questions": [{"q": "Read the passage.\n\nA Healthy Snack: Grapes or Apples\n\nGrapes grow on vines that climb or trail. The vines bloom in spring and summer, then die back in winter before growing again from root-stock. Apples grow on flowering trees. Grapes have two fused carpels, while apples have five carpels arranged in a star pattern.\n\nWhich fruit is commonly seedless?", "choices": ["grapes", "apples", "both grapes and apples", "neither grapes nor apples"], "answer": 0}, {"q": "Refer to the Grapes and Apples passage. Which fruit grows on flowering trees?", "choices": ["grapes", "apples", "both grapes and apples", "neither grapes nor apples"], "answer": 1}, {"q": "Refer to the Grapes and Apples passage. Which fruit has the least carpels?", "choices": ["grapes", "apples", "both grapes and apples", "neither grapes nor apples"], "answer": 0}, {"q": "Refer to the Grapes and Apples passage. Which plant dies back in winter and grows again in spring?", "choices": ["grape vines", "apple trees", "both plants", "neither plant"], "answer": 0}]}, {"title": "Susan and Brittany Set", "area": "Reading Comprehension", "questions": [{"q": "Read the passage.\n\nFacts about Susan and Brittany\n\nSusan lives on a rural farm, attends Jackson Middle School, speaks French and English, and enjoys basketball and cooking. Brittany lives with her grandmother in a city apartment, attends an all-girl private school, speaks only English, and likes skateboarding and drawing.\n\nWhich girl attends a private school?", "choices": ["Susan", "Brittany", "both Susan and Brittany", "neither Susan nor Brittany"], "answer": 1}, {"q": "Refer to the Susan and Brittany passage. Which girl lives in the city?", "choices": ["Susan", "Brittany", "both Susan and Brittany", "neither Susan nor Brittany"], "answer": 1}, {"q": "Refer to the Susan and Brittany passage. Which girl speaks two languages?", "choices": ["Susan", "Brittany", "both Susan and Brittany", "neither Susan nor Brittany"], "answer": 0}, {"q": "Refer to the Susan and Brittany passage. Which girl enjoys drawing?", "choices": ["Susan", "Brittany", "both Susan and Brittany", "neither Susan nor Brittany"], "answer": 1}]}, {"title": "Busy as a Bee Set", "area": "Reading Comprehension", "questions": [{"q": "Read the passage.\n\nBusy as a Bee\n\nBuzz began life as an egg in a hexagon-shaped cell in a honeycomb. Worker bees built the honeycomb from beeswax for storing nectar and raising babies. As Buzz grew, he cleaned empty cells, cared for young bees, and later left the hive to collect nectar, pollen, and water.\n\nWhat shape was the cell where Buzz began life?", "choices": ["circle", "triangle", "hexagon", "square"], "answer": 2}, {"q": "Refer to the Busy as a Bee passage. What did worker bees use to build the honeycomb?", "choices": ["mud", "beeswax", "twigs", "leaves"], "answer": 1}, {"q": "Refer to the Busy as a Bee passage. What was Buzz's first job?", "choices": ["collecting honey outside", "cleaning cells and helping the babies", "guarding the hive entrance", "flying to new flowers"], "answer": 1}, {"q": "Refer to the Busy as a Bee passage. What happened to nectar after it was brought to the hive?", "choices": ["It changed into honey.", "It became wax.", "It turned into pollen.", "It was thrown away."], "answer": 0}]}, {"title": "Water Cycle Set", "area": "Reading Comprehension", "questions": [{"q": "Read the passage.\n\nThe Water Cycle\n\nHeat from the sun causes water in oceans, lakes, and rivers to evaporate into the air. As water vapor rises, it cools and condenses into droplets that form clouds. When the droplets grow large enough, they fall as precipitation such as rain or snow.\n\nWhat is the main idea of the passage?", "choices": ["Water moves through a continuous cycle.", "Clouds never change.", "Snow only falls in winter.", "Oceans do not evaporate."], "answer": 0}, {"q": "Refer to the Water Cycle passage. What causes evaporation?", "choices": ["wind", "the sun's heat", "snow", "clouds"], "answer": 1}, {"q": "Refer to the Water Cycle passage. What happens during condensation?", "choices": ["Water vapor turns into droplets.", "Rain falls to the ground.", "Snow melts in the ocean.", "Clouds disappear."], "answer": 0}, {"q": "Refer to the Water Cycle passage. What is precipitation?", "choices": ["water vapor only", "rain or snow falling to Earth", "sunlight heating water", "clouds forming"], "answer": 1}]}, {"title": "Preparing for a Hike Set", "area": "Reading Comprehension", "questions": [{"q": "Read the passage.\n\nPreparing for a Hike\n\nBefore going on a long hike, Jordan packed water, snacks, a map, and a first-aid kit. He checked the weather forecast and told his family where he would be. During the hike, he stayed on marked trails and took breaks when needed.\n\nWhat is the main idea of the passage?", "choices": ["Hiking is always dangerous.", "Planning helps keep people safe outdoors.", "Maps are too hard to use.", "Weather forecasts are never useful."], "answer": 1}, {"q": "Refer to the Preparing for a Hike passage. Which detail best shows Jordan was prepared?", "choices": ["He packed supplies and checked the weather.", "He left without telling anyone.", "He ran the whole time.", "He ignored the trail signs."], "answer": 0}, {"q": "Refer to the Preparing for a Hike passage. What can you infer about Jordan?", "choices": ["He is careless.", "He is responsible.", "He dislikes hiking.", "He forgot to plan ahead."], "answer": 1}, {"q": "Refer to the Preparing for a Hike passage. Why did Jordan tell his family where he would be?", "choices": ["to brag about the hike", "for safety reasons", "to avoid packing snacks", "to cancel the hike"], "answer": 1}]}];
+
+const areaSelect = document.getElementById('areaSelect');
+const countSelect = document.getElementById('countSelect');
+const countHint = document.getElementById('countHint');
+const startBtn = document.getElementById('startBtn');
+const submitBtn = document.getElementById('submitBtn');
+const quizShell = document.getElementById('quizShell');
+const quizContainer = document.getElementById('quizContainer');
+const setInfo = document.getElementById('setInfo');
+
+const AREA_ORDER = ['Reading Comprehension','Vocabulary','Word Study','Grammar & Usage','Writing Conventions','Spelling','Full Curriculum'];
+let currentQuestions = [];
+
+function buildAreaMenu(){
+  AREA_ORDER.forEach(area => {
+    const opt = document.createElement('option');
+    opt.value = area;
+    opt.textContent = area;
+    areaSelect.appendChild(opt);
+  });
+}
+
+function shuffle(arr){
+  const copy = [...arr];
+  for(let i = copy.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function uniqueSingles(list){
+  const seen = new Set();
+  const out = [];
+  list.forEach(q => {
+    const key = q.q + '||' + JSON.stringify(q.choices);
+    if(!seen.has(key)){
+      seen.add(key);
+      out.push(q);
+    }
+  });
+  return out;
+}
+
+function pickExactCount(count, singles, bundles, preferBundle){
+  singles = uniqueSingles(singles);
+  bundles = shuffle(bundles);
+
+  const possibleCounts = [];
+  for(let b = 0; b <= Math.min(6, bundles.length); b++){
+    const remaining = count - (b * 4);
+    if(remaining >= 0 && remaining <= singles.length) possibleCounts.push(b);
+  }
+
+  let selectedBundleCount = 0;
+  if(preferBundle && possibleCounts.includes(1)) selectedBundleCount = 1;
+  if(count >= 20 && possibleCounts.includes(2)) selectedBundleCount = 2;
+  if(selectedBundleCount === 0 && possibleCounts.length) selectedBundleCount = possibleCounts[possibleCounts.length - 1] === 0 ? 0 : possibleCounts[0];
+
+  const chosenBundles = bundles.slice(0, selectedBundleCount);
+  let questions = [];
+  chosenBundles.forEach(bundle => {
+    bundle.questions.forEach(q => questions.push({...q, area: bundle.area, bundleTitle: bundle.title}));
+  });
+
+  const usedKeys = new Set(questions.map(q => q.q + '||' + JSON.stringify(q.choices)));
+  const singlesPool = shuffle(singles).filter(q => !usedKeys.has(q.q + '||' + JSON.stringify(q.choices)));
+  const need = count - questions.length;
+  questions = questions.concat(singlesPool.slice(0, need));
+  return questions;
+}
+
+function getPools(area){
+  if(area === 'Reading Comprehension'){
+    return {
+      singles: AREA_BANK['Reading Comprehension'].map(q => ({...q, area:'Reading Comprehension'})),
+      bundles: PASSAGE_BUNDLES.filter(b => b.area === 'Reading Comprehension'),
+      preferBundle: true
+    };
+  }
+  if(area === 'Full Curriculum'){
+    let singles = [];
+    Object.entries(AREA_BANK).forEach(([k, v]) => v.forEach(q => singles.push({...q, area:k})));
+    return {
+      singles,
+      bundles: PASSAGE_BUNDLES,
+      preferBundle: true
+    };
+  }
+  return {
+    singles: (AREA_BANK[area] || []).map(q => ({...q, area})),
+    bundles: [],
+    preferBundle: false
+  };
+}
+
+function syncCountOptions(){
+  const full = areaSelect.value === 'Full Curriculum';
+  const opt25 = Array.from(countSelect.options).find(o => o.value === '25');
+  if(opt25) opt25.disabled = !full;
+  if(!full) countSelect.value = '10';
+  countHint.textContent = full ? 'Full Curriculum: choose 10 or 25 questions.' : 'Area practice: 10 questions per area.';
+}
+
+function renderQuiz(area, count){
+  const pools = getPools(area);
+  const chosen = pickExactCount(count, pools.singles, pools.bundles, pools.preferBundle).map(q => {
+    const pairings = q.choices.map((choice, i) => ({choice, originalIndex:i}));
+    const shuffledChoices = shuffle(pairings);
+    const newAnswerIndex = shuffledChoices.findIndex(x => x.originalIndex === q.answer);
+    return {...q, shuffledChoices, shuffledAnswer:newAnswerIndex};
+  });
+
+  currentQuestions = chosen;
+  quizContainer.innerHTML = '';
+
+  chosen.forEach((q, idx) => {
+    const card = document.createElement('div');
+    card.className = 'card question';
+
+    const title = document.createElement('h3');
+    title.textContent = (idx + 1) + '. ' + q.q;
+    card.appendChild(title);
+
+    q.shuffledChoices.forEach((item, cIndex) => {
+      const label = document.createElement('label');
+      label.className = 'choice';
+
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'q_' + idx;
+      input.value = String(cIndex);
+
+      label.appendChild(input);
+      label.appendChild(document.createTextNode(String.fromCharCode(65 + cIndex) + ') ' + item.choice));
+      card.appendChild(label);
+    });
+
+    quizContainer.appendChild(card);
+  });
+
+  setInfo.textContent = area + ' • ' + chosen.length + ' questions';
+  quizShell.style.display = 'block';
+  window.scrollTo({top: quizShell.offsetTop - 12, behavior:'smooth'});
+}
+
+function escapeHtml(text){
+  return String(text)
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'",'&#39;');
+}
+
+function buildResultsPage(results){
+  const correct = results.filter(r => r.isCorrect).length;
+  const total = results.length;
+  const percent = Math.round((correct / total) * 100);
+  const wrong = results.filter(r => !r.isCorrect);
+
+  let wrongHtml = '';
+  if(wrong.length === 0){
+    wrongHtml = '<div class="goodBox">Amazing work — every answer was correct.</div>';
+  } else {
+    wrongHtml = wrong.map((r, i) => `
+      <div class="resultCard wrongCard" style="background:white;border:1px solid #dbe4f0;border-left:8px solid #b3261e;border-radius:20px;padding:18px;box-shadow:0 10px 28px rgba(24,49,83,.08)">
+        <h3>${i + 1}. ${escapeHtml(r.q)}</h3>
+        <p><strong>Your answer:</strong> <span style="color:#b3261e;font-weight:700">${escapeHtml(r.studentAnswer || 'No answer selected')}</span></p>
+        <p><strong>Correct answer:</strong> <span style="color:#107c41;font-weight:700">${escapeHtml(r.correctAnswer)}</span></p>
+        <p style="display:inline-block;margin-top:8px;background:#f4f7fb;border:1px solid #dbe4f0;border-radius:999px;padding:6px 10px;font-size:.92rem;color:#5f6f82">${escapeHtml(r.area)}</p>
+      </div>
+    `).join('');
+  }
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ELA 6 Results</title>
+<style>
+body{font-family:Arial,Helvetica,sans-serif;margin:0;background:linear-gradient(180deg,#f7faff 0%,#eef4fb 100%);color:#183153}
+.wrap{max-width:980px;margin:0 auto;padding:24px}
+.hero{background:white;border:1px solid #dbe4f0;border-radius:20px;box-shadow:0 10px 28px rgba(24,49,83,.08);padding:24px;margin-bottom:18px}
+h1{margin:0 0 8px 0;font-size:2rem}
+.score{display:inline-block;margin-top:10px;padding:12px 16px;background:#e9f1ff;border:1px solid #cfe0ff;border-radius:999px;color:#2d6cdf;font-weight:700}
+.grid{display:grid;gap:14px}
+button{padding:12px 15px;border:none;border-radius:14px;background:#2d6cdf;color:white;font-weight:700;cursor:pointer}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <h1>Practice Results</h1>
+      <p>You got <strong>${correct} / ${total}</strong> correct.</p>
+      <div class="score">${percent}%</div>
+      <div style="margin-top:16px;"><button onclick="window.print()">Print Results</button></div>
+    </div>
+    <div class="grid">${wrongHtml}</div>
+  </div>
+</body>
+</html>`;
+}
+
+function collectResults(){
+  return currentQuestions.map((q, idx) => {
+    const selected = document.querySelector('input[name="q_' + idx + '"]:checked');
+    const selectedIndex = selected ? Number(selected.value) : -1;
+    const studentAnswer = selectedIndex >= 0
+      ? String.fromCharCode(65 + selectedIndex) + ') ' + q.shuffledChoices[selectedIndex].choice
+      : '';
+    const correctAnswer = String.fromCharCode(65 + q.shuffledAnswer) + ') ' + q.shuffledChoices[q.shuffledAnswer].choice;
+    return {
+      area: q.area,
+      q: q.q,
+      studentAnswer,
+      correctAnswer,
+      isCorrect: selectedIndex === q.shuffledAnswer
+    };
+  });
+}
+
+startBtn.addEventListener('click', () => {
+  const area = areaSelect.value;
+  const requestedCount = Number(countSelect.value);
+  const finalCount = area === 'Full Curriculum' ? requestedCount : 10;
+  renderQuiz(area, finalCount);
+});
+
+submitBtn.addEventListener('click', () => {
+  if(!currentQuestions.length) return;
+  const results = collectResults();
+  const page = buildResultsPage(results);
+  const win = window.open('', '_blank');
+  if(!win){
+    alert('Please allow pop-ups for this site so the results page can open.');
+    return;
+  }
+  win.document.open();
+  win.document.write(page);
+  win.document.close();
+});
+
+buildAreaMenu();
+syncCountOptions();
+areaSelect.addEventListener('change', syncCountOptions);
+</script>
+</body>
+</html>
