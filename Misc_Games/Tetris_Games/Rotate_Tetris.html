@@ -1,0 +1,839 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Rotating Gravity Tetris (no anti-gravity)</title>
+  <style>
+    :root{
+      --bg:#0b0f14;
+      --text:#e7eefc;
+      --muted:#9fb0d0;
+      --border:rgba(255,255,255,.10);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;
+      background:linear-gradient(180deg,var(--bg),#070a0f);
+      color:var(--text);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      overflow:hidden;
+    }
+
+    .wrap{
+      width:min(1100px, 100%);
+      height:calc(100vh - 36px);
+      display:grid;
+      grid-template-columns: 290px 1fr;
+      gap:14px;
+      align-items:stretch;
+    }
+
+    .side{
+      background:rgba(255,255,255,.04);
+      border:1px solid var(--border);
+      border-radius:18px;
+      padding:14px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      min-height:0;
+      overflow:auto;
+    }
+    .card{
+      background:rgba(255,255,255,.03);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px;
+    }
+    .card h2{
+      font-size:13px;
+      margin:0 0 8px 0;
+      letter-spacing:.2px;
+    }
+    .hint{font-size:12px;color:var(--muted);line-height:1.35}
+
+    .kbd{
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+      font-size:11px;
+      padding:2px 7px;
+      border-radius:8px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      white-space:nowrap;
+      display:inline-block;
+    }
+
+    .controls{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:6px;
+      font-size:12px;
+      color:var(--muted);
+    }
+    .controls .row{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:center;
+    }
+
+    .btns{display:flex;gap:8px;flex-wrap:wrap}
+    button{
+      cursor:pointer;
+      border:1px solid rgba(255,255,255,.15);
+      background:rgba(122,162,255,.14);
+      color:var(--text);
+      padding:8px 10px;
+      border-radius:12px;
+      font-weight:650;
+      font-size:12px;
+      transition:transform .04s ease, background .15s ease, border-color .15s ease;
+    }
+    button:hover{background:rgba(122,162,255,.22); border-color:rgba(122,162,255,.35)}
+    button:active{transform:translateY(1px)}
+    button.secondary{background:rgba(255,255,255,.06)}
+    button.secondary:hover{background:rgba(255,255,255,.10)}
+
+    .nextBox{display:flex;gap:10px;align-items:flex-start}
+    #next{
+      width:120px;height:120px;
+      border-radius:12px;
+      background:rgba(0,0,0,.25);
+      border:1px solid rgba(255,255,255,.10);
+      image-rendering:pixelated;
+      flex:0 0 auto;
+    }
+
+    .game{
+      background:rgba(255,255,255,.04);
+      border:1px solid var(--border);
+      border-radius:18px;
+      padding:14px;
+      position:relative;
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      min-height:0;
+    }
+    .hud{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:12px;
+      flex:0 0 auto;
+    }
+    .title{display:flex;flex-direction:column;gap:2px}
+    .title h1{font-size:18px;margin:0;letter-spacing:.2px}
+    .title .sub{font-size:12px;color:var(--muted)}
+    .stats{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      align-items:flex-start;
+    }
+    .pill{
+      background:rgba(255,255,255,.05);
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:6px 10px;
+      font-size:12px;
+      display:flex;
+      gap:8px;
+      align-items:center;
+      white-space:nowrap;
+    }
+    .pill b{font-weight:650}
+
+    .boardWrap{
+      position:relative;
+      width:100%;
+      flex:1 1 auto;
+      min-height:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+    }
+    canvas#board{
+      display:block;
+      image-rendering:pixelated;
+      border-radius:14px;
+      background:rgba(0,0,0,.35);
+      border:1px solid rgba(255,255,255,.10);
+    }
+
+    .overlay{
+      position:absolute; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      background:rgba(0,0,0,.55);
+      backdrop-filter: blur(3px);
+      opacity:0; pointer-events:none;
+      transition:opacity .18s ease;
+    }
+    .overlay.show{opacity:1;pointer-events:auto}
+    .overlay .modal{
+      width:min(420px, 92%);
+      background:rgba(18,24,38,.92);
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:18px;
+      padding:16px;
+      text-align:center;
+      box-shadow: 0 12px 40px rgba(0,0,0,.55);
+    }
+    .overlay .modal h3{margin:0 0 6px 0;font-size:18px}
+    .overlay .modal p{margin:0 0 12px 0;color:var(--muted);font-size:13px;line-height:1.35}
+
+    @media (max-width: 960px){
+      body{overflow:auto}
+      .wrap{grid-template-columns:1fr;height:auto}
+      .game{min-height:520px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="side">
+      <div class="card">
+        <h2>Next Piece</h2>
+        <div class="nextBox">
+          <canvas id="next" width="120" height="120"></canvas>
+          <div class="hint">
+            Every time a piece locks, the playfield rotates <b>90° clockwise</b>. Gravity rotates with it.
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Controls (no anti-gravity)</h2>
+        <div class="controls">
+          <div class="row"><span id="softKey"><span class="kbd">↓</span></span><span>Soft drop (with gravity)</span></div>
+          <div class="row"><span id="sideKey"><span class="kbd">←</span> / <span class="kbd">→</span></span><span>Move sideways</span></div>
+          <div class="row"><span><span class="kbd">Z</span> / <span class="kbd">X</span></span><span>Rotate piece</span></div>
+          <div class="row"><span><span class="kbd">Space</span></span><span>Hard drop</span></div>
+          <div class="row"><span><span class="kbd">P</span></span><span>Pause / Resume</span></div>
+          <div class="row"><span><span class="kbd">R</span></span><span>Restart</span></div>
+        </div>
+        <div class="hint" style="margin-top:8px">
+          Orientation: <b id="rotLabel">0°</b> · Gravity: <b id="gravLabel">Down</b>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Quick Actions</h2>
+        <div class="btns">
+          <button id="pauseBtn" class="secondary">Pause (P)</button>
+          <button id="resetBtn">Restart (R)</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Movement rule</h2>
+        <div class="hint">
+          You can move <b>sideways</b> and <b>with gravity</b>, but you can’t move <b>against gravity</b>.
+        </div>
+      </div>
+    </div>
+
+    <div class="game">
+      <div class="hud">
+        <div class="title">
+          <h1>Rotating Gravity Tetris</h1>
+          <div class="sub">Starts normal. After each lock: rotate 90° CW. Pieces fall in the new direction.</div>
+        </div>
+        <div class="stats">
+          <div class="pill">Score <b id="score">0</b></div>
+          <div class="pill">Lines <b id="lines">0</b></div>
+          <div class="pill">Level <b id="level">1</b></div>
+          <div class="pill">State <b id="state">Playing</b></div>
+        </div>
+      </div>
+
+      <div class="boardWrap" id="boardWrap">
+        <canvas id="board" aria-label="Tetris board"></canvas>
+      </div>
+
+      <div class="overlay" id="overlay">
+        <div class="modal">
+          <h3 id="overlayTitle">Paused</h3>
+          <p id="overlayText">Press <span class="kbd">P</span> to resume.</p>
+          <div class="btns" style="justify-content:center">
+            <button id="resumeBtn" class="secondary">Resume (P)</button>
+            <button id="restartBtn">Restart (R)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const COLS = 10;
+  const ROWS = 20;
+  const BLOCK = 32;
+
+  const boardWrap  = document.getElementById('boardWrap');
+  const boardCanvas = document.getElementById('board');
+  const ctx = boardCanvas.getContext('2d');
+
+  const nextCanvas = document.getElementById('next');
+  const nctx = nextCanvas.getContext('2d');
+
+  const scoreEl = document.getElementById('score');
+  const linesEl = document.getElementById('lines');
+  const levelEl = document.getElementById('level');
+  const stateEl = document.getElementById('state');
+  const rotLabel = document.getElementById('rotLabel');
+  const gravLabel = document.getElementById('gravLabel');
+
+  const softKeyEl = document.getElementById('softKey');
+  const sideKeyEl = document.getElementById('sideKey');
+
+  const overlay = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlayTitle');
+  const overlayText = document.getElementById('overlayText');
+  const resumeBtn = document.getElementById('resumeBtn');
+  const restartBtn = document.getElementById('restartBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const resetBtn = document.getElementById('resetBtn');
+
+  const PIECES = [
+    null,
+    [[1,1,1,1]],                         // I
+    [[2,0,0],[2,2,2]],                   // J
+    [[0,0,3],[3,3,3]],                   // L
+    [[4,4],[4,4]],                       // O
+    [[0,5,5],[5,5,0]],                   // S
+    [[0,6,0],[6,6,6]],                   // T
+    [[7,7,0],[0,7,7]],                   // Z
+  ];
+
+  const COLORS = {
+    1:'rgba(122,162,255,0.95)',
+    2:'rgba(255,184,108,0.95)',
+    3:'rgba(255,122,162,0.95)',
+    4:'rgba(125,255,178,0.95)',
+    5:'rgba(255,255,140,0.95)',
+    6:'rgba(170,140,255,0.95)',
+    7:'rgba(255,120,120,0.95)',
+  };
+
+  function cloneMatrix(m){ return m.map(r => r.slice()); }
+  function rotatePieceCW(m){
+    const h=m.length, w=m[0].length;
+    const out = Array.from({length:w}, () => Array(h).fill(0));
+    for(let y=0;y<h;y++) for(let x=0;x<w;x++) out[x][h-1-y]=m[y][x];
+    return out;
+  }
+  function rotatePieceCCW(m){
+    let out = m;
+    out = rotatePieceCW(out); out = rotatePieceCW(out); out = rotatePieceCW(out);
+    return out;
+  }
+
+  let rot = 0; // view rotation CW steps
+
+  function screenDimsForRot(r){
+    return (r % 2 === 0)
+      ? { screenCols: COLS, screenRows: ROWS }
+      : { screenCols: ROWS, screenRows: COLS };
+  }
+
+  function boardToScreenCell(bx, by, r){
+    switch(r % 4){
+      case 0: return { sx: bx,              sy: by };
+      case 1: return { sx: (ROWS-1) - by,   sy: bx };
+      case 2: return { sx: (COLS-1) - bx,   sy: (ROWS-1) - by };
+      case 3: return { sx: by,              sy: (COLS-1) - bx };
+    }
+  }
+
+  function screenDeltaToBoardDelta(dx, dy, r){
+    switch(r % 4){
+      case 0: return { bdx: dx,  bdy: dy };
+      case 1: return { bdx: dy,  bdy: -dx };
+      case 2: return { bdx: -dx, bdy: -dy };
+      case 3: return { bdx: -dy, bdy: dx };
+    }
+  }
+
+  // Gravity direction on screen: Down, Left, Up, Right as rot increases
+  function gravityScreenVector(){
+    switch(rot % 4){
+      case 0: return { dx: 0,  dy: 1  }; // down
+      case 1: return { dx: -1, dy: 0  }; // left
+      case 2: return { dx: 0,  dy: -1 }; // up
+      case 3: return { dx: 1,  dy: 0  }; // right
+    }
+  }
+  function gravityScreenName(){
+    switch(rot % 4){
+      case 0: return 'Down';
+      case 1: return 'Left';
+      case 2: return 'Up';
+      case 3: return 'Right';
+    }
+  }
+
+  function gravityBoardDelta(){
+    const g = gravityScreenVector();
+    const {bdx, bdy} = screenDeltaToBoardDelta(g.dx, g.dy, rot);
+    return { dx: bdx, dy: bdy };
+  }
+
+  function resizeCanvasForRot(){
+    const {screenCols, screenRows} = screenDimsForRot(rot);
+    boardCanvas.width  = screenCols * BLOCK;
+    boardCanvas.height = screenRows * BLOCK;
+    fitBoardToViewport();
+    updateLegend();
+  }
+
+  function fitBoardToViewport(){
+    const rect = boardWrap.getBoundingClientRect();
+    const availW = Math.max(60, rect.width - 8);
+    const availH = Math.max(60, rect.height - 8);
+    const scale = Math.min(availW / boardCanvas.width, availH / boardCanvas.height);
+    boardCanvas.style.width  = Math.floor(boardCanvas.width * scale) + 'px';
+    boardCanvas.style.height = Math.floor(boardCanvas.height * scale) + 'px';
+  }
+  window.addEventListener('resize', fitBoardToViewport);
+
+  function kbd(s){ return `<span class="kbd">${s}</span>`; }
+
+  function updateLegend(){
+    rotLabel.textContent = `${rot*90}°`;
+    gravLabel.textContent = gravityScreenName();
+
+    const g = gravityScreenVector();
+    const softKey =
+      (g.dx===0 && g.dy===1) ? '↓' :
+      (g.dx===0 && g.dy===-1) ? '↑' :
+      (g.dx===-1 && g.dy===0) ? '←' : '→';
+
+    softKeyEl.innerHTML = kbd(softKey);
+
+    // Sideways are perpendicular to gravity
+    if(softKey === '↓' || softKey === '↑'){
+      sideKeyEl.innerHTML = `${kbd('←')} / ${kbd('→')}`;
+    }else{
+      sideKeyEl.innerHTML = `${kbd('↑')} / ${kbd('↓')}`;
+    }
+  }
+
+  // Game state
+  let board, current, next;
+  let score=0, lines=0, level=1;
+  let dropMs = 650, lastDropAt = 0;
+  let paused=false, running=true, gameOver=false;
+
+  function makeBoard(){ return Array.from({length:ROWS}, ()=>Array(COLS).fill(0)); }
+  function randPieceId(){ return 1 + Math.floor(Math.random()*7); }
+
+  function collides(piece, dx, dy, mOverride=null){
+    const m = mOverride || piece.m;
+    for(let py=0; py<m.length; py++){
+      for(let px=0; px<m[py].length; px++){
+        if(!m[py][px]) continue;
+        const nx = piece.x + px + dx;
+        const ny = piece.y + py + dy;
+        if(nx < 0 || nx >= COLS) return true;
+        if(ny < 0 || ny >= ROWS) return true;
+        if(board[ny][nx]) return true;
+      }
+    }
+    return false;
+  }
+
+  function merge(piece){
+    const m = piece.m;
+    for(let py=0; py<m.length; py++){
+      for(let px=0; px<m[py].length; px++){
+        if(!m[py][px]) continue;
+        const bx = piece.x + px;
+        const by = piece.y + py;
+        if(by>=0 && by<ROWS && bx>=0 && bx<COLS) board[by][bx] = piece.id;
+      }
+    }
+  }
+
+  function clearRows(){
+    let cleared = 0;
+    for(let y=ROWS-1; y>=0; y--){
+      let full = true;
+      for(let x=0; x<COLS; x++){
+        if(board[y][x] === 0){ full = false; break; }
+      }
+      if(full){
+        cleared++;
+        for(let yy=y; yy>0; yy--){
+          for(let x=0; x<COLS; x++) board[yy][x] = board[yy-1][x];
+        }
+        for(let x=0; x<COLS; x++) board[0][x] = 0;
+        y++;
+      }
+    }
+
+    if(cleared){
+      const table = [0,100,300,500,800];
+      score += table[Math.min(cleared,4)] * level;
+      lines += cleared;
+
+      const newLevel = 1 + Math.floor(lines/10);
+      if(newLevel !== level){
+        level = newLevel;
+        dropMs = Math.max(120, 650 - (level-1)*45);
+      }
+      updateHUD();
+    }
+  }
+
+  function newPiece(){
+    const id = randPieceId();
+    const m = cloneMatrix(PIECES[id]);
+    const x = Math.floor((COLS - m[0].length)/2);
+    const y = 0;
+    return { id, m, x, y };
+  }
+
+  function tryRotatePiece(dir){
+    const rotated = (dir === 1) ? rotatePieceCW(current.m) : rotatePieceCCW(current.m);
+    const kicks = [[0,0],[-1,0],[1,0],[0,-1],[0,1],[-2,0],[2,0],[0,-2],[0,2]];
+    for(const [kx,ky] of kicks){
+      if(!collides(current, kx, ky, rotated)){
+        current.m = rotated;
+        current.x += kx;
+        current.y += ky;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function spawnNext(){
+    current = next || newPiece();
+    next = newPiece();
+    if(collides(current, 0, 0)){
+      gameOver = true;
+      running = false;
+      setOverlay('Game Over', 'Press R to restart.');
+    }
+    drawNext();
+  }
+
+  function stepGravity(){
+    const g = gravityBoardDelta();
+    if(!collides(current, g.dx, g.dy)){
+      current.x += g.dx;
+      current.y += g.dy;
+      return true;
+    }
+
+    merge(current);
+    clearRows();
+
+    // rotate the whole world
+    rot = (rot + 1) % 4;
+    resizeCanvasForRot();
+
+    spawnNext();
+    return false;
+  }
+
+  function hardDrop(){
+    const g = gravityBoardDelta();
+    while(!collides(current, g.dx, g.dy)){
+      current.x += g.dx;
+      current.y += g.dy;
+    }
+    stepGravity();
+  }
+
+  function getGhostPiece(){
+    const g = gravityBoardDelta();
+    const ghost = { id: current.id, m: current.m, x: current.x, y: current.y };
+    while(!collides(ghost, g.dx, g.dy)){
+      ghost.x += g.dx;
+      ghost.y += g.dy;
+    }
+    return ghost;
+  }
+
+  // Rendering
+  function clearCanvas(){
+    ctx.clearRect(0,0,boardCanvas.width,boardCanvas.height);
+    ctx.fillStyle = 'rgba(0,0,0,0.20)';
+    ctx.fillRect(0,0,boardCanvas.width,boardCanvas.height);
+  }
+
+  function drawGrid(){
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    const {screenCols, screenRows} = screenDimsForRot(rot);
+    for(let x=0;x<=screenCols;x++){
+      ctx.beginPath();
+      ctx.moveTo(x*BLOCK+0.5,0);
+      ctx.lineTo(x*BLOCK+0.5,screenRows*BLOCK);
+      ctx.stroke();
+    }
+    for(let y=0;y<=screenRows;y++){
+      ctx.beginPath();
+      ctx.moveTo(0,y*BLOCK+0.5);
+      ctx.lineTo(screenCols*BLOCK,y*BLOCK+0.5);
+      ctx.stroke();
+    }
+  }
+
+  function drawCellScreen(sx, sy, id, alpha=1){
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = COLORS[id] || 'rgba(255,255,255,0.9)';
+    ctx.fillRect(sx*BLOCK, sy*BLOCK, BLOCK, BLOCK);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+    ctx.strokeRect(sx*BLOCK+0.5, sy*BLOCK+0.5, BLOCK-1, BLOCK-1);
+  }
+
+  function drawBoard(){
+    for(let by=0; by<ROWS; by++){
+      for(let bx=0; bx<COLS; bx++){
+        const id = board[by][bx];
+        if(!id) continue;
+        const {sx, sy} = boardToScreenCell(bx, by, rot);
+        drawCellScreen(sx, sy, id, 1);
+      }
+    }
+  }
+
+  function drawPiece(piece){
+    const m = piece.m;
+    for(let py=0; py<m.length; py++){
+      for(let px=0; px<m[py].length; px++){
+        if(!m[py][px]) continue;
+        const bx = piece.x + px;
+        const by = piece.y + py;
+        const {sx, sy} = boardToScreenCell(bx, by, rot);
+        drawCellScreen(sx, sy, piece.id, 1);
+      }
+    }
+  }
+
+  function drawGhost(piece){
+    const m = piece.m;
+    ctx.save();
+    for(let py=0; py<m.length; py++){
+      for(let px=0; px<m[py].length; px++){
+        if(!m[py][px]) continue;
+        const bx = piece.x + px;
+        const by = piece.y + py;
+        const {sx, sy} = boardToScreenCell(bx, by, rot);
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(sx*BLOCK+2, sy*BLOCK+2, BLOCK-4, BLOCK-4);
+      }
+    }
+    ctx.restore();
+  }
+
+  function render(){
+    clearCanvas();
+    drawGrid();
+    drawBoard();
+
+    if(!gameOver){
+      drawGhost(getGhostPiece());
+      drawPiece(current);
+    }
+
+    if(paused && !gameOver){
+      ctx.fillStyle = 'rgba(0,0,0,0.15)';
+      ctx.fillRect(0,0,boardCanvas.width,boardCanvas.height);
+    }
+  }
+
+  function drawNext(){
+    nctx.clearRect(0,0,nextCanvas.width,nextCanvas.height);
+    nctx.fillStyle = 'rgba(0,0,0,0.15)';
+    nctx.fillRect(0,0,nextCanvas.width,nextCanvas.height);
+
+    const m = next.m;
+    const cell = Math.floor(Math.min(nextCanvas.width, nextCanvas.height) / 6);
+    const w = m[0].length * cell;
+    const h = m.length * cell;
+    const ox = Math.floor((nextCanvas.width - w)/2);
+    const oy = Math.floor((nextCanvas.height - h)/2);
+
+    for(let y=0;y<m.length;y++){
+      for(let x=0;x<m[y].length;x++){
+        if(!m[y][x]) continue;
+        nctx.fillStyle = COLORS[next.id] || 'rgba(255,255,255,0.9)';
+        nctx.fillRect(ox + x*cell, oy + y*cell, cell, cell);
+        nctx.strokeStyle = 'rgba(255,255,255,0.10)';
+        nctx.strokeRect(ox + x*cell + 0.5, oy + y*cell + 0.5, cell-1, cell-1);
+      }
+    }
+  }
+
+  // HUD / Overlay
+  function updateHUD(){
+    scoreEl.textContent = String(score);
+    linesEl.textContent = String(lines);
+    levelEl.textContent = String(level);
+    stateEl.textContent = gameOver ? 'Game Over' : (paused ? 'Paused' : 'Playing');
+  }
+
+  function setOverlay(title, text){
+    overlayTitle.textContent = title;
+    overlayText.innerHTML = text
+      .replaceAll('P','<span class="kbd">P</span>')
+      .replaceAll('R','<span class="kbd">R</span>');
+    overlay.classList.add('show');
+  }
+  function hideOverlay(){ overlay.classList.remove('show'); }
+
+  function setPaused(p){
+    if(gameOver) return;
+    paused = p;
+    updateHUD();
+    if(paused) setOverlay('Paused', 'Press P to resume.');
+    else hideOverlay();
+  }
+
+  // ===== Input rules (NO moving against gravity) =====
+  function screenMoveAllowed(dx, dy){
+    // disallow moving opposite gravity vector
+    const g = gravityScreenVector();
+    return !(dx === -g.dx && dy === -g.dy);
+  }
+
+  function moveByScreenDir(dx, dy){
+    if(!screenMoveAllowed(dx, dy)) return; // block anti-gravity
+    const {bdx, bdy} = screenDeltaToBoardDelta(dx, dy, rot);
+    if(!collides(current, bdx, bdy)){
+      current.x += bdx;
+      current.y += bdy;
+    }
+  }
+
+  function softDrop(){
+    const g = gravityScreenVector();
+    const {bdx, bdy} = screenDeltaToBoardDelta(g.dx, g.dy, rot);
+    if(!collides(current, bdx, bdy)){
+      current.x += bdx;
+      current.y += bdy;
+    }else{
+      stepGravity();
+      lastDropAt = performance.now();
+    }
+  }
+
+  function mapGravityToArrowCode(){
+    const g = gravityScreenVector();
+    if(g.dx===0 && g.dy===1) return 'ArrowDown';
+    if(g.dx===0 && g.dy===-1) return 'ArrowUp';
+    if(g.dx===-1 && g.dy===0) return 'ArrowLeft';
+    return 'ArrowRight';
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if(gameOver){
+      if(e.code === 'KeyR') restart();
+      return;
+    }
+    if(e.code === 'KeyP'){ setPaused(!paused); return; }
+    if(e.code === 'KeyR'){ restart(); return; }
+    if(paused) return;
+
+    const gKey = mapGravityToArrowCode();
+
+    switch(e.code){
+      case 'ArrowLeft':
+        e.preventDefault();
+        if(gKey === 'ArrowLeft') softDrop();
+        else moveByScreenDir(-1, 0);
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        if(gKey === 'ArrowRight') softDrop();
+        else moveByScreenDir(1, 0);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        if(gKey === 'ArrowUp') softDrop();
+        else moveByScreenDir(0, -1);
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        if(gKey === 'ArrowDown') softDrop();
+        else moveByScreenDir(0, 1);
+        break;
+
+      case 'KeyZ':
+        e.preventDefault();
+        if(!e.repeat) tryRotatePiece(-1);
+        break;
+      case 'KeyX':
+        e.preventDefault();
+        if(!e.repeat) tryRotatePiece(1);
+        break;
+
+      case 'Space':
+        e.preventDefault();
+        if(!e.repeat) hardDrop();
+        break;
+    }
+    render();
+  });
+
+  pauseBtn.addEventListener('click', () => setPaused(!paused));
+  resetBtn.addEventListener('click', () => restart());
+  resumeBtn.addEventListener('click', () => setPaused(false));
+  restartBtn.addEventListener('click', () => restart());
+
+  function tick(ts){
+    if(!running){
+      render();
+      requestAnimationFrame(tick);
+      return;
+    }
+    if(!paused && !gameOver){
+      if(!lastDropAt) lastDropAt = ts;
+      if(ts - lastDropAt >= dropMs){
+        stepGravity();
+        lastDropAt = ts;
+      }
+    }
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  function restart(){
+    board = makeBoard();
+    score = 0; lines = 0; level = 1;
+    dropMs = 650; lastDropAt = 0;
+    paused = false; running = true; gameOver = false;
+
+    rot = 0;
+    resizeCanvasForRot();
+
+    next = newPiece();
+    spawnNext();
+
+    hideOverlay();
+    updateHUD();
+    requestAnimationFrame(fitBoardToViewport);
+  }
+
+  // Init
+  restart();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

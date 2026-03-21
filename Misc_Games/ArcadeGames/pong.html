@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Avoid Pong (Growing Multi-ball · 1P / 2P)</title>
+  <style>
+    :root{
+      --bg:#0b0f17;
+      --fg:#eaf0ff;
+      --muted:rgba(234,240,255,.65);
+      --line:rgba(234,240,255,.25);
+      --danger:#fb7185;
+      --ok:#34d399;
+      --btn:#111a2c;
+      --btn2:#0f1626;
+    }
+    html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
+    .wrap{height:100%; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:10px; padding:18px; box-sizing:border-box;}
+    canvas{
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+      box-shadow:0 10px 30px rgba(0,0,0,.35);
+      max-width:min(900px, 95vw);
+      max-height:min(520px, 70vh);
+      width:900px; height:520px;
+    }
+    .hud{
+      width:min(900px, 95vw);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      color:var(--muted);
+      font-size:14px;
+      user-select:none;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      background:rgba(255,255,255,.02);
+      line-height:1.2;
+      white-space:nowrap;
+    }
+    kbd{
+      font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size:12px;
+      padding:2px 6px;
+      border-radius:6px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.03);
+      color:var(--fg);
+    }
+    .ok{color:var(--ok)}
+    .danger{color:var(--danger)}
+    .controls{
+      width:min(900px, 95vw);
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:6px;
+    }
+    .panel{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .toggle{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:rgba(255,255,255,.02);
+    }
+    .toggle label{cursor:pointer}
+    select,button{
+      background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border:1px solid var(--line);
+      color:var(--fg);
+      padding:8px 10px;
+      border-radius:12px;
+      font-size:14px;
+      cursor:pointer;
+      outline:none;
+    }
+    button{background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));}
+    button:hover, select:hover{border-color:rgba(234,240,255,.38)}
+    .small{font-size:12px; color:var(--muted)}
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="controls">
+    <div class="panel">
+      <div class="toggle">
+        <input type="radio" id="mode1" name="mode" value="1" checked />
+        <label for="mode1"><b>1 Player</b> vs CPU</label>
+      </div>
+      <div class="toggle">
+        <input type="radio" id="mode2" name="mode" value="2" />
+        <label for="mode2"><b>2 Player</b> (W/S vs ↑/↓)</label>
+      </div>
+      <button id="applyMode">Apply mode</button>
+      <span class="small">Also: Pause <kbd>P</kbd> · Restart <kbd>R</kbd></span>
+    </div>
+  </div>
+
+  <div class="hud">
+    <div class="badge" id="controlsHint">
+      1P: Left <kbd>W</kbd>/<kbd>S</kbd> · Right (CPU)
+    </div>
+    <div class="badge">First to <b style="color:var(--fg)">10</b> wins</div>
+  </div>
+
+  <div class="hud">
+    <div class="badge">
+      <span class="danger">Avoid</span> paddle hits · <span class="ok">Score</span> when opponent is hit · Back-wall hit = grow · Every +5 grows = +1 ball
+    </div>
+    <div class="badge" id="ballInfo">Balls: <b>1</b> · Grow count: <b>0</b></div>
+  </div>
+
+  <canvas id="game" width="900" height="520" aria-label="Avoid Pong game"></canvas>
+
+  <div class="hud">
+    <div>All balls behave the same: back walls only grow/bounce — no points.</div>
+    <div id="status" class="badge">Ready…</div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const ballInfoEl = document.getElementById('ballInfo');
+  const statusEl = document.getElementById('status');
+  const controlsHintEl = document.getElementById('controlsHint');
+  const applyModeBtn = document.getElementById('applyMode');
+
+  const W = canvas.width, H = canvas.height;
+  const WIN_SCORE = 10;
+
+  const paddle = { w: 14, h: 90, margin: 28, speed: 560 };
+
+  const ballCfg = {
+    baseR: 8,
+    baseSpeed: 380,   // fixed speed for all balls
+    wallGrow: 1.22,   // growth per back-wall hit
+    maxGrow: 6.0,     // cap
+    serveDelayMs: 550
+  };
+
+  const cpuAI = { reaction: 0.10, maxSpeed: 470, dodgeBias: 0.76, noise: 24 };
+
+  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+  const rand = (a,b) => a + Math.random()*(b-a);
+
+  let keys = new Set();
+  let paused = false;
+  let gameOver = false;
+  let lastTime = performance.now();
+  let serveTimeout = null;
+
+  let mode = 1; // 1 = vs CPU, 2 = two players
+
+  const left = { x: paddle.margin, y: (H - paddle.h) / 2, score: 0 };
+  const right = { x: W - paddle.margin - paddle.w, y: (H - paddle.h) / 2, score: 0 };
+
+  /** @type {{x:number,y:number,vx:number,vy:number,r:number,color:string}[]} */
+  let balls = [];
+  let growCount = 0;
+
+  function setStatus(text, kind='') {
+    statusEl.textContent = text;
+    statusEl.className = 'badge' + (kind ? ' ' + kind : '');
+  }
+
+  function updateBallInfo() {
+    ballInfoEl.innerHTML = `Balls: <b>${balls.length}</b> · Grow count: <b>${growCount}</b>`;
+  }
+
+  function makeBall(color = '#7dd3fc') {
+    return { x: W/2, y: H/2, vx: 0, vy: 0, r: ballCfg.baseR, color };
+  }
+
+  function setBallVelocityToBaseSpeed(b, dirSign) {
+    const angle = rand(-0.35, 0.35);
+    b.vx = Math.cos(angle) * ballCfg.baseSpeed * dirSign;
+    b.vy = Math.sin(angle) * ballCfg.baseSpeed;
+  }
+
+  function setControlsHint() {
+    if (mode === 1) controlsHintEl.innerHTML = `1P: Left <kbd>W</kbd>/<kbd>S</kbd> · Right (CPU)`;
+    else controlsHintEl.innerHTML = `2P: Left <kbd>W</kbd>/<kbd>S</kbd> · Right <kbd>↑</kbd>/<kbd>↓</kbd>`;
+  }
+
+  function resetMatch() {
+    left.score = 0;
+    right.score = 0;
+    gameOver = false;
+    paused = false;
+    setStatus('Ready…');
+    resetRally(Math.random() < 0.5 ? 'left' : 'right', true);
+  }
+
+  function resetRally(server='left', fullReset=false) {
+    if (serveTimeout) clearTimeout(serveTimeout);
+
+    if (fullReset) {
+      balls = [ makeBall('#7dd3fc') ];
+      growCount = 0;
+    }
+
+    // center + stop + reset sizes (after points)
+    for (const b of balls) {
+      b.x = W/2; b.y = H/2;
+      b.vx = 0; b.vy = 0;
+      b.r = ballCfg.baseR;
+    }
+
+    updateBallInfo();
+
+    serveTimeout = setTimeout(() => {
+      if (gameOver) return;
+      const dir = (server === 'left') ? 1 : -1;
+      balls.forEach((b, i) => {
+        const dirSign = (i % 2 === 0) ? dir : -dir;
+        setBallVelocityToBaseSpeed(b, dirSign);
+      });
+    }, ballCfg.serveDelayMs);
+  }
+
+  function rectIntersect(ax, ay, aw, ah, bx, by, bw, bh) {
+    return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+  }
+
+  function drawNet() {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(234,240,255,.22)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([10, 12]);
+    ctx.beginPath();
+    ctx.moveTo(W / 2, 18);
+    ctx.lineTo(W / 2, H - 18);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawTextCentered(text, y, size = 34, color = '#eaf0ff') {
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.font = `800 ${size}px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, W / 2, y);
+    ctx.restore();
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    const g = ctx.createRadialGradient(W/2, H/2, 120, W/2, H/2, 520);
+    g.addColorStop(0, 'rgba(255,255,255,.04)');
+    g.addColorStop(1, 'rgba(0,0,0,.35)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    drawNet();
+
+    ctx.fillStyle = 'rgba(234,240,255,.92)';
+    ctx.fillRect(left.x, left.y, paddle.w, paddle.h);
+    ctx.fillRect(right.x, right.y, paddle.w, paddle.h);
+
+    for (const b of balls) {
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+      ctx.fillStyle = b.color;
+      ctx.fill();
+    }
+
+    // scores
+    ctx.save();
+    ctx.fillStyle = 'rgba(234,240,255,.82)';
+    ctx.font = '700 54px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(String(left.score), W * 0.25, 18);
+    ctx.fillText(String(right.score), W * 0.75, 18);
+    ctx.restore();
+
+    if (paused && !gameOver) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,.35)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+      drawTextCentered('PAUSED', H/2 - 18, 44);
+      drawTextCentered('Press P to resume', H/2 + 24, 20, 'rgba(234,240,255,.75)');
+    }
+
+    if (gameOver) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,.45)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+      const winner = left.score > right.score ? 'LEFT PLAYER WINS!' : 'RIGHT PLAYER WINS!';
+      drawTextCentered(winner, H/2 - 22, 44);
+      drawTextCentered('Press R to play again', H/2 + 28, 20, 'rgba(234,240,255,.75)');
+    }
+  }
+
+  function checkWin() {
+    if (left.score >= WIN_SCORE || right.score >= WIN_SCORE) {
+      gameOver = true;
+      if (serveTimeout) clearTimeout(serveTimeout);
+      balls.forEach(b => { b.vx = 0; b.vy = 0; });
+      setStatus('Game over. Press R to restart.');
+    }
+  }
+
+  function scorePoint(winnerSide) {
+    // winnerSide: 'left' or 'right'
+    if (winnerSide === 'left') {
+      left.score += 1;
+      setStatus('Point for LEFT (right got hit)!', 'ok');
+    } else {
+      right.score += 1;
+      setStatus('Point for RIGHT (left got hit)!', 'ok');
+    }
+
+    checkWin();
+
+    if (!gameOver) {
+      // serve toward the side that got hit (keeps pressure on)
+      const server = (winnerSide === 'left') ? 'right' : 'left';
+      resetRally(server, true); // reset to 1 ball and sizes reset
+    }
+  }
+
+  function spawnBall() {
+    const colors = ['#a7f3d0', '#fde68a', '#c4b5fd', '#fca5a5', '#93c5fd', '#f9a8d4'];
+    const color = colors[(balls.length - 1) % colors.length] || '#e9d5ff';
+
+    const b = makeBall(color);
+    b.x = W/2 + rand(-24, 24);
+    b.y = H/2 + rand(-24, 24);
+
+    const dir = Math.random() < 0.5 ? -1 : 1;
+    setBallVelocityToBaseSpeed(b, dir);
+
+    balls.push(b);
+    updateBallInfo();
+    setStatus(`Grow ${growCount} → new ball spawned!`, '');
+  }
+
+  function growOnBackWall(b) {
+    const maxR = ballCfg.baseR * ballCfg.maxGrow;
+    b.r = Math.min(maxR, b.r * ballCfg.wallGrow);
+    growCount += 1;
+    updateBallInfo();
+    setStatus('Back wall hit → ball grows!', '');
+
+    if (growCount % 5 === 0) spawnBall();
+  }
+
+  // Elastic equal-mass collision
+  function resolveBallBallCollision(a, b) {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const dist = Math.hypot(dx, dy);
+    const minDist = a.r + b.r;
+    if (dist === 0 || dist >= minDist) return;
+
+    const overlap = (minDist - dist);
+    const nx = dx / dist;
+    const ny = dy / dist;
+
+    a.x -= nx * overlap * 0.5;
+    a.y -= ny * overlap * 0.5;
+    b.x += nx * overlap * 0.5;
+    b.y += ny * overlap * 0.5;
+
+    const tx = -ny, ty = nx;
+
+    const aN = a.vx * nx + a.vy * ny;
+    const aT = a.vx * tx + a.vy * ty;
+    const bN = b.vx * nx + b.vy * ny;
+    const bT = b.vx * tx + b.vy * ty;
+
+    const aN2 = bN;
+    const bN2 = aN;
+
+    a.vx = aN2 * nx + aT * tx;
+    a.vy = aN2 * ny + aT * ty;
+    b.vx = bN2 * nx + bT * tx;
+    b.vy = bN2 * ny + bT * ty;
+
+    // Blend slightly toward base speed (prevents numeric energy drift)
+    const nudge = (ball) => {
+      const v = Math.hypot(ball.vx, ball.vy) || 1;
+      const blend = 0.18;
+      const newSpeed = (1 - blend) * v + blend * ballCfg.baseSpeed;
+      ball.vx = (ball.vx / v) * newSpeed;
+      ball.vy = (ball.vy / v) * newSpeed;
+    };
+    nudge(a); nudge(b);
+  }
+
+  function update(dt) {
+    if (paused || gameOver) return;
+
+    // Left player movement: W/S
+    let ldir = 0;
+    if (keys.has('w')) ldir -= 1;
+    if (keys.has('s')) ldir += 1;
+    left.y = clamp(left.y + ldir * paddle.speed * dt, 12, H - paddle.h - 12);
+
+    if (mode === 2) {
+      // Right player movement: ArrowUp/ArrowDown
+      let rdir = 0;
+      if (keys.has('arrowup')) rdir -= 1;
+      if (keys.has('arrowdown')) rdir += 1;
+      right.y = clamp(right.y + rdir * paddle.speed * dt, 12, H - paddle.h - 12);
+    } else {
+      // CPU movement: pick closest approaching ball
+      let threat = null;
+      let best = -Infinity;
+      for (const b of balls) {
+        if (b.vx > 0) {
+          const score = b.x;
+          if (score > best) { best = score; threat = b; }
+        }
+      }
+
+      let targetY = (H - paddle.h) / 2;
+      if (threat) {
+        const cpuCenter = right.y + paddle.h/2;
+        const ballYNoisy = threat.y + (Math.random()*2 - 1) * cpuAI.noise;
+        const shouldDodgeWell = Math.random() < cpuAI.dodgeBias;
+        if (shouldDodgeWell) {
+          if (ballYNoisy < cpuCenter) targetY = right.y + 140; else targetY = right.y - 140;
+        } else {
+          targetY = ballYNoisy - paddle.h/2;
+        }
+      }
+
+      targetY = clamp(targetY, 12, H - paddle.h - 12);
+      const diff = targetY - right.y;
+      const aiVel = clamp(diff * (cpuAI.reaction / dt), -cpuAI.maxSpeed, cpuAI.maxSpeed);
+      right.y = clamp(right.y + aiVel * dt, 12, H - paddle.h - 12);
+    }
+
+    // Move balls + walls
+    for (const b of balls) {
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+
+      // top/bottom
+      if (b.y - b.r <= 10) { b.y = 10 + b.r; b.vy *= -1; }
+      else if (b.y + b.r >= H - 10) { b.y = (H - 10) - b.r; b.vy *= -1; }
+
+      // back walls (NO SCORING): bounce + grow
+      if (b.x - b.r <= 10) {
+        b.x = 10 + b.r;
+        b.vx = Math.abs(b.vx);
+        growOnBackWall(b);
+      } else if (b.x + b.r >= W - 10) {
+        b.x = (W - 10) - b.r;
+        b.vx = -Math.abs(b.vx);
+        growOnBackWall(b);
+      }
+    }
+
+    // Ball-ball collisions
+    if (balls.length >= 2) {
+      for (let i = 0; i < balls.length; i++) {
+        for (let j = i + 1; j < balls.length; j++) {
+          resolveBallBallCollision(balls[i], balls[j]);
+        }
+      }
+    }
+
+    // Paddle hit detection (ANY ball): the ONLY way to score
+    for (const b of balls) {
+      const ballRect = { x: b.x - b.r, y: b.y - b.r, w: b.r * 2, h: b.r * 2 };
+
+      if (rectIntersect(ballRect.x, ballRect.y, ballRect.w, ballRect.h, left.x, left.y, paddle.w, paddle.h)) {
+        // left got hit -> right scores
+        b.x = left.x + paddle.w + b.r + 1;
+        scorePoint('right');
+        return;
+      }
+
+      if (rectIntersect(ballRect.x, ballRect.y, ballRect.w, ballRect.h, right.x, right.y, paddle.w, paddle.h)) {
+        // right got hit -> left scores
+        b.x = right.x - b.r - 1;
+        scorePoint('left');
+        return;
+      }
+    }
+  }
+
+  function loop(now) {
+    const dt = Math.min(0.033, (now - lastTime) / 1000);
+    lastTime = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // Inputs
+  window.addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase();
+
+    if (k === 'p') { if (!gameOver) paused = !paused; e.preventDefault(); return; }
+    if (k === 'r') { resetMatch(); e.preventDefault(); return; }
+
+    // Prevent page scroll on arrows/space etc.
+    if (['w','s','arrowup','arrowdown'].includes(k)) e.preventDefault();
+
+    keys.add(k);
+  });
+  window.addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
+
+  // Mode switching
+  function applyModeFromUI() {
+    const selected = document.querySelector('input[name="mode"]:checked')?.value;
+    mode = (selected === '2') ? 2 : 1;
+    setControlsHint();
+    setStatus(mode === 2 ? '2 Player mode enabled.' : '1 Player mode enabled.');
+    // Reset so rules/AI state feels clean
+    resetMatch();
+  }
+  applyModeBtn.addEventListener('click', applyModeFromUI);
+
+  // Init
+  setControlsHint();
+  resetMatch();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

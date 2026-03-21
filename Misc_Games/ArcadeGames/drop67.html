@@ -1,0 +1,896 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>2x2 + Sum Line Clear (7x9 Pills)</title>
+  <style>
+    :root{
+      --bg:#0f1220;
+      --panel:#161a2e;
+      --grid:#0b0e19;
+      --line:rgba(255,255,255,.10);
+      --text:rgba(255,255,255,.92);
+      --muted:rgba(255,255,255,.65);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(900px 500px at 30% 10%, #1a2150, transparent 60%),
+                  radial-gradient(900px 500px at 70% 30%, #2a1455, transparent 55%),
+                  var(--bg);
+      color:var(--text);
+      display:flex;
+      min-height:100vh;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+    }
+    .wrap{
+      width:min(1020px, 100%);
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:14px;
+    }
+    .top{
+      display:flex;
+      gap:14px;
+      flex-wrap:wrap;
+      align-items:stretch;
+      justify-content:space-between;
+    }
+    .card{
+      background: rgba(22,26,46,.85);
+      border:1px solid rgba(255,255,255,.08);
+      box-shadow: 0 12px 30px rgba(0,0,0,.35);
+      border-radius:16px;
+      padding:12px 14px;
+      backdrop-filter: blur(8px);
+    }
+    .stats{
+      display:flex;
+      gap:14px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .stat{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      min-width:140px;
+    }
+    .stat .label{color:var(--muted); font-size:12px;}
+    .stat .value{font-weight:800; font-size:18px; letter-spacing:.2px;}
+    .controls{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-width:390px;
+    }
+    .controls b{color:var(--text)}
+    .boardRow{
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap:14px;
+      align-items:start;
+    }
+    canvas{
+      display:block;
+      width: min(520px, 100%);
+      height:auto;
+      background: rgba(11,14,25,.88);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:16px;
+      box-shadow: 0 16px 40px rgba(0,0,0,.45);
+    }
+    .side{
+      width: 260px;
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+    .btnRow{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    button{
+      appearance:none;
+      border:none;
+      cursor:pointer;
+      background: rgba(255,255,255,.10);
+      color: var(--text);
+      border:1px solid rgba(255,255,255,.10);
+      padding:10px 12px;
+      border-radius:12px;
+      font-weight:700;
+      transition: transform .04s ease, background .15s ease;
+    }
+    button:hover{ background: rgba(255,255,255,.14); }
+    button:active{ transform: translateY(1px); }
+    .small{ font-size:12px; font-weight:700; color:var(--muted); }
+    .nextBox{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .nextCanvas{
+      width:120px;
+      height:120px;
+      background: rgba(11,14,25,.88);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:14px;
+    }
+    .hsTitle{
+      font-weight:900;
+      letter-spacing:.3px;
+      margin-bottom:8px;
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .hsList{
+      margin:0;
+      padding-left:18px;
+      color:rgba(255,255,255,.86);
+      font-size:13px;
+      line-height:1.4;
+    }
+    .hsList li{
+      margin:6px 0;
+    }
+    .hsMeta{
+      color:var(--muted);
+      font-size:12px;
+      font-weight:700;
+    }
+
+    .overlay{
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+    }
+    .modal{
+      width:min(560px, 100%);
+      background: rgba(22,26,46,.95);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:18px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.65);
+      padding:18px;
+      text-align:center;
+    }
+    .modal h2{ margin:6px 0 8px; font-size:26px; letter-spacing:.2px; }
+    .modal p{ margin:6px 0; color: var(--muted); }
+    .modal .big{ font-size:20px; font-weight:900; color: var(--text); margin-top:10px; }
+    .modal .btnRow{ justify-content:center; margin-top:14px; }
+
+    @media (max-width: 900px){
+      .boardRow{ grid-template-columns: 1fr; }
+      .side{ width:100%; flex-direction:row; flex-wrap:wrap; }
+      .side .card{ flex: 1 1 240px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="card stats" role="status" aria-live="polite">
+        <div class="stat">
+          <div class="label">Score</div>
+          <div class="value" id="score">0</div>
+        </div>
+        <div class="stat">
+          <div class="label">Speed level</div>
+          <div class="value" id="level">1</div>
+        </div>
+      </div>
+
+      <div class="card controls">
+        <div><b>Controls</b></div>
+        <div>← / →: move</div>
+        <div>↓: soft drop</div>
+        <div>↑: rotate 90° (0°, 90°, 180°, 270°)</div>
+        <div>Space: hard drop</div>
+        <div class="small"><b>Clear #1:</b> any <b>2×2</b> same color disappears (+4 per 2×2).</div>
+        <div class="small"><b>Clear #2:</b> if a <b>row</b> or <b>column</b> number-sum is <b>exactly 6 or 7</b>, clear that line (+1 per block removed).</div>
+        <div class="small">Tile numbers are <b>0–7</b>. Pill halves are generated so they <b>never sum to 6 or 7</b> together.</div>
+        <div class="small"><b>2% chance:</b> any given block can spawn as an <b>8</b> instead.</div>
+        <div class="small">Speed increases every <b>25</b> points.</div>
+      </div>
+    </div>
+
+    <div class="boardRow">
+      <canvas id="game" width="560" height="720" aria-label="Game board"></canvas>
+
+      <div class="side">
+        <div class="card nextBox">
+          <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px;">
+            <div style="font-weight:900; letter-spacing:.3px;">NEXT</div>
+            <div class="small" id="statusText">Playing</div>
+          </div>
+          <canvas class="nextCanvas" id="next" width="120" height="120" aria-label="Next piece"></canvas>
+        </div>
+
+        <div class="card">
+          <div class="hsTitle">
+            <span>TOP 5</span>
+            <span class="hsMeta" id="hsMeta"></span>
+          </div>
+          <ol class="hsList" id="hsList"></ol>
+          <div class="btnRow" style="margin-top:10px;">
+            <button id="clearHSBtn" title="Clears saved high scores">Clear High Scores</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="font-weight:900; letter-spacing:.3px; margin-bottom:10px;">ACTIONS</div>
+          <div class="btnRow">
+            <button id="restartBtn">Restart</button>
+            <button id="pauseBtn">Pause</button>
+          </div>
+          <div class="small" style="margin-top:10px;">Tip: Press <b>P</b> to pause/resume.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h2>Game Over</h2>
+      <p>You couldn’t spawn a new piece.</p>
+      <div class="big">Final score: <span id="finalScore">0</span></div>
+      <p class="small">Speed level reached: <span id="finalLevel">1</span></p>
+      <div class="btnRow">
+        <button id="playAgainBtn">Play again</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const COLS = 7;
+  const ROWS = 9;
+
+  const COLORS = [
+    {fill:'#ff4d4d'},
+    {fill:'#42e37a'},
+    {fill:'#ffd24a'},
+    {fill:'#4aa7ff'}
+  ];
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const nextCanvas = document.getElementById('next');
+  const nctx = nextCanvas.getContext('2d');
+
+  const scoreEl = document.getElementById('score');
+  const levelEl = document.getElementById('level');
+  const statusText = document.getElementById('statusText');
+
+  const overlay = document.getElementById('overlay');
+  const finalScoreEl = document.getElementById('finalScore');
+  const finalLevelEl = document.getElementById('finalLevel');
+
+  const restartBtn = document.getElementById('restartBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const playAgainBtn = document.getElementById('playAgainBtn');
+
+  const hsListEl = document.getElementById('hsList');
+  const hsMetaEl = document.getElementById('hsMeta');
+  const clearHSBtn = document.getElementById('clearHSBtn');
+
+  // Sizing
+  const PAD = 18;
+  const usableW = canvas.width - PAD*2;
+  const usableH = canvas.height - PAD*2;
+  const CELL = Math.floor(Math.min(usableW / COLS, usableH / ROWS));
+  const boardW = CELL * COLS;
+  const boardH = CELL * ROWS;
+  const offsetX = Math.floor((canvas.width - boardW) / 2);
+  const offsetY = Math.floor((canvas.height - boardH) / 2);
+
+  // Grid cell: null OR { color, num }
+  let grid = makeEmptyGrid();
+
+  // Piece: anchor A at (x,y), orient 0..3 for B relative position
+  let current = null; // {x,y, orient, a:{color,num}, b:{color,num}}
+  let nextPiece = null;
+
+  let score = 0;
+  let isPaused = false;
+  let isGameOver = false;
+
+  // Timing
+  let dropInterval = 650;
+  let lastTime = 0;
+  let dropAcc = 0;
+
+  // High scores
+  const HS_KEY = "pill_sum_highscores_v1"; // safe to change later
+  let highScores = loadHighScores();
+
+  function makeEmptyGrid(){
+    return Array.from({length: ROWS}, () => Array.from({length: COLS}, () => null));
+  }
+
+  function randColor(){
+    return COLORS[(Math.random() * COLORS.length) | 0].fill;
+  }
+
+  // numbers 0..7
+  function randBaseNum(){
+    return (Math.random() * 8) | 0; // 0..7
+  }
+
+  // NEW: 2% chance to be 8 (per block)
+  function randNumWithEightChance(){
+    return (Math.random() < 0.02) ? 8 : randBaseNum();
+  }
+
+  function computeLevelFromScore(){
+    return Math.floor(score / 25) + 1;
+  }
+  function computeInterval(level){
+    const base = 650;
+    const step = 70;
+    return Math.max(140, base - (level - 1) * step);
+  }
+  function updateUI(){
+    const level = computeLevelFromScore();
+    dropInterval = computeInterval(level);
+    scoreEl.textContent = String(score);
+    levelEl.textContent = String(level);
+  }
+
+  // Pill halves generated so A+B != 6 and != 7
+  // NOTE: each half number can be 0..7 or (2% chance) 8.
+  function newRandomTemplate(){
+    const aNum = randNumWithEightChance();
+    let bNum = randNumWithEightChance();
+    while ((aNum + bNum) === 6 || (aNum + bNum) === 7){
+      bNum = randNumWithEightChance();
+    }
+    return {
+      a: { color: randColor(), num: aNum },
+      b: { color: randColor(), num: bNum }
+    };
+  }
+
+  function bOffset(orient){
+    switch (orient & 3){
+      case 0: return {dx: 1, dy: 0};  // right
+      case 1: return {dx: 0, dy: 1};  // down
+      case 2: return {dx:-1, dy: 0};  // left
+      case 3: return {dx: 0, dy:-1};  // up
+    }
+  }
+
+  function cellsOfPiece(p){
+    const off = bOffset(p.orient);
+    return [
+      {x:p.x,          y:p.y,          cell:p.a},
+      {x:p.x+off.dx,   y:p.y+off.dy,   cell:p.b},
+    ];
+  }
+
+  function inBounds(x,y){
+    return x>=0 && x<COLS && y>=0 && y<ROWS;
+  }
+
+  function collides(p){
+    for (const c of cellsOfPiece(p)){
+      if (!inBounds(c.x, c.y)) return true;
+      if (grid[c.y][c.x] !== null) return true;
+    }
+    return false;
+  }
+
+  function lockPiece(p){
+    for (const c of cellsOfPiece(p)){
+      grid[c.y][c.x] = { color: c.cell.color, num: c.cell.num };
+    }
+  }
+
+  function spawnPieceFromTemplate(t){
+    return {
+      x: Math.floor((COLS - 2) / 2),
+      y: 0,
+      orient: 0,
+      a: {...t.a},
+      b: {...t.b},
+    };
+  }
+
+  // --- Clear rule #1: 2x2 same color ---
+  function find2x2Matches(){
+    const cells = new Set();
+    let groups = 0;
+    for (let y=0; y<ROWS-1; y++){
+      for (let x=0; x<COLS-1; x++){
+        const c1 = grid[y][x];
+        if (!c1) continue;
+        const c2 = grid[y][x+1];
+        const c3 = grid[y+1][x];
+        const c4 = grid[y+1][x+1];
+        if (c2 && c3 && c4 && c1.color===c2.color && c1.color===c3.color && c1.color===c4.color){
+          groups++;
+          cells.add(`${x},${y}`);
+          cells.add(`${x+1},${y}`);
+          cells.add(`${x},${y+1}`);
+          cells.add(`${x+1},${y+1}`);
+        }
+      }
+    }
+    return {cells, groups};
+  }
+
+  // --- Clear rule #2: row/col sum == 6 or 7 ---
+  function findSumLines(){
+    const clearCells = new Set();
+
+    // rows
+    for (let y=0; y<ROWS; y++){
+      let sum = 0;
+      let hasAny = false;
+      for (let x=0; x<COLS; x++){
+        const c = grid[y][x];
+        if (c){
+          sum += c.num;
+          hasAny = true;
+        }
+      }
+      if (hasAny && (sum === 6 || sum === 7)){
+        for (let x=0; x<COLS; x++){
+          if (grid[y][x]) clearCells.add(`${x},${y}`);
+        }
+      }
+    }
+
+    // cols
+    for (let x=0; x<COLS; x++){
+      let sum = 0;
+      let hasAny = false;
+      for (let y=0; y<ROWS; y++){
+        const c = grid[y][x];
+        if (c){
+          sum += c.num;
+          hasAny = true;
+        }
+      }
+      if (hasAny && (sum === 6 || sum === 7)){
+        for (let y=0; y<ROWS; y++){
+          if (grid[y][x]) clearCells.add(`${x},${y}`);
+        }
+      }
+    }
+
+    return clearCells;
+  }
+
+  function cascadeGravity(){
+    for (let x=0; x<COLS; x++){
+      let write = ROWS - 1;
+      for (let y=ROWS-1; y>=0; y--){
+        const v = grid[y][x];
+        if (v !== null){
+          if (y !== write){
+            grid[write][x] = v;
+            grid[y][x] = null;
+          }
+          write--;
+        }
+      }
+    }
+  }
+
+  function clearCellsSet(cellSet){
+    let removed = 0;
+    for (const key of cellSet){
+      const [xs, ys] = key.split(',');
+      const x = +xs, y = +ys;
+      if (grid[y][x] !== null){
+        grid[y][x] = null;
+        removed++;
+      }
+    }
+    return removed;
+  }
+
+  function resolveAllClears(){
+    while (true){
+      let didAnything = false;
+
+      const {cells: sqCells, groups} = find2x2Matches();
+      if (groups > 0){
+        score += groups * 4;
+        clearCellsSet(sqCells);
+        cascadeGravity();
+        didAnything = true;
+      }
+
+      const sumCells = findSumLines();
+      if (sumCells.size > 0){
+        const removed = clearCellsSet(sumCells);
+        score += removed;
+        cascadeGravity();
+        didAnything = true;
+      }
+
+      if (!didAnything) break;
+    }
+
+    updateUI();
+  }
+
+  // --- Movement ---
+  function tryMove(dx, dy){
+    if (!current || isPaused || isGameOver) return false;
+    const p = {...current, x: current.x + dx, y: current.y + dy};
+    if (!collides(p)){
+      current = p;
+      return true;
+    }
+    return false;
+  }
+
+  function tryRotate(){
+    if (!current || isPaused || isGameOver) return false;
+    const rotated = {...current, orient: (current.orient + 1) & 3};
+
+    const kicks = [
+      {dx:0, dy:0},
+      {dx:-1, dy:0},
+      {dx:1, dy:0},
+      {dx:-2, dy:0},
+      {dx:2, dy:0},
+      {dx:0, dy:-1},
+      {dx:0, dy:1},
+    ];
+
+    for (const k of kicks){
+      const p = {...rotated, x: rotated.x + k.dx, y: rotated.y + k.dy};
+      if (!collides(p)){
+        current = p;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function stepLock(){
+    lockPiece(current);
+    current = null;
+
+    resolveAllClears();
+    spawnNext();
+  }
+
+  function stepDown(){
+    if (isPaused || isGameOver || !current) return;
+    if (!tryMove(0, 1)){
+      stepLock();
+    }
+  }
+
+  function hardDrop(){
+    if (!current || isPaused || isGameOver) return;
+    while (tryMove(0, 1)) {}
+    stepLock();
+  }
+
+  // --- High scores ---
+  function loadHighScores(){
+    try{
+      const raw = localStorage.getItem(HS_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter(x => x && typeof x.score === "number" && typeof x.ts === "string")
+        .slice(0, 20);
+    }catch{
+      return [];
+    }
+  }
+
+  function saveHighScores(){
+    try{
+      localStorage.setItem(HS_KEY, JSON.stringify(highScores.slice(0, 5)));
+    }catch{}
+  }
+
+  function fmtTs(iso){
+    // ISO -> local readable
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleString(undefined, {
+      year:'numeric', month:'short', day:'2-digit',
+      hour:'2-digit', minute:'2-digit'
+    });
+  }
+
+  function renderHighScores(){
+    hsListEl.innerHTML = "";
+    const top = highScores.slice(0,5);
+    if (top.length === 0){
+      const li = document.createElement("li");
+      li.textContent = "No scores yet.";
+      li.style.color = "rgba(255,255,255,.70)";
+      hsListEl.appendChild(li);
+      hsMetaEl.textContent = "";
+      return;
+    }
+
+    top.forEach((entry) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<span style="font-weight:900;">${entry.score}</span> <span class="hsMeta">— ${fmtTs(entry.ts)}</span>`;
+      hsListEl.appendChild(li);
+    });
+
+    hsMetaEl.textContent = `Saved locally`;
+  }
+
+  function maybeAddHighScore(finalScore){
+    const entry = { score: finalScore, ts: new Date().toISOString() };
+    const list = [...highScores, entry].sort((a,b) => b.score - a.score);
+
+    // Keep top 5
+    highScores = list.slice(0, 5);
+
+    // Save and redraw
+    saveHighScores();
+    renderHighScores();
+  }
+
+  // --- Spawning / game control ---
+  function initPieces(){
+    nextPiece = newRandomTemplate();
+    spawnNext();
+  }
+
+  function spawnNext(){
+    const template = nextPiece || newRandomTemplate();
+    nextPiece = newRandomTemplate();
+    drawNextPreview();
+
+    const p = spawnPieceFromTemplate(template);
+    if (collides(p)){
+      gameOver();
+      return;
+    }
+    current = p;
+  }
+
+  function gameOver(){
+    isGameOver = true;
+    statusText.textContent = "Game Over";
+    finalScoreEl.textContent = String(score);
+    finalLevelEl.textContent = String(computeLevelFromScore());
+    overlay.style.display = "flex";
+
+    // high score update
+    maybeAddHighScore(score);
+  }
+
+  function restart(){
+    grid = makeEmptyGrid();
+    current = null;
+    nextPiece = null;
+    score = 0;
+    isPaused = false;
+    isGameOver = false;
+    overlay.style.display = "none";
+    statusText.textContent = "Playing";
+    pauseBtn.textContent = "Pause";
+    updateUI();
+    initPieces();
+  }
+
+  function togglePause(){
+    if (isGameOver) return;
+    isPaused = !isPaused;
+    pauseBtn.textContent = isPaused ? "Resume" : "Pause";
+    statusText.textContent = isPaused ? "Paused" : "Playing";
+  }
+
+  // --- Drawing ---
+  function rr(g, x,y,w,h,r){
+    const rr = Math.min(r, w/2, h/2);
+    g.beginPath();
+    g.moveTo(x+rr,y);
+    g.arcTo(x+w,y,x+w,y+h,rr);
+    g.arcTo(x+w,y+h,x,y+h,rr);
+    g.arcTo(x,y+h,x,y,rr);
+    g.arcTo(x,y,x+w,y,rr);
+    g.closePath();
+  }
+
+  function drawCell(px, py, cellObj, isActive=false){
+    const pad = Math.max(3, Math.floor(CELL * 0.10));
+    const x = px + pad;
+    const y = py + pad;
+    const w = CELL - pad*2;
+    const h = CELL - pad*2;
+    const r = Math.max(8, Math.floor(Math.min(w,h) * 0.22));
+
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,.35)";
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetY = 3;
+
+    ctx.fillStyle = cellObj.color;
+    rr(ctx, x, y, w, h, r);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.strokeStyle = isActive ? "rgba(255,255,255,.58)" : "rgba(255,255,255,.28)";
+    ctx.lineWidth = isActive ? 2 : 1;
+    rr(ctx, x, y, w, h, r);
+    ctx.stroke();
+
+    ctx.fillStyle = "rgba(255,255,255,.16)";
+    rr(ctx, x+3, y+3, w-6, Math.max(6, Math.floor(h*0.30)), r);
+    ctx.fill();
+
+    // number
+    ctx.save();
+    ctx.font = `900 ${Math.max(14, Math.floor(CELL * 0.40))}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.lineWidth = Math.max(3, Math.floor(CELL * 0.07));
+    ctx.strokeStyle = "rgba(0,0,0,.55)";
+    ctx.strokeText(String(cellObj.num), px + CELL/2, py + CELL/2);
+    ctx.fillStyle = "rgba(255,255,255,.92)";
+    ctx.fillText(String(cellObj.num), px + CELL/2, py + CELL/2);
+    ctx.restore();
+  }
+
+  function drawNextPreview(){
+    nctx.clearRect(0,0,nextCanvas.width,nextCanvas.height);
+    nctx.fillStyle = "rgba(11,14,25,.88)";
+    nctx.fillRect(0,0,nextCanvas.width,nextCanvas.height);
+
+    if (!nextPiece) return;
+
+    const size = 36;
+    const cx = nextCanvas.width / 2;
+    const cy = nextCanvas.height / 2;
+    const x0 = cx - size;
+    const y0 = cy - size/2;
+
+    drawNextCell(x0, y0, size, size, nextPiece.a);
+    drawNextCell(x0 + size, y0, size, size, nextPiece.b);
+
+    nctx.strokeStyle = "rgba(255,255,255,.18)";
+    nctx.lineWidth = 2;
+    nctx.strokeRect(1,1,nextCanvas.width-2,nextCanvas.height-2);
+
+    function drawNextCell(x,y,w,h,cellObj){
+      const pad = 4;
+      nctx.fillStyle = cellObj.color;
+      nctx.fillRect(x+pad, y+pad, w-pad*2, h-pad*2);
+      nctx.strokeStyle = "rgba(255,255,255,.30)";
+      nctx.strokeRect(x+pad, y+pad, w-pad*2, h-pad*2);
+      nctx.fillStyle = "rgba(255,255,255,.14)";
+      nctx.fillRect(x+pad+2, y+pad+2, w-pad*2-4, Math.max(6, Math.floor((h-pad*2)*0.28)));
+
+      nctx.save();
+      nctx.font = `900 18px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+      nctx.textAlign = "center";
+      nctx.textBaseline = "middle";
+      nctx.lineWidth = 3;
+      nctx.strokeStyle = "rgba(0,0,0,.55)";
+      nctx.strokeText(String(cellObj.num), x + w/2, y + h/2);
+      nctx.fillStyle = "rgba(255,255,255,.92)";
+      nctx.fillText(String(cellObj.num), x + w/2, y + h/2);
+      nctx.restore();
+    }
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    ctx.fillStyle = "rgba(11,14,25,.88)";
+    rr(ctx, offsetX - 10, offsetY - 10, boardW + 20, boardH + 20, 16);
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(255,255,255,.10)";
+    ctx.lineWidth = 1;
+
+    for (let y=0; y<ROWS; y++){
+      for (let x=0; x<COLS; x++){
+        const px = offsetX + x * CELL;
+        const py = offsetY + y * CELL;
+        ctx.strokeRect(px, py, CELL, CELL);
+
+        const v = grid[y][x];
+        if (v) drawCell(px, py, v, false);
+      }
+    }
+
+    if (current){
+      for (const c of cellsOfPiece(current)){
+        const px = offsetX + c.x * CELL;
+        const py = offsetY + c.y * CELL;
+        drawCell(px, py, c.cell, true);
+      }
+    }
+
+    ctx.strokeStyle = "rgba(255,255,255,.16)";
+    ctx.lineWidth = 2;
+    rr(ctx, offsetX - 10, offsetY - 10, boardW + 20, boardH + 20, 16);
+    ctx.stroke();
+  }
+
+  // Main loop
+  function loop(ts){
+    const dt = ts - lastTime;
+    lastTime = ts;
+
+    if (!isPaused && !isGameOver){
+      dropAcc += dt;
+      while (dropAcc >= dropInterval){
+        dropAcc -= dropInterval;
+        stepDown();
+      }
+    }
+
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // Input
+  window.addEventListener('keydown', (e) => {
+    if (e.repeat) return;
+
+    if (['ArrowLeft','ArrowRight','ArrowDown','ArrowUp','Space'].includes(e.code) || e.code === 'Space'){
+      e.preventDefault();
+    }
+
+    if (isGameOver){
+      if (e.code === 'Space' || e.key === 'Enter') restart();
+      return;
+    }
+
+    switch (e.code){
+      case 'ArrowLeft': tryMove(-1, 0); break;
+      case 'ArrowRight': tryMove(1, 0); break;
+      case 'ArrowDown': stepDown(); break;
+      case 'ArrowUp': tryRotate(); break;
+      case 'Space': hardDrop(); break;
+      case 'KeyP': togglePause(); break;
+    }
+  }, {passive:false});
+
+  restartBtn.addEventListener('click', restart);
+  pauseBtn.addEventListener('click', togglePause);
+  playAgainBtn.addEventListener('click', restart);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) restart();
+  });
+
+  clearHSBtn.addEventListener('click', () => {
+    if (!confirm("Clear saved high scores?")) return;
+    highScores = [];
+    try{ localStorage.removeItem(HS_KEY); }catch{}
+    renderHighScores();
+  });
+
+  // Init
+  updateUI();
+  renderHighScores();
+  initPieces();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
