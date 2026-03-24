@@ -231,12 +231,7 @@
         </div>
       </div>
 
-      <div class="card">
-        <h2>Sections Included</h2>
-        <div id="sectionSummary" class="small"></div>
-        <div class="notice small" style="margin-top:14px">
-          Full test page, end-only scoring, short answer + multiple choice, visuals, and duplicate filtering within the same quiz.
-        </div>
+      
       </div>
     </div>
   </div>
@@ -918,17 +913,38 @@ function generateMultiRatio(rng, count){
 
 function generateData(rng, count){
   const out = [];
-  const categorySets = [['red','blue','green'],['soccer','basketball','hockey'],['cat','dog','fish'],['apple','banana','orange']];
+  const categorySets = [
+    ['red','blue','green'],
+    ['soccer','basketball','hockey'],
+    ['cat','dog','fish'],
+    ['apple','banana','orange'],
+    ['reading','math','science'],
+    ['bus','bike','walk'],
+    ['pencil','marker','crayon'],
+    ['spring','summer','winter']
+  ];
+  const numericSets = [
+    [3,5,5,7,8,5,6],
+    [12,15,13,15,14,16,15],
+    [2,4,6,6,8,10,6],
+    [9,11,11,12,14,11,13],
+    [20,22,24,24,26,28,24]
+  ];
   while(out.length < count){
-    const type = randInt(rng,1,5);
+    const type = randInt(rng,1,25);
     if(type === 1){
       const cats = pick(rng,categorySets);
-      const counts = cats.map(()=>randInt(rng,1,10));
+      let counts = cats.map(()=>randInt(rng,1,10));
+      const max = Math.max(...counts);
+      if(counts.filter(v=>v===max).length > 1){
+        const idx = counts.indexOf(max);
+        counts[idx] += 1;
+      }
       const modeIndex = counts.indexOf(Math.max(...counts));
-      out.push(makeSA('data','thinking','Which category is the mode in this data table?', [cats[modeIndex]], `The mode is ${cats[modeIndex]} because it has the greatest frequency.`, makeTable(cats, counts)));
+      out.push(makeSA('data','thinking',`Which category is the mode in this data table: ${cats[0]} ${counts[0]}, ${cats[1]} ${counts[1]}, ${cats[2]} ${counts[2]}?`, [cats[modeIndex]], `The mode is ${cats[modeIndex]} because it has the greatest frequency.`, makeTable(cats, counts)));
     } else if(type === 2){
       const cats = pick(rng,categorySets);
-      const countVals = randInt(rng,5,12);
+      const countVals = randInt(rng,6,12);
       const picks = Array.from({length:countVals}, ()=>pick(rng,cats));
       const target = pick(rng,cats);
       const freq = picks.filter(x=>x===target).length;
@@ -943,8 +959,127 @@ function generateData(rng, count){
         'What do you wish school had?'
       ];
       out.push(makeMC('data','recall','Which question is a closed-list question?', options, 1, 'A closed-list question gives a fixed set of choices.'));
-    } else {
+    } else if(type === 5){
       out.push(makeTF('data','recall','A frequency table shows how many times each category appears.', true, 'A frequency table organizes counts by category.'));
+    } else if(type === 6){
+      const nums = pick(rng,numericSets);
+      const mode = nums.slice().sort((a,b)=>nums.filter(x=>x===b).length-nums.filter(x=>x===a).length || a-b)[0];
+      out.push(makeSA('data','thinking',`What is the mode of this numerical data set: ${nums.join(', ')}?`, [String(mode)], `The number ${mode} appears most often.`));
+    } else if(type === 7){
+      const cats = pick(rng,categorySets);
+      let counts = cats.map(()=>randInt(rng,2,9));
+      const total = counts.reduce((a,b)=>a+b,0);
+      out.push(makeSA('data','thinking',`Find the total frequency in this table: ${cats[0]} ${counts[0]}, ${cats[1]} ${counts[1]}, ${cats[2]} ${counts[2]}.`, [String(total)], `Add all the frequencies: ${total}.`, makeTable(cats, counts)));
+    } else if(type === 8){
+      const cats = pick(rng,categorySets);
+      let counts = cats.map(()=>randInt(rng,1,10));
+      const minVal = Math.min(...counts);
+      const leastIndex = counts.indexOf(minVal);
+      out.push(makeSA('data','thinking',`Which category has the least frequency: ${cats[0]} ${counts[0]}, ${cats[1]} ${counts[1]}, ${cats[2]} ${counts[2]}?`, [cats[leastIndex]], `${cats[leastIndex]} has the smallest count.`, makeTable(cats, counts)));
+    } else if(type === 9){
+      const cats = pick(rng,categorySets);
+      let counts = cats.map(()=>randInt(rng,2,12));
+      const diff = Math.max(...counts) - Math.min(...counts);
+      out.push(makeSA('data','thinking',`What is the difference between the greatest and least frequencies in this table: ${cats[0]} ${counts[0]}, ${cats[1]} ${counts[1]}, ${cats[2]} ${counts[2]}?`, [String(diff)], `Subtract the least frequency from the greatest frequency.`, makeTable(cats, counts)));
+    } else if(type === 10){
+      const cats = pick(rng,categorySets);
+      let counts = cats.map(()=>randInt(rng,1,10));
+      const greatestIndex = counts.indexOf(Math.max(...counts));
+      const target = cats[greatestIndex];
+      out.push(makeSA('data','thinking',`How many more students chose ${target} than the least common category in this table: ${cats[0]} ${counts[0]}, ${cats[1]} ${counts[1]}, ${cats[2]} ${counts[2]}?`, [String(Math.max(...counts)-Math.min(...counts))], `Subtract the least count from the greatest count.`, makeTable(cats, counts)));
+    } else if(type === 11){
+      const options = [
+        'How many pets do you have?',
+        'What is the best game ever?',
+        'Why do you like music?',
+        'Tell me about your weekend.'
+      ];
+      out.push(makeMC('data','recall','Which question would produce numerical data?', options, 0, '"How many pets do you have?" gives number answers.'));
+    } else if(type === 12){
+      const options = [
+        'favourite colour',
+        'number of books read this month',
+        'favourite recess activity',
+        'preferred lunch choice'
+      ];
+      out.push(makeMC('data','thinking','Which item is most suitable for a bar graph with numerical values grouped by amount?', options, 1, 'Number of books read gives numerical data that can be counted or grouped.'));
+    } else if(type === 13){
+      const cats = pick(rng,categorySets);
+      let counts = cats.map(()=>randInt(rng,3,10));
+      const total = counts.reduce((a,b)=>a+b,0);
+      const idx = randInt(rng,0,2);
+      out.push(makeSA('data','thinking',`Out of ${total} responses, how many were for ${cats[idx]} if the table shows ${cats[0]} ${counts[0]}, ${cats[1]} ${counts[1]}, ${cats[2]} ${counts[2]}?`, [String(counts[idx])], `${cats[idx]} has frequency ${counts[idx]}.`, makeTable(cats, counts)));
+    } else if(type === 14){
+      const nums = pick(rng,numericSets);
+      const above = nums.filter(n=>n>nums[0]).length;
+      out.push(makeSA('data','thinking',`In this data set, how many values are greater than ${nums[0]}? ${nums.join(', ')}`, [String(above)], `Count the values that are greater than ${nums[0]}.`));
+    } else if(type === 15){
+      const cats = pick(rng,categorySets);
+      let counts = cats.map(()=>randInt(rng,1,8));
+      const total = counts.reduce((a,b)=>a+b,0);
+      const idx = randInt(rng,0,2);
+      out.push(makeSA('data','thinking',`Write the part-whole ratio of ${cats[idx]} to the total for this table: ${cats[0]} ${counts[0]}, ${cats[1]} ${counts[1]}, ${cats[2]} ${counts[2]}.`, [`${counts[idx]}:${total}`, `${counts[idx]}/${total}`], `The part-whole relationship is ${counts[idx]}:${total}.`, makeTable(cats, counts)));
+    } else if(type === 16){
+      const options = [
+        'A tally chart helps organize counts.',
+        'A frequency table shows categories and how often they occur.',
+        'A bar graph can compare categories.',
+        'A frequency table only works for one piece of data.'
+      ];
+      out.push(makeMC('data','recall','Which statement about frequency tables is false?', options, 3, 'Frequency tables can organize many pieces of data, not just one.'));
+    } else if(type === 17){
+      const cats = pick(rng,categorySets);
+      let counts = cats.map(()=>randInt(rng,2,10));
+      const total = counts.reduce((a,b)=>a+b,0);
+      const idx = counts.indexOf(Math.max(...counts));
+      out.push(makeSA('data','thinking',`Which category would be tallest on a bar graph made from this table: ${cats[0]} ${counts[0]}, ${cats[1]} ${counts[1]}, ${cats[2]} ${counts[2]}?`, [cats[idx]], `${cats[idx]} has the greatest frequency, so it would have the tallest bar.`, makeTable(cats, counts)));
+    } else if(type === 18){
+      const nums = pick(rng,numericSets);
+      const minVal = Math.min(...nums);
+      out.push(makeSA('data','thinking',`What is the smallest value in this data set: ${nums.join(', ')}?`, [String(minVal)], `The least value is ${minVal}.`));
+    } else if(type === 19){
+      const nums = pick(rng,numericSets);
+      const maxVal = Math.max(...nums);
+      out.push(makeSA('data','thinking',`What is the greatest value in this data set: ${nums.join(', ')}?`, [String(maxVal)], `The greatest value is ${maxVal}.`));
+    } else if(type === 20){
+      const cats = pick(rng,categorySets);
+      const target = pick(rng,cats);
+      const choices = [
+        `How many students chose ${target}?`,
+        `Why did students choose ${target}?`,
+        'What was the best answer?',
+        'What do you think about surveys?'
+      ];
+      out.push(makeMC('data','thinking','Which question can be answered directly from a frequency table?', choices, 0, 'A frequency table lets you read exact counts for each category.'));
+    } else if(type === 21){
+      const cats = pick(rng,categorySets);
+      let counts = cats.map(()=>randInt(rng,1,9));
+      const total = counts.reduce((a,b)=>a+b,0);
+      const answer = counts.map((v,i)=>`${cats[i]} ${v}`).join(', ');
+      out.push(makeSA('data','thinking',`A survey had ${total} responses split among ${cats.join(', ')}. Use this table to write the frequencies in words order from left to right.`, [answer], `One correct response is ${answer}.`, makeTable(cats, counts)));
+    } else if(type === 22){
+      const options = [
+        'collecting data',
+        'guessing without asking',
+        'ignoring categories',
+        'changing answers after graphing'
+      ];
+      out.push(makeMC('data','recall','Which action is part of collecting data?', options, 0, 'Collecting data means asking, observing, or measuring and recording results.'));
+    } else if(type === 23){
+      const cats = pick(rng,categorySets);
+      let counts = cats.map(()=>randInt(rng,2,9));
+      const idx = randInt(rng,0,2);
+      const newCount = counts[idx] + randInt(rng,1,4);
+      const increase = newCount - counts[idx];
+      out.push(makeSA('data','thinking',`The frequency for ${cats[idx]} was ${counts[idx]} and then increased to ${newCount}. By how many did it increase?`, [String(increase)], `Subtract the old frequency from the new one.`));
+    } else if(type === 24){
+      const cats = pick(rng,categorySets);
+      let counts = cats.map(()=>randInt(rng,2,10));
+      const idx = randInt(rng,0,2);
+      const fraction = `${counts[idx]}/${counts.reduce((a,b)=>a+b,0)}`;
+      out.push(makeSA('data','thinking',`Write the fraction of responses that were ${cats[idx]} in this table: ${cats[0]} ${counts[0]}, ${cats[1]} ${counts[1]}, ${cats[2]} ${counts[2]}.`, [fraction], `The fraction is category frequency over total frequency.`, makeTable(cats, counts)));
+    } else if(type === 25){
+      out.push(makeTF('data','thinking','The category with the tallest bar on a bar graph is also the category with the greatest frequency.', true, 'Bar height represents frequency.'));
     }
   }
   return out;
@@ -953,13 +1088,13 @@ function generateData(rng, count){
 function generateArea(rng, count){
   const out = [];
   while(out.length < count){
-    const type = randInt(rng,1,5);
+    const type = randInt(rng,1,9);
     if(type === 1){
       const w = randInt(rng,2,16), h = randInt(rng,2,16);
-      out.push(makeSA('area','thinking','Find the area of this rectangle.', [String(w*h), `${w*h} square units`, `${w*h} cm2`, `${w*h} m2`], `Area = length × width = ${w} × ${h} = ${w*h}.`, rectangleViz(w,h,'cm')));
+      out.push(makeSA('area','thinking',`Find the area of a rectangle with side lengths ${w} cm and ${h} cm.`, [String(w*h), `${w*h} square units`, `${w*h} square centimetres`, `${w*h} cm2`], `Area = length × width = ${w} × ${h} = ${w*h}.`, rectangleViz(w,h,'cm')));
     } else if(type === 2){
       const w = randInt(rng,2,16), h = randInt(rng,2,16);
-      out.push(makeSA('area','thinking','Find the perimeter of this rectangle.', [String(2*(w+h)), `${2*(w+h)} units`, `${2*(w+h)} cm`, `${2*(w+h)} m`], `Perimeter = 2(${w} + ${h}) = ${2*(w+h)}.`, rectangleViz(w,h,'m')));
+      out.push(makeSA('area','thinking',`Find the perimeter of a rectangle with side lengths ${w} m and ${h} m.`, [String(2*(w+h)), `${2*(w+h)} units`, `${2*(w+h)} m`, `${2*(w+h)} metres`], `Perimeter = 2(${w} + ${h}) = ${2*(w+h)}.`, rectangleViz(w,h,'m')));
     } else if(type === 3){
       const area = randInt(rng,12,48);
       const pairs = [];
@@ -969,8 +1104,37 @@ function generateArea(rng, count){
     } else if(type === 4){
       const options = ['square centimetres','square metres','square kilometres','centimetres'];
       out.push(makeMC('area','recall','Which unit would be most reasonable for the area of a classroom?', options, 1, 'A classroom area is usually measured in square metres.'));
+    } else if(type === 5){
+      const w = randInt(rng,2,14), h = randInt(rng,2,14);
+      const p = 2*(w+h);
+      out.push(makeSA('area','thinking',`A rectangle has side lengths ${w} cm and ${h} cm. What is its perimeter?`, [String(p), `${p} cm`, `${p} centimetres`], `Add all four sides or use 2(length + width).`, rectangleViz(w,h,'cm')));
+    } else if(type === 6){
+      const w = randInt(rng,2,14), h = randInt(rng,2,14);
+      const area = w*h;
+      out.push(makeSA('area','thinking',`A rectangle is ${w} units wide and ${h} units long. How many square units cover it?`, [String(area), `${area} square units`], `Multiply the side lengths to find the area.`, rectangleViz(w,h,'u')));
+    } else if(type === 7){
+      const w = randInt(rng,2,12), h = randInt(rng,2,12);
+      const area = w*h;
+      const perimeter = 2*(w+h);
+      const choices = shuffle([
+        `Area ${area}, Perimeter ${perimeter}`,
+        `Area ${perimeter}, Perimeter ${area}`,
+        `Area ${area+2}, Perimeter ${perimeter}`,
+        `Area ${area}, Perimeter ${perimeter+2}`
+      ], rng);
+      out.push(makeMC('area','thinking',`A rectangle has side lengths ${w} and ${h}. Which pair matches its area and perimeter?`, choices, choices.indexOf(`Area ${area}, Perimeter ${perimeter}`), `The correct pair is area ${area} and perimeter ${perimeter}.`, rectangleViz(w,h,'u')));
+    } else if(type === 8){
+      const side = randInt(rng,2,15);
+      out.push(makeSA('area','recall',`What is the area of a square with side length ${side} cm?`, [String(side*side), `${side*side} square centimetres`, `${side*side} cm2`], `For a square, area = side × side = ${side*side}.`));
     } else {
-      out.push(makeTF('area','thinking','Different rectangles can have the same area but different perimeters.', true, 'That is an important comparison in this unit.'));
+      const area = randInt(rng,18,72);
+      const w = randInt(rng,1,area-1);
+      const h = area / w;
+      if(Number.isInteger(h)){
+        out.push(makeTF('area','thinking',`Two different rectangles can both have area ${area} square units but different perimeters.`, true, 'Rectangles with the same area can have different side lengths and different perimeters.'));
+      } else {
+        out.push(makeTF('area','thinking','Different rectangles can have the same area but different perimeters.', true, 'That is an important comparison in this unit.'));
+      }
     }
   }
   return out;
@@ -979,26 +1143,49 @@ function generateArea(rng, count){
 function generateSymmetry(rng, count){
   const out = [];
   const shapes = [
-    {name:'square', lines:'4', rot:'4'},
-    {name:'rectangle', lines:'2', rot:'2'},
-    {name:'equilateral triangle', lines:'3', rot:'3'},
-    {name:'regular hexagon', lines:'6', rot:'6'}
+    {name:'square', lines:'4', rot:'4', fraction:'1/4 turn', angle:'90°'},
+    {name:'rectangle', lines:'2', rot:'2', fraction:'1/2 turn', angle:'180°'},
+    {name:'equilateral triangle', lines:'3', rot:'3', fraction:'1/3 turn', angle:'120°'},
+    {name:'regular pentagon', lines:'5', rot:'5', fraction:'1/5 turn', angle:'72°'},
+    {name:'regular hexagon', lines:'6', rot:'6', fraction:'1/6 turn', angle:'60°'},
+    {name:'isosceles triangle', lines:'1', rot:'1', fraction:'a full turn', angle:'360°'}
   ];
   while(out.length < count){
-    const type = randInt(rng,1,5);
+    const type = randInt(rng,1,11);
+    const shape = pick(rng, shapes);
     if(type === 1){
-      out.push(makeTF('symmetry','recall','A line of symmetry divides a shape into two matching halves.', true, 'The two halves match as mirror images.', symmetryViz('line')));
+      out.push(makeTF('symmetry','recall',`A ${shape.name} can be divided into matching halves by a line of symmetry.`, Number(shape.lines) > 0, `A ${shape.name} has ${shape.lines} line(s) of symmetry.`, symmetryViz('line')));
     } else if(type === 2){
-      const shape = pick(rng, shapes);
       out.push(makeSA('symmetry','thinking',`How many lines of symmetry does a ${shape.name} have?`, [shape.lines], `A ${shape.name} has ${shape.lines} lines of symmetry.`));
     } else if(type === 3){
-      const shape = pick(rng, shapes);
       out.push(makeSA('symmetry','thinking',`What is the order of rotation symmetry for a ${shape.name}?`, [shape.rot], `A ${shape.name} has rotation symmetry of order ${shape.rot}.`));
     } else if(type === 4){
-      const options = ['a scalene triangle','an isosceles triangle','a general parallelogram','an irregular pentagon'];
-      out.push(makeMC('symmetry','recall','Which shape usually has exactly one line of symmetry?', options, 1, 'An isosceles triangle usually has one line of symmetry.'));
+      const options = shuffle(['a scalene triangle','an isosceles triangle','a general parallelogram','an irregular pentagon'], rng);
+      out.push(makeMC('symmetry','recall','Which shape usually has exactly one line of symmetry?', options, options.indexOf('an isosceles triangle'), 'An isosceles triangle usually has one line of symmetry.'));
+    } else if(type === 5){
+      out.push(makeTF('symmetry','thinking',`The shape ${shape.name} has rotation symmetry because it matches itself after a ${shape.fraction}.`, true, `A ${shape.name} matches itself after a ${shape.fraction}.`, symmetryViz('rotation')));
+    } else if(type === 6){
+      out.push(makeSA('symmetry','thinking',`How many times does a ${shape.name} match itself in one full turn?`, [shape.rot], `It matches itself ${shape.rot} time(s) in a full turn.`));
+    } else if(type === 7){
+      out.push(makeSA('symmetry','thinking',`What is the smallest turn that maps a ${shape.name} onto itself?`, [shape.angle], `The smallest angle of rotation is ${shape.angle}.`));
+    } else if(type === 8){
+      const compare = pick(rng, shapes.filter(s => s.name !== shape.name));
+      const answer = Number(shape.lines) > Number(compare.lines) ? shape.name : compare.name;
+      out.push(makeSA('symmetry','thinking',`Which shape has more lines of symmetry: a ${shape.name} or a ${compare.name}?`, [answer], `A ${shape.name} has ${shape.lines} line(s), while a ${compare.name} has ${compare.lines}.`));
+    } else if(type === 9){
+      const compare = pick(rng, shapes.filter(s => s.name !== shape.name));
+      const answer = Number(shape.rot) > Number(compare.rot) ? shape.name : compare.name;
+      out.push(makeSA('symmetry','thinking',`Which shape has the greater order of rotation: a ${shape.name} or a ${compare.name}?`, [answer], `A ${shape.name} has order ${shape.rot}, while a ${compare.name} has order ${compare.rot}.`));
+    } else if(type === 10){
+      const options = shuffle([
+        `${shape.lines}`,
+        `${Math.max(1, Number(shape.lines)+1)}`,
+        `${Math.max(1, Number(shape.lines)-1)}`,
+        `${shape.rot}`
+      ], rng);
+      out.push(makeMC('symmetry','recall',`How many lines of symmetry would you expect a ${shape.name} to have?`, options, options.indexOf(`${shape.lines}`), `A ${shape.name} has ${shape.lines} line(s) of symmetry.`));
     } else {
-      out.push(makeTF('symmetry','thinking','Symmetry can be found in nature and in First Nations, Métis, and Inuit designs.', true, 'Students investigate symmetry in both contexts.', symmetryViz('rotation')));
+      out.push(makeTF('symmetry','thinking',`Symmetry can be found in nature and in cultural designs, including First Nations, Métis, and Inuit art.`, true, 'Students investigate symmetry in both natural and cultural contexts.', symmetryViz('rotation')));
     }
   }
   return out;
@@ -1323,7 +1510,7 @@ function goHome(){
 }
 function init(){
   renderSectionButtons();
-  renderSectionSummary();
+  
   syncControls();
 
   document.querySelectorAll('input[name="quizMode"]').forEach(r => {
