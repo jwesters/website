@@ -363,6 +363,29 @@
       ctx.restore();
     }
 
+    function renderAbsoluteNormalized(ctx, strokes, alpha=1, color="#000", lineW=6, drawBgGrid=true){
+      if(drawBgGrid) drawGrid(ctx); else clearCtx(ctx);
+      drawAbsoluteNormalizedOn(ctx, strokes, alpha, color, lineW);
+    }
+
+    function drawAbsoluteNormalizedOn(ctx, strokes, alpha=1, color="#000", lineW=6){
+      if(!strokes || !strokes.length) return;
+      const w=ctx.canvas.width, h=ctx.canvas.height;
+      ctx.save();
+      ctx.globalAlpha=alpha;
+      ctx.strokeStyle=color;
+      ctx.lineWidth=lineW;
+      ctx.lineCap="round"; ctx.lineJoin="round";
+      for(const st of strokes){
+        if(st.length<2) continue;
+        ctx.beginPath();
+        ctx.moveTo(st[0].x*w, st[0].y*h);
+        for(let i=1;i<st.length;i++) ctx.lineTo(st[i].x*w, st[i].y*h);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     // --- deterministic prompt selection ---
     function randomSimple(){
       const strokes=[];
@@ -467,6 +490,22 @@
     function toNormUser(){
       const w=user.width, h=user.height;
       return drawState.strokes.map(st=>st.map(p=>({x:p.x/w, y:p.y/h})));
+    }
+    function totalStrokeLength(strokes){
+      let L=0;
+      for(const st of strokes){
+        for(let i=1;i<st.length;i++) L += Math.hypot(st[i].x-st[i-1].x, st[i].y-st[i-1].y);
+      }
+      return L;
+    }
+    function isTinySubmission(strokes){
+      const b = bbox(strokes);
+      if(!b) return true;
+      const bw = b.maxX - b.minX;
+      const bh = b.maxY - b.minY;
+      const area = bw * bh;
+      const length = totalStrokeLength(strokes);
+      return length < 0.045 || (bw < 0.018 && bh < 0.018) || area < 0.00012;
     }
 
     // --- scoring (balanced) ---
@@ -648,6 +687,10 @@
         return;
       }
       const userNorm = toNormUser();
+      if(isTinySubmission(userNorm)){
+        statusEl.textContent="That mark is too small to score — draw a real answer first 🙂";
+        return;
+      }
       const {total,ss,sh} = combined(prompt, userNorm);
       const pct = Math.round(total*100);
 
@@ -656,11 +699,11 @@
       breakdownEl.textContent = "Breakdown: Size " + Math.round(ss*100) + "% • Shape " + Math.round(sh*100) + "% • Final = 30% size + 70% shape (+ bonus).";
 
       renderNormalized(ro, prompt, 1, "#000", 6, true);
-      renderNormalized(ru, userNorm, 1, "#000", 6, true);
+      renderAbsoluteNormalized(ru, userNorm, 1, "#000", 6, true);
 
       drawGrid(rv);
-      drawNormalizedOn(rv, prompt, 0.25, "#008aa8", 6);
-      drawNormalizedOn(rv, userNorm, 1.0, "#000", 6);
+      drawAbsoluteNormalizedOn(rv, prompt, 0.25, "#008aa8", 6);
+      drawAbsoluteNormalizedOn(rv, userNorm, 1.0, "#000", 6);
 
       rScoreEl.textContent = pct + "%";
       rStarsEl.textContent = stars(pct);
