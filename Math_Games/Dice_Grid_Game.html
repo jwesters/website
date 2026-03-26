@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dice Grid Game Deluxe</title>
+<style>
+  :root{
+    --bg1:#f4f7fd;
+    --bg2:#e9effa;
+    --panel:#ffffff;
+    --panel-2:#f7f9fe;
+    --line:#d7dfec;
+    --ink:#1f2a44;
+    --muted:#64748b;
+    --accent:#2f6fed;
+    --accent-2:#1e4db7;
+    --x:#d55252;
+    --o:#2f8a73;
+    --y:#8a59d6;
+    --good:#dff5e7;
+    --good-ring:#7bc497;
+    --special:#fff2c9;
+    --special-ring:#d7b14e;
+    --win:#ffe48e;
+    --shadow:0 14px 34px rgba(31, 42, 68, 0.11);
+    --radius:22px;
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:"Segoe UI", Tahoma, Arial, sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(circle at top, #fbfdff 0%, var(--bg1) 42%, var(--bg2) 100%);
+  }
+
+  .wrap{
+    max-width:1320px;
+    margin:0 auto;
+    padding:20px;
+  }
+
+  .app{
+    display:grid;
+    grid-template-columns:360px 1fr;
+    gap:18px;
+    align-items:start;
+  }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+  }
+
+  .sidebar{
+    padding:18px;
+    position:sticky;
+    top:16px;
+  }
+
+  .title{
+    margin:0 0 6px;
+    font-size:1.9rem;
+    line-height:1.05;
+  }
+
+  .sub{
+    color:var(--muted);
+    font-size:.97rem;
+    line-height:1.45;
+    margin-bottom:14px;
+  }
+
+  .section-title{
+    margin:16px 0 8px;
+    color:var(--muted);
+    font-size:.82rem;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    font-weight:700;
+  }
+
+  .setup-grid{
+    display:grid;
+    gap:10px;
+  }
+
+  .setup-row{
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:12px;
+  }
+
+  .setup-row label{
+    display:block;
+    color:var(--muted);
+    font-size:.78rem;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    font-weight:700;
+    margin-bottom:7px;
+  }
+
+  select{
+    width:100%;
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:11px 12px;
+    font:inherit;
+    font-weight:700;
+    color:var(--ink);
+    background:white;
+  }
+
+  .actions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:12px;
+  }
+
+  button{
+    border:none;
+    border-radius:14px;
+    padding:12px 15px;
+    font:inherit;
+    font-weight:800;
+    cursor:pointer;
+    transition:transform .08s ease, background .15s ease, opacity .15s ease;
+  }
+  button:hover{ transform:translateY(-1px); }
+  button:active{ transform:translateY(1px); }
+  button:disabled{ opacity:.55; cursor:not-allowed; transform:none; }
+
+  .primary{ background:var(--accent); color:white; }
+  .primary:hover{ background:var(--accent-2); }
+  .secondary{ background:#e8eef9; color:var(--ink); }
+  .ghost{ background:#f3f6fc; color:var(--ink); border:1px solid var(--line); }
+
+  .status-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-top:14px;
+  }
+
+  .mini{
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:11px 12px;
+  }
+  .mini .label{
+    font-size:.76rem;
+    text-transform:uppercase;
+    letter-spacing:.07em;
+    color:var(--muted);
+    font-weight:700;
+    margin-bottom:4px;
+  }
+  .mini .value{
+    font-size:1.15rem;
+    font-weight:800;
+  }
+
+  .player-x{ color:var(--x); }
+  .player-o{ color:var(--o); }
+  .player-y{ color:var(--y); }
+
+  .dice-row{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+    margin-top:12px;
+  }
+
+  .die{
+    min-height:100px;
+    background:linear-gradient(180deg,#ffffff 0%, #f3f7ff 100%);
+    border:2px solid var(--line);
+    border-radius:18px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    user-select:none;
+    text-align:center;
+    padding:8px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
+  }
+
+  .die.selectable{ cursor:pointer; }
+  .die.selectable:hover{
+    border-color:#a8bee9;
+    background:linear-gradient(180deg,#ffffff 0%, #eaf1ff 100%);
+  }
+  .die.selected{
+    border-color:var(--accent);
+    background:linear-gradient(180deg,#f8fbff 0%, #dfe9ff 100%);
+    box-shadow:0 0 0 4px rgba(47,111,237,.12);
+  }
+  .die.locked{
+    opacity:.98;
+  }
+
+  .die-num{
+    font-size:2.15rem;
+    font-weight:900;
+    line-height:1;
+  }
+  .die-label{
+    margin-top:6px;
+    font-size:.78rem;
+    color:var(--muted);
+    font-weight:700;
+  }
+
+  .info{
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:12px;
+    line-height:1.45;
+    color:#33415f;
+  }
+
+  .calc-box{
+    min-height:72px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    font-size:1.08rem;
+    font-weight:800;
+  }
+
+  .special-banner{
+    background:var(--special);
+    border:1px solid var(--special-ring);
+    color:#7a5c00;
+    border-radius:16px;
+    padding:13px;
+    font-weight:900;
+    text-align:center;
+    letter-spacing:.03em;
+    animation:pulse 1.25s ease-in-out infinite;
+  }
+
+  @keyframes pulse{
+    0%,100%{ box-shadow:0 0 0 0 rgba(215,177,78,0); }
+    50%{ box-shadow:0 0 0 7px rgba(215,177,78,.13); }
+  }
+
+  .main{
+    padding:18px;
+  }
+
+  .topbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-bottom:14px;
+  }
+
+  .topbar h2{
+    margin:0;
+    font-size:1.35rem;
+  }
+
+  .orientation{
+    color:var(--muted);
+    font-size:.96rem;
+    margin-top:5px;
+  }
+
+  .legend{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+
+  .pill{
+    padding:8px 10px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    background:#fafcff;
+    font-size:.9rem;
+    font-weight:800;
+  }
+  .pill.green{ background:var(--good); border-color:var(--good-ring); }
+  .pill.gold{ background:var(--special); border-color:var(--special-ring); }
+
+  .howtoplay{
+    margin-bottom:14px;
+  }
+
+  .board-wrap{
+    background:linear-gradient(180deg,#fafcff 0%, #f2f6fd 100%);
+    border:1px solid var(--line);
+    border-radius:24px;
+    padding:16px;
+    overflow:auto;
+  }
+
+  .axes-shell{
+    display:grid;
+    grid-template-columns:40px auto;
+    grid-template-rows:auto auto;
+    gap:8px;
+    width:max-content;
+    margin:0 auto;
+  }
+
+  .x-axis{
+    grid-column:2;
+    display:grid;
+    grid-template-columns:repeat(10, 58px);
+    gap:4px;
+  }
+
+  .y-axis{
+    grid-row:2;
+    display:grid;
+    grid-template-rows:repeat(10, 58px);
+    gap:4px;
+  }
+
+  .x-axis div,.y-axis div{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:.93rem;
+    font-weight:800;
+    color:var(--muted);
+  }
+
+  #board{
+    grid-row:2;
+    grid-column:2;
+    display:grid;
+    grid-template-columns:repeat(10, 58px);
+    grid-template-rows:repeat(10, 58px);
+    gap:4px;
+  }
+
+  .cell{
+    width:58px;
+    height:58px;
+    border-radius:15px;
+    border:1px solid #cad5e7;
+    background:white;
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:1.7rem;
+    font-weight:900;
+    cursor:pointer;
+    user-select:none;
+    transition:transform .08s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
+  }
+  .cell:hover{ transform:translateY(-1px); }
+  .cell.valid{
+    background:var(--good);
+    border-color:var(--good-ring);
+    box-shadow:0 0 0 2px rgba(123,196,151,.18) inset;
+  }
+  .cell.special-valid{
+    background:var(--special);
+    border-color:var(--special-ring);
+    box-shadow:0 0 0 2px rgba(215,177,78,.18) inset;
+  }
+  .cell.x-mark{ color:var(--x); }
+  .cell.o-mark{ color:var(--o); }
+  .cell.y-mark{ color:var(--y); }
+  .cell.win{
+    background:var(--win);
+    border-color:#d8b44f;
+    box-shadow:0 0 0 2px rgba(216,180,79,.18) inset;
+  }
+
+  .coord{
+    position:absolute;
+    left:6px;
+    bottom:4px;
+    font-size:.58rem;
+    font-weight:700;
+    color:#95a2ba;
+  }
+
+  .footer{
+    margin-top:12px;
+    color:var(--muted);
+    font-size:.92rem;
+  }
+
+  @media (max-width: 1020px){
+    .app{ grid-template-columns:1fr; }
+    .sidebar{ position:static; }
+  }
+
+  @media (max-width: 760px){
+    .wrap{ padding:12px; }
+    .x-axis{ grid-template-columns:repeat(10, 44px); }
+    .y-axis{ grid-template-rows:repeat(10, 44px); }
+    #board{ grid-template-columns:repeat(10, 44px); grid-template-rows:repeat(10, 44px); }
+    .cell{ width:44px; height:44px; font-size:1.15rem; border-radius:10px; }
+    .coord{ font-size:.47rem; left:4px; bottom:3px; }
+    .dice-row{ gap:8px; }
+    .die{ min-height:84px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app">
+    <aside class="card sidebar">
+      <h1 class="title">Dice Grid Game Deluxe</h1>
+      <div class="sub">
+        4 in a row to win. Triples or sequences let you play anywhere.
+        Choose 2-player or 3-player mode, and set any player to human or computer.
+      </div>
+
+      <div class="section-title">Game Setup</div>
+      <div class="setup-grid">
+        <div class="setup-row">
+          <label for="playerCount">Number of Players</label>
+          <select id="playerCount">
+            <option value="2">2 Players (X, O)</option>
+            <option value="3">3 Players (X, O, Y)</option>
+          </select>
+        </div>
+        <div class="setup-row">
+          <label for="typeX">Player X</label>
+          <select id="typeX">
+            <option value="human" selected>Human</option>
+            <option value="computer">Computer</option>
+          </select>
+        </div>
+        <div class="setup-row">
+          <label for="typeO">Player O</label>
+          <select id="typeO">
+            <option value="human" selected>Human</option>
+            <option value="computer">Computer</option>
+          </select>
+        </div>
+        <div class="setup-row" id="rowY" style="display:none;">
+          <label for="typeY">Player Y</label>
+          <select id="typeY">
+            <option value="human" selected>Human</option>
+            <option value="computer">Computer</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="actions" id="startActions">
+        <button class="primary" id="startBtn">Start New Game</button>
+        <button class="secondary" id="resetBtn">Reset Board</button>
+      </div>
+
+      <div class="status-grid">
+        <div class="mini">
+          <div class="label">Current Player</div>
+          <div class="value" id="currentPlayerDisplay">—</div>
+        </div>
+        <div class="mini">
+          <div class="label">Phase</div>
+          <div class="value" id="phaseDisplay">Setup</div>
+        </div>
+      </div>
+
+      <div class="dice-row">
+        <button class="die" id="dieBtn0" type="button">
+          <div class="die-num" id="die0">–</div>
+          <div class="die-label">Die 1</div>
+        </button>
+        <button class="die" id="dieBtn1" type="button">
+          <div class="die-num" id="die1">–</div>
+          <div class="die-label">Die 2</div>
+        </button>
+        <button class="die" id="dieBtn2" type="button">
+          <div class="die-num" id="die2">–</div>
+          <div class="die-label">Die 3</div>
+        </button>
+      </div>
+
+      <div class="actions">
+        <button class="primary" id="rollBtn">Roll 3 Dice (1–9)</button>
+      </div>
+
+      <div class="section-title">Calculation</div>
+      <div class="info calc-box" id="calcBox">Click “Start New Game” to begin.</div>
+
+      <div class="section-title">Special Roll</div>
+      <div class="info" id="specialBox">Triples or sequences like 1,2,3 or 7,8,9 let you play anywhere on the board.</div>
+
+      <div class="section-title">Status</div>
+      <div class="info" id="statusText">Choose your setup, then start a game.</div>
+    </aside>
+
+    <main class="card main">
+      <div class="topbar">
+        <div>
+          <h2>10×10 Board</h2>
+          <div class="orientation">(0,0) is bottom-left. X increases to the right; Y increases upward.</div>
+        </div>
+        <div class="legend">
+          <div class="pill">X</div>
+          <div class="pill">O</div>
+          <div class="pill">Y</div>
+          <div class="pill green">Green = valid move</div>
+          <div class="pill gold">Gold = play anywhere</div>
+        </div>
+      </div>
+
+      <div class="info howtoplay">
+        <strong>How to play:</strong> Roll 3 dice. For a normal turn, click exactly 2 dice to lock in your choice, then place on a highlighted square.
+        For a special roll, you may place anywhere. First player to get 4 in a row wins. Computer players move automatically.
+      </div>
+
+      <div class="board-wrap">
+        <div class="axes-shell">
+          <div class="x-axis" id="xAxis"></div>
+          <div class="y-axis" id="yAxis"></div>
+          <div id="board"></div>
+        </div>
+      </div>
+
+      <div class="footer" id="boardFooter">Click a highlighted square to place your mark.</div>
+    </main>
+  </div>
+</div>
+
+<script>
+(() => {
+  const SIZE = 10;
+  const WIN_LEN = 4;
+  const AI_DELAY = 550;
+
+  const boardEl = document.getElementById("board");
+  const xAxisEl = document.getElementById("xAxis");
+  const yAxisEl = document.getElementById("yAxis");
+
+  const playerCountEl = document.getElementById("playerCount");
+  const typeXEl = document.getElementById("typeX");
+  const typeOEl = document.getElementById("typeO");
+  const typeYEl = document.getElementById("typeY");
+  const rowYEl = document.getElementById("rowY");
+
+  const startBtn = document.getElementById("startBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const rollBtn = document.getElementById("rollBtn");
+  const startActionsEl = document.getElementById("startActions");
+
+  const currentPlayerDisplayEl = document.getElementById("currentPlayerDisplay");
+  const phaseDisplayEl = document.getElementById("phaseDisplay");
+  const calcBoxEl = document.getElementById("calcBox");
+  const specialBoxEl = document.getElementById("specialBox");
+  const statusTextEl = document.getElementById("statusText");
+  const boardFooterEl = document.getElementById("boardFooter");
+
+  const dieEls = [
+    document.getElementById("die0"),
+    document.getElementById("die1"),
+    document.getElementById("die2")
+  ];
+  const dieBtnEls = [
+    document.getElementById("dieBtn0"),
+    document.getElementById("dieBtn1"),
+    document.getElementById("dieBtn2")
+  ];
+
+  let board = [];
+  let players = ["X","O"];
+  let playerTypes = { X:"human", O:"human", Y:"human" };
+  let currentPlayerIndex = 0;
+  let currentPlayer = "X";
+  let phase = "setup";
+  let dice = [null, null, null];
+  let selectedDice = [];
+  let committedProduct = null;
+  let specialRoll = false;
+  let validMoves = [];
+  let gameOver = false;
+  let aiBusy = false;
+  let turnsSinceSpecial = 0;
+
+  function initAxes(){
+    xAxisEl.innerHTML = "";
+    yAxisEl.innerHTML = "";
+    for(let x = 0; x < SIZE; x++){
+      const d = document.createElement("div");
+      d.textContent = x;
+      xAxisEl.appendChild(d);
+    }
+    for(let y = SIZE - 1; y >= 0; y--){
+      const d = document.createElement("div");
+      d.textContent = y;
+      yAxisEl.appendChild(d);
+    }
+  }
+
+  function initBoard(){
+    board = Array.from({length: SIZE}, () => Array(SIZE).fill(""));
+    boardEl.innerHTML = "";
+    for(let displayY = SIZE - 1; displayY >= 0; displayY--){
+      for(let x = 0; x < SIZE; x++){
+        const cell = document.createElement("button");
+        cell.type = "button";
+        cell.className = "cell";
+        cell.dataset.x = x;
+        cell.dataset.y = displayY;
+
+        const coord = document.createElement("div");
+        coord.className = "coord";
+        coord.textContent = `(${x},${displayY})`;
+        cell.appendChild(coord);
+
+        cell.addEventListener("click", () => tryPlace(x, displayY));
+        boardEl.appendChild(cell);
+      }
+    }
+  }
+
+  function setStatus(html){
+    statusTextEl.innerHTML = html;
+  }
+
+  function setCurrentPlayerDisplay(){
+    const cls = currentPlayer === "X" ? "player-x" : currentPlayer === "O" ? "player-o" : "player-y";
+    currentPlayerDisplayEl.innerHTML = `Player <span class="${cls}">${currentPlayer}</span>`;
+  }
+
+  function setPhaseDisplay(){
+    const names = { setup:"Setup", roll:"Roll", choose:"Choose", place:"Place", gameover:"Game Over" };
+    phaseDisplayEl.textContent = names[phase] || phase;
+  }
+
+  function updatePlayerOptions(){
+    rowYEl.style.display = playerCountEl.value === "3" ? "" : "none";
+  }
+
+  function resetVisualDice(){
+    dice = [null, null, null];
+    selectedDice = [];
+    committedProduct = null;
+    dieEls.forEach(el => el.textContent = "–");
+    updateDiceUI();
+  }
+
+  function updateDiceUI(){
+    for(let i = 0; i < 3; i++){
+      const btn = dieBtnEls[i];
+      btn.className = "die";
+      btn.disabled = true;
+
+      if(dice[i] === null) continue;
+
+      const allowSelecting = phase === "choose" && !isCurrentPlayerComputer();
+      if(allowSelecting){
+        btn.disabled = false;
+        btn.classList.add("selectable");
+      }
+      if(selectedDice.includes(i)){
+        btn.classList.add("selected");
+      }
+      if(phase === "place" || phase === "gameover"){
+        if(selectedDice.includes(i)){
+          btn.classList.add("locked");
+        }
+      }
+    }
+  }
+
+  function isCurrentPlayerComputer(){
+    return playerTypes[currentPlayer] === "computer";
+  }
+
+  function startGame(){
+    players = playerCountEl.value === "3" ? ["X","O","Y"] : ["X","O"];
+    playerTypes = {
+      X: typeXEl.value,
+      O: typeOEl.value,
+      Y: typeYEl.value
+    };
+    currentPlayerIndex = 0;
+    currentPlayer = players[0];
+    phase = "roll";
+    specialRoll = false;
+    validMoves = [];
+    gameOver = false;
+    aiBusy = false;
+    turnsSinceSpecial = 0;
+
+    initBoard();
+    clearHighlights();
+    resetVisualDice();
+
+    setCurrentPlayerDisplay();
+    setPhaseDisplay();
+    calcBoxEl.innerHTML = "Roll to begin.";
+    specialBoxEl.className = "info";
+    specialBoxEl.innerHTML = "Triples or sequences let you play anywhere on the board.";
+    setStatus(`Game started. Player <strong>${currentPlayer}</strong> goes first.`);
+    boardFooterEl.textContent = "Click a highlighted square to place your mark.";
+    startBtn.style.display = "none";
+
+    maybeRunComputerTurn();
+  }
+
+  function resetBoardOnly(){
+    phase = "setup";
+    currentPlayerIndex = 0;
+    currentPlayer = "X";
+    specialRoll = false;
+    validMoves = [];
+    gameOver = false;
+    aiBusy = false;
+    turnsSinceSpecial = 0;
+
+    initBoard();
+    clearHighlights();
+    resetVisualDice();
+
+    setCurrentPlayerDisplay();
+    setPhaseDisplay();
+    calcBoxEl.innerHTML = "Click “Start New Game” to begin.";
+    specialBoxEl.className = "info";
+    specialBoxEl.innerHTML = "Triples or sequences like 1,2,3 or 7,8,9 let you play anywhere on the board.";
+    setStatus("Choose your setup, then start a game.");
+    boardFooterEl.textContent = "Click a highlighted square to place your mark.";
+    startBtn.style.display = "";
+  }
+
+  function clearHighlights(){
+    document.querySelectorAll(".cell.valid, .cell.special-valid").forEach(el => {
+      el.classList.remove("valid", "special-valid");
+    });
+  }
+
+  function getCellEl(x, y){
+    return boardEl.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+  }
+
+  function inBounds(x, y){
+    return x >= 0 && x < SIZE && y >= 0 && y < SIZE;
+  }
+
+  function isTriple(arr){
+    return arr[0] === arr[1] && arr[1] === arr[2];
+  }
+
+  function isSequence(arr){
+    const s = [...arr].sort((a,b) => a - b);
+    return s[0] + 1 === s[1] && s[1] + 1 === s[2];
+  }
+
+  function randomNormalRoll(){
+    return Array.from({length:3}, () => Math.floor(Math.random() * 9) + 1);
+  }
+
+  function forceTripleRoll(){
+    const n = Math.floor(Math.random() * 9) + 1;
+    return [n,n,n];
+  }
+
+  function boostedRoll(){
+    let roll = randomNormalRoll();
+    if(isTriple(roll) || isSequence(roll)) return roll;
+
+    let chance = 0;
+    if(turnsSinceSpecial >= 12) chance = 0.08;
+    if(turnsSinceSpecial >= 14) chance = 0.18;
+    if(turnsSinceSpecial >= 16) chance = 0.35;
+    if(turnsSinceSpecial >= 18) chance = 0.65;
+    if(turnsSinceSpecial >= 19) chance = 1.00;
+
+    if(Math.random() < chance) return forceTripleRoll();
+    return roll;
+  }
+
+  function rollDice(){
+    if(gameOver || phase !== "roll" || aiBusy) return;
+
+    clearHighlights();
+    validMoves = [];
+    selectedDice = [];
+    committedProduct = null;
+
+    dice = boostedRoll();
+    dice.forEach((n, i) => dieEls[i].textContent = n);
+
+    specialRoll = isTriple(dice) || isSequence(dice);
+    if(specialRoll){
+      turnsSinceSpecial = 0;
+      phase = "place";
+      setPhaseDisplay();
+      updateDiceUI();
+      calcBoxEl.innerHTML = `<strong>${dice.join(", ")}</strong>`;
+      specialBoxEl.className = "special-banner";
+      specialBoxEl.innerHTML = "🔥 SPECIAL ROLL — PLAY ANYWHERE 🔥";
+      generateSpecialMoves();
+      return;
+    }
+
+    turnsSinceSpecial += 1;
+    phase = "choose";
+    setPhaseDisplay();
+    specialBoxEl.className = "info";
+    specialBoxEl.innerHTML = "Normal roll. Click exactly 2 dice to lock in your choice.";
+    calcBoxEl.innerHTML = "Click <strong>2 dice</strong> to lock in your choice.";
+    setStatus(`Player <strong>${currentPlayer}</strong> rolled <strong>${dice.join(", ")}</strong>. Choose 2 dice.`);
+    updateDiceUI();
+
+    maybeRunComputerTurn();
+  }
+
+  function handleDieClick(index){
+    if(gameOver || phase !== "choose" || isCurrentPlayerComputer()) return;
+    if(selectedDice.includes(index)) return;
+    if(selectedDice.length >= 2) return;
+
+    selectedDice.push(index);
+    updateDiceUI();
+
+    if(selectedDice.length === 1){
+      calcBoxEl.innerHTML = `First die chosen: <strong>${dice[index]}</strong>. Choose 1 more die.`;
+      setStatus(`Player <strong>${currentPlayer}</strong> chose the first die. Choose 1 more die.`);
+      return;
+    }
+
+    const a = dice[selectedDice[0]];
+    const b = dice[selectedDice[1]];
+    committedProduct = a * b;
+    phase = "place";
+    setPhaseDisplay();
+    updateDiceUI();
+    calcBoxEl.innerHTML = `<strong>${a} × ${b} = ${committedProduct}</strong>`;
+    generateNormalMoves(committedProduct);
+  }
+
+  function generateNormalMoves(product){
+    clearHighlights();
+    validMoves = [];
+
+    const digits = String(product).padStart(2, "0");
+    const d1 = Number(digits[0]);
+    const d2 = Number(digits[1]);
+
+    const options = [[d1,d2],[d2,d1]];
+    const seen = new Set();
+
+    for(const [x,y] of options){
+      const key = `${x},${y}`;
+      if(seen.has(key)) continue;
+      seen.add(key);
+
+      if(inBounds(x,y) && board[y][x] === ""){
+        validMoves.push({x,y});
+      }
+    }
+
+    if(!validMoves.length){
+      calcBoxEl.innerHTML = `<strong>${product}</strong> gives no open spaces.`;
+      setStatus(`No moves available for <strong>${product}</strong>. Player <strong>${currentPlayer}</strong> loses the turn.`);
+      setTimeout(() => {
+        if(!gameOver) nextPlayer();
+      }, 650);
+      return;
+    }
+
+    validMoves.forEach(({x,y}) => {
+      getCellEl(x,y)?.classList.add("valid");
+    });
+
+    const moveText = validMoves.map(m => `(${m.x},${m.y})`).join(" or ");
+    setStatus(`Player <strong>${currentPlayer}</strong>: place at <strong>${moveText}</strong>.`);
+    maybeRunComputerTurn();
+  }
+
+  function generateSpecialMoves(){
+    clearHighlights();
+    validMoves = [];
+    for(let y = 0; y < SIZE; y++){
+      for(let x = 0; x < SIZE; x++){
+        if(board[y][x] === ""){
+          validMoves.push({x,y});
+          getCellEl(x,y)?.classList.add("special-valid");
+        }
+      }
+    }
+    setStatus(`Special roll for <strong>${currentPlayer}</strong>! You may place anywhere on the board.`);
+    maybeRunComputerTurn();
+  }
+
+  function tryPlace(x, y){
+    if(gameOver || phase !== "place" || aiBusy) return;
+    if(!validMoves.some(m => m.x === x && m.y === y)) return;
+    placeAt(x, y);
+  }
+
+  function placeAt(x, y){
+    board[y][x] = currentPlayer;
+    const cell = getCellEl(x,y);
+    if(cell){
+      cell.classList.remove("valid", "special-valid");
+      const cls = currentPlayer === "X" ? "x-mark" : currentPlayer === "O" ? "o-mark" : "y-mark";
+      cell.classList.add(cls);
+      cell.textContent = currentPlayer;
+      const coord = document.createElement("div");
+      coord.className = "coord";
+      coord.textContent = `(${x},${y})`;
+      cell.appendChild(coord);
+    }
+
+    clearHighlights();
+    validMoves = [];
+
+    const winLine = findWinLineFrom(x, y, currentPlayer);
+    if(winLine.length){
+      winLine.forEach(({x,y}) => {
+        getCellEl(x,y)?.classList.add("win");
+      });
+      gameOver = true;
+      phase = "gameover";
+      setPhaseDisplay();
+      updateDiceUI();
+      calcBoxEl.innerHTML = `<strong>${currentPlayer}</strong> wins! `;
+      specialBoxEl.className = "info";
+      specialBoxEl.innerHTML = "Game over.";
+      setStatus(`Player <strong>${currentPlayer}</strong> wins with 4 in a row! 🎉`);
+      boardFooterEl.textContent = "Game over.";
+      return;
+    }
+
+    nextPlayer();
+  }
+
+  function nextPlayer(){
+    currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+    currentPlayer = players[currentPlayerIndex];
+    phase = "roll";
+    specialRoll = false;
+    validMoves = [];
+    aiBusy = false;
+
+    resetVisualDice();
+    clearHighlights();
+    setCurrentPlayerDisplay();
+    setPhaseDisplay();
+    calcBoxEl.innerHTML = "Roll to begin.";
+    specialBoxEl.className = "info";
+    specialBoxEl.innerHTML = "Triples or sequences let you play anywhere on the board.";
+    setStatus(`Player <strong>${currentPlayer}</strong>'s turn. Roll 3 dice.`);
+    boardFooterEl.textContent = "Click a highlighted square to place your mark.";
+
+    maybeRunComputerTurn();
+  }
+
+  function findWinLineFrom(x, y, player){
+    const dirs = [[1,0],[0,1],[1,1],[1,-1]];
+    for(const [dx,dy] of dirs){
+      const line = [{x,y}];
+
+      let cx = x + dx, cy = y + dy;
+      while(inBounds(cx,cy) && board[cy][cx] === player){
+        line.push({x:cx,y:cy});
+        cx += dx; cy += dy;
+      }
+
+      cx = x - dx; cy = y - dy;
+      while(inBounds(cx,cy) && board[cy][cx] === player){
+        line.unshift({x:cx,y:cy});
+        cx -= dx; cy -= dy;
+      }
+
+      if(line.length >= WIN_LEN){
+        return line.slice(0, WIN_LEN);
+      }
+    }
+    return [];
+  }
+
+  function wouldWin(player, x, y){
+    if(board[y][x] !== "") return false;
+    board[y][x] = player;
+    const result = findWinLineFrom(x, y, player).length > 0;
+    board[y][x] = "";
+    return result;
+  }
+
+  function longestLineIfPlaced(player, x, y){
+    if(board[y][x] !== "") return -999;
+    board[y][x] = player;
+    const dirs = [[1,0],[0,1],[1,1],[1,-1]];
+    let best = 1;
+
+    for(const [dx,dy] of dirs){
+      let len = 1;
+      let cx = x + dx, cy = y + dy;
+      while(inBounds(cx,cy) && board[cy][cx] === player){ len++; cx += dx; cy += dy; }
+      cx = x - dx; cy = y - dy;
+      while(inBounds(cx,cy) && board[cy][cx] === player){ len++; cx -= dx; cy -= dy; }
+      best = Math.max(best, len);
+    }
+
+    board[y][x] = "";
+    return best;
+  }
+
+  function evaluateMove(player, x, y){
+    let score = 0;
+
+    if(wouldWin(player, x, y)) score += 100000;
+
+    for(const opp of players){
+      if(opp === player) continue;
+      if(wouldWin(opp, x, y)) score += 30000;
+    }
+
+    score += longestLineIfPlaced(player, x, y) * 180;
+
+    for(const opp of players){
+      if(opp === player) continue;
+      score += longestLineIfPlaced(opp, x, y) * 65;
+    }
+
+    score += 26 - (Math.abs(4.5 - x) + Math.abs(4.5 - y)) * 2.2;
+    score += Math.random() * 85; // keeps AI smart, not perfect
+    return score;
+  }
+
+  function getMovesForProduct(product){
+    const digits = String(product).padStart(2, "0");
+    const d1 = Number(digits[0]);
+    const d2 = Number(digits[1]);
+    const opts = [[d1,d2],[d2,d1]];
+    const seen = new Set();
+    const moves = [];
+
+    for(const [x,y] of opts){
+      const key = `${x},${y}`;
+      if(seen.has(key)) continue;
+      seen.add(key);
+      if(inBounds(x,y) && board[y][x] === ""){
+        moves.push({x,y});
+      }
+    }
+    return moves;
+  }
+
+  function chooseBestAIMoveFromValid(){
+    if(!validMoves.length) return null;
+
+    const scored = validMoves
+      .map(m => ({...m, score: evaluateMove(currentPlayer, m.x, m.y)}))
+      .sort((a,b) => b.score - a.score);
+
+    const pool = scored.slice(0, Math.min(3, scored.length));
+    return Math.random() < 0.72 ? pool[0] : pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  function chooseAIDiceAndContinue(){
+    const combos = [[0,1],[0,2],[1,2]].map(([i,j]) => {
+      const a = dice[i], b = dice[j];
+      const product = a * b;
+      const moves = getMovesForProduct(product);
+      let bestScore = -999999;
+      if(moves.length){
+        bestScore = Math.max(...moves.map(m => evaluateMove(currentPlayer, m.x, m.y)));
+      }
+      return {pair:[i,j], product, bestScore};
+    }).sort((a,b) => b.bestScore - a.bestScore);
+
+    const choice = combos[0];
+    selectedDice = [...choice.pair];
+    committedProduct = choice.product;
+    updateDiceUI();
+    calcBoxEl.innerHTML = `<strong>${dice[selectedDice[0]]} × ${dice[selectedDice[1]]} = ${committedProduct}</strong>`;
+    phase = "place";
+    setPhaseDisplay();
+    generateNormalMoves(committedProduct);
+  }
+
+  function maybeRunComputerTurn(){
+    if(gameOver || !isCurrentPlayerComputer() || aiBusy) return;
+
+    if(phase === "roll"){
+      aiBusy = true;
+      setStatus(`Computer <strong>${currentPlayer}</strong> is rolling...`);
+      boardFooterEl.textContent = "Computer players move automatically.";
+      setTimeout(() => {
+        aiBusy = false;
+        rollDice();
+      }, AI_DELAY);
+      return;
+    }
+
+    if(phase === "choose"){
+      aiBusy = true;
+      setStatus(`Computer <strong>${currentPlayer}</strong> is choosing dice...`);
+      boardFooterEl.textContent = "Computer players move automatically.";
+      setTimeout(() => {
+        aiBusy = false;
+        chooseAIDiceAndContinue();
+      }, AI_DELAY);
+      return;
+    }
+
+    if(phase === "place"){
+      aiBusy = true;
+      setStatus(`Computer <strong>${currentPlayer}</strong> is choosing a square...`);
+      boardFooterEl.textContent = "Computer players move automatically.";
+      setTimeout(() => {
+        aiBusy = false;
+        const move = chooseBestAIMoveFromValid();
+        if(move) placeAt(move.x, move.y);
+      }, AI_DELAY);
+    }
+  }
+
+  playerCountEl.addEventListener("change", updatePlayerOptions);
+  dieBtnEls.forEach((btn, index) => {
+    btn.addEventListener("click", () => handleDieClick(index));
+  });
+  startBtn.addEventListener("click", startGame);
+  resetBtn.addEventListener("click", resetBoardOnly);
+  rollBtn.addEventListener("click", rollDice);
+
+  initAxes();
+  updatePlayerOptions();
+  resetBoardOnly();
+})();
+</script>
+</body>
+</html>
