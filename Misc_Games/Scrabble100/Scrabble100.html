@@ -155,6 +155,10 @@
   let selectedRackIndex = null;
   let currentPlacements = [];
 
+  let finalChallengeActive = false;
+  let benchmarkScore = 0;
+  let remainingChallengePlayers = [];
+
   function say(text){ msgEl.textContent = text; }
   function saySetup(text){ setupMsgEl.textContent = text; }
 
@@ -176,7 +180,8 @@
         return res.text();
       })
       .then(text => {
-        text.split(/\r?\n/).map(x => x.trim().toUpperCase()).filter(x => /^[A-Z]+$/.test(x)).forEach(w => WORDS.add(w));
+        text.split(/?
+/).map(x => x.trim().toUpperCase()).filter(x => /^[A-Z]+$/.test(x)).forEach(w => WORDS.add(w));
         dictionaryFailed = false;
         say(`dictionary.txt loaded (${WORDS.size.toLocaleString()} words available).`);
       })
@@ -275,7 +280,11 @@
       span.textContent = `${p.name}: ${p.score}`;
       scoresEl.appendChild(span);
     });
-    turnLabelEl.textContent = `${players[currentPlayer].name}'s turn`;
+    if(finalChallengeActive){
+      turnLabelEl.textContent = `${players[currentPlayer].name}'s comeback turn`;
+    } else {
+      turnLabelEl.textContent = `${players[currentPlayer].name}'s turn`;
+    }
   }
 
   function onBoardClick(e){
@@ -421,6 +430,62 @@
     return dictionaryFailed;
   }
 
+  function finalizeWinnerByHighest(){
+    let bestScore = Math.max(...players.map(p => p.score));
+    const winners = players.filter(p => p.score === bestScore);
+    renderBoard();
+    renderRack();
+    renderScores();
+    if(winners.length === 1){
+      say(`${winners[0].name} wins with ${bestScore} points!`);
+      setTimeout(() => alert(`${winners[0].name} wins!`), 50);
+    } else {
+      const names = winners.map(p => p.name).join(' and ');
+      say(`Tie game: ${names} with ${bestScore} points!`);
+      setTimeout(() => alert(`Tie game: ${names}!`), 50);
+    }
+  }
+
+  function advanceAfterTurn(turnPoints, finishedName){
+    if(finalChallengeActive){
+      if(remainingChallengePlayers.length){
+        currentPlayer = remainingChallengePlayers.shift();
+        renderBoard();
+        renderRack();
+        renderScores();
+        say(`${finishedName} scored ${turnPoints} point${turnPoints === 1 ? '' : 's'}. ${players[currentPlayer].name} gets a comeback turn to beat ${players[0].name}'s ${benchmarkScore}.`);
+      } else {
+        finalChallengeActive = false;
+        finalizeWinnerByHighest();
+      }
+      return;
+    }
+
+    if(currentPlayer === 0 && players[0].score >= TARGET_SCORE && players.length > 1){
+      finalChallengeActive = true;
+      benchmarkScore = players[0].score;
+      remainingChallengePlayers = [];
+      for(let i=1;i<players.length;i++) remainingChallengePlayers.push(i);
+      currentPlayer = remainingChallengePlayers.shift();
+      renderBoard();
+      renderRack();
+      renderScores();
+      say(`${players[0].name} reached ${benchmarkScore}. Everyone else gets one more turn to beat that score.`);
+      return;
+    }
+
+    if(currentPlayer !== 0 && players[currentPlayer].score >= TARGET_SCORE){
+      finalizeWinnerByHighest();
+      return;
+    }
+
+    currentPlayer = (currentPlayer + 1) % players.length;
+    renderBoard();
+    renderRack();
+    renderScores();
+    say(`${finishedName} scored ${turnPoints} point${turnPoints === 1 ? '' : 's'}.`);
+  }
+
   function submitTurn(){
     if(!currentPlacements.length){
       say('Place at least one tile first.');
@@ -457,6 +522,12 @@
     const newlyPlacedSet = new Set(currentPlacements.map(p => `${p.r},${p.c}`));
     let turnPoints = 0;
     wordsMade.forEach(w => turnPoints += scoreWord(w, newlyPlacedSet));
+
+    // First-play bonus for Player 1 only
+    if(currentPlayer === 0 && players[0].score === 0 && !finalChallengeActive){
+      turnPoints *= 2;
+    }
+
     if(currentPlacements.length === 7) turnPoints += 50;
 
     currentPlacements.forEach(p => { board[p.r][p.c].pending = false; });
@@ -465,17 +536,8 @@
     currentPlacements = [];
     selectedRackIndex = null;
 
-    if(players[currentPlayer].score >= TARGET_SCORE){
-      renderBoard(); renderRack(); renderScores();
-      say(`${players[currentPlayer].name} wins with ${players[currentPlayer].score} points!`);
-      setTimeout(() => alert(`${players[currentPlayer].name} wins!`), 50);
-      return;
-    }
-
     const finished = players[currentPlayer].name;
-    currentPlayer = (currentPlayer + 1) % players.length;
-    renderBoard(); renderRack(); renderScores();
-    say(`${finished} scored ${turnPoints} point${turnPoints === 1 ? '' : 's'}.`);
+    advanceAfterTurn(turnPoints, finished);
   }
 
   function startGame(){
@@ -499,6 +561,9 @@
     currentPlayer = 0;
     selectedRackIndex = null;
     currentPlacements = [];
+    finalChallengeActive = false;
+    benchmarkScore = 0;
+    remainingChallengePlayers = [];
 
     setupScreen.classList.add('hidden');
     gameTopbar.classList.remove('hidden');
@@ -518,10 +583,6 @@
   resetBtn.addEventListener('click', resetTurn);
   submitBtn.addEventListener('click', submitTurn);
   createPlayerInputs();
-
-  window.shuffleRack = shuffleRackAction;
-  window.resetTurn = resetTurn;
-  window.submitTurn = submitTurn;
 })();
 </script>
 </body>
