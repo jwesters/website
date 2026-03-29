@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Scrabble Race Minimal</title>
+<style>
+  :root{
+    --bg:#f4f1ea;
+    --panel:#fffdf8;
+    --line:#d6c9b3;
+    --text:#2e261d;
+    --muted:#6a5c4a;
+    --tileEdge:#c89c3d;
+    --tileText:#2b2113;
+    --dw:#f7b7c3;
+    --tw:#ef7373;
+    --dl:#b9dcff;
+    --tl:#6fa9e8;
+    --star:#f2c65c;
+    --ok:#2c8c52;
+    --boardCell: clamp(20px, 5.2vw, 42px);
+    --gap: 2px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:Arial, Helvetica, sans-serif;
+    background:var(--bg);
+    color:var(--text);
+  }
+  .app{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:10px 8px 16px;
+    gap:10px;
+  }
+  .setup{
+    width:min(96vw, 760px);
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:14px;
+  }
+  .setup h1{
+    margin:0 0 10px;
+    font-size:22px;
+    text-align:center;
+  }
+  .setup p{
+    margin:0 0 12px;
+    text-align:center;
+    color:var(--muted);
+    font-weight:700;
+  }
+  .setup-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    justify-content:center;
+    align-items:center;
+    margin-bottom:10px;
+  }
+  .player-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin:10px 0 12px;
+  }
+  .player-card{
+    border:1px solid var(--line);
+    background:#faf5ec;
+    border-radius:12px;
+    padding:10px;
+  }
+  .player-card label{
+    display:block;
+    font-weight:700;
+    font-size:14px;
+    margin-bottom:6px;
+  }
+  .player-card input{
+    width:100%;
+    border:1px solid #cbb89c;
+    border-radius:8px;
+    padding:9px 10px;
+    font-size:14px;
+    background:white;
+  }
+  .topbar{
+    width:min(96vw, 860px);
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:8px 12px;
+    display:grid;
+    grid-template-columns:1fr auto 1fr;
+    align-items:center;
+    gap:8px;
+  }
+  .title{
+    font-size:18px;
+    font-weight:700;
+    text-align:center;
+    white-space:nowrap;
+  }
+  .scores{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    flex-wrap:wrap;
+    font-size:14px;
+  }
+  .score-pill{
+    padding:5px 10px;
+    border-radius:999px;
+    background:#efe7da;
+    border:1px solid var(--line);
+    font-weight:700;
+  }
+  .score-pill.current{
+    background:#dfeedd;
+    border-color:#9cc29a;
+  }
+  .turn{
+    justify-self:end;
+    font-size:14px;
+    color:var(--muted);
+    font-weight:700;
+  }
+  .board-wrap{
+    width:min(96vw, 860px);
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:8px;
+    overflow:auto;
+  }
+  .board{
+    display:grid;
+    grid-template-columns:repeat(15, var(--boardCell));
+    grid-template-rows:repeat(15, var(--boardCell));
+    gap:var(--gap);
+    width:max-content;
+    margin:0 auto;
+  }
+  .cell{
+    width:var(--boardCell);
+    height:var(--boardCell);
+    position:relative;
+    border:1px solid #cdbca1;
+    border-radius:4px;
+    background:#f7f0e3;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:700;
+    user-select:none;
+    cursor:pointer;
+    overflow:hidden;
+    flex:0 0 auto;
+  }
+  .cell small{
+    position:absolute;
+    right:2px;
+    bottom:1px;
+    font-size:8px;
+    font-weight:700;
+    color:#604f3d;
+    letter-spacing:.2px;
+    pointer-events:none;
+    line-height:1;
+  }
+  .cell.empty:hover{ outline:2px solid rgba(111,169,232,.45); outline-offset:-2px; }
+  .cell.pending{ outline:3px solid rgba(44,140,82,.55); outline-offset:-3px; }
+  .cell.dw{background:var(--dw)}
+  .cell.tw{background:var(--tw); color:white}
+  .cell.dl{background:var(--dl)}
+  .cell.tl{background:var(--tl); color:white}
+  .cell.star{background:var(--star)}
+  .tile-on-board{
+    width:calc(var(--boardCell) - 4px);
+    height:calc(var(--boardCell) - 4px);
+    border-radius:6px;
+    background:linear-gradient(#f9df97,#efc96a);
+    border:1px solid var(--tileEdge);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.45);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--tileText);
+    position:relative;
+    font-size:clamp(12px, 2.2vw, 21px);
+    pointer-events:none;
+    line-height:1;
+    font-weight:700;
+  }
+  .tile-on-board .value{
+    position:absolute;
+    right:3px;
+    bottom:2px;
+    font-size:9px;
+    line-height:1;
+  }
+  .rack-panel{
+    width:min(96vw, 860px);
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:10px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .rack{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    justify-content:center;
+    min-height:52px;
+  }
+  .rack-tile{
+    width:46px;
+    height:46px;
+    border-radius:10px;
+    background:linear-gradient(#f9df97,#efc96a);
+    border:1px solid var(--tileEdge);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.45);
+    color:var(--tileText);
+    font-size:24px;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    cursor:pointer;
+    user-select:none;
+    line-height:1;
+  }
+  .rack-tile .value{
+    position:absolute;
+    right:5px;
+    bottom:3px;
+    font-size:11px;
+    line-height:1;
+  }
+  .rack-tile.selected{
+    outline:3px solid #4f84c4;
+    transform:translateY(-2px);
+  }
+  .actions{
+    display:flex;
+    gap:8px;
+    justify-content:center;
+    flex-wrap:wrap;
+  }
+  button, select{
+    border:none;
+    border-radius:999px;
+    padding:10px 14px;
+    font-size:14px;
+    font-weight:700;
+    color:var(--text);
+    background:#e9decc;
+  }
+  button{ cursor:pointer; }
+  button.primary{
+    background:var(--ok);
+    color:white;
+  }
+  .msg{
+    text-align:center;
+    min-height:18px;
+    font-size:14px;
+    color:var(--muted);
+    font-weight:700;
+  }
+  .hidden{display:none !important;}
+  @media (max-width:700px){
+    .topbar{ grid-template-columns:1fr; }
+    .title,.turn,.scores{justify-self:center;text-align:center}
+    .board-wrap{padding:6px}
+    .rack-tile{width:42px;height:42px;font-size:22px}
+    .player-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="setup" id="setupScreen">
+    <h1>Scrabble Race to 100</h1>
+    <p>Enter player names, then start the game.</p>
+    <div class="setup-row">
+      <label for="playerCount"><strong>Players:</strong></label>
+      <select id="playerCount">
+        <option value="2" selected>2 Players</option>
+        <option value="3">3 Players</option>
+        <option value="4">4 Players</option>
+      </select>
+    </div>
+    <div class="player-grid" id="playerInputs"></div>
+    <div class="setup-row">
+      <button class="primary" id="startBtn">Start Game</button>
+    </div>
+    <div class="msg" id="setupMsg"></div>
+  </div>
+
+  <div class="topbar hidden" id="gameTopbar">
+    <div class="scores" id="scores"></div>
+    <div class="title">Scrabble Race to 100</div>
+    <div class="turn" id="turnLabel">Turn</div>
+  </div>
+
+  <div class="board-wrap hidden" id="boardWrap">
+    <div class="board" id="board"></div>
+  </div>
+
+  <div class="rack-panel hidden" id="rackPanel">
+    <div class="rack" id="rack"></div>
+    <div class="actions">
+      <button onclick="shuffleRack()">Shuffle Rack</button>
+      <button onclick="resetTurn()">Reset Turn</button>
+      <button class="primary" onclick="submitTurn()">Submit Word</button>
+    </div>
+    <div class="msg" id="msg">Pick a tile, then place it on the board.</div>
+  </div>
+</div>
+
+
+<script>
+const BOARD_SIZE = 15;
+const RACK_SIZE = 7;
+const TARGET_SCORE = 100;
+
+const LETTER_VALUES = {
+  A:1,B:3,C:3,D:2,E:1,F:4,G:2,H:4,I:1,J:8,K:5,L:1,M:3,N:1,O:1,P:3,Q:10,R:1,S:1,T:1,U:1,V:4,W:4,X:8,Y:4,Z:10
+};
+
+const BAG_DISTRIBUTION = {
+  A:9,B:2,C:2,D:4,E:12,F:2,G:3,H:2,I:9,J:1,K:1,L:4,M:2,N:6,O:8,P:2,Q:1,R:6,S:4,T:6,U:4,V:2,W:2,X:1,Y:2,Z:1
+};
+
+const BASE_WORDS = [
+  "A","I","AN","AS","AT","BE","BY","DO","GO","HE","IF","IN","IS","IT","ME","MY","NO","OF","ON","OR","SO","TO","UP","US","WE",
+  "ACE","ACT","ADD","AGE","AGO","AID","AIR","AND","ANT","ANY","APE","APP","ARC","ARE","ARM","ART","ASH","ASK","ATE","AWE","BAD","BAG","BAN","BAR","BAT","BAY","BED","BEE","BEG","BET","BIG","BIN","BIT","BOG","BOX","BOY","BUN","BUS","BUT","BUY","CAB","CAN","CAP","CAR","CAT","COW","CRY","CUP","CUT","DAY","DEN","DID","DIG","DIM","DIN","DOG","DOT","DRY","DUE","DUG","EAR","EAT","EGG","END","ERA","EYE","FAN","FAR","FED","FEW","FIG","FIN","FIT","FIX","FLY","FOG","FOR","FOX","FUN","GAP","GAS","GET","GOD","GUM","GUN","GUY","GYM","HAD","HAM","HAS","HAT","HEN","HER","HEY","HID","HIM","HIP","HIT","HOT","HOW","HUG","HUT","ICE","INK","JAM","JAR","JET","JOB","JOG","JOY","KEY","KID","KIT","LAB","LAP","LAW","LAY","LEG","LET","LID","LIP","LOG","LOT","LOW","MAD","MAN","MAP","MAT","MAY","MEN","MIX","MOM","MOO","MOP","MUD","MUG","NAP","NET","NEW","NOD","NOR","NOT","NOW","NUT","OAK","ODD","OFF","OIL","OLD","ONE","OUR","OUT","OWL","OWN","PAD","PAN","PEN","PET","PIG","PIN","PIT","PLY","POD","POP","POT","PRO","PUT","RAG","RAM","RAN","RAP","RAT","RAW","RED","RID","RIM","RIP","ROD","ROW","RUG","RUN","SAD","SAG","SAT","SAW","SAY","SEA","SEE","SET","SEW","SHE","SHY","SIN","SIP","SIR","SIT","SKY","SLY","SON","SUN","TAB","TAG","TAN","TAP","TEA","TEN","THE","TIN","TIP","TOE","TOP","TOY","TRY","TUB","TUG","TWO","USE","VAN","WAR","WAS","WAY","WEB","WHO","WHY","WIN","WIT","WOOD","WOW","YAK","YAM","YAP","YET","YOU","ZIP","ZOO",
+  "ABLE","ACID","AGED","ALSO","AREA","ARMY","AWAY","BACK","BALL","BAND","BANK","BASE","BATH","BEAR","BEAT","BEEN","BELL","BELT","BEST","BILL","BIRD","BLOW","BLUE","BOAT","BODY","BOMB","BOND","BONE","BOOK","BOOT","BORN","BOTH","BOWL","BULK","BURN","BUSH","BUSY","CAKE","CALL","CALM","CAME","CAMP","CARD","CARE","CASE","CASH","CAST","CELL","CHAT","CHIP","CITY","CLUB","COAL","COAT","CODE","COLD","COME","COOK","COOL","COPY","CORE","COST","CREW","CROP","DARK","DATA","DATE","DAWN","DAYS","DEAD","DEAL","DEAN","DEAR","DEEP","DESK","DIAL","DICE","DIET","DISC","DISH","DOES","DONE","DOOR","DOWN","DRAW","DROP","DRUG","DRUM","DUCK","DUST","DUTY","EACH","EARN","EASE","EAST","EASY","EDGE","ELSE","EVEN","EVER","EXIT","FACE","FACT","FAIL","FAIR","FALL","FARM","FAST","FATE","FEAR","FEED","FEEL","FILE","FILL","FILM","FIND","FINE","FIRE","FIRM","FISH","FIVE","FLAT","FLOW","FOOD","FOOT","FORD","FORM","FORT","FOUR","FREE","FROM","FUEL","FULL","FUND","GAME","GATE","GAVE","GEAR","GIFT","GIRL","GIVE","GLAD","GOAL","GOAT","GOES","GOLD","GOLF","GONE","GOOD","GRAY","GREW","GREY","GROW","HAIR","HALF","HALL","HAND","HANG","HARD","HARM","HATE","HAVE","HEAD","HEAR","HEAT","HELD","HELP","HERE","HERO","HIGH","HILL","HOLD","HOLE","HOLY","HOME","HOOK","HOPE","HOUR","HUGE","HUNG","HUNT","HURT","IDEA","INTO","IRON","ITEM","JOIN","JUMP","JURY","JUST","KEEP","KEPT","KICK","KILL","KIND","KING","KNEW","KNOW","LACK","LADY","LAID","LAKE","LAND","LANE","LAST","LATE","LEAD","LEFT","LESS","LIFE","LIFT","LIKE","LINE","LINK","LIST","LIVE","LOAD","LOAN","LOCK","LONG","LOOK","LORD","LOSE","LOSS","LOST","LOVE","LUCK","MADE","MAIL","MAIN","MAKE","MALE","MANY","MARK","MASS","MEAL","MEAN","MEAT","MEET","MENU","MILE","MILK","MIND","MINE","MISS","MODE","MOON","MORE","MOST","MOVE","MUCH","MUST","NAME","NAVY","NEAR","NECK","NEED","NEWS","NEXT","NICE","NINE","NONE","NOSE","NOTE","OKAY","ONCE","ONLY","ONTO","OPEN","OVER","PACE","PACK","PAGE","PAID","PAIN","PAIR","PARK","PART","PASS","PAST","PATH","PEAK","PICK","PINK","PIPE","PLAN","PLAY","PLOT","PLUS","POOL","POOR","PORT","POST","PULL","PURE","PUSH","RACE","RAIL","RAIN","RANK","RATE","READ","REAL","RENT","REST","RICE","RICH","RIDE","RING","RISE","RISK","ROAD","ROCK","ROLE","ROLL","ROOF","ROOM","ROOT","ROSE","RULE","RUSH","SAFE","SAID","SAKE","SALE","SALT","SAME","SAND","SAVE","SEAT","SEED","SEEK","SEEM","SEEN","SELF","SELL","SEND","SHIP","SHOP","SHOT","SHOW","SHUT","SICK","SIDE","SIGN","SITE","SIZE","SKIN","SLIP","SLOW","SNOW","SOFT","SOIL","SOLD","SOME","SONG","SOON","SORT","SOUL","SPOT","STAR","STAY","STEP","STOP","SUCH","SUIT","SURE","TAKE","TALE","TALK","TALL","TANK","TAPE","TASK","TEAM","TELL","TEND","TERM","TEST","TEXT","THAN","THAT","THEM","THEN","THEY","THIN","THIS","TIME","TINY","TOLD","TONE","TOOK","TOOL","TOUR","TOWN","TREE","TRIP","TRUE","TURN","TWIN","TYPE","UNIT","UPON","USED","USER","VARY","VAST","VERY","VIEW","VOTE","WAGE","WAIT","WAKE","WALK","WALL","WANT","WARM","WASH","WAVE","WAYS","WEAK","WEAR","WEEK","WELL","WENT","WERE","WEST","WHAT","WHEN","WHOM","WIDE","WIFE","WILD","WILL","WIND","WINE","WING","WIRE","WISE","WITH","WOOD","WORD","WORE","WORK","YARD","YEAR","YOUR","ZERO","ZONE",
+  "APPLE","BASIC","BREAD","BRAVE","BRAVER","BRICK","BRING","BROWN","BUILD","CARRY","CHAIR","CHEST","CHILD","CLEAN","CLEAR","CLOCK","CLOUD","COAST","COUNT","COVER","CRAZY","CROSS","CROWN","DANCE","DREAM","DRINK","DRIVE","EARTH","ENJOY","FIELD","FLOOR","FRONT","FRUIT","GHOST","GIANT","GLASS","GRASS","GREEN","GROUP","HAPPY","HEART","HONEY","HORSE","HOUSE","JUICE","KNIFE","LAUGH","LEARN","LEMON","LIGHT","LUNCH","MAGIC","MANGO","METAL","MONEY","MOUSE","MUSIC","NIGHT","NORTH","OCEAN","PAINT","PARTY","PEACH","PEARL","PHONE","PIANO","PIZZA","PLANT","PLATE","POINT","POWER","QUEEN","QUICK","QUIET","RADIO","RIVER","ROBOT","ROUND","SCALE","SCHOOL","SCORE","SHAPE","SHEEP","SHINE","SHIRT","SHOES","SLEEP","SMALL","SMART","SMILE","SNAKE","SOUND","SPACE","SPEED","SPELL","SPORT","STACK","STAMP","STONE","STORE","STORM","STORY","SUGAR","TABLE","TEACH","THANK","THING","TIGER","TODAY","TRAIN","TRUCK","TRUTH","UNDER","VOICE","WATER","WHITE","WHOLE","WINDOW","WORLD","WRITE","YOUTH","EVENT"
+];
+
+const WORDS = new Set(BASE_WORDS);
+let externalDictionaryLoaded = false;
+let externalDictionaryFailed = false;
+let externalDictionaryCount = 0;
+const LOCAL_DICTIONARY_URL = "dictionary.txt";
+
+const setupScreen = document.getElementById('setupScreen');
+const playerCountEl = document.getElementById('playerCount');
+const playerInputsEl = document.getElementById('playerInputs');
+const setupMsgEl = document.getElementById('setupMsg');
+const startBtn = document.getElementById('startBtn');
+
+const gameTopbar = document.getElementById('gameTopbar');
+const boardWrap = document.getElementById('boardWrap');
+const rackPanel = document.getElementById('rackPanel');
+const boardEl = document.getElementById('board');
+const rackEl = document.getElementById('rack');
+const msgEl = document.getElementById('msg');
+const turnLabelEl = document.getElementById('turnLabel');
+const scoresEl = document.getElementById('scores');
+
+let bonuses = {};
+let board = [];
+let bag = [];
+let players = [];
+let currentPlayer = 0;
+let selectedRackIndex = null;
+let currentPlacements = [];
+
+function say(text){ msgEl.textContent = text; }
+function saySetup(text){ setupMsgEl.textContent = text; }
+
+function createPlayerInputs(){
+  const count = Number(playerCountEl.value);
+  playerInputsEl.innerHTML = '';
+  for(let i=0;i<count;i++){
+    const card = document.createElement('div');
+    card.className = 'player-card';
+    card.innerHTML = `
+      <label for="playerName${i}">Player ${i+1} Name</label>
+      <input id="playerName${i}" maxlength="16" placeholder="Player ${i+1}" value="Player ${i+1}">
+    `;
+    playerInputsEl.appendChild(card);
+  }
+}
+playerCountEl.addEventListener('change', createPlayerInputs);
+createPlayerInputs();
+
+function loadExternalDictionary(){
+  externalDictionaryLoaded = false;
+  externalDictionaryFailed = false;
+  externalDictionaryCount = 0;
+
+  fetch(LOCAL_DICTIONARY_URL, { cache: "no-store" })
+    .then(res => {
+      if(!res.ok) throw new Error("Dictionary fetch failed");
+      return res.text();
+    })
+    .then(text => {
+      const extraWords = text
+        .split(/?
+/)
+        .map(w => w.trim().toUpperCase())
+        .filter(w => /^[A-Z]+$/.test(w));
+
+      extraWords.forEach(w => WORDS.add(w));
+      externalDictionaryLoaded = true;
+      externalDictionaryFailed = false;
+      externalDictionaryCount = extraWords.length;
+
+      if(typeof say === "function"){
+        say(`dictionary.txt loaded: ${externalDictionaryCount.toLocaleString()} words.`);
+      }
+    })
+    .catch(() => {
+      externalDictionaryLoaded = false;
+      externalDictionaryFailed = true;
+
+      if(typeof say === "function"){
+        say("dictionary.txt could not be loaded, so fallback mode is on.");
+      }
+    });
+}
+
+function createBag(){
+  bag = [];
+  for(const [letter, count] of Object.entries(BAG_DISTRIBUTION)){
+    for(let i=0;i<count;i++) bag.push(letter);
+  }
+  shuffle(bag);
+}
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+}
+function drawTiles(n){
+  const out = [];
+  for(let i=0;i<n && bag.length;i++) out.push(bag.pop());
+  return out;
+}
+
+function setBonus(r,c,type,label){
+  bonuses[`${r},${c}`] = {type,label};
+}
+function initBonuses(){
+  bonuses = {};
+  const tw = [[0,0],[0,7],[0,14],[7,0],[7,14],[14,0],[14,7],[14,14]];
+  const dw = [[1,1],[2,2],[3,3],[4,4],[7,7],[10,10],[11,11],[12,12],[13,13],[1,13],[2,12],[3,11],[4,10],[10,4],[11,3],[12,2],[13,1]];
+  const tl = [[1,5],[1,9],[5,1],[5,5],[5,9],[5,13],[9,1],[9,5],[9,9],[9,13],[13,5],[13,9]];
+  const dl = [[0,3],[0,11],[2,6],[2,8],[3,0],[3,7],[3,14],[6,2],[6,6],[6,8],[6,12],[7,3],[7,11],[8,2],[8,6],[8,8],[8,12],[11,0],[11,7],[11,14],[12,6],[12,8],[14,3],[14,11]];
+  tw.forEach(([r,c])=>setBonus(r,c,'tw','TW'));
+  dw.forEach(([r,c])=>setBonus(r,c,'dw','DW'));
+  tl.forEach(([r,c])=>setBonus(r,c,'tl','TL'));
+  dl.forEach(([r,c])=>setBonus(r,c,'dl','DL'));
+  setBonus(7,7,'star','★');
+}
+
+function initBoard(){
+  board = Array.from({length:BOARD_SIZE}, (_,r)=>
+    Array.from({length:BOARD_SIZE}, (_,c)=>({
+      letter:'',
+      locked:false,
+      pending:false,
+      bonus:bonuses[`${r},${c}`] || null
+    }))
+  );
+}
+
+function renderBoard(){
+  boardEl.innerHTML = '';
+  for(let r=0;r<BOARD_SIZE;r++){
+    for(let c=0;c<BOARD_SIZE;c++){
+      const cellData = board[r][c];
+      const bonus = cellData.bonus;
+      const cell = document.createElement('div');
+      let classes = ['cell'];
+      if(!cellData.letter) classes.push('empty');
+      if(cellData.pending) classes.push('pending');
+      if(bonus) classes.push(bonus.type);
+      cell.className = classes.join(' ');
+      cell.dataset.r = r;
+      cell.dataset.c = c;
+
+      if(cellData.letter){
+        const tile = document.createElement('div');
+        tile.className = 'tile-on-board';
+        tile.innerHTML = `${cellData.letter}<span class="value">${LETTER_VALUES[cellData.letter]}</span>`;
+        cell.appendChild(tile);
+      }else if(bonus){
+        const small = document.createElement('small');
+        small.textContent = bonus.label;
+        cell.appendChild(small);
+      }
+
+      cell.addEventListener('click', onBoardClick);
+      boardEl.appendChild(cell);
+    }
+  }
+}
+
+function renderRack(){
+  rackEl.innerHTML = '';
+  const rack = players[currentPlayer].rack;
+  rack.forEach((letter, idx)=>{
+    const tile = document.createElement('div');
+    tile.className = 'rack-tile' + (selectedRackIndex===idx ? ' selected' : '');
+    tile.innerHTML = `${letter}<span class="value">${LETTER_VALUES[letter]}</span>`;
+    tile.addEventListener('click', ()=>{
+      selectedRackIndex = selectedRackIndex===idx ? null : idx;
+      renderRack();
+      if(selectedRackIndex!==null) say(`Selected ${rack[idx]}. Place it on the board.`);
+      else say('Tile unselected.');
+    });
+    rackEl.appendChild(tile);
+  });
+}
+
+function renderScores(){
+  scoresEl.innerHTML = '';
+  players.forEach((player, idx)=>{
+    const span = document.createElement('span');
+    span.className = 'score-pill' + (idx===currentPlayer ? ' current' : '');
+    span.textContent = `${player.name}: ${player.score}`;
+    scoresEl.appendChild(span);
+  });
+  turnLabelEl.textContent = `${players[currentPlayer].name}'s turn`;
+}
+
+function onBoardClick(e){
+  const r = Number(e.currentTarget.dataset.r);
+  const c = Number(e.currentTarget.dataset.c);
+
+  if(board[r][c].pending){
+    const placementIndex = currentPlacements.findIndex(p=>p.r===r && p.c===c);
+    if(placementIndex !== -1){
+      const placement = currentPlacements.splice(placementIndex,1)[0];
+      players[currentPlayer].rack.push(placement.letter);
+      board[r][c].letter = '';
+      board[r][c].pending = false;
+      selectedRackIndex = null;
+      renderBoard();
+      renderRack();
+      say('Tile removed from the board.');
+    }
+    return;
+  }
+
+  if(board[r][c].letter){
+    say('That square is already filled.');
+    return;
+  }
+  if(selectedRackIndex===null){
+    say('Pick a rack tile first.');
+    return;
+  }
+
+  const letter = players[currentPlayer].rack[selectedRackIndex];
+  board[r][c].letter = letter;
+  board[r][c].locked = false;
+  board[r][c].pending = true;
+  currentPlacements.push({r,c,letter});
+  players[currentPlayer].rack.splice(selectedRackIndex,1);
+  selectedRackIndex = null;
+  renderBoard();
+  renderRack();
+  say('Tile placed. Submit when your word looks right.');
+}
+
+function resetTurn(){
+  if(!currentPlacements.length){
+    say('Nothing to reset.');
+    return;
+  }
+  currentPlacements.forEach(p=>{
+    board[p.r][p.c].letter = '';
+    board[p.r][p.c].locked = false;
+    board[p.r][p.c].pending = false;
+    players[currentPlayer].rack.push(p.letter);
+  });
+  currentPlacements = [];
+  selectedRackIndex = null;
+  players[currentPlayer].rack.sort();
+  renderBoard();
+  renderRack();
+  say('Turn reset.');
+}
+
+function shuffleRack(){
+  if(currentPlacements.length){
+    say('Submit or reset your placed tiles first.');
+    return;
+  }
+  shuffle(players[currentPlayer].rack);
+  selectedRackIndex = null;
+  renderRack();
+}
+
+function isStraightLine(places){
+  const sameRow = places.every(p=>p.r===places[0].r);
+  const sameCol = places.every(p=>p.c===places[0].c);
+  return {sameRow,sameCol,ok:sameRow||sameCol};
+}
+
+function buildMainWord(places){
+  const line = isStraightLine(places);
+  if(!line.ok) return null;
+  if(line.sameRow){
+    const r = places[0].r;
+    const cols = places.map(p=>p.c).sort((a,b)=>a-b);
+    let c = cols[0];
+    while(c>0 && board[r][c-1].letter) c--;
+    let letters = [];
+    let coords = [];
+    while(c<BOARD_SIZE && board[r][c].letter){
+      letters.push(board[r][c].letter);
+      coords.push([r,c]);
+      c++;
+    }
+    return {word:letters.join(''), coords};
+  }else{
+    const c = places[0].c;
+    const rows = places.map(p=>p.r).sort((a,b)=>a-b);
+    let r = rows[0];
+    while(r>0 && board[r-1][c].letter) r--;
+    let letters = [];
+    let coords = [];
+    while(r<BOARD_SIZE && board[r][c].letter){
+      letters.push(board[r][c].letter);
+      coords.push([r,c]);
+      r++;
+    }
+    return {word:letters.join(''), coords};
+  }
+}
+
+function buildCrossWord(r,c,mainIsRow){
+  let coords = [];
+  if(mainIsRow){
+    let rr = r;
+    while(rr>0 && board[rr-1][c].letter) rr--;
+    while(rr<BOARD_SIZE && board[rr][c].letter){
+      coords.push([rr,c]);
+      rr++;
+    }
+  }else{
+    let cc = c;
+    while(cc>0 && board[r][cc-1].letter) cc--;
+    while(cc<BOARD_SIZE && board[r][cc].letter){
+      coords.push([r,cc]);
+      cc++;
+    }
+  }
+  if(coords.length <= 1) return null;
+  return { word: coords.map(([rr,cc])=>board[rr][cc].letter).join(''), coords };
+}
+
+function scoreWord(wordObj, newlyPlacedSet){
+  let wordMult = 1;
+  let sum = 0;
+  for(const [r,c] of wordObj.coords){
+    const cell = board[r][c];
+    let v = LETTER_VALUES[cell.letter];
+    const key = `${r},${c}`;
+    if(newlyPlacedSet.has(key) && cell.bonus){
+      if(cell.bonus.type==='dl') v *= 2;
+      else if(cell.bonus.type==='tl') v *= 3;
+      else if(cell.bonus.type==='dw' || cell.bonus.type==='star') wordMult *= 2;
+      else if(cell.bonus.type==='tw') wordMult *= 3;
+    }
+    sum += v;
+  }
+  return sum * wordMult;
+}
+
+function isValidWord(word){
+  word = String(word).toUpperCase().trim();
+  if(word.length < 2) return false;
+  if(!/^[A-Z]+$/.test(word)) return false;
+
+  if(WORDS.has(word)) return true;
+
+  const suffixes = ["S","ES","ED","ER","ERS","ING","D","R"];
+  for(const suf of suffixes){
+    if(word.length > suf.length + 1 && word.endsWith(suf)){
+      const base = word.slice(0, -suf.length);
+      if(WORDS.has(base)) return true;
+      if((suf === "ER" || suf === "ERS" || suf === "D" || suf === "R" || suf === "ED" || suf === "ING") && WORDS.has(base + "E")) return true;
+      if((suf === "ED" || suf === "ING") && base.length > 1 && WORDS.has(base.slice(0, -1))) return true;
+    }
+  }
+
+  if(externalDictionaryFailed){
+    return true;
+  }
+  return false;
+}
+
+function submitTurn(){
+  if(!currentPlacements.length){
+    say('Place at least one tile first.');
+    return;
+  }
+
+  const line = isStraightLine(currentPlacements);
+  if(!line.ok){
+    say('Tiles must be in one row or one column.');
+    return;
+  }
+
+  const main = buildMainWord(currentPlacements);
+  if(!main || main.word.length < 2){
+    say('Play must make a word with at least 2 letters.');
+    return;
+  }
+
+  const newlyPlacedSet = new Set(currentPlacements.map(p=>`${p.r},${p.c}`));
+  const wordsMade = [main];
+  const crossSeen = new Set();
+
+  for(const p of currentPlacements){
+    const cross = buildCrossWord(p.r, p.c, line.sameRow);
+    if(cross){
+      const key = cross.coords.map(x=>x.join(',')).join('|');
+      if(!crossSeen.has(key)){
+        crossSeen.add(key);
+        wordsMade.push(cross);
+      }
+    }
+  }
+
+  for(const obj of wordsMade){
+    if(!isValidWord(obj.word)){
+      say(`"${obj.word}" is not in the word list.`);
+      return;
+    }
+  }
+
+  let turnPoints = 0;
+  for(const obj of wordsMade){
+    turnPoints += scoreWord(obj, newlyPlacedSet);
+  }
+  if(currentPlacements.length === 7) turnPoints += 50;
+
+  currentPlacements.forEach(p=>{
+    board[p.r][p.c].locked = true;
+    board[p.r][p.c].pending = false;
+  });
+
+  players[currentPlayer].score += turnPoints;
+  players[currentPlayer].rack.push(...drawTiles(RACK_SIZE - players[currentPlayer].rack.length));
+  currentPlacements = [];
+  selectedRackIndex = null;
+
+  renderBoard();
+
+  if(players[currentPlayer].score >= TARGET_SCORE){
+    renderScores();
+    renderRack();
+    say(`${players[currentPlayer].name} wins with ${players[currentPlayer].score} points!`);
+    setTimeout(()=>alert(`${players[currentPlayer].name} wins!`), 60);
+    return;
+  }
+
+  const finishedName = players[currentPlayer].name;
+  currentPlayer = (currentPlayer + 1) % players.length;
+  renderScores();
+  renderRack();
+  say(`${finishedName} scored ${turnPoints} point${turnPoints===1?'':'s'}.`);
+}
+
+function startGame(){
+  const count = Number(playerCountEl.value);
+  const names = [];
+  for(let i=0;i<count;i++){
+    const input = document.getElementById(`playerName${i}`);
+    const name = (input.value || '').trim() || `Player ${i+1}`;
+    names.push(name);
+  }
+
+  const uniqueCheck = names.map(n => n.toLowerCase());
+  if(new Set(uniqueCheck).size !== uniqueCheck.length){
+    saySetup('Please use different player names.');
+    return;
+  }
+
+  initBonuses();
+  createBag();
+  initBoard();
+  players = names.map(name => ({
+    name,
+    score: 0,
+    rack: drawTiles(RACK_SIZE)
+  }));
+  currentPlayer = 0;
+  selectedRackIndex = null;
+  currentPlacements = [];
+
+  setupScreen.classList.add('hidden');
+  gameTopbar.classList.remove('hidden');
+  boardWrap.classList.remove('hidden');
+  rackPanel.classList.remove('hidden');
+
+  renderBoard();
+  renderRack();
+  renderScores();
+  say('Loading dictionary.txt... Pick a tile, then place it on the board.');
+  loadExternalDictionary();
+}
+
+startBtn.addEventListener('click', startGame);
+</script>
+
+</body>
+</html>

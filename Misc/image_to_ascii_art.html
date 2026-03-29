@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Image to ASCII Art</title>
+<style>
+  :root{
+    --bg1:#eef4ff;
+    --bg2:#dfe9fb;
+    --panel:#ffffff;
+    --panel2:#f7faff;
+    --ink:#22304a;
+    --muted:#5c6b85;
+    --line:#c8d5ee;
+    --accent:#4f7cff;
+    --accent2:#6f9bff;
+    --good:#1f9d68;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:Arial, Helvetica, sans-serif;
+    color:var(--ink);
+    background:linear-gradient(180deg,var(--bg1),var(--bg2));
+    min-height:100vh;
+  }
+  .wrap{
+    max-width:1200px;
+    margin:0 auto;
+    padding:20px;
+  }
+  .top{
+    text-align:center;
+    margin-bottom:16px;
+  }
+  h1{
+    margin:0 0 8px 0;
+    font-size:clamp(1.7rem,2.8vw,2.6rem);
+  }
+  .sub{
+    color:var(--muted);
+    font-size:1rem;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns: 360px 1fr;
+    gap:16px;
+  }
+  .panel{
+    background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border:1px solid var(--line);
+    border-radius:20px;
+    box-shadow:0 10px 25px rgba(40,60,120,0.08);
+    padding:16px;
+  }
+  .panel h2{
+    margin:0 0 12px 0;
+    font-size:1.15rem;
+  }
+  .controls{
+    display:grid;
+    gap:12px;
+  }
+  label{
+    font-weight:700;
+    font-size:.95rem;
+  }
+  .hint{
+    color:var(--muted);
+    font-size:.88rem;
+    margin-top:4px;
+  }
+  input[type="file"], select, input[type="range"], textarea, button{
+    width:100%;
+  }
+  input[type="file"]{
+    padding:10px;
+    border:1px solid var(--line);
+    border-radius:14px;
+    background:#fff;
+  }
+  .row{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:12px;
+    align-items:center;
+  }
+  .value-pill{
+    min-width:58px;
+    text-align:center;
+    padding:8px 10px;
+    border-radius:999px;
+    background:#fff;
+    border:1px solid var(--line);
+    font-weight:700;
+  }
+  select{
+    padding:10px 12px;
+    border:1px solid var(--line);
+    border-radius:14px;
+    background:#fff;
+    color:var(--ink);
+    font-size:1rem;
+  }
+  button{
+    border:none;
+    border-radius:14px;
+    padding:12px 14px;
+    font-size:1rem;
+    font-weight:700;
+    cursor:pointer;
+    background:linear-gradient(180deg,var(--accent),var(--accent2));
+    color:#fff;
+  }
+  button.secondary{
+    background:#fff;
+    color:var(--ink);
+    border:1px solid var(--line);
+  }
+  button:disabled{
+    opacity:.6;
+    cursor:not-allowed;
+  }
+  .btns{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+  .preview-wrap{
+    display:grid;
+    grid-template-rows:auto auto 1fr;
+    gap:12px;
+    min-height:70vh;
+  }
+  .preview-box{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:18px;
+    overflow:auto;
+    min-height:220px;
+  }
+  .image-preview{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:12px;
+    min-height:220px;
+  }
+  .image-preview img{
+    max-width:100%;
+    max-height:320px;
+    border-radius:10px;
+    box-shadow:0 6px 18px rgba(0,0,0,.08);
+  }
+  .ascii-box{
+    padding:12px;
+    background:#fff;
+  }
+  pre{
+    margin:0;
+    font-family:"Courier New", Courier, monospace;
+    line-height:.92;
+    white-space:pre;
+    font-size:8px;
+    color:#111;
+  }
+  .status{
+    padding:10px 12px;
+    border-radius:12px;
+    background:#f6fbff;
+    border:1px solid var(--line);
+    color:var(--muted);
+  }
+  .footer-note{
+    margin-top:10px;
+    color:var(--muted);
+    font-size:.88rem;
+  }
+  canvas{
+    display:none;
+  }
+  @media (max-width: 900px){
+    .grid{
+      grid-template-columns:1fr;
+    }
+    .preview-wrap{
+      min-height:auto;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <h1>Image to ASCII Art</h1>
+      <div class="sub">Upload an image, adjust a few settings, and turn it into ASCII art.</div>
+    </div>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>Controls</h2>
+        <div class="controls">
+          <div>
+            <label for="fileInput">Upload image</label>
+            <input type="file" id="fileInput" accept="image/*" />
+            <div class="hint">PNG, JPG, GIF, WEBP, and other standard image files should work.</div>
+          </div>
+
+          <div>
+            <label for="widthRange">ASCII width</label>
+            <div class="row">
+              <input type="range" id="widthRange" min="20" max="220" step="1" value="100" />
+              <div class="value-pill" id="widthVal">100</div>
+            </div>
+            <div class="hint">Higher values create more detail but make the output larger.</div>
+          </div>
+
+          <div>
+            <label for="charset">Character set</label>
+            <select id="charset">
+              <option value="@%#*+=-:. ">Dense</option>
+              <option value="$@B%8&WM#*oahkbdpqwmZO0QLCJYXzcvunxrjft/|()1{}[]?-_+~&lt;&gt;i!lI;:,^`'. ">Detailed</option>
+              <option value="@#S%?*+;:,. ">Classic</option>
+              <option value="█▓▒░ ">Blocky</option>
+              <option value="01">Binary</option>
+              <option value=" .:-=+*#%@">Inverted dense</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="invertBox">Brightness mode</label>
+            <select id="invertBox">
+              <option value="normal">Normal</option>
+              <option value="invert">Invert</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="colorMode">Output mode</label>
+            <select id="colorMode">
+              <option value="mono">Black and white</option>
+              <option value="color">Color ASCII</option>
+            </select>
+          </div>
+
+          <div class="btns">
+            <button id="convertBtn" disabled>Convert</button>
+            <button id="copyBtn" class="secondary" disabled>Copy text</button>
+          </div>
+
+          <button id="downloadBtn" class="secondary" disabled>Download .txt</button>
+
+          <div class="status" id="status">Upload an image to begin.</div>
+        </div>
+        <div class="footer-note">Tip: tall images usually look better with a width between 70 and 130.</div>
+      </section>
+
+      <section class="panel">
+        <div class="preview-wrap">
+          <div>
+            <h2 style="margin:0 0 10px 0;">Original image</h2>
+            <div class="preview-box image-preview" id="imagePreview">No image loaded yet.</div>
+          </div>
+
+          <div>
+            <h2 style="margin:0 0 10px 0;">ASCII art</h2>
+            <div class="preview-box ascii-box" id="asciiContainer">
+              <pre id="asciiOutput">Your ASCII art will appear here.</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+<script>
+(() => {
+  const fileInput = document.getElementById('fileInput');
+  const widthRange = document.getElementById('widthRange');
+  const widthVal = document.getElementById('widthVal');
+  const charsetSel = document.getElementById('charset');
+  const invertBox = document.getElementById('invertBox');
+  const colorMode = document.getElementById('colorMode');
+  const convertBtn = document.getElementById('convertBtn');
+  const copyBtn = document.getElementById('copyBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const imagePreview = document.getElementById('imagePreview');
+  const asciiOutput = document.getElementById('asciiOutput');
+  const asciiContainer = document.getElementById('asciiContainer');
+  const statusBox = document.getElementById('status');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+  let currentImage = null;
+  let lastPlainText = '';
+
+  widthRange.addEventListener('input', () => {
+    widthVal.textContent = widthRange.value;
+    if (currentImage) convertImage();
+  });
+
+  charsetSel.addEventListener('change', () => {
+    if (currentImage) convertImage();
+  });
+
+  invertBox.addEventListener('change', () => {
+    if (currentImage) convertImage();
+  });
+
+  colorMode.addEventListener('change', () => {
+    if (currentImage) convertImage();
+  });
+
+  fileInput.addEventListener('change', handleFile);
+  convertBtn.addEventListener('click', convertImage);
+
+  copyBtn.addEventListener('click', async () => {
+    if (!lastPlainText) return;
+    try {
+      await navigator.clipboard.writeText(lastPlainText);
+      setStatus('ASCII text copied to clipboard.');
+    } catch (err) {
+      setStatus('Could not copy automatically. You can still select and copy the text manually.');
+    }
+  });
+
+  downloadBtn.addEventListener('click', () => {
+    if (!lastPlainText) return;
+    const blob = new Blob([lastPlainText], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'ascii_art.txt';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  function setStatus(msg){
+    statusBox.textContent = msg;
+  }
+
+  function escapeHtml(text){
+    return text
+      .replaceAll('&','&amp;')
+      .replaceAll('<','&lt;')
+      .replaceAll('>','&gt;');
+  }
+
+  function handleFile(e){
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')){
+      setStatus('That file does not look like an image.');
+      return;
+    }
+
+    const img = new Image();
+    img.onload = () => {
+      currentImage = img;
+      imagePreview.innerHTML = '';
+      const preview = document.createElement('img');
+      preview.src = img.src;
+      preview.alt = 'Uploaded preview';
+      imagePreview.appendChild(preview);
+      convertBtn.disabled = false;
+      convertImage();
+    };
+    img.onerror = () => {
+      setStatus('The image could not be loaded.');
+    };
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      img.src = reader.result;
+      setStatus('Image loaded. Converting...');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function convertImage(){
+    if (!currentImage) return;
+
+    const asciiWidth = parseInt(widthRange.value, 10);
+    const chars = charsetSel.value;
+    const invert = invertBox.value === 'invert';
+    const color = colorMode.value === 'color';
+
+    const aspectRatio = currentImage.height / currentImage.width;
+    const asciiHeight = Math.max(1, Math.round(asciiWidth * aspectRatio * 0.55));
+
+    canvas.width = asciiWidth;
+    canvas.height = asciiHeight;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(currentImage, 0, 0, asciiWidth, asciiHeight);
+
+    const imgData = ctx.getImageData(0, 0, asciiWidth, asciiHeight).data;
+    let plain = '';
+    let html = '';
+
+    for (let y = 0; y < asciiHeight; y++){
+      for (let x = 0; x < asciiWidth; x++){
+        const i = (y * asciiWidth + x) * 4;
+        const r = imgData[i];
+        const g = imgData[i + 1];
+        const b = imgData[i + 2];
+        const a = imgData[i + 3];
+
+        if (a < 40){
+          plain += ' ';
+          html += ' ';
+          continue;
+        }
+
+        let brightness = 0.299 * r + 0.587 * g + 0.114 * b;
+        if (invert) brightness = 255 - brightness;
+
+        const index = Math.min(
+          chars.length - 1,
+          Math.floor((brightness / 255) * (chars.length - 1))
+        );
+        const ch = chars[index];
+
+        plain += ch;
+
+        if (color){
+          html += `<span style="color:rgb(${r},${g},${b})">${escapeHtml(ch)}</span>`;
+        } else {
+          html += escapeHtml(ch);
+        }
+      }
+      plain += '\n';
+      html += '\n';
+    }
+
+    lastPlainText = plain;
+    asciiOutput.innerHTML = html;
+    copyBtn.disabled = false;
+    downloadBtn.disabled = false;
+    setStatus(`Converted to ASCII at ${asciiWidth} characters wide.`);
+  }
+})();
+</script>
+</body>
+</html>
