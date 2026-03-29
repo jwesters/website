@@ -3,24 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Scrabble Race Minimal</title>
+<title>Scrabble Race to 100</title>
 <style>
   :root{
-    --bg:#f4f1ea;
-    --panel:#fffdf8;
-    --line:#d6c9b3;
-    --text:#2e261d;
-    --muted:#6a5c4a;
-    --tileEdge:#c89c3d;
-    --tileText:#2b2113;
-    --dw:#f7b7c3;
-    --tw:#ef7373;
-    --dl:#b9dcff;
-    --tl:#6fa9e8;
-    --star:#f2c65c;
-    --ok:#2c8c52;
-    --boardCell: clamp(20px, 5.2vw, 42px);
-    --gap: 2px;
+    --bg:#f4f1ea; --panel:#fffdf8; --line:#d6c9b3; --text:#2e261d; --muted:#6a5c4a;
+    --tileEdge:#c89c3d; --tileText:#2b2113; --dw:#f7b7c3; --tw:#ef7373; --dl:#b9dcff;
+    --tl:#6fa9e8; --star:#f2c65c; --ok:#2c8c52; --boardCell:clamp(20px,5.2vw,42px); --gap:2px;
   }
   *{box-sizing:border-box}
   body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
@@ -112,7 +100,7 @@
 </div>
 
 <script>
-(function(){
+(() => {
   const BOARD_SIZE = 15;
   const RACK_SIZE = 7;
   const TARGET_SCORE = 100;
@@ -130,22 +118,24 @@
   const WORDS = new Set(BASE_WORDS);
   let dictionaryFailed = false;
 
-  const setupScreen = document.getElementById('setupScreen');
-  const playerCountEl = document.getElementById('playerCount');
-  const playerInputsEl = document.getElementById('playerInputs');
-  const setupMsgEl = document.getElementById('setupMsg');
-  const startBtn = document.getElementById('startBtn');
-  const gameTopbar = document.getElementById('gameTopbar');
-  const boardWrap = document.getElementById('boardWrap');
-  const rackPanel = document.getElementById('rackPanel');
-  const boardEl = document.getElementById('board');
-  const rackEl = document.getElementById('rack');
-  const msgEl = document.getElementById('msg');
-  const turnLabelEl = document.getElementById('turnLabel');
-  const scoresEl = document.getElementById('scores');
-  const shuffleBtn = document.getElementById('shuffleBtn');
-  const resetBtn = document.getElementById('resetBtn');
-  const submitBtn = document.getElementById('submitBtn');
+  const els = {
+    setupScreen: document.getElementById('setupScreen'),
+    playerCount: document.getElementById('playerCount'),
+    playerInputs: document.getElementById('playerInputs'),
+    setupMsg: document.getElementById('setupMsg'),
+    startBtn: document.getElementById('startBtn'),
+    gameTopbar: document.getElementById('gameTopbar'),
+    boardWrap: document.getElementById('boardWrap'),
+    rackPanel: document.getElementById('rackPanel'),
+    board: document.getElementById('board'),
+    rack: document.getElementById('rack'),
+    msg: document.getElementById('msg'),
+    turnLabel: document.getElementById('turnLabel'),
+    scores: document.getElementById('scores'),
+    shuffleBtn: document.getElementById('shuffleBtn'),
+    resetBtn: document.getElementById('resetBtn'),
+    submitBtn: document.getElementById('submitBtn')
+  };
 
   let bonuses = {};
   let board = [];
@@ -154,22 +144,20 @@
   let currentPlayer = 0;
   let selectedRackIndex = null;
   let currentPlacements = [];
+  let finalChallenge = null; // {leaderIndex, benchmark, queue:[...]}
+  let gameOver = false;
 
-  let finalChallengeActive = false;
-  let benchmarkScore = 0;
-  let remainingChallengePlayers = [];
-
-  function say(text){ msgEl.textContent = text; }
-  function saySetup(text){ setupMsgEl.textContent = text; }
+  function say(text){ els.msg.textContent = text; }
+  function saySetup(text){ els.setupMsg.textContent = text; }
 
   function createPlayerInputs(){
-    const count = Number(playerCountEl.value);
-    playerInputsEl.innerHTML = '';
+    const count = Number(els.playerCount.value);
+    els.playerInputs.innerHTML = '';
     for(let i=0;i<count;i++){
       const card = document.createElement('div');
       card.className = 'player-card';
       card.innerHTML = `<label for="playerName${i}">Player ${i+1} Name</label><input id="playerName${i}" maxlength="16" placeholder="Player ${i+1}" value="Player ${i+1}">`;
-      playerInputsEl.appendChild(card);
+      els.playerInputs.appendChild(card);
     }
   }
 
@@ -180,8 +168,7 @@
         return res.text();
       })
       .then(text => {
-        text.split(/?
-/).map(x => x.trim().toUpperCase()).filter(x => /^[A-Z]+$/.test(x)).forEach(w => WORDS.add(w));
+        text.split(/\r?\n/).map(x => x.trim().toUpperCase()).filter(x => /^[A-Z]+$/.test(x)).forEach(w => WORDS.add(w));
         dictionaryFailed = false;
         say(`dictionary.txt loaded (${WORDS.size.toLocaleString()} words available).`);
       })
@@ -232,7 +219,7 @@
   }
 
   function renderBoard(){
-    boardEl.innerHTML = '';
+    els.board.innerHTML = '';
     for(let r=0;r<BOARD_SIZE;r++){
       for(let c=0;c<BOARD_SIZE;c++){
         const data = board[r][c];
@@ -251,43 +238,47 @@
           cell.appendChild(small);
         }
         cell.addEventListener('click', onBoardClick);
-        boardEl.appendChild(cell);
+        els.board.appendChild(cell);
       }
     }
   }
 
   function renderRack(){
-    rackEl.innerHTML = '';
-    const rack = players[currentPlayer].rack;
+    els.rack.innerHTML = '';
+    const rack = players[currentPlayer]?.rack || [];
     rack.forEach((letter, idx) => {
       const tile = document.createElement('div');
       tile.className = 'rack-tile' + (selectedRackIndex === idx ? ' selected' : '');
       tile.innerHTML = `${letter}<span class="value">${LETTER_VALUES[letter]}</span>`;
       tile.addEventListener('click', () => {
+        if(gameOver) return;
         selectedRackIndex = selectedRackIndex === idx ? null : idx;
         renderRack();
         say(selectedRackIndex === null ? 'Tile unselected.' : `Selected ${letter}. Place it on the board.`);
       });
-      rackEl.appendChild(tile);
+      els.rack.appendChild(tile);
     });
   }
 
   function renderScores(){
-    scoresEl.innerHTML = '';
+    els.scores.innerHTML = '';
     players.forEach((p, idx) => {
       const span = document.createElement('span');
       span.className = 'score-pill' + (idx === currentPlayer ? ' current' : '');
       span.textContent = `${p.name}: ${p.score}`;
-      scoresEl.appendChild(span);
+      els.scores.appendChild(span);
     });
-    if(finalChallengeActive){
-      turnLabelEl.textContent = `${players[currentPlayer].name}'s comeback turn`;
+    if(gameOver){
+      els.turnLabel.textContent = 'Game over';
+    } else if(finalChallenge){
+      els.turnLabel.textContent = `${players[currentPlayer].name}'s comeback turn`;
     } else {
-      turnLabelEl.textContent = `${players[currentPlayer].name}'s turn`;
+      els.turnLabel.textContent = `${players[currentPlayer].name}'s turn`;
     }
   }
 
   function onBoardClick(e){
+    if(gameOver) return;
     const r = Number(e.currentTarget.dataset.r);
     const c = Number(e.currentTarget.dataset.c);
 
@@ -327,6 +318,7 @@
   }
 
   function resetTurn(){
+    if(gameOver) return;
     if(!currentPlacements.length){
       say('Nothing to reset.');
       return;
@@ -345,6 +337,7 @@
   }
 
   function shuffleRackAction(){
+    if(gameOver) return;
     if(currentPlacements.length){
       say('Submit or reset your placed tiles first.');
       return;
@@ -430,63 +423,66 @@
     return dictionaryFailed;
   }
 
-  function finalizeWinnerByHighest(){
-    let bestScore = Math.max(...players.map(p => p.score));
-    const winners = players.filter(p => p.score === bestScore);
-    renderBoard();
-    renderRack();
+  function announceWinners(){
+    gameOver = true;
     renderScores();
+    renderRack();
+    const best = Math.max(...players.map(p => p.score));
+    const winners = players.filter(p => p.score === best);
     if(winners.length === 1){
-      say(`${winners[0].name} wins with ${bestScore} points!`);
+      say(`${winners[0].name} wins with ${best} points!`);
       setTimeout(() => alert(`${winners[0].name} wins!`), 50);
     } else {
       const names = winners.map(p => p.name).join(' and ');
-      say(`Tie game: ${names} with ${bestScore} points!`);
+      say(`Tie game: ${names} with ${best} points!`);
       setTimeout(() => alert(`Tie game: ${names}!`), 50);
     }
   }
 
-  function advanceAfterTurn(turnPoints, finishedName){
-    if(finalChallengeActive){
-      if(remainingChallengePlayers.length){
-        currentPlayer = remainingChallengePlayers.shift();
+  function moveToNextTurn(turnPoints, finishedName){
+    if(finalChallenge){
+      if(finalChallenge.queue.length){
+        currentPlayer = finalChallenge.queue.shift();
         renderBoard();
         renderRack();
         renderScores();
-        say(`${finishedName} scored ${turnPoints} point${turnPoints === 1 ? '' : 's'}. ${players[currentPlayer].name} gets a comeback turn to beat ${players[0].name}'s ${benchmarkScore}.`);
+        say(`${finishedName} scored ${turnPoints} point${turnPoints===1?'':'s'}. ${players[currentPlayer].name} gets one comeback turn to beat ${players[finalChallenge.leaderIndex].name}'s ${finalChallenge.benchmark}.`);
       } else {
-        finalChallengeActive = false;
-        finalizeWinnerByHighest();
+        finalChallenge = null;
+        announceWinners();
       }
       return;
     }
 
-    if(currentPlayer === 0 && players[0].score >= TARGET_SCORE && players.length > 1){
-      finalChallengeActive = true;
-      benchmarkScore = players[0].score;
-      remainingChallengePlayers = [];
-      for(let i=1;i<players.length;i++) remainingChallengePlayers.push(i);
-      currentPlayer = remainingChallengePlayers.shift();
-      renderBoard();
-      renderRack();
-      renderScores();
-      say(`${players[0].name} reached ${benchmarkScore}. Everyone else gets one more turn to beat that score.`);
-      return;
-    }
-
-    if(currentPlayer !== 0 && players[currentPlayer].score >= TARGET_SCORE){
-      finalizeWinnerByHighest();
-      return;
+    const justReached = players[currentPlayer].score >= TARGET_SCORE;
+    if(justReached){
+      if(currentPlayer === 0 && players.length > 1){
+        finalChallenge = {
+          leaderIndex: 0,
+          benchmark: players[0].score,
+          queue: Array.from({length: players.length - 1}, (_,i) => i + 1)
+        };
+        currentPlayer = finalChallenge.queue.shift();
+        renderBoard();
+        renderRack();
+        renderScores();
+        say(`${players[0].name} reached ${players[0].score}. Everyone else gets one more turn to beat that score.`);
+        return;
+      } else {
+        announceWinners();
+        return;
+      }
     }
 
     currentPlayer = (currentPlayer + 1) % players.length;
     renderBoard();
     renderRack();
     renderScores();
-    say(`${finishedName} scored ${turnPoints} point${turnPoints === 1 ? '' : 's'}.`);
+    say(`${finishedName} scored ${turnPoints} point${turnPoints===1?'':'s'}.`);
   }
 
   function submitTurn(){
+    if(gameOver) return;
     if(!currentPlacements.length){
       say('Place at least one tile first.');
       return;
@@ -523,11 +519,9 @@
     let turnPoints = 0;
     wordsMade.forEach(w => turnPoints += scoreWord(w, newlyPlacedSet));
 
-    // First-play bonus for Player 1 only
-    if(currentPlayer === 0 && players[0].score === 0 && !finalChallengeActive){
+    if(currentPlayer === 0 && players[0].score === 0 && !finalChallenge){
       turnPoints *= 2;
     }
-
     if(currentPlacements.length === 7) turnPoints += 50;
 
     currentPlacements.forEach(p => { board[p.r][p.c].pending = false; });
@@ -536,12 +530,12 @@
     currentPlacements = [];
     selectedRackIndex = null;
 
-    const finished = players[currentPlayer].name;
-    advanceAfterTurn(turnPoints, finished);
+    const finishedName = players[currentPlayer].name;
+    moveToNextTurn(turnPoints, finishedName);
   }
 
   function startGame(){
-    const count = Number(playerCountEl.value);
+    const count = Number(els.playerCount.value);
     const names = [];
     for(let i=0;i<count;i++){
       const input = document.getElementById(`playerName${i}`);
@@ -561,14 +555,13 @@
     currentPlayer = 0;
     selectedRackIndex = null;
     currentPlacements = [];
-    finalChallengeActive = false;
-    benchmarkScore = 0;
-    remainingChallengePlayers = [];
+    finalChallenge = null;
+    gameOver = false;
 
-    setupScreen.classList.add('hidden');
-    gameTopbar.classList.remove('hidden');
-    boardWrap.classList.remove('hidden');
-    rackPanel.classList.remove('hidden');
+    els.setupScreen.classList.add('hidden');
+    els.gameTopbar.classList.remove('hidden');
+    els.boardWrap.classList.remove('hidden');
+    els.rackPanel.classList.remove('hidden');
 
     renderBoard();
     renderRack();
@@ -577,11 +570,11 @@
     loadLocalDictionary();
   }
 
-  playerCountEl.addEventListener('change', createPlayerInputs);
-  startBtn.addEventListener('click', startGame);
-  shuffleBtn.addEventListener('click', shuffleRackAction);
-  resetBtn.addEventListener('click', resetTurn);
-  submitBtn.addEventListener('click', submitTurn);
+  els.playerCount.addEventListener('change', createPlayerInputs);
+  els.startBtn.addEventListener('click', startGame);
+  els.shuffleBtn.addEventListener('click', shuffleRackAction);
+  els.resetBtn.addEventListener('click', resetTurn);
+  els.submitBtn.addEventListener('click', submitTurn);
   createPlayerInputs();
 })();
 </script>
