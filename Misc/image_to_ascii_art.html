@@ -15,7 +15,6 @@
     --line:#c8d5ee;
     --accent:#4f7cff;
     --accent2:#6f9bff;
-    --good:#1f9d68;
   }
   *{box-sizing:border-box}
   body{
@@ -26,7 +25,7 @@
     min-height:100vh;
   }
   .wrap{
-    max-width:1200px;
+    max-width:1280px;
     margin:0 auto;
     padding:20px;
   }
@@ -44,7 +43,7 @@
   }
   .grid{
     display:grid;
-    grid-template-columns: 360px 1fr;
+    grid-template-columns: 380px 1fr;
     gap:16px;
   }
   .panel{
@@ -71,7 +70,7 @@
     font-size:.88rem;
     margin-top:4px;
   }
-  input[type="file"], select, input[type="range"], textarea, button{
+  input[type="file"], select, input[type="range"], button{
     width:100%;
   }
   input[type="file"]{
@@ -87,7 +86,7 @@
     align-items:center;
   }
   .value-pill{
-    min-width:58px;
+    min-width:64px;
     text-align:center;
     padding:8px 10px;
     border-radius:999px;
@@ -122,9 +121,14 @@
     opacity:.6;
     cursor:not-allowed;
   }
-  .btns{
+  .btns2{
     display:grid;
     grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+  .btns3{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
     gap:10px;
   }
   .preview-wrap{
@@ -180,12 +184,20 @@
   canvas{
     display:none;
   }
-  @media (max-width: 900px){
+  @media (max-width: 980px){
     .grid{
       grid-template-columns:1fr;
     }
     .preview-wrap{
       min-height:auto;
+    }
+  }
+  @media (max-width: 560px){
+    .btns3{
+      grid-template-columns:1fr;
+    }
+    .btns2{
+      grid-template-columns:1fr;
     }
   }
 </style>
@@ -210,10 +222,19 @@
           <div>
             <label for="widthRange">ASCII width</label>
             <div class="row">
-              <input type="range" id="widthRange" min="20" max="220" step="1" value="100" />
-              <div class="value-pill" id="widthVal">100</div>
+              <input type="range" id="widthRange" min="20" max="500" step="1" value="120" />
+              <div class="value-pill" id="widthVal">120</div>
             </div>
             <div class="hint">Higher values create more detail but make the output larger.</div>
+          </div>
+
+          <div>
+            <label for="fontSizeRange">Preview font size</label>
+            <div class="row">
+              <input type="range" id="fontSizeRange" min="4" max="14" step="1" value="8" />
+              <div class="value-pill" id="fontSizeVal">8px</div>
+            </div>
+            <div class="hint">Shrink this if you use a very large width.</div>
           </div>
 
           <div>
@@ -244,16 +265,20 @@
             </select>
           </div>
 
-          <div class="btns">
+          <div class="btns2">
             <button id="convertBtn" disabled>Convert</button>
             <button id="copyBtn" class="secondary" disabled>Copy text</button>
           </div>
 
-          <button id="downloadBtn" class="secondary" disabled>Download .txt</button>
+          <div class="btns3">
+            <button id="downloadBtn" class="secondary" disabled>Download .txt</button>
+            <button id="exportPngBtn" class="secondary" disabled>Export PNG</button>
+            <button id="exportJpgBtn" class="secondary" disabled>Export JPG</button>
+          </div>
 
           <div class="status" id="status">Upload an image to begin.</div>
         </div>
-        <div class="footer-note">Tip: tall images usually look better with a width between 70 and 130.</div>
+        <div class="footer-note">Tip: for detailed images, widths around 150–260 often look great. You can now push it much larger too.</div>
       </section>
 
       <section class="panel">
@@ -281,15 +306,18 @@
   const fileInput = document.getElementById('fileInput');
   const widthRange = document.getElementById('widthRange');
   const widthVal = document.getElementById('widthVal');
+  const fontSizeRange = document.getElementById('fontSizeRange');
+  const fontSizeVal = document.getElementById('fontSizeVal');
   const charsetSel = document.getElementById('charset');
   const invertBox = document.getElementById('invertBox');
   const colorMode = document.getElementById('colorMode');
   const convertBtn = document.getElementById('convertBtn');
   const copyBtn = document.getElementById('copyBtn');
   const downloadBtn = document.getElementById('downloadBtn');
+  const exportPngBtn = document.getElementById('exportPngBtn');
+  const exportJpgBtn = document.getElementById('exportJpgBtn');
   const imagePreview = document.getElementById('imagePreview');
   const asciiOutput = document.getElementById('asciiOutput');
-  const asciiContainer = document.getElementById('asciiContainer');
   const statusBox = document.getElementById('status');
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -300,6 +328,11 @@
   widthRange.addEventListener('input', () => {
     widthVal.textContent = widthRange.value;
     if (currentImage) convertImage();
+  });
+
+  fontSizeRange.addEventListener('input', () => {
+    fontSizeVal.textContent = fontSizeRange.value + 'px';
+    asciiOutput.style.fontSize = fontSizeRange.value + 'px';
   });
 
   charsetSel.addEventListener('change', () => {
@@ -336,6 +369,9 @@
     a.click();
     URL.revokeObjectURL(a.href);
   });
+
+  exportPngBtn.addEventListener('click', () => exportAsciiImage('png'));
+  exportJpgBtn.addEventListener('click', () => exportAsciiImage('jpg'));
 
   function setStatus(msg){
     statusBox.textContent = msg;
@@ -380,16 +416,20 @@
     reader.readAsDataURL(file);
   }
 
+  function getAsciiDimensions(){
+    const asciiWidth = parseInt(widthRange.value, 10);
+    const aspectRatio = currentImage.height / currentImage.width;
+    const asciiHeight = Math.max(1, Math.round(asciiWidth * aspectRatio * 0.55));
+    return { asciiWidth, asciiHeight };
+  }
+
   function convertImage(){
     if (!currentImage) return;
 
-    const asciiWidth = parseInt(widthRange.value, 10);
+    const { asciiWidth, asciiHeight } = getAsciiDimensions();
     const chars = charsetSel.value;
     const invert = invertBox.value === 'invert';
     const color = colorMode.value === 'color';
-
-    const aspectRatio = currentImage.height / currentImage.width;
-    const asciiHeight = Math.max(1, Math.round(asciiWidth * aspectRatio * 0.55));
 
     canvas.width = asciiWidth;
     canvas.height = asciiHeight;
@@ -437,9 +477,82 @@
 
     lastPlainText = plain;
     asciiOutput.innerHTML = html;
+    asciiOutput.style.fontSize = fontSizeRange.value + 'px';
     copyBtn.disabled = false;
     downloadBtn.disabled = false;
+    exportPngBtn.disabled = false;
+    exportJpgBtn.disabled = false;
     setStatus(`Converted to ASCII at ${asciiWidth} characters wide.`);
+  }
+
+  function exportAsciiImage(type){
+    if (!currentImage || !lastPlainText) return;
+
+    const { asciiWidth, asciiHeight } = getAsciiDimensions();
+    const chars = charsetSel.value;
+    const invert = invertBox.value === 'invert';
+    const useColor = colorMode.value === 'color';
+
+    const fontSize = 12;
+    const lineHeight = 12;
+    const padding = 20;
+    const fontFamily = '"Courier New", Courier, monospace';
+
+    const measureCanvas = document.createElement('canvas');
+    const measureCtx = measureCanvas.getContext('2d');
+    measureCtx.font = `${fontSize}px ${fontFamily}`;
+    const charWidth = Math.ceil(measureCtx.measureText('M').width);
+
+    const outW = Math.max(100, padding * 2 + asciiWidth * charWidth);
+    const outH = Math.max(100, padding * 2 + asciiHeight * lineHeight);
+
+    const outCanvas = document.createElement('canvas');
+    outCanvas.width = outW;
+    outCanvas.height = outH;
+    const outCtx = outCanvas.getContext('2d');
+
+    outCtx.fillStyle = '#ffffff';
+    outCtx.fillRect(0, 0, outW, outH);
+    outCtx.font = `${fontSize}px ${fontFamily}`;
+    outCtx.textBaseline = 'top';
+
+    ctx.clearRect(0, 0, asciiWidth, asciiHeight);
+    ctx.drawImage(currentImage, 0, 0, asciiWidth, asciiHeight);
+    const pixels = ctx.getImageData(0, 0, asciiWidth, asciiHeight).data;
+
+    for (let y = 0; y < asciiHeight; y++){
+      for (let x = 0; x < asciiWidth; x++){
+        const i = (y * asciiWidth + x) * 4;
+        const r = pixels[i];
+        const g = pixels[i + 1];
+        const b = pixels[i + 2];
+        const a = pixels[i + 3];
+
+        if (a < 40) continue;
+
+        let brightness = 0.299 * r + 0.587 * g + 0.114 * b;
+        if (invert) brightness = 255 - brightness;
+
+        const index = Math.min(
+          chars.length - 1,
+          Math.floor((brightness / 255) * (chars.length - 1))
+        );
+        const ch = chars[index];
+
+        outCtx.fillStyle = useColor ? `rgb(${r},${g},${b})` : '#111111';
+        outCtx.fillText(ch, padding + x * charWidth, padding + y * lineHeight);
+      }
+    }
+
+    const a = document.createElement('a');
+    if (type === 'jpg'){
+      a.href = outCanvas.toDataURL('image/jpeg', 0.95);
+      a.download = 'ascii_art.jpg';
+    } else {
+      a.href = outCanvas.toDataURL('image/png');
+      a.download = 'ascii_art.png';
+    }
+    a.click();
   }
 })();
 </script>
