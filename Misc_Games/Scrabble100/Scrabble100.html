@@ -41,10 +41,14 @@
   .tile-on-board .value{position:absolute;right:3px;bottom:2px;font-size:9px;line-height:1}
   .rack-panel{padding:10px;display:flex;flex-direction:column;gap:8px}
   .rack{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;min-height:52px}
-  .rack-tile{width:46px;height:46px;border-radius:10px;background:linear-gradient(#f9df97,#efc96a);border:1px solid var(--tileEdge);box-shadow:inset 0 1px 0 rgba(255,255,255,.45);color:var(--tileText);font-size:24px;font-weight:700;display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer;user-select:none;line-height:1}
-  .rack-tile .value{position:absolute;right:5px;bottom:3px;font-size:11px;line-height:1}
+  .rack-tile{width:46px;height:46px;border-radius:10px;background:linear-gradient(#f9df97,#efc96a);border:1px solid var(--tileEdge);box-shadow:inset 0 1px 0 rgba(255,255,255,.45);color:var(--tileText);font-size:24px;font-weight:700;display:flex;align-items:center;justify-content:center;position:relative;cursor:grab;user-select:none;line-height:1;-webkit-user-drag:element}
+  .rack-tile .value{position:absolute;right:5px;bottom:3px;font-size:11px;line-height:1;pointer-events:none}
   .rack-tile.selected{outline:3px solid #4f84c4;transform:translateY(-2px)}
+  .rack-tile.dragging{opacity:.55;cursor:grabbing}
+  .cell.drag-target{outline:3px dashed #4f84c4;outline-offset:-3px}
   .actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .actions.primary-row{margin-bottom:2px}
+  .actions.submit-row{margin-top:0}
   button,select{border:none;border-radius:999px;padding:10px 14px;font-size:14px;font-weight:700;color:var(--text);background:#e9decc}
   button{cursor:pointer}
   button.primary{background:var(--ok);color:white}
@@ -119,10 +123,13 @@
 
   <div class="rack-panel hidden" id="rackPanel">
     <div class="rack" id="rack"></div>
-    <div class="actions">
+    <div class="actions primary-row">
       <button type="button" id="shuffleBtn">Shuffle Rack</button>
       <button type="button" id="resetBtn">Reset Turn</button>
       <button type="button" id="passBtn">Pass Turn</button>
+      <button type="button" id="restartBoardBtn" class="hidden">Restart Game</button>
+    </div>
+    <div class="actions submit-row">
       <button type="button" class="primary" id="submitBtn">Submit Word</button>
     </div>
     <div class="msg" id="msg">Pick a tile, then place it on the board.</div>
@@ -178,6 +185,7 @@
     resetBtn: document.getElementById('resetBtn'),
     passBtn: document.getElementById('passBtn'),
     submitBtn: document.getElementById('submitBtn'),
+    restartBoardBtn: document.getElementById('restartBoardBtn'),
     winOverlay: document.getElementById('winOverlay'),
     winTitle: document.getElementById('winTitle'),
     winText: document.getElementById('winText'),
@@ -194,6 +202,7 @@
   let currentPlacements = [];
   let finalChallenge = null; // {leaderIndex, benchmark, queue:[...]}
   let gameOver = false;
+  let draggedRackIndex = null;
 
   function say(text){ els.msg.textContent = text; }
   function saySetup(text){ els.setupMsg.textContent = text; }
@@ -285,7 +294,47 @@
           small.textContent = data.bonus.label;
           cell.appendChild(small);
         }
+
         cell.addEventListener('click', onBoardClick);
+
+        cell.addEventListener('dragenter', (e) => {
+          if(gameOver || data.letter) return;
+          e.preventDefault();
+          cell.classList.add('drag-target');
+        });
+
+        cell.addEventListener('dragover', (e) => {
+          if(gameOver || data.letter) return;
+          e.preventDefault();
+          try { e.dataTransfer.dropEffect = 'move'; } catch(err) {}
+          cell.classList.add('drag-target');
+        });
+
+        cell.addEventListener('dragleave', () => {
+          cell.classList.remove('drag-target');
+        });
+
+        cell.addEventListener('drop', (e) => {
+          if(gameOver || data.letter) return;
+          e.preventDefault();
+          cell.classList.remove('drag-target');
+
+          let idx = draggedRackIndex;
+          if(idx === null || idx === undefined){
+            try {
+              const raw = e.dataTransfer.getData('text/plain');
+              if(raw !== '') idx = Number(raw);
+            } catch(err) {}
+          }
+
+          if(Number.isInteger(idx) && idx >= 0){
+            placeTileAt(r, c, idx);
+          } else {
+            say('Drag a rack tile onto an empty square.');
+          }
+          draggedRackIndex = null;
+        });
+
         els.board.appendChild(cell);
       }
     }
@@ -298,17 +347,41 @@
       const tile = document.createElement('div');
       tile.className = 'rack-tile' + (selectedRackIndex === idx ? ' selected' : '');
       tile.innerHTML = `${letter}<span class="value">${LETTER_VALUES[letter]}</span>`;
+      tile.setAttribute('draggable', gameOver ? 'false' : 'true');
+
       tile.addEventListener('click', () => {
         if(gameOver) return;
         selectedRackIndex = selectedRackIndex === idx ? null : idx;
         renderRack();
         say(selectedRackIndex === null ? 'Tile unselected.' : `Selected ${letter}. Place it on the board.`);
       });
+
+      tile.addEventListener('dragstart', (e) => {
+        if(gameOver) {
+          e.preventDefault();
+          return;
+        }
+        draggedRackIndex = idx;
+        selectedRackIndex = idx;
+        tile.classList.add('dragging');
+        try {
+          e.dataTransfer.setData('text/plain', String(idx));
+          e.dataTransfer.effectAllowed = 'move';
+        } catch(err) {}
+      });
+
+      tile.addEventListener('dragend', () => {
+        draggedRackIndex = null;
+        tile.classList.remove('dragging');
+        document.querySelectorAll('.cell.drag-target').forEach(c => c.classList.remove('drag-target'));
+      });
+
       els.rack.appendChild(tile);
     });
   }
 
   function renderScores(){
+    els.restartBoardBtn.classList.toggle('hidden', !gameOver);
     els.scores.innerHTML = '';
     players.forEach((p, idx) => {
       const span = document.createElement('span');
@@ -323,6 +396,33 @@
     } else {
       els.turnLabel.textContent = `${players[currentPlayer].name}'s turn`;
     }
+  }
+
+  function hasCommittedTiles(){
+    return board.some(row => row.some(cell => cell.letter && !cell.pending));
+  }
+
+  function placeTileAt(r, c, rackIndex){
+    if(gameOver) return;
+    if(board[r][c].letter){
+      say('That square is already filled.');
+      return;
+    }
+    const rack = players[currentPlayer].rack;
+    if(rackIndex === null || rackIndex < 0 || rackIndex >= rack.length){
+      say('Pick a rack tile first.');
+      return;
+    }
+    const letter = rack[rackIndex];
+    rack.splice(rackIndex, 1);
+    board[r][c].letter = letter;
+    board[r][c].pending = true;
+    currentPlacements.push({r,c,letter});
+    selectedRackIndex = null;
+    draggedRackIndex = null;
+    renderBoard();
+    renderRack();
+    say('Tile placed. Submit when your word looks right.');
   }
 
   function onBoardClick(e){
@@ -345,24 +445,7 @@
       return;
     }
 
-    if(board[r][c].letter){
-      say('That square is already filled.');
-      return;
-    }
-    if(selectedRackIndex === null){
-      say('Pick a rack tile first.');
-      return;
-    }
-
-    const letter = players[currentPlayer].rack[selectedRackIndex];
-    players[currentPlayer].rack.splice(selectedRackIndex, 1);
-    board[r][c].letter = letter;
-    board[r][c].pending = true;
-    currentPlacements.push({r,c,letter});
-    selectedRackIndex = null;
-    renderBoard();
-    renderRack();
-    say('Tile placed. Submit when your word looks right.');
+    placeTileAt(r, c, selectedRackIndex);
   }
 
   function resetTurn(){
@@ -484,6 +567,11 @@
 
   function restartGame(){
     hideWinOverlay();
+    gameOver = false;
+    finalChallenge = null;
+    currentPlacements = [];
+    selectedRackIndex = null;
+    draggedRackIndex = null;
     els.setupScreen.classList.remove('hidden');
     els.gameTopbar.classList.add('hidden');
     els.boardWrap.classList.add('hidden');
@@ -594,8 +682,9 @@
       return;
     }
     const main = buildMainWord(currentPlacements);
-    if(!main || main.word.length < 2){
-      say('Play must make a word with at least 2 letters.');
+    const committedBeforeTurn = hasCommittedTiles();
+    if(!main){
+      say('Tiles must connect to form a word.');
       return;
     }
 
@@ -609,7 +698,18 @@
       }
     }
 
-    for(const w of wordsMade){
+    const playableWords = wordsMade.filter(w => w.word.length >= 2);
+
+    if(!committedBeforeTurn && playableWords.length === 0){
+      say('First turn must make a word with at least 2 letters.');
+      return;
+    }
+    if(committedBeforeTurn && playableWords.length === 0){
+      say('That move must create or extend a word of at least 2 letters.');
+      return;
+    }
+
+    for(const w of playableWords){
       if(!isValidWord(w.word)){
         say(`"${w.word}" is not in the word list.`);
         return;
@@ -618,7 +718,7 @@
 
     const newlyPlacedSet = new Set(currentPlacements.map(p => `${p.r},${p.c}`));
     let turnPoints = 0;
-    wordsMade.forEach(w => turnPoints += scoreWord(w, newlyPlacedSet));
+    playableWords.forEach(w => turnPoints += scoreWord(w, newlyPlacedSet));
 
     if(currentPlayer === 0 && players[0].score === 0 && !finalChallenge){
       turnPoints *= 2;
@@ -680,6 +780,7 @@
   els.submitBtn.addEventListener('click', submitTurn);
   els.viewBoardBtn.addEventListener('click', hideWinOverlay);
   els.restartGameBtn.addEventListener('click', restartGame);
+  els.restartBoardBtn.addEventListener('click', restartGame);
   createPlayerInputs();
 })();
 </script>
