@@ -50,6 +50,35 @@
   button.primary{background:var(--ok);color:white}
   .msg{text-align:center;min-height:18px;font-size:14px;color:var(--muted);font-weight:700}
   .hidden{display:none!important}
+
+  .overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.45);
+    display:flex; align-items:center; justify-content:center;
+    padding:16px; z-index:1000;
+  }
+  .overlay.hidden{display:none!important}
+  .modal{
+    width:min(92vw, 520px);
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:20px;
+    box-shadow:0 18px 50px rgba(0,0,0,.22);
+    text-align:center;
+  }
+  .modal h2{
+    margin:0 0 8px;
+    font-size:28px;
+  }
+  .modal p{
+    margin:0 0 16px;
+    color:var(--muted);
+    font-weight:700;
+    line-height:1.4;
+  }
+  .modal-actions{
+    display:flex; gap:10px; justify-content:center; flex-wrap:wrap;
+  }
   @media (max-width:700px){
     .topbar{grid-template-columns:1fr}
     .title,.turn,.scores{justify-self:center;text-align:center}
@@ -93,9 +122,22 @@
     <div class="actions">
       <button type="button" id="shuffleBtn">Shuffle Rack</button>
       <button type="button" id="resetBtn">Reset Turn</button>
+      <button type="button" id="passBtn">Pass Turn</button>
       <button type="button" class="primary" id="submitBtn">Submit Word</button>
     </div>
     <div class="msg" id="msg">Pick a tile, then place it on the board.</div>
+  </div>
+</div>
+
+
+<div class="overlay hidden" id="winOverlay">
+  <div class="modal">
+    <h2 id="winTitle">Game Over</h2>
+    <p id="winText"></p>
+    <div class="modal-actions">
+      <button type="button" id="viewBoardBtn">View Board</button>
+      <button type="button" class="primary" id="restartGameBtn">Restart Game</button>
+    </div>
   </div>
 </div>
 
@@ -134,7 +176,13 @@
     scores: document.getElementById('scores'),
     shuffleBtn: document.getElementById('shuffleBtn'),
     resetBtn: document.getElementById('resetBtn'),
-    submitBtn: document.getElementById('submitBtn')
+    passBtn: document.getElementById('passBtn'),
+    submitBtn: document.getElementById('submitBtn'),
+    winOverlay: document.getElementById('winOverlay'),
+    winTitle: document.getElementById('winTitle'),
+    winText: document.getElementById('winText'),
+    viewBoardBtn: document.getElementById('viewBoardBtn'),
+    restartGameBtn: document.getElementById('restartGameBtn')
   };
 
   let bonuses = {};
@@ -423,6 +471,27 @@
     return dictionaryFailed;
   }
 
+
+  function showWinOverlay(title, text){
+    els.winTitle.textContent = title;
+    els.winText.textContent = text;
+    els.winOverlay.classList.remove('hidden');
+  }
+
+  function hideWinOverlay(){
+    els.winOverlay.classList.add('hidden');
+  }
+
+  function restartGame(){
+    hideWinOverlay();
+    els.setupScreen.classList.remove('hidden');
+    els.gameTopbar.classList.add('hidden');
+    els.boardWrap.classList.add('hidden');
+    els.rackPanel.classList.add('hidden');
+    els.setupMsg.textContent = '';
+    createPlayerInputs();
+  }
+
   function announceWinners(){
     gameOver = true;
     renderScores();
@@ -430,12 +499,14 @@
     const best = Math.max(...players.map(p => p.score));
     const winners = players.filter(p => p.score === best);
     if(winners.length === 1){
-      say(`${winners[0].name} wins with ${best} points!`);
-      setTimeout(() => alert(`${winners[0].name} wins!`), 50);
+      const msg = `${winners[0].name} wins with ${best} points!`;
+      say(msg);
+      showWinOverlay('You won!', msg);
     } else {
       const names = winners.map(p => p.name).join(' and ');
-      say(`Tie game: ${names} with ${best} points!`);
-      setTimeout(() => alert(`Tie game: ${names}!`), 50);
+      const msg = `Tie game: ${names} with ${best} points!`;
+      say(msg);
+      showWinOverlay('Tie game', msg);
     }
   }
 
@@ -479,6 +550,36 @@
     renderRack();
     renderScores();
     say(`${finishedName} scored ${turnPoints} point${turnPoints===1?'':'s'}.`);
+  }
+
+  function passTurn(){
+    if(gameOver) return;
+    if(currentPlacements.length){
+      say('Reset your placed tiles before passing.');
+      return;
+    }
+
+    const passerName = players[currentPlayer].name;
+
+    if(finalChallenge){
+      if(finalChallenge.queue.length){
+        currentPlayer = finalChallenge.queue.shift();
+        renderBoard();
+        renderRack();
+        renderScores();
+        say(`${passerName} passed. ${players[currentPlayer].name} gets one comeback turn to beat ${players[finalChallenge.leaderIndex].name}'s ${finalChallenge.benchmark}.`);
+      } else {
+        finalChallenge = null;
+        announceWinners();
+      }
+      return;
+    }
+
+    currentPlayer = (currentPlayer + 1) % players.length;
+    renderBoard();
+    renderRack();
+    renderScores();
+    say(`${passerName} passed their turn.`);
   }
 
   function submitTurn(){
@@ -557,6 +658,7 @@
     currentPlacements = [];
     finalChallenge = null;
     gameOver = false;
+    hideWinOverlay();
 
     els.setupScreen.classList.add('hidden');
     els.gameTopbar.classList.remove('hidden');
@@ -574,7 +676,10 @@
   els.startBtn.addEventListener('click', startGame);
   els.shuffleBtn.addEventListener('click', shuffleRackAction);
   els.resetBtn.addEventListener('click', resetTurn);
+  els.passBtn.addEventListener('click', passTurn);
   els.submitBtn.addEventListener('click', submitTurn);
+  els.viewBoardBtn.addEventListener('click', hideWinOverlay);
+  els.restartGameBtn.addEventListener('click', restartGame);
   createPlayerInputs();
 })();
 </script>

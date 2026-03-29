@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Local Go</title>
+<style>
+  :root{
+    --bg:#f3ecdf;
+    --panel:#fffaf1;
+    --ink:#2d241a;
+    --muted:#786858;
+    --line:#5d4730;
+    --wood1:#d8b57a;
+    --wood2:#c99d5d;
+    --accent:#2b6cb0;
+    --good:#276749;
+    --bad:#c53030;
+    --shadow:0 12px 28px rgba(0,0,0,.12);
+    --radius:18px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);
+    background:linear-gradient(180deg,#f7f1e7 0%, #efe3cf 100%);
+  }
+  .wrap{
+    max-width:1200px;
+    margin:0 auto;
+    padding:18px;
+  }
+  h1{
+    margin:0 0 6px;
+    font-size:clamp(1.5rem,3vw,2.25rem);
+  }
+  .sub{color:var(--muted);margin-bottom:14px}
+  .grid{
+    display:grid;
+    grid-template-columns:360px 1fr;
+    gap:18px;
+    align-items:start;
+  }
+  .panel{
+    background:var(--panel);
+    border:1px solid rgba(93,71,48,.14);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:16px;
+  }
+  .controls{
+    display:grid;
+    gap:12px;
+  }
+  .row{
+    display:grid;
+    gap:8px;
+  }
+  .row.inline{
+    grid-template-columns:1fr 1fr;
+  }
+  label{
+    font-weight:700;
+    font-size:.95rem;
+  }
+  select,input,button,textarea{
+    font:inherit;
+  }
+  select,input{
+    width:100%;
+    border:1px solid #ccb18d;
+    background:#fffdf8;
+    border-radius:12px;
+    padding:10px 12px;
+    color:var(--ink);
+  }
+  button{
+    border:none;
+    border-radius:14px;
+    padding:11px 14px;
+    font-weight:700;
+    cursor:pointer;
+    color:#fff;
+    background:var(--accent);
+    box-shadow:0 6px 12px rgba(43,108,176,.18);
+  }
+  button.alt{
+    background:#72583a;
+    box-shadow:0 6px 12px rgba(114,88,58,.18);
+  }
+  button.good{background:var(--good); box-shadow:0 6px 12px rgba(39,103,73,.18)}
+  button.bad{background:var(--bad); box-shadow:0 6px 12px rgba(197,48,48,.18)}
+  button.ghost{
+    background:#ece2d4;
+    color:var(--ink);
+    box-shadow:none;
+  }
+  button:hover{filter:brightness(.98)}
+  .btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .btns3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .status{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+  .chip{
+    border-radius:16px;
+    padding:12px;
+    background:#f6efe5;
+    border:1px solid rgba(93,71,48,.12);
+  }
+  .chip .big{font-size:1.15rem;font-weight:800}
+  .turnBadge{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:8px 12px;border-radius:999px;background:#f6efe5;border:1px solid rgba(93,71,48,.12);
+    font-weight:800;
+  }
+  .stoneDot{width:16px;height:16px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,.25)}
+  .black{background:radial-gradient(circle at 35% 30%, #666 0%, #222 35%, #070707 100%)}
+  .white{background:radial-gradient(circle at 35% 30%, #fff 0%, #f4f4f4 45%, #d7d7d7 100%)}
+  .boardPanel{padding:14px}
+  .boardWrap{
+    position:relative;
+    width:min(90vw,820px);
+    max-width:100%;
+    aspect-ratio:1;
+    margin:0 auto;
+  }
+  canvas{
+    width:100%;height:100%;display:block;border-radius:22px;box-shadow:var(--shadow);
+    background:
+      linear-gradient(135deg, rgba(255,255,255,.18), rgba(255,255,255,0) 35%),
+      radial-gradient(circle at top left, rgba(255,255,255,.22), transparent 30%),
+      linear-gradient(135deg, var(--wood1), var(--wood2));
+  }
+  .help, .log, .scorebox{
+    color:var(--muted);
+    line-height:1.45;
+    font-size:.95rem;
+  }
+  .log{
+    background:#fcf8f1;
+    border:1px solid rgba(93,71,48,.12);
+    border-radius:14px;
+    padding:12px;
+    min-height:84px;
+    max-height:190px;
+    overflow:auto;
+  }
+  .shareBox{
+    display:grid;
+    grid-template-columns:1fr auto auto;
+    gap:8px;
+  }
+  textarea{
+    resize:vertical;
+    min-height:74px;
+    border:1px solid #ccb18d;
+    background:#fffdf8;
+    border-radius:12px;
+    padding:10px 12px;
+    color:var(--ink);
+  }
+  .small{font-size:.88rem;color:var(--muted)}
+  .footerNote{margin-top:10px;color:var(--muted);font-size:.9rem}
+  @media (max-width: 930px){
+    .grid{grid-template-columns:1fr}
+    .boardWrap{width:min(94vw,760px)}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Local Go</h1>
+  <div class="sub">Two players, three board sizes, and a shareable save link right in the URL.</div>
+
+  <div class="grid">
+    <div class="panel controls">
+      <div class="row inline">
+        <div>
+          <label for="boardSize">Board size</label>
+          <select id="boardSize">
+            <option value="9">9 × 9</option>
+            <option value="13">13 × 13</option>
+            <option value="19" selected>19 × 19</option>
+          </select>
+        </div>
+        <div>
+          <label for="komi">White komi</label>
+          <input id="komi" type="number" step="0.5" value="6.5" />
+        </div>
+      </div>
+
+      <div class="btns">
+        <button id="newGameBtn">New game</button>
+        <button id="undoBtn" class="ghost">Undo</button>
+      </div>
+      <div class="btns3">
+        <button id="passBtn" class="alt">Pass</button>
+        <button id="saveBtn" class="good">Save link</button>
+        <button id="resignBtn" class="bad">Resign</button>
+      </div>
+
+      <div class="turnBadge" id="turnBadge">
+        <span class="stoneDot black"></span>
+        <span>Black to move</span>
+      </div>
+
+      <div class="status">
+        <div class="chip">
+          <div>Black captures</div>
+          <div class="big" id="blackCaps">0</div>
+        </div>
+        <div class="chip">
+          <div>White captures</div>
+          <div class="big" id="whiteCaps">0</div>
+        </div>
+      </div>
+
+      <div class="scorebox panel" style="padding:12px;margin:0">
+        <strong>End of game</strong><br>
+        The game ends when both players pass in a row. Chinese area scoring is used: stones on the board + surrounded territory + komi for White. Neutral points are ignored. Captures matter during play, but they do not add extra endgame points under Chinese rules.
+        <div id="finalScore" style="margin-top:8px;font-weight:700;color:var(--ink)">Game in progress.</div>
+      </div>
+
+      <div class="row">
+        <label for="shareLink">Saved game link</label>
+        <div class="shareBox">
+          <textarea id="shareLink" placeholder="Click Save link to generate a URL, or paste a saved link here to load it."></textarea>
+          <button id="copyBtn" class="ghost">Copy</button>
+          <button id="loadBtn" class="ghost">Load</button>
+        </div>
+        <div class="small">Open the saved link on the same device or send it to someone else to continue the game later.</div>
+      </div>
+
+      <div class="row">
+        <label>Move log</label>
+        <div class="log" id="log"></div>
+      </div>
+
+      <div class="help">
+        Click an intersection to place a stone. Illegal moves are blocked automatically, including suicide and immediate ko repetition. This is a local two-player game only.
+      </div>
+    </div>
+
+    <div class="panel boardPanel">
+      <div class="boardWrap">
+        <canvas id="boardCanvas" width="1000" height="1000" aria-label="Go board"></canvas>
+      </div>
+      <div class="footerNote" id="msg">Ready.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('boardCanvas');
+  const ctx = canvas.getContext('2d');
+  const boardSizeSel = document.getElementById('boardSize');
+  const komiInput = document.getElementById('komi');
+  const blackCapsEl = document.getElementById('blackCaps');
+  const whiteCapsEl = document.getElementById('whiteCaps');
+  const turnBadge = document.getElementById('turnBadge');
+  const msgEl = document.getElementById('msg');
+  const finalScoreEl = document.getElementById('finalScore');
+  const logEl = document.getElementById('log');
+  const shareLinkEl = document.getElementById('shareLink');
+  const loadBtn = document.getElementById('loadBtn');
+
+  const BASE64URL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+
+  let game = null;
+  let snapshots = [];
+
+  function emptyBoard(size){
+    return Array.from({length:size}, () => Array(size).fill(0));
+  }
+
+  function cloneBoard(b){
+    return b.map(row => row.slice());
+  }
+
+  function boardToString(board){
+    let out = '';
+    for (let y=0; y<board.length; y++) for (let x=0; x<board.length; x++) out += board[y][x];
+    return out;
+  }
+
+  function serializeBoardPacked(board){
+    const size = board.length;
+    const values = [];
+    for (let y=0; y<size; y++) {
+      for (let x=0; x<size; x++) values.push(board[y][x] & 3);
+    }
+    let bits = 0, bitCount = 0, out = '';
+    for (const v of values) {
+      bits = (bits << 2) | v;
+      bitCount += 2;
+      while (bitCount >= 6) {
+        bitCount -= 6;
+        out += BASE64URL[(bits >> bitCount) & 63];
+      }
+    }
+    if (bitCount > 0) out += BASE64URL[(bits << (6 - bitCount)) & 63];
+    return out;
+  }
+
+  function deserializeBoardPacked(str, size){
+    const total = size * size;
+    let bits = 0, bitCount = 0, vals = [];
+    for (const ch of str) {
+      const idx = BASE64URL.indexOf(ch);
+      if (idx < 0) continue;
+      bits = (bits << 6) | idx;
+      bitCount += 6;
+      while (bitCount >= 2 && vals.length < total) {
+        bitCount -= 2;
+        vals.push((bits >> bitCount) & 3);
+      }
+    }
+    if (vals.length !== total) throw new Error('Saved board data is incomplete.');
+    const board = emptyBoard(size);
+    let i = 0;
+    for (let y=0; y<size; y++) for (let x=0; x<size; x++) board[y][x] = vals[i++];
+    return board;
+  }
+
+  function createGame(size, komi=6.5){
+    return {
+      size,
+      board: emptyBoard(size),
+      previousBoard: emptyBoard(size),
+      currentPlayer: 1,
+      blackCaptures: 0,
+      whiteCaptures: 0,
+      consecutivePasses: 0,
+      moveNumber: 1,
+      lastMove: null,
+      komi: Number(komi) || 0,
+      winnerText: '',
+      gameOver: false,
+      resultReason: '',
+      log: []
+    };
+  }
+
+  function pushSnapshot(){
+    snapshots.push(JSON.stringify(exportStateObject()));
+    if (snapshots.length > 300) snapshots.shift();
+  }
+
+  function restoreFromSnapshot(text){
+    importStateObject(JSON.parse(text), false);
+  }
+
+  function exportStateObject(){
+    return {
+      s: game.size,
+      k: game.komi,
+      p: game.currentPlayer,
+      bc: game.blackCaptures,
+      wc: game.whiteCaptures,
+      cp: game.consecutivePasses,
+      mv: game.moveNumber,
+      go: game.gameOver ? 1 : 0,
+      rr: game.resultReason || '',
+      lm: game.lastMove ? [game.lastMove.x, game.lastMove.y] : null,
+      b: serializeBoardPacked(game.board),
+      pb: serializeBoardPacked(game.previousBoard),
+      lg: game.log.slice(-120)
+    };
+  }
+
+  function toBase64UrlUtf8(text){
+    const bytes = new TextEncoder().encode(text);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  }
+
+  function fromBase64UrlUtf8(str){
+    const binary = atob(padBase64(str).replace(/-/g,'+').replace(/_/g,'/'));
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+
+  function safeDecodeURIComponent(value){
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return value;
+    }
+  }
+
+  function encodeStateToUrl(){
+    const o = exportStateObject();
+    const payload = toBase64UrlUtf8(JSON.stringify(o));
+    const body = `v2.${payload}`;
+    const url = `${location.origin}${location.pathname}?g=${body}`;
+    shareLinkEl.value = url;
+    history.replaceState(null, '', `?g=${body}`);
+    setMessage('Shareable save link created.');
+  }
+
+  function padBase64(str){
+    const needed = (4 - (str.length % 4)) % 4;
+    return str + '='.repeat(needed);
+  }
+
+  function decodeStateFromUrl(str){
+    if (str.startsWith('v2.')) {
+      const payload = str.slice(3);
+      const obj = JSON.parse(fromBase64UrlUtf8(payload));
+      if (!obj || ![9,13,19].includes(obj.s)) throw new Error('Saved game has an invalid board size.');
+      if (!Array.isArray(obj.lg)) obj.lg = [];
+      return obj;
+    }
+
+    const parts = str.split('.');
+    if (parts[0] !== 'v1') throw new Error('Unsupported save format.');
+    const [_, s, k, p, bc, wc, cp, mv, go, rr, lm, b, pb, lg=''] = parts;
+    const size = parseInt(s, 36);
+    if (![9,13,19].includes(size)) throw new Error('Saved game has an invalid board size.');
+    const logJson = lg ? fromBase64UrlUtf8(lg) : '[]';
+    const obj = {
+      s: size,
+      k: Number(k),
+      p: parseInt(p, 36),
+      bc: parseInt(bc, 36),
+      wc: parseInt(wc, 36),
+      cp: parseInt(cp, 36),
+      mv: parseInt(mv, 36),
+      go: parseInt(go, 36),
+      rr: safeDecodeURIComponent(rr),
+      lm: lm ? lm.split('_').map(v => parseInt(v, 36)) : null,
+      b,
+      pb,
+      lg: JSON.parse(logJson)
+    };
+    return obj;
+  }
+
+
+  function extractSavedCode(text){
+    const value = (text || '').trim();
+    if (!value) throw new Error('No saved link was entered.');
+    try {
+      const url = new URL(value, location.href);
+      const g = url.searchParams.get('g');
+      if (g) return g;
+    } catch {}
+    if (value.startsWith('v1.')) return value;
+    if (value.startsWith('?g=')) return value.slice(3);
+    if (value.includes('g=')) {
+      const m = value.match(/[?&]g=([^&]+)/);
+      if (m) return m[1];
+    }
+    throw new Error('That does not look like a saved game link.');
+  }
+
+  function importStateObject(obj, updateUrl=true){
+    game = createGame(obj.s, obj.k);
+    game.currentPlayer = obj.p;
+    game.blackCaptures = obj.bc;
+    game.whiteCaptures = obj.wc;
+    game.consecutivePasses = obj.cp;
+    game.moveNumber = obj.mv;
+    game.gameOver = !!obj.go;
+    game.resultReason = obj.rr || '';
+    game.lastMove = obj.lm ? {x:obj.lm[0], y:obj.lm[1]} : null;
+    game.board = deserializeBoardPacked(obj.b, obj.s);
+    game.previousBoard = deserializeBoardPacked(obj.pb, obj.s);
+    game.log = Array.isArray(obj.lg) ? obj.lg.slice(-120) : [];
+    boardSizeSel.value = String(obj.s);
+    komiInput.value = String(obj.k);
+    snapshots = [];
+    render();
+    if (updateUrl) history.replaceState(null, '', location.pathname + location.search);
+  }
+
+  function setMessage(text){ msgEl.textContent = text; }
+
+  function neighbors(x, y, size){
+    const arr = [];
+    if (x > 0) arr.push([x-1, y]);
+    if (x < size-1) arr.push([x+1, y]);
+    if (y > 0) arr.push([x, y-1]);
+    if (y < size-1) arr.push([x, y+1]);
+    return arr;
+  }
+
+  function collectGroup(board, x, y){
+    const color = board[y][x];
+    const size = board.length;
+    const seen = new Set();
+    const stones = [];
+    const libs = new Set();
+    const stack = [[x,y]];
+    while (stack.length){
+      const [cx, cy] = stack.pop();
+      const key = cx + ',' + cy;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      stones.push([cx,cy]);
+      for (const [nx, ny] of neighbors(cx, cy, size)) {
+        const v = board[ny][nx];
+        if (v === 0) libs.add(nx + ',' + ny);
+        else if (v === color && !seen.has(nx + ',' + ny)) stack.push([nx, ny]);
+      }
+    }
+    return { color, stones, liberties: libs };
+  }
+
+  function removeGroup(board, group){
+    for (const [x,y] of group.stones) board[y][x] = 0;
+  }
+
+  function tryMove(x, y){
+    if (game.gameOver) {
+      setMessage('The game is over. Start a new game or undo.');
+      return;
+    }
+    if (game.board[y][x] !== 0) {
+      setMessage('That intersection is already occupied.');
+      return;
+    }
+
+    const beforeBoard = cloneBoard(game.board);
+    const board = cloneBoard(game.board);
+    const me = game.currentPlayer;
+    const opp = me === 1 ? 2 : 1;
+    board[y][x] = me;
+
+    let totalCaptured = 0;
+    for (const [nx, ny] of neighbors(x, y, game.size)) {
+      if (board[ny][nx] === opp) {
+        const g = collectGroup(board, nx, ny);
+        if (g.liberties.size === 0) {
+          totalCaptured += g.stones.length;
+          removeGroup(board, g);
+        }
+      }
+    }
+
+    const own = collectGroup(board, x, y);
+    if (own.liberties.size === 0) {
+      setMessage('Illegal move: suicide is not allowed.');
+      return;
+    }
+
+    const newHash = boardToString(board);
+    const prevPrevHash = boardToString(game.previousBoard);
+    if (newHash === prevPrevHash) {
+      setMessage('Illegal move: ko.');
+      return;
+    }
+
+    pushSnapshot();
+    game.previousBoard = beforeBoard;
+    game.board = board;
+    game.lastMove = {x,y};
+    game.consecutivePasses = 0;
+    if (me === 1) game.blackCaptures += totalCaptured;
+    else game.whiteCaptures += totalCaptured;
+
+    const moveText = `${game.moveNumber}. ${me === 1 ? 'Black' : 'White'} ${coordLabel(x,y,game.size)}${totalCaptured ? `, captures ${totalCaptured}` : ''}`;
+    game.log.push(moveText);
+    game.moveNumber++;
+    game.currentPlayer = opp;
+    game.winnerText = '';
+    game.resultReason = '';
+    render();
+    setMessage(totalCaptured ? `Move played. ${totalCaptured} stone${totalCaptured===1?'':'s'} captured.` : 'Move played.');
+  }
+
+  function coordLabel(x,y,size){
+    const letters = 'ABCDEFGHJKLMNOPQRST';
+    return `${letters[x]}${size - y}`;
+  }
+
+  function passTurn(){
+    if (game.gameOver) {
+      setMessage('The game is already over.');
+      return;
+    }
+    pushSnapshot();
+    const who = game.currentPlayer === 1 ? 'Black' : 'White';
+    game.log.push(`${game.moveNumber}. ${who} passes`);
+    game.moveNumber++;
+    game.consecutivePasses++;
+    game.lastMove = null;
+    game.previousBoard = cloneBoard(game.board);
+    game.currentPlayer = game.currentPlayer === 1 ? 2 : 1;
+
+    if (game.consecutivePasses >= 2) {
+      game.gameOver = true;
+      game.resultReason = 'Both players passed.';
+      const result = estimateScore();
+      game.winnerText = result.text;
+      setMessage('Both players passed. The game is over.');
+    } else {
+      setMessage(`${who} passed.`);
+    }
+    render();
+  }
+
+  function resign(){
+    if (game.gameOver) {
+      setMessage('The game is already over.');
+      return;
+    }
+    pushSnapshot();
+    const resigner = game.currentPlayer === 1 ? 'Black' : 'White';
+    const winner = game.currentPlayer === 1 ? 'White' : 'Black';
+    game.gameOver = true;
+    game.resultReason = `${resigner} resigned.`;
+    game.winnerText = `${winner} wins by resignation.`;
+    game.log.push(`${game.moveNumber}. ${resigner} resigned`);
+    render();
+    setMessage(`${resigner} resigned.`);
+  }
+
+  function undo(){
+    if (!snapshots.length) {
+      setMessage('Nothing to undo yet.');
+      return;
+    }
+    const snap = snapshots.pop();
+    restoreFromSnapshot(snap);
+    setMessage('Move undone.');
+  }
+
+  function estimateScore(){
+    const size = game.size;
+    let blackStones = 0, whiteStones = 0, blackTerritory = 0, whiteTerritory = 0;
+    const seen = new Set();
+
+    for (let y=0; y<size; y++) {
+      for (let x=0; x<size; x++) {
+        const v = game.board[y][x];
+        if (v === 1) blackStones++;
+        else if (v === 2) whiteStones++;
+        else {
+          const key = x + ',' + y;
+          if (seen.has(key)) continue;
+          const region = [];
+          const borders = new Set();
+          const stack = [[x,y]];
+          while (stack.length) {
+            const [cx, cy] = stack.pop();
+            const k = cx + ',' + cy;
+            if (seen.has(k)) continue;
+            seen.add(k);
+            if (game.board[cy][cx] !== 0) continue;
+            region.push([cx,cy]);
+            for (const [nx,ny] of neighbors(cx,cy,size)) {
+              const n = game.board[ny][nx];
+              if (n === 0) {
+                if (!seen.has(nx + ',' + ny)) stack.push([nx,ny]);
+              } else {
+                borders.add(n);
+              }
+            }
+          }
+          if (borders.size === 1) {
+            const owner = [...borders][0];
+            if (owner === 1) blackTerritory += region.length;
+            else whiteTerritory += region.length;
+          }
+        }
+      }
+    }
+
+    const blackTotal = blackStones + blackTerritory;
+    const whiteTotal = whiteStones + whiteTerritory + game.komi;
+    const diff = Math.abs(blackTotal - whiteTotal);
+    let text = `Black ${blackTotal.toFixed(1)} — White ${whiteTotal.toFixed(1)}. `;
+    text += blackTotal > whiteTotal ? `Black leads by ${diff.toFixed(1)}.` : `White leads by ${diff.toFixed(1)}.`;
+    return { blackStones, whiteStones, blackTerritory, whiteTerritory, blackTotal, whiteTotal, text };
+  }
+
+  function updateTurnBadge(){
+    const isBlack = game.currentPlayer === 1;
+    turnBadge.innerHTML = `<span class="stoneDot ${isBlack ? 'black' : 'white'}"></span><span>${isBlack ? 'Black' : 'White'} ${game.gameOver ? 'game over' : 'to move'}</span>`;
+  }
+
+  function updateScoreText(){
+    if (!game.gameOver) {
+      finalScoreEl.textContent = 'Game in progress.';
+      return;
+    }
+    if (game.winnerText && /resignation/i.test(game.winnerText)) {
+      finalScoreEl.textContent = `${game.winnerText} ${game.resultReason}`;
+      return;
+    }
+    const result = estimateScore();
+    finalScoreEl.textContent = `${result.text} ${game.resultReason}`;
+  }
+
+  function renderLog(){
+    logEl.innerHTML = game.log.length ? game.log.slice().reverse().map(line => `<div>${escapeHtml(line)}</div>`).join('') : '<div>No moves yet.</div>';
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  function render(){
+    blackCapsEl.textContent = game.blackCaptures;
+    whiteCapsEl.textContent = game.whiteCaptures;
+    updateTurnBadge();
+    updateScoreText();
+    renderLog();
+    drawBoard();
+  }
+
+  function getStarPoints(size){
+    if (size === 9) return [2, 6];
+    if (size === 13) return [3, 9];
+    return [3, 9, 15];
+  }
+
+  function drawBoard(){
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0,0,w,h);
+    const size = game.size;
+    const margin = size === 19 ? 62 : 74;
+    const spacing = (w - margin * 2) / (size - 1);
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,.09)';
+    for (let i=0; i<9; i++) {
+      ctx.fillRect((i*113)%w, 0, 18, h);
+    }
+    ctx.restore();
+
+    ctx.strokeStyle = 'rgba(60,39,20,.92)';
+    ctx.lineWidth = 2.2;
+    for (let i=0; i<size; i++) {
+      const pos = margin + i * spacing;
+      ctx.beginPath(); ctx.moveTo(margin, pos); ctx.lineTo(w - margin, pos); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(pos, margin); ctx.lineTo(pos, h - margin); ctx.stroke();
+    }
+
+    const stars = getStarPoints(size);
+    ctx.fillStyle = 'rgba(50,32,18,.9)';
+    for (const sy of stars) for (const sx of stars) {
+      if (size === 9 && sx === 4 && sy === 4) continue;
+      const cx = margin + sx * spacing;
+      const cy = margin + sy * spacing;
+      ctx.beginPath(); ctx.arc(cx, cy, size === 19 ? 5.2 : 5.8, 0, Math.PI*2); ctx.fill();
+    }
+    if (size === 9) {
+      const cx = margin + 4 * spacing, cy = margin + 4 * spacing;
+      ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI*2); ctx.fill();
+    }
+
+    const letters = size === 19 ? 'ABCDEFGHJKLMNOPQRST' : 'ABCDEFGHJKLMNOPQ'.slice(0,size);
+    ctx.fillStyle = 'rgba(40,28,18,.88)';
+    ctx.font = '600 26px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let i=0; i<size; i++) {
+      const pos = margin + i * spacing;
+      ctx.fillText(letters[i], pos, h - 24);
+      ctx.fillText(letters[i], pos, 24);
+      ctx.fillText(String(size - i), 24, pos);
+      ctx.fillText(String(size - i), w - 24, pos);
+    }
+
+    for (let y=0; y<size; y++) {
+      for (let x=0; x<size; x++) {
+        const v = game.board[y][x];
+        if (!v) continue;
+        const cx = margin + x * spacing;
+        const cy = margin + y * spacing;
+        const r = Math.max(11, spacing * 0.44);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx + r*0.14, cy + r*0.14, r, 0, Math.PI*2);
+        ctx.fillStyle = 'rgba(0,0,0,.18)';
+        ctx.fill();
+        ctx.restore();
+
+        const grad = ctx.createRadialGradient(cx - r*0.35, cy - r*0.35, r*0.18, cx, cy, r*1.02);
+        if (v === 1) {
+          grad.addColorStop(0, '#666');
+          grad.addColorStop(.36, '#222');
+          grad.addColorStop(1, '#050505');
+        } else {
+          grad.addColorStop(0, '#ffffff');
+          grad.addColorStop(.5, '#f1f1f1');
+          grad.addColorStop(1, '#d1d1d1');
+        }
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI*2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.lineWidth = 1.25;
+        ctx.strokeStyle = v === 1 ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.18)';
+        ctx.stroke();
+      }
+    }
+
+    if (game.lastMove) {
+      const {x,y} = game.lastMove;
+      const cx = margin + x * spacing;
+      const cy = margin + y * spacing;
+      ctx.beginPath();
+      ctx.arc(cx, cy, Math.max(4, spacing*0.11), 0, Math.PI*2);
+      ctx.fillStyle = game.board[y][x] === 1 ? '#f7fafc' : '#1a202c';
+      ctx.fill();
+    }
+  }
+
+  function canvasToBoard(evt){
+    const rect = canvas.getBoundingClientRect();
+    const x = (evt.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (evt.clientY - rect.top) * (canvas.height / rect.height);
+    const size = game.size;
+    const margin = size === 19 ? 62 : 74;
+    const spacing = (canvas.width - margin * 2) / (size - 1);
+    const gx = Math.round((x - margin) / spacing);
+    const gy = Math.round((y - margin) / spacing);
+    if (gx < 0 || gy < 0 || gx >= size || gy >= size) return null;
+    const cx = margin + gx * spacing;
+    const cy = margin + gy * spacing;
+    const dist = Math.hypot(x - cx, y - cy);
+    if (dist > spacing * 0.48) return null;
+    return {x:gx, y:gy};
+  }
+
+  function newGame(){
+    game = createGame(parseInt(boardSizeSel.value, 10), Number(komiInput.value));
+    snapshots = [];
+    shareLinkEl.value = '';
+    history.replaceState(null, '', location.pathname);
+    render();
+    setMessage('New game started. Black moves first.');
+  }
+
+  canvas.addEventListener('click', (evt) => {
+    const pt = canvasToBoard(evt);
+    if (!pt) return;
+    tryMove(pt.x, pt.y);
+  });
+
+  document.getElementById('newGameBtn').addEventListener('click', newGame);
+  document.getElementById('undoBtn').addEventListener('click', undo);
+  document.getElementById('passBtn').addEventListener('click', passTurn);
+  document.getElementById('resignBtn').addEventListener('click', resign);
+  document.getElementById('saveBtn').addEventListener('click', encodeStateToUrl);
+  document.getElementById('copyBtn').addEventListener('click', async () => {
+    if (!shareLinkEl.value) {
+      setMessage('There is no saved link to copy yet.');
+      return;
+    }
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(shareLinkEl.value);
+      } else {
+        shareLinkEl.focus();
+        shareLinkEl.select();
+        shareLinkEl.setSelectionRange(0, shareLinkEl.value.length);
+        const ok = document.execCommand('copy');
+        if (!ok) throw new Error('Copy failed');
+      }
+      setMessage('Saved link copied.');
+    } catch {
+      shareLinkEl.focus();
+      shareLinkEl.select();
+      shareLinkEl.setSelectionRange(0, shareLinkEl.value.length);
+      setMessage('Copy did not complete automatically. The link is highlighted so you can copy it manually.');
+    }
+  });
+
+  loadBtn.addEventListener('click', () => {
+    try {
+      const code = extractSavedCode(shareLinkEl.value);
+      importStateObject(decodeStateFromUrl(code), false);
+      const fullUrl = `${location.origin}${location.pathname}?g=${code}`;
+      shareLinkEl.value = fullUrl;
+      history.replaceState(null, '', `?g=${code}`);
+      setMessage('Saved game loaded.');
+    } catch (err) {
+      console.error(err);
+      setMessage(err && err.message ? err.message : 'That saved link could not be loaded.');
+    }
+  });
+
+  boardSizeSel.addEventListener('change', () => {
+    if (!game || boardSizeSel.value !== String(game.size)) newGame();
+  });
+  komiInput.addEventListener('change', () => {
+    if (game) {
+      game.komi = Number(komiInput.value) || 0;
+      render();
+    }
+  });
+
+  window.addEventListener('resize', drawBoard);
+
+  function boot(){
+    const params = new URLSearchParams(location.search);
+    const saved = params.get('g');
+    if (saved) {
+      try {
+        importStateObject(decodeStateFromUrl(saved), false);
+        shareLinkEl.value = location.href;
+        setMessage('Saved game loaded from the URL.');
+        return;
+      } catch (err) {
+        console.error(err);
+        setMessage('Saved game could not be loaded, so a new game was started instead.');
+      }
+    }
+    newGame();
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
