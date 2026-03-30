@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Snakes and Ladders</title>
+<style>
+  :root{
+    --bg:#efe6d7; --panel:#fffaf1; --board-bg:#f7f0e3; --ink:#34291f; --muted:#7e6f5f; --line:#d3c0a2;
+    --accent:#5d875d; --button:#a06c40; --button2:#8a735d; --snake:#b55252; --ladder:#5f9463;
+    --p1:#c86451; --p2:#567bc4; --p3:#b28a3d; --p4:#8b5bb3; --shadow:0 12px 28px rgba(0,0,0,.08);
+    --radius:20px; --cell-size: clamp(42px, 5.8vw, 66px);
+  }
+  *{box-sizing:border-box} body{margin:0;font-family:"Trebuchet MS","Segoe UI",Arial,sans-serif;color:var(--ink);background:linear-gradient(180deg,#efe6d7 0%, #f6f1e7 100%)}
+  .app{max-width:1220px;margin:0 auto;padding:18px;display:grid;grid-template-columns:360px 1fr;gap:18px;align-items:start}
+  .panel,.board-panel{background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .panel{padding:18px;position:sticky;top:16px} h1{margin:0 0 12px;font-size:clamp(1.6rem,3vw,2.1rem)}
+  .setup{display:grid;gap:10px;margin-bottom:14px}.player-count-row{display:grid;gap:6px}
+  label{display:block;font-weight:800;font-size:.94rem;margin-bottom:6px}
+  input[type="text"],select{width:100%;padding:10px 12px;border-radius:12px;border:2px solid var(--line);font-size:1rem;color:var(--ink);background:#fff}
+  button{border:none;border-radius:14px;padding:12px 14px;font-size:1rem;font-weight:800;cursor:pointer;transition:transform .08s ease, filter .15s ease, opacity .15s ease;background:var(--button);color:#fff;box-shadow:0 7px 16px rgba(160,108,64,.20)}
+  button:hover{filter:brightness(1.04)} button:active{transform:translateY(1px)} button:disabled{opacity:.5;cursor:not-allowed}
+  .green{background:var(--accent)} .secondary{background:var(--button2)} .top-actions{display:grid;gap:10px;margin-bottom:14px}
+  .status-box{border:2px solid var(--line);border-radius:16px;background:#fff;padding:14px;margin-bottom:14px}
+  .turn{font-size:1.2rem;font-weight:900;margin-bottom:6px}.message{min-height:44px;color:var(--muted);line-height:1.4;margin-bottom:12px}
+  .dice-bank{display:flex;flex-wrap:nowrap;justify-content:space-between;gap:10px;width:100%;margin-bottom:14px}
+  .die-card{flex:0 0 calc((100% - 20px)/3);min-width:0;border:2px solid #8cab71;border-radius:18px;background:#fbfcf7;padding:8px 6px 10px;display:grid;justify-items:center;gap:6px;box-shadow:0 4px 10px rgba(0,0,0,.04);user-select:none}
+  .die-card.clickable{cursor:pointer;background:#fffffc;box-shadow:0 6px 14px rgba(0,0,0,.07)} .die-card.used{opacity:.42;border-style:dashed}
+  .die-card.selected{border-color:#486e48;box-shadow:0 0 0 3px rgba(72,110,72,.16)} .die-label{font-weight:900;color:#766656;font-size:.82rem}
+  .die{width:78px;height:78px;border-radius:18px;background:#fff;border:3px solid #d5c6ad;position:relative;box-shadow:inset 0 0 0 3px rgba(255,255,255,.35)}
+  .die.rolling{animation:shake .65s ease}
+  @keyframes shake{0%{transform:translateX(0) rotate(0)}15%{transform:translateX(-4px) rotate(-7deg)}30%{transform:translateX(4px) rotate(7deg)}45%{transform:translateX(-4px) rotate(-5deg)}60%{transform:translateX(4px) rotate(5deg)}75%{transform:translateX(-2px) rotate(-2deg)}100%{transform:translateX(0) rotate(0)}}
+  .pip{width:12px;height:12px;border-radius:50%;background:#382d22;position:absolute}.roll-row{display:flex;gap:10px}
+  .players{display:grid;gap:10px}.player-card{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;border:2px solid var(--line);border-radius:14px;background:#fff;padding:12px}
+  .player-card.active .active-dot{background:#78a06b;box-shadow:0 0 0 4px rgba(120,160,107,.16)}
+  .token,.legend-dot,.name-dot{width:22px;height:22px;border-radius:50%;border:2px solid rgba(0,0,0,.18);box-shadow:inset 0 0 0 2px rgba(255,255,255,.22);display:inline-block}
+  .legend-dot,.name-dot{width:13px;height:13px;border-width:1px;box-shadow:none}
+  .player-name{display:flex;align-items:center;gap:8px;font-weight:900}.active-dot{width:12px;height:12px;border-radius:50%;background:transparent}
+  .choice-float{display:none;position:fixed;top:18px;right:18px;width:min(390px, calc(100vw - 36px));z-index:25}.choice-float.show{display:block}
+  .choice-card{background:var(--panel);border:2px solid var(--line);border-radius:18px;box-shadow:0 16px 32px rgba(0,0,0,.14);padding:16px}
+  .choice-title{font-size:1.2rem;font-weight:900;margin-bottom:6px}.choice-msg{color:var(--muted);line-height:1.4;margin-bottom:12px}
+  .choice-grid,.opponent-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.opponent-btn{text-align:left;display:flex;align-items:center;gap:10px}
+  .board-panel{padding:14px}.board-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;padding:2px 2px 0}
+  .mini-legend{display:flex;flex-wrap:wrap;gap:12px;color:var(--muted);font-size:.92rem}.mini-legend span{display:inline-flex;align-items:center;gap:6px}
+  .swatch{width:14px;height:14px;display:inline-block;border-radius:4px}.board-wrap{background:#e6dcc9;border:2px solid var(--line);border-radius:18px;padding:12px;overflow:auto}
+  .board{position:relative;width:calc(var(--cell-size) * 10);height:calc(var(--cell-size) * 10);margin:0 auto;border:3px solid #8d7354;border-radius:14px;overflow:hidden;background:var(--board-bg)}
+  .grid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(10, 1fr);grid-template-rows:repeat(10, 1fr)}
+  .cell{position:relative;border:1px solid rgba(100,78,56,.22);padding:4px;font-weight:900;font-size:clamp(.72rem,1.25vw,.95rem);overflow:hidden}
+  .cell:nth-child(4n+1){background:#f0e6d5}.cell:nth-child(4n+2){background:#e7ddcb}.cell:nth-child(4n+3){background:#f7f1e7}.cell:nth-child(4n+4){background:#ebdfce}
+  .cell.start{background:#dce7d7}.cell.finish{background:#ecd0aa}.cell-num{position:relative;z-index:3}.cell-label{position:absolute;right:4px;bottom:3px;font-size:.56rem;font-weight:800;color:#7b6c5e;z-index:3}
+  svg.overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.path-shadow{stroke:rgba(0,0,0,.05);stroke-width:4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .ladder-line{stroke:var(--ladder);stroke-width:2.4;fill:none;stroke-linecap:round}.ladder-rung{stroke:var(--ladder);stroke-width:1.8;fill:none;stroke-linecap:round}
+  .snake-body{stroke:var(--snake);stroke-width:4.2;fill:none;stroke-linecap:round}.snake-detail{stroke:#8d4242;stroke-width:1.15;fill:none;stroke-linecap:round}
+  .tokens-layer{position:absolute;inset:0;pointer-events:none}.piece{position:absolute;width:22px;height:22px;border-radius:50%;border:2px solid rgba(0,0,0,.2);transform:translate(-50%, -50%);transition:left .28s linear, top .28s linear;box-shadow:0 4px 8px rgba(0,0,0,.18), inset 0 0 0 2px rgba(255,255,255,.22);z-index:5}
+  .rules{margin-top:16px;background:#fff;border:2px dashed var(--line);border-radius:16px;padding:14px 16px;color:var(--muted);line-height:1.45;text-align:center}
+  .overlay-screen{position:fixed;inset:0;background:rgba(35,25,16,.58);display:none;align-items:center;justify-content:center;padding:18px;z-index:40}
+  .overlay-screen.show{display:flex}.modal{width:min(520px, 100%);background:var(--panel);border:2px solid var(--line);border-radius:22px;box-shadow:0 18px 40px rgba(0,0,0,.24);padding:22px;text-align:center}
+  .modal h2{margin:0 0 8px;font-size:1.9rem}.modal p{margin:0 0 18px;color:var(--muted);line-height:1.45}.modal-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+  @media (max-width:980px){.app{grid-template-columns:1fr}.panel{position:static}.choice-float{top:auto;bottom:18px}}
+  @media (max-width:520px){.app{padding:10px;gap:12px}.panel,.board-panel{padding:12px}.dice-bank{gap:6px}.die-card{padding:6px 4px 8px}.die{width:66px;height:66px}.choice-grid,.opponent-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <section class="panel">
+    <h1>Snakes and Ladders</h1>
+    <div class="setup" id="setupBox">
+      <div class="player-count-row">
+        <label for="playerCount">Number of Players</label>
+        <select id="playerCount"><option value="2" selected>2 Players</option><option value="3">3 Players</option><option value="4">4 Players</option></select>
+      </div>
+      <div><label for="player1">Player 1 Name</label><input id="player1" type="text" value="Player 1" maxlength="18" /></div>
+      <div><label for="player2">Player 2 Name</label><input id="player2" type="text" value="Player 2" maxlength="18" /></div>
+      <div id="player3Wrap" style="display:none;"><label for="player3">Player 3 Name</label><input id="player3" type="text" value="Player 3" maxlength="18" /></div>
+      <div id="player4Wrap" style="display:none;"><label for="player4">Player 4 Name</label><input id="player4" type="text" value="Player 4" maxlength="18" /></div>
+    </div>
+    <div class="top-actions"><button id="startBtn" class="green">Start Game</button></div>
+    <div class="status-box">
+      <div class="turn" id="turnText">Press Start Game</div>
+      <div class="message" id="messageText">Set player names if you want, then begin.</div>
+      <div class="dice-bank">
+        <div class="die-card" id="dieCard0"><div class="die-label">Die 1</div><div class="die" id="die0"></div></div>
+        <div class="die-card" id="dieCard1"><div class="die-label">Die 2</div><div class="die" id="die1"></div></div>
+        <div class="die-card" id="dieCard2"><div class="die-label">Die 3</div><div class="die" id="die2"></div></div>
+      </div>
+      <div class="roll-row"><button id="rollBtn">Roll 3 Dice</button></div>
+    </div>
+    <div class="top-actions"><button id="restartBtn" class="secondary" disabled>Restart Game</button></div>
+    <div class="players" id="playersBox"></div>
+  </section>
+
+  <section class="board-panel">
+    <div class="board-header"><div><strong>Board</strong></div><div class="mini-legend" id="miniLegend"></div></div>
+    <div class="board-wrap"><div class="board" id="board"><div class="grid" id="grid"></div><svg class="overlay" id="overlay" viewBox="0 0 100 100" preserveAspectRatio="none"></svg><div class="tokens-layer" id="tokensLayer"></div></div></div>
+    <div class="rules"><button id="howToPlayBtn" class="secondary">How to Play</button></div>
+  </section>
+</div>
+
+<div class="choice-float" id="choiceFloat" aria-hidden="true">
+  <div class="choice-card">
+    <div class="choice-title" id="choiceTitle">Choose a move</div>
+    <div class="choice-msg" id="choiceMsg">Pick what happens with this die.</div>
+    <div class="choice-grid" id="choiceGrid"></div>
+  </div>
+</div>
+
+<div class="overlay-screen" id="winnerOverlay" aria-hidden="true"><div class="modal"><h2 id="winnerTitle">Winner!</h2><p id="winnerMsg">Nice job.</p><div class="modal-actions"><button id="viewBoardBtn" class="secondary">View Board</button><button id="winnerRestartBtn" class="green">Restart Game</button></div></div></div>
+<div class="overlay-screen" id="restartOverlay" aria-hidden="true"><div class="modal"><h2>Start a new game?</h2><p>Are you sure you want to start a new game?</p><div class="modal-actions"><button id="confirmRestartBtn" class="green">Yes</button><button id="cancelRestartBtn" class="secondary">Cancel</button></div></div></div>
+<div class="overlay-screen" id="howToPlayOverlay" aria-hidden="true"><div class="modal"><h2>How to Play</h2><p>Roll 3 dice, then use exactly 2 of them one at a time. For each chosen die, decide whether to move yourself or your opponent forward or backward by that die value. Snakes and ladders trigger immediately after each move. First player to reach or pass 100 wins.</p><div class="modal-actions"><button id="closeHowToPlayBtn" class="green">Close</button></div></div></div>
+
+<script>
+const COLORS = ['var(--p1)','var(--p2)','var(--p3)','var(--p4)'];
+const state = {started:false,current:0,rolling:false,animating:false,winner:null,players:[],currentRolls:[1,1,1],usedDice:[],selectedDieIndex:null,snakes:{},ladders:{}};
+const grid=document.getElementById('grid'), overlay=document.getElementById('overlay'), board=document.getElementById('board'), tokensLayer=document.getElementById('tokensLayer');
+const turnText=document.getElementById('turnText'), messageText=document.getElementById('messageText'), playersBox=document.getElementById('playersBox'), miniLegend=document.getElementById('miniLegend');
+const setupBox=document.getElementById('setupBox'), playerCountSelect=document.getElementById('playerCount');
+const nameInputs=[document.getElementById('player1'),document.getElementById('player2'),document.getElementById('player3'),document.getElementById('player4')];
+const nameWraps=[null,null,document.getElementById('player3Wrap'),document.getElementById('player4Wrap')];
+const startBtn=document.getElementById('startBtn'), restartBtn=document.getElementById('restartBtn'), rollBtn=document.getElementById('rollBtn');
+const dice=[document.getElementById('die0'),document.getElementById('die1'),document.getElementById('die2')], dieCards=[document.getElementById('dieCard0'),document.getElementById('dieCard1'),document.getElementById('dieCard2')];
+const choiceFloat=document.getElementById('choiceFloat'), choiceTitle=document.getElementById('choiceTitle'), choiceMsg=document.getElementById('choiceMsg'), choiceGrid=document.getElementById('choiceGrid');
+const winnerOverlay=document.getElementById('winnerOverlay'), winnerTitle=document.getElementById('winnerTitle'), winnerMsg=document.getElementById('winnerMsg'), restartOverlay=document.getElementById('restartOverlay'), howToPlayOverlay=document.getElementById('howToPlayOverlay');
+const tokenEls=[], cellCenters={};
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))} function clamp(n,min,max){return Math.max(min,Math.min(max,n))} function randInt(min,max){return Math.floor(Math.random()*(max-min+1))+min}
+function escapeHtml(str){return String(str).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function updatePlayerCountUI(){const count=Number(playerCountSelect.value); if(nameWraps[2]) nameWraps[2].style.display=count>=3?'block':'none'; if(nameWraps[3]) nameWraps[3].style.display=count>=4?'block':'none'}
+function renderDie(el, value){el.innerHTML=''; const map={1:[[50,50]],2:[[25,25],[75,75]],3:[[25,25],[50,50],[75,75]],4:[[25,25],[75,25],[25,75],[75,75]],5:[[25,25],[75,25],[50,50],[25,75],[75,75]],6:[[25,25],[75,25],[25,50],[75,50],[25,75],[75,75]]}; map[value].forEach(([x,y])=>{const pip=document.createElement('div'); pip.className='pip'; pip.style.left=`calc(${x}% - 6px)`; pip.style.top=`calc(${y}% - 6px)`; el.appendChild(pip)})}
+function renderAllDice(){state.currentRolls.forEach((v,i)=>renderDie(dice[i],v)); dieCards.forEach((card,i)=>{const clickable=state.started&&!state.rolling&&!state.animating&&state.winner===null&&state.currentRolls.some(v=>v!==1)&&state.usedDice.length<2&&!state.usedDice.includes(i); card.classList.toggle('used',state.usedDice.includes(i)); card.classList.toggle('selected',state.selectedDieIndex===i); card.classList.toggle('clickable',clickable)})}
+function buildPlayersFromSetup(){const count=Number(playerCountSelect.value); state.players=Array.from({length:count},(_,i)=>({name:(nameInputs[i].value||`Player ${i+1}`).trim()||`Player ${i+1}`,pos:1,color:COLORS[i]}))}
+function buildBoard(){grid.innerHTML=''; overlay.innerHTML=''; tokensLayer.innerHTML=''; for(let row=0; row<10; row++){const fromBottom=9-row; const leftToRight=(fromBottom%2===0); for(let col=0; col<10; col++){const number=fromBottom*10+(leftToRight?(col+1):(10-col)); const cell=document.createElement('div'); cell.className='cell'; if(number===1) cell.classList.add('start'); if(number===100) cell.classList.add('finish'); cell.dataset.num=String(number); cell.style.gridRow=String(row+1); cell.style.gridColumn=String(col+1); const num=document.createElement('div'); num.className='cell-num'; num.textContent=String(number); cell.appendChild(num); if(state.ladders[number]){const tag=document.createElement('div'); tag.className='cell-label'; tag.textContent='ladder'; cell.appendChild(tag)} else if(state.snakes[number]){const tag=document.createElement('div'); tag.className='cell-label'; tag.textContent='snake'; cell.appendChild(tag)} grid.appendChild(cell)}} requestAnimationFrame(()=>{cacheCenters(); drawConnections(); createTokens(); updateTokens(true)})}
+function cacheCenters(){const boardRect=board.getBoundingClientRect(); [...grid.children].forEach(cell=>{const rect=cell.getBoundingClientRect(); const n=Number(cell.dataset.num); cellCenters[n]={xPct:((rect.left-boardRect.left)+rect.width/2)/boardRect.width*100,yPct:((rect.top-boardRect.top)+rect.height/2)/boardRect.height*100}})}
+function svgLine(x1,y1,x2,y2,cls){const line=document.createElementNS('http://www.w3.org/2000/svg','line'); line.setAttribute('x1',x1); line.setAttribute('y1',y1); line.setAttribute('x2',x2); line.setAttribute('y2',y2); line.setAttribute('class',cls); return line}
+function svgPath(d,cls){const path=document.createElementNS('http://www.w3.org/2000/svg','path'); path.setAttribute('d',d); path.setAttribute('class',cls); return path}
+function drawLadder(from,to){const a=cellCenters[from], b=cellCenters[to]; if(!a||!b) return; const dx=b.xPct-a.xPct, dy=b.yPct-a.yPct, len=Math.hypot(dx,dy)||1, px=-dy/len*1.55, py=dx/len*1.55; overlay.appendChild(svgLine(a.xPct+px,a.yPct+py,b.xPct+px,b.yPct+py,'path-shadow')); overlay.appendChild(svgLine(a.xPct-px,a.yPct-py,b.xPct-px,b.yPct-py,'path-shadow')); overlay.appendChild(svgLine(a.xPct+px,a.yPct+py,b.xPct+px,b.yPct+py,'ladder-line')); overlay.appendChild(svgLine(a.xPct-px,a.yPct-py,b.xPct-px,b.yPct-py,'ladder-line')); const rungCount=Math.max(3,Math.floor(len/8)); for(let i=1;i<rungCount;i++){const t=i/rungCount, x=a.xPct+dx*t, y=a.yPct+dy*t; overlay.appendChild(svgLine(x+px,y+py,x-px,y-py,'ladder-rung'))}}
+function drawSnake(from,to){const a=cellCenters[from], b=cellCenters[to]; if(!a||!b) return; const midX=(a.xPct+b.xPct)/2+((a.yPct>b.yPct)?4.2:-4.2), midY=(a.yPct+b.yPct)/2+((a.xPct>b.xPct)?-4.2:4.2); const d=`M ${a.xPct} ${a.yPct} Q ${midX} ${midY} ${b.xPct} ${b.yPct}`; overlay.appendChild(svgPath(d,'path-shadow')); overlay.appendChild(svgPath(d,'snake-body')); overlay.appendChild(svgPath(d,'snake-detail')); const head=document.createElementNS('http://www.w3.org/2000/svg','circle'); head.setAttribute('cx',a.xPct); head.setAttribute('cy',a.yPct); head.setAttribute('r','1.5'); head.setAttribute('fill','#b55252'); overlay.appendChild(head)}
+function drawConnections(){overlay.innerHTML=''; Object.entries(state.ladders).forEach(([f,t])=>drawLadder(Number(f),Number(t))); Object.entries(state.snakes).forEach(([f,t])=>drawSnake(Number(f),Number(t)))}
+function createTokens(){tokenEls.length=0; state.players.forEach(player=>{const piece=document.createElement('div'); piece.className='piece'; piece.style.background=player.color; tokensLayer.appendChild(piece); tokenEls.push(piece)})}
+function tokenOffset(index){const offsets=[{x:-10,y:10},{x:10,y:-10},{x:-10,y:-10},{x:10,y:10}]; return offsets[index]||{x:0,y:0}}
+function renderLegend(){miniLegend.innerHTML=`<span><i class="swatch" style="background:var(--ladder)"></i> Ladders</span><span><i class="swatch" style="background:var(--snake)"></i> Snakes</span>${state.players.map(p=>`<span><i class="swatch" style="background:${p.color};border-radius:50%"></i> ${escapeHtml(p.name)}</span>`).join('')}`}
+function updateTokens(immediate=false){state.players.forEach((player,i)=>{const center=cellCenters[player.pos]; if(!center) return; const piece=tokenEls[i]; const off=tokenOffset(i); piece.style.transition=immediate?'none':'left .28s linear, top .28s linear'; piece.style.left=`calc(${center.xPct}% + ${off.x}px)`; piece.style.top=`calc(${center.yPct}% + ${off.y}px)`; if(immediate){void piece.offsetHeight; piece.style.transition='left .28s linear, top .28s linear'}}); renderPlayers(); renderLegend()}
+function renderPlayers(){playersBox.innerHTML=''; state.players.forEach((player,i)=>{const card=document.createElement('div'); card.className='player-card'+((state.started&&state.current===i&&state.winner===null)?' active':''); card.innerHTML=`<div class="token" style="background:${player.color}"></div><div><div class="player-name"><span class="name-dot" style="background:${player.color}"></span>${escapeHtml(player.name)}</div></div><div class="active-dot"></div>`; playersBox.appendChild(card)})}
+function resetDice(){state.currentRolls=[1,1,1]; state.usedDice=[]; state.selectedDieIndex=null; renderAllDice()}
+function updateStatus(){if(!state.started){turnText.textContent='Press Start Game'; messageText.textContent='Set player names if you want, then begin.'} else if(state.winner!==null){turnText.textContent=`${state.players[state.winner].name} wins!`} else {turnText.textContent=`${state.players[state.current].name}'s turn`} restartBtn.disabled=!state.started; rollBtn.disabled=!state.started||state.rolling||state.animating||state.winner!==null||state.usedDice.length>0; renderPlayers(); renderLegend(); renderAllDice()}
+function hideChoice(){state.selectedDieIndex=null; choiceFloat.classList.remove('show'); choiceFloat.setAttribute('aria-hidden','true')}
+function showActionPicker(dieIndex){state.selectedDieIndex=dieIndex; const value=state.currentRolls[dieIndex]; choiceTitle.textContent=`${state.players[state.current].name} chose Die ${dieIndex+1} (${value})`; choiceMsg.textContent=`Choose what to do with ${value}. You will use ${2-state.usedDice.length} die${2-state.usedDice.length===1?'':'s'} total this turn.`; choiceGrid.className='choice-grid'; choiceGrid.innerHTML=`<button class="green" data-move="self-forward">Move self forward</button><button class="green" data-move="self-backward">Move self backward</button><button class="secondary" data-move="opp-forward">Move opponent forward</button><button class="secondary" data-move="opp-backward">Move opponent backward</button>`; choiceGrid.querySelectorAll('[data-move]').forEach(btn=>{btn.addEventListener('click',()=>{if(btn.dataset.move.startsWith('opp-')) showOpponentPicker(btn.dataset.move); else applyMove(btn.dataset.move,null)})}); choiceFloat.classList.add('show'); choiceFloat.setAttribute('aria-hidden','false'); renderAllDice()}
+function showOpponentPicker(kind){const currentIndex=state.current; const opponents=state.players.map((player,index)=>({player,index})).filter(x=>x.index!==currentIndex); choiceTitle.textContent=kind==='opp-forward'?'Move opponent forward':'Move opponent backward'; choiceMsg.textContent='Choose which opponent to move.'; choiceGrid.className='opponent-grid'; choiceGrid.innerHTML=opponents.map(({player,index})=>`<button class="opponent-btn" data-opponent-index="${index}" style="background:${player.color};"><span class="name-dot" style="background:${player.color}; border-color:rgba(255,255,255,.45)"></span>${escapeHtml(player.name)}</button>`).join(''); choiceGrid.querySelectorAll('[data-opponent-index]').forEach(btn=>btn.addEventListener('click',()=>applyMove(kind,Number(btn.dataset.opponentIndex))))}
+function showRestartConfirm(){restartOverlay.classList.add('show'); restartOverlay.setAttribute('aria-hidden','false')} function hideRestartConfirm(){restartOverlay.classList.remove('show'); restartOverlay.setAttribute('aria-hidden','true')}
+function hideWinner(){winnerOverlay.classList.remove('show'); winnerOverlay.setAttribute('aria-hidden','true')} function showHowToPlay(){howToPlayOverlay.classList.add('show'); howToPlayOverlay.setAttribute('aria-hidden','false')} function hideHowToPlay(){howToPlayOverlay.classList.remove('show'); howToPlayOverlay.setAttribute('aria-hidden','true')}
+function squareToCoord(n){const idx=n-1, rowFromBottom=Math.floor(idx/10), posInRow=idx%10, col=(rowFromBottom%2===0)?posInRow:9-posInRow; return {col,row:rowFromBottom}}
+function generateBoardObjects(){const ladders={}, snakes={}, usedEndpoints=new Set(), segments=[]; function boardRow(square){return Math.floor((square-1)/10)} function coordDist(a,b){return Math.hypot(a.col-b.col,a.row-b.row)} function midpoint(start,end){const a=squareToCoord(start), b=squareToCoord(end); return {x:(a.col+b.col)/2,y:(a.row+b.row)/2}} function tooCrowded(start,end){const a=squareToCoord(start), b=squareToCoord(end), mid=midpoint(start,end); for(const seg of segments){if(coordDist(a,seg.a)<1.25) return true; if(coordDist(a,seg.b)<1.25) return true; if(coordDist(b,seg.a)<1.25) return true; if(coordDist(b,seg.b)<1.25) return true; const midDist=Math.hypot(mid.x-seg.mid.x, mid.y-seg.mid.y); if(midDist<1.6) return true} return false} function valid(start,end){if(start===end) return false; if(start===1||start===100||end===1||end===100) return false; if(Math.abs(end-start)<10) return false; if(Math.abs(boardRow(end)-boardRow(start))>3) return false; if(usedEndpoints.has(start)||usedEndpoints.has(end)) return false; if(tooCrowded(start,end)) return false; return true} function addSegment(start,end){const a=squareToCoord(start), b=squareToCoord(end); segments.push({a,b,mid:midpoint(start,end)}); usedEndpoints.add(start); usedEndpoints.add(end)} let ladderAttempts=0; while(Object.keys(ladders).length<6&&ladderAttempts<16000){ladderAttempts++; const start=randInt(1,100), end=randInt(1,100); if(end<=start) continue; if(!valid(start,end)) continue; ladders[start]=end; addSegment(start,end)} let snakeAttempts=0; while(Object.keys(snakes).length<6&&snakeAttempts<16000){snakeAttempts++; const start=randInt(1,100), end=randInt(1,100); if(start<=end) continue; if(!valid(start,end)) continue; snakes[start]=end; addSegment(start,end)} state.ladders=ladders; state.snakes=snakes}
+async function animateMove(playerIndex,from,to){const player=state.players[playerIndex], step=from<=to?1:-1; for(let pos=from+step; step>0?pos<=to:pos>=to; pos+=step){player.pos=pos; updateTokens(); await sleep(210)}}
+async function animateDirectMove(playerIndex,from,to){state.players[playerIndex].pos=to; updateTokens(); await sleep(360)}
+async function resolveSpecialSquare(playerIndex){const player=state.players[playerIndex]; if(state.ladders[player.pos]){const target=state.ladders[player.pos]; messageText.textContent=`${player.name} found a ladder and climbs up to ${target}!`; await sleep(160); await animateDirectMove(playerIndex,player.pos,target)} else if(state.snakes[player.pos]){const target=state.snakes[player.pos]; messageText.textContent=`${player.name} landed on a snake and slides down to ${target}!`; await sleep(160); await animateDirectMove(playerIndex,player.pos,target)}}
+function finishGame(index){state.winner=index; winnerTitle.textContent=`${state.players[index].name} wins!`; winnerMsg.textContent=`${state.players[index].name} reached square ${state.players[index].pos}.`; winnerOverlay.classList.add('show'); winnerOverlay.setAttribute('aria-hidden','false'); messageText.textContent=`${state.players[index].name} wins the game!`}
+async function applyMove(kind,explicitTargetIndex){if(state.selectedDieIndex===null||state.animating||state.winner!==null) return; const dieIndex=state.selectedDieIndex; if(state.usedDice.includes(dieIndex)) return; const roll=state.currentRolls[dieIndex]; hideChoice(); state.animating=true; updateStatus(); const currentIndex=state.current; const targetIndex=kind.startsWith('opp-')?explicitTargetIndex:currentIndex; const movingPlayer=state.players[targetIndex]; const direction=kind.endsWith('backward')?-1:1; const startPos=movingPlayer.pos, endPos=clamp(startPos+direction*roll,1,100); messageText.textContent=targetIndex===currentIndex?`${movingPlayer.name} moves ${direction===1?'forward':'backward'} ${roll}.`:`${state.players[currentIndex].name} moves ${movingPlayer.name} ${direction===1?'forward':'backward'} ${roll}.`; await animateMove(targetIndex,startPos,endPos); state.usedDice.push(dieIndex); if(movingPlayer.pos>=100){finishGame(targetIndex); state.animating=false; updateStatus(); return} await resolveSpecialSquare(targetIndex); if(movingPlayer.pos>=100){finishGame(targetIndex); state.animating=false; updateStatus(); return} state.animating=false; if(state.usedDice.length>=2){const discarded=[0,1,2].filter(i=>!state.usedDice.includes(i))[0]; const nextName=state.players[(state.current+1)%state.players.length].name; messageText.textContent+=` Die ${discarded+1} is discarded. Next: ${nextName}.`; state.current=(state.current+1)%state.players.length; state.usedDice=[]; state.selectedDieIndex=null; state.currentRolls=[1,1,1]; updateStatus()} else {messageText.textContent+=' Choose one more die.'; updateStatus()}}
+async function takeTurn(){if(!state.started||state.rolling||state.animating||state.winner!==null||state.usedDice.length>0) return; state.rolling=true; updateStatus(); dice.forEach(d=>{d.classList.remove('rolling'); void d.offsetWidth; d.classList.add('rolling')}); const timer=setInterval(()=>{const preview=[randInt(1,6),randInt(1,6),randInt(1,6)]; preview.forEach((v,i)=>renderDie(dice[i],v))},90); await sleep(700); clearInterval(timer); dice.forEach(d=>d.classList.remove('rolling')); state.currentRolls=[randInt(1,6),randInt(1,6),randInt(1,6)]; state.usedDice=[]; state.selectedDieIndex=null; renderAllDice(); state.rolling=false; messageText.textContent=`${state.players[state.current].name} rolled ${state.currentRolls.join(', ')}. Choose 2 dice to use.`; updateStatus()}
+function startGame(){buildPlayersFromSetup(); state.players.forEach(p=>p.pos=1); state.started=true; state.current=0; state.rolling=false; state.animating=false; state.winner=null; resetDice(); hideChoice(); hideWinner(); hideRestartConfirm(); hideHowToPlay(); setupBox.style.display='none'; startBtn.style.display='none'; generateBoardObjects(); buildBoard(); messageText.textContent=`${state.players[0].name} goes first. Roll 3 dice to start.`; updateStatus()}
+function resetInitial(){state.started=false; state.current=0; state.rolling=false; state.animating=false; state.winner=null; buildPlayersFromSetup(); state.players.forEach(p=>p.pos=1); state.ladders={}; state.snakes={}; resetDice(); hideChoice(); hideWinner(); hideRestartConfirm(); hideHowToPlay(); setupBox.style.display='grid'; startBtn.style.display='block'; buildBoard(); updateStatus()}
+playerCountSelect.addEventListener('change',updatePlayerCountUI); startBtn.addEventListener('click',startGame); rollBtn.addEventListener('click',takeTurn); restartBtn.addEventListener('click',()=>state.started?showRestartConfirm():startGame());
+document.getElementById('confirmRestartBtn').addEventListener('click',startGame); document.getElementById('cancelRestartBtn').addEventListener('click',hideRestartConfirm); document.getElementById('viewBoardBtn').addEventListener('click',hideWinner); document.getElementById('winnerRestartBtn').addEventListener('click',showRestartConfirm); document.getElementById('howToPlayBtn').addEventListener('click',showHowToPlay); document.getElementById('closeHowToPlayBtn').addEventListener('click',hideHowToPlay);
+dieCards.forEach((card,i)=>card.addEventListener('click',()=>{if(!state.started||state.rolling||state.animating||state.winner!==null) return; if(state.currentRolls.every(v=>v===1)) return; if(state.usedDice.length>=2) return; if(state.usedDice.includes(i)) return; showActionPicker(i)}));
+window.addEventListener('resize',()=>requestAnimationFrame(()=>{cacheCenters(); drawConnections(); updateTokens(true)}));
+updatePlayerCountUI(); resetInitial();
+</script>
+</body>
+</html>
