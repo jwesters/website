@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Shikaku 15×15 (with blanks)</title>
+<title>Shikaku</title>
 <style>
   :root{
     --cell: 28px; /* set by JS */
@@ -275,6 +275,93 @@
   .msg strong{ color:var(--text); }
   .msg strong{ color:var(--text); }
 
+
+  .difficultyBadge{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 10px;
+    border-radius:12px;
+    background:#f9fafb;
+    border:1px solid var(--line2);
+    color:var(--muted);
+    font-size:13px;
+    font-weight:600;
+  }
+
+  .startOverlay{
+    position:fixed;
+    inset:0;
+    background:rgba(17,24,39,.50);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    z-index:50;
+  }
+  .startOverlay[hidden]{ display:none; }
+  .startCard{
+    width:min(560px, 100%);
+    background:var(--panel);
+    border-radius:22px;
+    box-shadow: var(--shadow);
+    padding:18px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  .startCard h2{
+    margin:0;
+    font-size:22px;
+  }
+  .startCard p{
+    margin:0;
+    color:var(--muted);
+    font-size:14px;
+    line-height:1.45;
+  }
+  .difficultyGrid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:10px;
+  }
+  @media (max-width: 560px){
+    .difficultyGrid{ grid-template-columns:1fr; }
+  }
+  .difficultyOption{
+    appearance:none;
+    width:100%;
+    text-align:left;
+    padding:14px;
+    border-radius:16px;
+    border:1px solid var(--line);
+    background:#fff;
+    cursor:pointer;
+  }
+  .difficultyOption:hover{
+    border-color:#93c5fd;
+    background:#eff6ff;
+  }
+  .difficultyOption strong{
+    display:block;
+    font-size:15px;
+    margin-bottom:4px;
+  }
+  .difficultyOption span{
+    display:block;
+    color:var(--muted);
+    font-size:13px;
+    line-height:1.35;
+  }
+
+
+  .winActions{
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+    flex-wrap:wrap;
+  }
+
   .footer{
     color:var(--muted);
     font-size:12px;
@@ -292,9 +379,10 @@
 <body>
   <div class="app">
     <div class="header">
-      <h1>Shikaku (15×15) with blanks</h1>
-      <div class="sub">Drag to draw rectangles • Illegal rectangles (wrong area / includes blanks / overlaps) won’t place • Auto-detects solved</div>
+      <h1 id="gameTitle">Shikaku</h1>
+      <div class="sub">Drag to draw rectangles • Illegal rectangles (wrong area / overlaps) won’t place • Auto-detects solved</div>
       <div class="spacer"></div>
+      <div id="difficultyBadge" class="difficultyBadge">Difficulty: waiting to start</div>
       <div class="controls">
         <button id="btnNew" class="primary">New Puzzle</button>
         <button id="btnUndo">Undo</button>
@@ -304,12 +392,36 @@
       </div>
     </div>
 
+    <div id="startOverlay" class="startOverlay">
+      <div class="startCard" role="dialog" aria-modal="true" aria-labelledby="startTitle">
+        <h2 id="startTitle">Choose a difficulty</h2>
+        <p>Select a board size before the puzzle begins.</p>
+        <div class="difficultyGrid">
+          <button class="difficultyOption" data-difficulty="easy"><strong>Easy</strong><span>10×10 • smaller rectangles</span></button>
+          <button class="difficultyOption" data-difficulty="medium"><strong>Medium</strong><span>12×12 • balanced mix</span></button>
+          <button class="difficultyOption" data-difficulty="hard"><strong>Hard</strong><span>15×15 • larger regions</span></button>
+          <button class="difficultyOption" data-difficulty="insane"><strong>Insane</strong><span>20×20 • biggest regions</span></button>
+        </div>
+      </div>
+    </div>
+
+    <div id="winOverlay" class="startOverlay" hidden>
+      <div class="startCard" role="dialog" aria-modal="true" aria-labelledby="winTitle">
+        <h2 id="winTitle">You Win!</h2>
+        <p>You solved the puzzle correctly.</p>
+        <div class="winActions">
+          <button id="btnWinClose">Close</button>
+          <button id="btnWinNewGame" class="primary">New Game</button>
+        </div>
+      </div>
+    </div>
+
     <div class="main">
       <div class="boardCard">
         <div class="boardTop">
           <div class="status">
             <div id="statusDot" class="dot"></div>
-            <div id="hintText" class="hint">Cover every non-blank cell. Each rectangle must contain exactly one number and match its area.</div>
+            <div id="hintText" class="hint">Cover every cell. Each rectangle must contain exactly one number and match its area.</div>
           </div>
         </div>
 
@@ -328,11 +440,10 @@
         <div>
           <h2>Rules</h2>
           <ul>
-            <li>Some cells are <b>blank</b> (blocked). They don’t need coverage.</li>
-            <li>Rectangles are axis-aligned and can’t include blank cells.</li>
-            <li>Rectangles can’t overlap.</li>
+            <li>Cover every cell on the board.</li>
+            <li>Rectangles are axis-aligned and can’t overlap.</li>
             <li>Each rectangle contains exactly <b>one</b> clue.</li>
-            <li>Rectangle area equals its clue number (counts only cells inside the rectangle).</li>
+            <li>Rectangle area equals its clue number.</li>
           </ul>
         </div>
         <div>
@@ -343,20 +454,48 @@
           <p><b>Show Solution</b> outlines the true partition (drawing disabled while shown).</p>
         </div>
         <div>
-          <h2>Blanks</h2>
-          <p>Each puzzle uses 5–15% blanks with a mix of scattered cells and chunkier blocks. Regions may be disconnected.</p>
+          <h2>Difficulty tuning</h2>
+          <p>Easy favors smaller, simpler rectangles. Medium mixes in more variety. Hard uses broader rectangle sizes, and Insane allows larger regions much more often.</p>
         </div>
       </div>
     </div>
 
-    <div class="footer">Generator verifies the solution has no overlaps and covers every playable cell exactly once.</div>
+    <div class="footer">Generator verifies the solution has no overlaps and covers every cell exactly once.</div>
   </div>
 
 <script>
 (() => {
   "use strict";
 
-  const N = 15;
+  const DIFFICULTIES = {
+    easy: {
+      label: "Easy",
+      size: 10,
+      allowedAreas: [2,3,4,5,6,8,9],
+      areaWeights: new Map([[2,3.2],[3,3.0],[4,3.5],[5,2.1],[6,2.3],[8,1.3],[9,1.0]])
+    },
+    medium: {
+      label: "Medium",
+      size: 12,
+      allowedAreas: [2,3,4,5,6,8,9,10,12,14,15,16],
+      areaWeights: new Map([[2,1.8],[3,2.1],[4,2.8],[5,2.2],[6,2.8],[8,2.5],[9,2.2],[10,1.8],[12,1.9],[14,1.3],[15,1.2],[16,1.0]])
+    },
+    hard: {
+      label: "Hard",
+      size: 15,
+      allowedAreas: [2,3,4,5,6,8,9,10,12,14,15,16,18,20,21,24,25,28,30],
+      areaWeights: new Map([[2,1.0],[3,1.1],[4,2.2],[5,1.7],[6,2.4],[8,2.5],[9,2.4],[10,2.1],[12,2.5],[14,1.9],[15,1.9],[16,2.2],[18,2.2],[20,2.1],[21,1.8],[24,2.0],[25,1.6],[28,1.4],[30,1.2]])
+    },
+    insane: {
+      label: "Insane",
+      size: 20,
+      allowedAreas: [2,3,4,5,6,8,9,10,12,14,15,16,18,20,21,24,25,28,30,32,35,36,40],
+      areaWeights: new Map([[2,0.5],[3,0.7],[4,1.0],[5,1.1],[6,1.3],[8,1.7],[9,1.8],[10,1.8],[12,2.2],[14,1.8],[15,1.9],[16,2.2],[18,2.3],[20,2.5],[21,1.9],[24,2.5],[25,2.2],[28,2.1],[30,2.1],[32,1.9],[35,1.7],[36,1.6],[40,1.4]])
+    },
+  };
+
+  let currentDifficulty = null;
+  let N = 15;
   document.documentElement.style.setProperty("--N", N);
 
   const gridEl = document.getElementById("grid");
@@ -373,6 +512,13 @@
   const btnClear = document.getElementById("btnClear");
   const btnSolution = document.getElementById("btnSolution");
   const btnCheck = document.getElementById("btnCheck");
+  const gameTitle = document.getElementById("gameTitle");
+  const difficultyBadge = document.getElementById("difficultyBadge");
+  const startOverlay = document.getElementById("startOverlay");
+  const winOverlay = document.getElementById("winOverlay");
+  const btnWinClose = document.getElementById("btnWinClose");
+  const btnWinNewGame = document.getElementById("btnWinNewGame");
+  const difficultyButtons = Array.from(document.querySelectorAll(".difficultyOption"));
 
   // --- Fit-to-screen sizing (pixel-perfect) ---
   function updateCellSize(){
@@ -412,7 +558,7 @@
   // Game state
   let puzzle = null;               // { rects: [...], clues: 2D, playable: 2D boolean }
   let userRects = [];              // [{r1,c1,r2,c2, color}]
-  let userOcc = make2D(false);      // occupancy for overlaps (only playable cells)
+  let userOcc = make2D(false);      // occupancy for overlaps (only cells)
   let showSolution = false;
 
   // Drag state
@@ -438,6 +584,53 @@
     return String(s).replace(/[&<>"']/g, ch => ({
       "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
     }[ch]));
+  }
+
+  function syncDifficultyUi(){
+    if(!currentDifficulty){
+      gameTitle.textContent = "Shikaku";
+      difficultyBadge.textContent = "Difficulty: waiting to start";
+      return;
+    }
+    const info = DIFFICULTIES[currentDifficulty];
+    const style = currentDifficulty === "easy" ? "smaller rectangles" : currentDifficulty === "medium" ? "balanced mix" : currentDifficulty === "hard" ? "larger regions" : "biggest regions";
+    gameTitle.textContent = `Shikaku (${info.size}×${info.size})`;
+    difficultyBadge.textContent = `Difficulty: ${info.label} • ${info.size}×${info.size} • ${style}`;
+  }
+
+  function closeWinOverlay(){
+    winOverlay.hidden = true;
+  }
+
+  function showWinOverlay(){
+    winOverlay.hidden = false;
+  }
+
+  function setBoardSize(size){
+    N = size;
+    document.documentElement.style.setProperty("--N", N);
+    userOcc = make2D(false);
+    buildGrid();
+    setGridTemplates();
+    updateCellSize();
+  }
+
+  function openDifficultyChooser(){
+    startOverlay.hidden = false;
+  }
+
+  function closeDifficultyChooser(){
+    startOverlay.hidden = true;
+  }
+
+  function startGameWithDifficulty(key){
+    const info = DIFFICULTIES[key];
+    if(!info) return;
+    currentDifficulty = key;
+    syncDifficultyUi();
+    closeDifficultyChooser();
+    setBoardSize(info.size);
+    newPuzzle();
   }
 
   // ---------- Rendering ----------
@@ -470,17 +663,17 @@
   }
 
   function renderPlayableAndClues(){
+    if(!puzzle) return;
     const cells = gridEl.querySelectorAll(".cell");
     cells.forEach(cell => {
       const r = Number(cell.dataset.r);
       const c = Number(cell.dataset.c);
-      const playable = puzzle.playable[r][c];
       const v = puzzle.clues[r][c];
       const numEl = cell.querySelector(".num");
 
-      cell.classList.toggle("blank", !playable);
+      cell.classList.remove("blank");
 
-      if(playable && v != null){
+      if(v != null){
         numEl.textContent = String(v);
         cell.classList.add("clue");
       } else {
@@ -512,6 +705,7 @@
 
   function renderSolution(){
     solutionEl.innerHTML = "";
+    if(!puzzle) return;
     for(const r of puzzle.rects){
       const el = document.createElement("div");
       el.className = "rect solution";
@@ -527,7 +721,7 @@
     btnSolution.textContent = on ? "Hide Solution" : "Show Solution";
     hintText.textContent = on
       ? "Solution outline shown (drawing disabled)."
-      : "Cover every non-blank cell. Each rectangle must contain exactly one number and match its area.";
+      : "Cover every cell. Each rectangle must contain exactly one number and match its area.";
   }
 
   // ---------- Blanks (5–15%, mix) ----------
@@ -537,88 +731,30 @@
   function inBounds(r,c){ return r>=0 && c>=0 && r<N && c<N; }
 
   function generatePlayableMask(){
-    // Start fully playable
-    const playable = make2D(true);
-
-    const total = N*N;
-    const pct = randInt(5, 15) / 100;
-    const targetBlanks = Math.max(1, Math.round(total * pct));
-
-    // We'll place ~60% as chunky blocks, ~40% scattered
-    const blockTarget = Math.round(targetBlanks * 0.60);
-    const scatterTarget = targetBlanks - blockTarget;
-
-    let blanks = 0;
-
-    // Place blocks using random walks / blobs
-    let tries = 0;
-    while(blanks < blockTarget && tries < 2000){
-      tries++;
-      const startR = randInt(0, N-1);
-      const startC = randInt(0, N-1);
-      if(!playable[startR][startC]) continue;
-
-      const blobSize = randInt(3, 9); // small-ish blobs
-      let r = startR, c = startC;
-      for(let k=0; k<blobSize && blanks < blockTarget; k++){
-        if(inBounds(r,c) && playable[r][c]){
-          playable[r][c] = false;
-          blanks++;
-        }
-        const dir = randInt(0,3);
-        if(dir===0) r++;
-        if(dir===1) r--;
-        if(dir===2) c++;
-        if(dir===3) c--;
-        r = Math.max(0, Math.min(N-1, r));
-        c = Math.max(0, Math.min(N-1, c));
-      }
-    }
-
-    // Scatter the rest
-    tries = 0;
-    while(blanks < targetBlanks && tries < 5000){
-      tries++;
-      const r = randInt(0,N-1), c = randInt(0,N-1);
-      if(playable[r][c]){
-        playable[r][c] = false;
-        blanks++;
-      }
-    }
-
-    // Ensure at least some playable cells remain
-    let playableCount = 0;
-    for(let r=0;r<N;r++) for(let c=0;c<N;c++) if(playable[r][c]) playableCount++;
-    if(playableCount < Math.round(total * 0.70)){
-      // Too many blanks due to rounding/placement; retry once by trimming random blanks.
-      let need = Math.round(total * 0.70) - playableCount;
-      for(let t=0; t<20000 && need>0; t++){
-        const r = randInt(0,N-1), c = randInt(0,N-1);
-        if(!playable[r][c]){
-          playable[r][c] = true;
-          need--;
-        }
-      }
-    }
-
-    return playable;
+    // Regular Shikaku: no blank/blocked cells.
+    return make2D(true);
   }
 
-  // ---------- Puzzle generator (verified, for playable cells only) ----------
-  // Mid-sized bias: avoid huge rectangles; allow variety needed for 15x15.
-  const allowedAreas = [2,3,4,5,6,8,9,10,12,14,15,16,18,20,21,24,25,28,30];
-  const areaWeights = new Map([
-    [2,1.2],[3,1.3],[4,2.8],[5,2.2],[6,3.0],
-    [8,2.7],[9,2.6],[10,2.2],[12,2.6],[14,2.0],[15,2.0],
-    [16,2.4],[18,2.4],[20,2.2],[21,2.0],[24,2.2],
-    [25,1.6],[28,1.5],[30,1.3]
-  ]);
+  // ---------- Puzzle generator (verified, for cells only) ----------
 
   function weightedShuffle(items, weightFn){
     return items
       .map(x => ({x, k: Math.random() ** (1 / Math.max(.001, weightFn(x)))}))
       .sort((a,b) => b.k - a.k)
       .map(o => o.x);
+  }
+
+
+  function getDifficultyConfig(){
+    return DIFFICULTIES[currentDifficulty] || DIFFICULTIES.hard;
+  }
+
+  function getAllowedAreas(){
+    return getDifficultyConfig().allowedAreas;
+  }
+
+  function getAreaWeight(area){
+    return getDifficultyConfig().areaWeights.get(area) ?? 1;
   }
 
   function findFirstUncovered(playable, occ){
@@ -642,8 +778,8 @@
 
   function genChoicesAnchored(playable, occ, r, c){
     const choices = [];
-    for(const area of allowedAreas){
-      const w = areaWeights.get(area) ?? 1;
+    for(const area of getAllowedAreas()){
+      const w = getAreaWeight(area);
       for(let h=1; h<=N; h++){
         if(area % h !== 0) continue;
         const wdt = area / h;
@@ -778,7 +914,7 @@
       return { rects, clues, playable };
     }
 
-    // Hard fallback: no blanks and simple rows (guaranteed valid)
+    // Hard fallback: simple rows (guaranteed valid)
     const playable = make2D(true);
     const rects = [];
     for(let r=0;r<N;r++){
@@ -837,10 +973,6 @@
   }
 
   function rectIsValidForPuzzle(r1,c1,r2,c2){
-    // Must not include blanks
-    if(!rectIsPlayableOnly(r1,c1,r2,c2)){
-      return {ok:false, reason:"Rectangle includes blank cells."};
-    }
     // Must contain exactly one clue and match its area
     const area = rectArea(r1,c1,r2,c2);
     let clueCount = 0;
@@ -912,7 +1044,8 @@
     renderUserRects(bad, solved ? good : new Set());
 
     if(solved){
-      setMessage("good", "Solved!", "You’ve correctly covered every non-blank cell.");
+      setMessage("good", "Solved!", "You’ve correctly covered every cell.");
+      showWinOverlay();
     }
     return solved;
   }
@@ -939,7 +1072,6 @@
     if(!el) return null;
     const cell = el.closest?.(".cell");
     if(!cell) return null;
-    if(cell.classList.contains("blank")) return null; // cannot start/end on blanks
     const r = Number(cell.dataset.r);
     const c = Number(cell.dataset.c);
     if(Number.isFinite(r) && Number.isFinite(c)) return {r,c, el: cell};
@@ -971,7 +1103,7 @@
   }
 
   function pointerDown(e){
-    if(showSolution) return;
+    if(!puzzle || showSolution) return;
     const info = getCellFromPoint(e.clientX, e.clientY);
     if(!info) return;
 
@@ -1002,10 +1134,8 @@
     const r2 = Math.max(dragStart.r, info.r);
     const c2 = Math.max(dragStart.c, info.c);
 
-    // Show conflict if includes blank or overlaps
-    const includesBlank = !rectIsPlayableOnly(r1,c1,r2,c2);
     const overlap = overlapWithUser(r1,c1,r2,c2);
-    updatePreview(r1,c1,r2,c2, includesBlank || overlap);
+    updatePreview(r1,c1,r2,c2, overlap);
     e.preventDefault();
   }
 
@@ -1021,15 +1151,6 @@
     const c1 = Math.min(dragStart.c, info.c);
     const r2 = Math.max(dragStart.r, info.r);
     const c2 = Math.max(dragStart.c, info.c);
-
-    // Block if includes blanks
-    if(!rectIsPlayableOnly(r1,c1,r2,c2)){
-      updatePreview(r1,c1,r2,c2, true);
-      setMessage("bad", "Not allowed", "That rectangle includes blank cells.");
-      setTimeout(() => { clearPreview(); }, 220);
-      dragStart = null;
-      return;
-    }
 
     // Block overlaps
     if(overlapWithUser(r1,c1,r2,c2)){
@@ -1061,6 +1182,7 @@
 
   // ---------- Manual validation (Check button) ----------
   function validate(){
+    if(!puzzle) return;
     if(isSolvedAndHighlight()) return;
 
     // Provide a short summary if not solved
@@ -1070,11 +1192,12 @@
         if(puzzle.playable[r][c] && !userOcc[r][c]) uncovered++;
       }
     }
-    setMessage("bad", "Not solved yet", `${uncovered} playable cell${uncovered===1?"":"s"} still uncovered (and/or incorrect rectangles highlighted).`);
+    setMessage("bad", "Not solved yet", `${uncovered} cell${uncovered===1?"":"s"} still uncovered (and/or incorrect rectangles highlighted).`);
   }
 
   // ---------- Buttons ----------
   function newPuzzle(){
+    closeWinOverlay();
     puzzle = generatePuzzle();
     userRects = [];
     userOcc = make2D(false);
@@ -1088,7 +1211,7 @@
   }
 
   function undo(){
-    if(userRects.length === 0) return;
+    if(!puzzle || userRects.length === 0) return;
     clearMessage();
     userRects.pop();
     userOcc = make2D(false);
@@ -1098,6 +1221,7 @@
   }
 
   function clearAll(){
+    if(!puzzle) return;
     clearMessage();
     userRects = [];
     userOcc = make2D(false);
@@ -1106,6 +1230,7 @@
   }
 
   function toggleSolution(){
+    if(!puzzle) return;
     setSolutionVisible(!showSolution);
     clearMessage();
   }
@@ -1116,8 +1241,13 @@
     gridEl.addEventListener("pointerup", pointerUp, {passive:false});
     gridEl.addEventListener("pointercancel", pointerUp, {passive:false});
 
-    btnNew.addEventListener("click", newPuzzle);
+    btnNew.addEventListener("click", () => { closeWinOverlay(); clearMessage(); setSolutionVisible(false); openDifficultyChooser(); });
     btnUndo.addEventListener("click", undo);
+    difficultyButtons.forEach(btn => {
+      btn.addEventListener("click", () => startGameWithDifficulty(btn.dataset.difficulty));
+    });
+    btnWinClose.addEventListener("click", closeWinOverlay);
+    btnWinNewGame.addEventListener("click", () => { closeWinOverlay(); openDifficultyChooser(); });
     btnClear.addEventListener("click", clearAll);
     btnSolution.addEventListener("click", toggleSolution);
     btnCheck.addEventListener("click", validate);
@@ -1128,6 +1258,8 @@
           isDragging = false;
           dragStart = null;
           clearPreview();
+        } else if(!winOverlay.hidden){
+          closeWinOverlay();
         }
       } else if(e.key.toLowerCase() === "z" && (e.ctrlKey || e.metaKey)){
         e.preventDefault();
@@ -1137,11 +1269,10 @@
   }
 
   // Init
-  buildGrid();
-  setGridTemplates();
-  updateCellSize();
+  syncDifficultyUi();
+  setBoardSize(N);
   wire();
-  newPuzzle();
+  openDifficultyChooser();
 })();
 </script>
 </body>
