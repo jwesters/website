@@ -1,2 +1,2 @@
-python make_indexGen.py --out index.html --hide-nsfw
-python make_indexGen.py --out indexNSFW.html 
+py make_indexGen.py --out index.html --hide-nsfw
+py make_indexGen.py --out indexNSFW.html 

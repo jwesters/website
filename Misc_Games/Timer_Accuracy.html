@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hit Zero</title>
+  <style>
+    :root{
+      --bg:#f4efe6;
+      --panel:#fffaf2;
+      --ink:#2f261e;
+      --muted:#7c6b59;
+      --accent:#b06f2b;
+      --accent2:#d89b4d;
+      --good:#2c8f5a;
+      --bad:#ba4e3a;
+      --shadow:0 12px 28px rgba(53,38,22,.12);
+      --radius:22px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:Arial, Helvetica, sans-serif;
+      background:linear-gradient(180deg,#efe7da 0%, #f7f2ea 100%);
+      color:var(--ink);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+    }
+    .app{
+      width:min(980px,100%);
+      background:var(--panel);
+      border:1px solid #eadfce;
+      border-radius:28px;
+      box-shadow:var(--shadow);
+      padding:24px;
+    }
+    .topbar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:16px;
+      flex-wrap:wrap;
+      margin-bottom:18px;
+    }
+    .title-wrap h1{
+      margin:0;
+      font-size:clamp(1.8rem,4vw,2.5rem);
+      line-height:1;
+      letter-spacing:.02em;
+    }
+    .subtitle{
+      color:var(--muted);
+      margin-top:6px;
+      font-size:.98rem;
+    }
+    .controls{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    button, select{
+      font:inherit;
+      border:none;
+      border-radius:14px;
+      padding:12px 16px;
+      background:#f0e6d8;
+      color:var(--ink);
+    }
+    button{
+      cursor:pointer;
+      transition:transform .08s ease, box-shadow .2s ease, background .2s ease;
+      box-shadow:0 6px 14px rgba(75,50,25,.10);
+      font-weight:700;
+    }
+    button:hover{transform:translateY(-1px)}
+    button:active{transform:translateY(1px)}
+    .primary{
+      background:linear-gradient(180deg,var(--accent2),var(--accent));
+      color:#fff;
+    }
+    .secondary{
+      background:#e7dbc9;
+    }
+    .layout{
+      display:grid;
+      grid-template-columns:1.45fr .85fr;
+      gap:18px;
+    }
+    .card{
+      background:#fffdf9;
+      border:1px solid #eadfce;
+      border-radius:var(--radius);
+      padding:18px;
+    }
+    .arena{
+      min-height:510px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      overflow:hidden;
+    }
+    .arena::before{
+      content:"";
+      position:absolute;
+      inset:12px;
+      border-radius:24px;
+      background:radial-gradient(circle at top, rgba(216,155,77,.11), transparent 45%),
+                 radial-gradient(circle at bottom, rgba(176,111,43,.08), transparent 45%);
+      pointer-events:none;
+    }
+    .center{
+      position:relative;
+      z-index:1;
+      text-align:center;
+      width:100%;
+      padding:20px;
+    }
+    .big-number{
+      font-size:clamp(6rem,18vw,11rem);
+      font-weight:900;
+      line-height:.9;
+      letter-spacing:.02em;
+      user-select:none;
+      min-height:1em;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .status{
+      margin-top:12px;
+      min-height:28px;
+      color:var(--muted);
+      font-size:1.05rem;
+    }
+    .click-zone{
+      margin-top:18px;
+      border:2px dashed #d9c9b3;
+      border-radius:22px;
+      padding:18px;
+      background:#fff7eb;
+      cursor:pointer;
+      user-select:none;
+      transition:transform .08s ease, background .2s ease, border-color .2s ease;
+    }
+    .click-zone:hover{transform:translateY(-1px)}
+    .click-zone.active{
+      background:#fff2dc;
+      border-color:#ca8b40;
+      box-shadow:0 0 0 5px rgba(216,155,77,.15);
+      animation:pulse 1s infinite ease-in-out;
+    }
+    .click-zone.disabled{
+      opacity:.6;
+      cursor:default;
+    }
+    @keyframes pulse{
+      0%,100%{transform:scale(1)}
+      50%{transform:scale(1.01)}
+    }
+    .hint{
+      font-size:.94rem;
+      color:var(--muted);
+      margin-top:10px;
+    }
+    .result-box{
+      margin-top:18px;
+      padding:16px;
+      border-radius:18px;
+      background:#f7f1e7;
+      border:1px solid #eadfce;
+      display:none;
+    }
+    .result-box.show{display:block}
+    .result-main{
+      font-size:clamp(1.5rem,4vw,2.3rem);
+      font-weight:900;
+    }
+    .early{color:var(--bad)}
+    .late{color:var(--good)}
+    .neutral{color:var(--ink)}
+    .meta{
+      color:var(--muted);
+      margin-top:6px;
+      line-height:1.4;
+    }
+    .side h3{
+      margin:0 0 10px;
+      font-size:1.15rem;
+    }
+    .stat-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-bottom:16px;
+    }
+    .stat{
+      background:#f7f1e7;
+      border:1px solid #eadfce;
+      border-radius:16px;
+      padding:14px;
+    }
+    .stat-label{
+      color:var(--muted);
+      font-size:.88rem;
+      margin-bottom:4px;
+    }
+    .stat-value{
+      font-weight:900;
+      font-size:1.35rem;
+    }
+    .mini-note{
+      color:var(--muted);
+      font-size:.92rem;
+      line-height:1.5;
+    }
+    .history{
+      margin-top:14px;
+      display:grid;
+      gap:8px;
+      max-height:260px;
+      overflow:auto;
+      padding-right:2px;
+    }
+    .history-item{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      padding:10px 12px;
+      border-radius:14px;
+      background:#f7f1e7;
+      border:1px solid #eadfce;
+      font-size:.95rem;
+    }
+    .pill{
+      display:inline-block;
+      padding:4px 10px;
+      border-radius:999px;
+      background:#eee2d1;
+      font-size:.82rem;
+      color:var(--ink);
+      font-weight:700;
+    }
+    .footer-row{
+      display:flex;
+      gap:10px;
+      margin-top:14px;
+      flex-wrap:wrap;
+    }
+    .overlay{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#fffaf2;
+      border-radius:24px;
+      z-index:5;
+      padding:22px;
+      text-align:center;
+    }
+    .overlay.hidden{display:none}
+    .overlay-card{
+      max-width:520px;
+    }
+    .overlay-card h2{
+      margin:0 0 12px;
+      font-size:clamp(1.8rem,4vw,2.4rem);
+    }
+    .overlay-card p{
+      margin:0 0 16px;
+      color:var(--muted);
+      line-height:1.55;
+    }
+    @media (max-width: 820px){
+      .layout{grid-template-columns:1fr}
+      .arena{min-height:430px}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="title-wrap">
+        <h1>Hit Zero</h1>
+        <div class="subtitle">Listen to the countdown in your head, then click when you think the timer hits 0.</div>
+      </div>
+      <div class="controls">
+        <label for="roundMode" style="color:#7c6b59;font-weight:700;">Start number</label>
+        <select id="roundMode" aria-label="Choose starting number">
+          <option value="random" selected>Random 5–10</option>
+          <option value="5">Always 5</option>
+          <option value="6">Always 6</option>
+          <option value="7">Always 7</option>
+          <option value="8">Always 8</option>
+          <option value="9">Always 9</option>
+          <option value="10">Always 10</option>
+        </select>
+                <button id="restartBtn" class="secondary">Reset Scores</button>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="card arena">
+        <div id="overlay" class="overlay">
+          <div class="overlay-card">
+            <h2>How to Play</h2>
+            <p>A number from <strong>5 to 10</strong> counts down once per second. The last two numbers are silent, so <strong>2</strong> and <strong>1</strong> will not appear. Click the big panel when you think the countdown reaches <strong>0</strong>. You will play <strong>5 rounds</strong>. Each round scores how many milliseconds off you were, whether early or late. After round 5, all 5 scores are added together. Lower is better.</p>
+            <button id="overlayStart" class="primary">Play Round</button>
+          </div>
+        </div>
+
+        <div class="center">
+          <div id="bigNumber" class="big-number">—</div>
+          <div id="status" class="status">Press Play Round to begin.</div>
+
+          <div id="clickZone" class="click-zone disabled" role="button" tabindex="0" aria-label="Click when you think the countdown reaches zero">
+            <div style="font-size:1.25rem;font-weight:900;">CLICK HERE</div>
+            <div class="hint">For the last two counts, the display goes silent. Trust your timing.</div>
+          </div>
+
+          <div id="resultBox" class="result-box" aria-live="polite">
+            <div id="resultMain" class="result-main neutral">0 ms</div>
+            <div id="resultMeta" class="meta"></div>
+            <div class="footer-row">
+              <button id="nextRoundBtn" class="primary">Next Round</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card side">
+        <h3>Scoreboard</h3>
+        <div class="stat-grid">
+          <div class="stat">
+            <div class="stat-label">Set round</div>
+            <div id="setRound" class="stat-value">0 / 5</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Set total</div>
+            <div id="setTotal" class="stat-value">0 ms</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Best round</div>
+            <div id="bestScore" class="stat-value">—</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Last round</div>
+            <div id="lastScore" class="stat-value">—</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Sets played</div>
+            <div id="setsPlayed" class="stat-value">0</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Set average</div>
+            <div id="avgScore" class="stat-value">—</div>
+          </div>
+        </div>
+
+        <div class="mini-note">
+          <strong>Scoring:</strong> each round uses the absolute number of milliseconds away from the true zero point. After 5 rounds, those 5 values are added together for one final set total.
+        </div>
+
+        <h3 style="margin-top:18px;">Recent rounds</h3>
+        <div id="history" class="history"></div>
+      </div>
+    </div>
+  </div>
+
+  
+  <script>
+    (() => {
+      const overlay = document.getElementById('overlay');
+      const overlayStart = document.getElementById('overlayStart');
+      const restartBtn = document.getElementById('restartBtn');
+      const nextRoundBtn = document.getElementById('nextRoundBtn');
+      const roundMode = document.getElementById('roundMode');
+      const bigNumber = document.getElementById('bigNumber');
+      const statusEl = document.getElementById('status');
+      const clickZone = document.getElementById('clickZone');
+      const resultBox = document.getElementById('resultBox');
+      const resultMain = document.getElementById('resultMain');
+      const resultMeta = document.getElementById('resultMeta');
+
+      const setRoundEl = document.getElementById('setRound');
+      const setTotalEl = document.getElementById('setTotal');
+      const bestScoreEl = document.getElementById('bestScore');
+      const lastScoreEl = document.getElementById('lastScore');
+      const setsPlayedEl = document.getElementById('setsPlayed');
+      const avgScoreEl = document.getElementById('avgScore');
+      const historyEl = document.getElementById('history');
+
+      const STORAGE_KEY = 'hit_zero_5_round_sets_v1';
+
+      let state = {
+        running: false,
+        acceptingClick: false,
+        roundStartNumber: 0,
+        timeoutIds: [],
+        targetTime: 0,
+        currentRound: 0,
+        maxRounds: 5,
+        roundScores: [],
+        completedSets: loadCompletedSets()
+      };
+
+      renderScores();
+      renderHistory();
+      resetVisuals();
+
+      function loadCompletedSets(){
+        try{
+          const raw = localStorage.getItem(STORAGE_KEY);
+          const parsed = raw ? JSON.parse(raw) : [];
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }
+
+      function saveCompletedSets(){
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state.completedSets.slice(0, 50)));
+      }
+
+      function clearTimers(){
+        state.timeoutIds.forEach(id => clearTimeout(id));
+        state.timeoutIds = [];
+      }
+
+      function chosenStartNumber(){
+        if (roundMode.value === 'random') {
+          return 5 + Math.floor(Math.random() * 6);
+        }
+        return Number(roundMode.value);
+      }
+
+      function formatMs(n){
+        return `${Math.round(n)} ms`;
+      }
+
+      function setInteractive(enabled){
+        state.acceptingClick = enabled;
+        clickZone.classList.toggle('active', enabled);
+        clickZone.classList.toggle('disabled', !enabled);
+      }
+
+      function resetVisuals(){
+        resultBox.classList.remove('show');
+        bigNumber.textContent = '—';
+        statusEl.textContent = state.currentRound === 0
+          ? 'Press Play Round to begin.'
+          : `Get ready for round ${Math.min(state.currentRound + 1, state.maxRounds)} of ${state.maxRounds}.`;
+        resultMain.className = 'result-main neutral';
+      }
+
+      function currentSetTotal(){
+        return state.roundScores.reduce((a, b) => a + b, 0);
+      }
+
+      function renderScores(){
+        setRoundEl.textContent = `${state.currentRound} / ${state.maxRounds}`;
+        setTotalEl.textContent = formatMs(currentSetTotal());
+
+        if (state.roundScores.length){
+          bestScoreEl.textContent = formatMs(Math.min(...state.roundScores));
+          lastScoreEl.textContent = formatMs(state.roundScores[state.roundScores.length - 1]);
+        } else {
+          bestScoreEl.textContent = '—';
+          lastScoreEl.textContent = '—';
+        }
+
+        setsPlayedEl.textContent = String(state.completedSets.length);
+
+        if (state.completedSets.length){
+          const avg = Math.round(
+            state.completedSets.reduce((sum, item) => sum + item.total, 0) / state.completedSets.length
+          );
+          avgScoreEl.textContent = formatMs(avg);
+        } else {
+          avgScoreEl.textContent = '—';
+        }
+      }
+
+      function renderHistory(){
+        historyEl.innerHTML = '';
+        if (!state.completedSets.length){
+          historyEl.innerHTML = '<div class="mini-note">No completed 5-round sets yet.</div>';
+          return;
+        }
+
+        state.completedSets.slice(0, 10).forEach((set, idx) => {
+          const item = document.createElement('div');
+          item.className = 'history-item';
+          item.innerHTML = `
+            <div>
+              <strong>Set ${state.completedSets.length - idx}</strong><br>
+              <span class="pill">${set.rounds.map(v => Math.round(v) + ' ms').join(' • ')}</span>
+            </div>
+            <div style="text-align:right;">
+              <strong>${formatMs(set.total)}</strong><br>
+              <span style="color:#7c6b59;">5 rounds</span>
+            </div>
+          `;
+          historyEl.appendChild(item);
+        });
+      }
+
+      function startRound(){
+        if (state.running) return;
+        if (state.currentRound >= state.maxRounds) return;
+
+        clearTimers();
+        resetVisuals();
+        overlay.classList.add('hidden');
+        state.running = true;
+        state.acceptingClick = false;
+        setInteractive(false);
+
+        state.currentRound += 1;
+        renderScores();
+
+        const startNum = chosenStartNumber();
+        state.roundStartNumber = startNum;
+        const now = performance.now();
+        state.targetTime = now + (startNum * 1000);
+
+        bigNumber.textContent = startNum;
+        statusEl.textContent = 'Watch the countdown...';
+
+        for (let step = 1; step <= startNum; step++) {
+          const numberToShow = startNum - step;
+          const timeoutId = setTimeout(() => {
+            if (!state.running) return;
+
+            if (numberToShow >= 3) {
+              bigNumber.textContent = numberToShow;
+              statusEl.textContent = 'Watch the countdown...';
+            } else if (numberToShow === 2 || numberToShow === 1) {
+              bigNumber.textContent = '';
+              statusEl.textContent = 'Silent countdown...';
+              setInteractive(true);
+            } else if (numberToShow === 0) {
+              bigNumber.textContent = '';
+              statusEl.textContent = 'Silent countdown...';
+            }
+          }, step * 1000);
+          state.timeoutIds.push(timeoutId);
+        }
+
+        const autoEndId = setTimeout(() => {
+          if (state.running && state.acceptingClick) {
+            finishRound(performance.now());
+          }
+        }, (startNum + 2.5) * 1000);
+        state.timeoutIds.push(autoEndId);
+      }
+
+      function finishRound(clickTime){
+        if (!state.running) return;
+
+        clearTimers();
+        state.running = false;
+        setInteractive(false);
+
+        const delta = clickTime - state.targetTime;
+        const absDelta = Math.abs(delta);
+        const direction = delta < 0 ? 'early' : delta > 0 ? 'late' : 'perfect';
+
+        state.roundScores.push(absDelta);
+        renderScores();
+
+        resultMain.textContent = formatMs(absDelta);
+        resultMain.className = 'result-main ' + (direction === 'early' ? 'early' : direction === 'late' ? 'late' : 'neutral');
+
+        const line1 = direction === 'perfect'
+          ? 'Perfect timing.'
+          : `You were ${formatMs(absDelta)} ${direction}.`;
+        const line2 = `Round ${state.currentRound} of ${state.maxRounds}. Running total: ${formatMs(currentSetTotal())}.`;
+
+        resultMeta.innerHTML = `${line1}<br>${line2}`;
+        resultBox.classList.add('show');
+        bigNumber.textContent = '—';
+        statusEl.textContent = state.currentRound >= state.maxRounds ? 'Set complete.' : 'Round complete.';
+
+        if (state.currentRound >= state.maxRounds) {
+          const total = currentSetTotal();
+          state.completedSets.unshift({
+            total: Math.round(total),
+            rounds: state.roundScores.map(v => Math.round(v)),
+            timestamp: Date.now()
+          });
+          state.completedSets = state.completedSets.slice(0, 50);
+          saveCompletedSets();
+          renderScores();
+          renderHistory();
+          nextRoundBtn.textContent = 'Play New Set';
+          overlay.classList.remove('hidden');
+          overlay.querySelector('h2').textContent = '5 Rounds Complete';
+          overlay.querySelector('p').innerHTML = `Your total was <strong>${formatMs(total)}</strong> across 5 rounds.<br><br>Round scores: <strong>${state.roundScores.map(v => formatMs(v)).join(' • ')}</strong>`;
+        } else {
+          nextRoundBtn.textContent = 'Next Round';
+        }
+      }
+
+      function handleClickAttempt(){
+        if (!state.acceptingClick) return;
+        finishRound(performance.now());
+      }
+
+      function resetSet(keepOverlayOpen = true){
+        clearTimers();
+        state.running = false;
+        state.acceptingClick = false;
+        state.targetTime = 0;
+        state.currentRound = 0;
+        state.roundScores = [];
+        setInteractive(false);
+        resetVisuals();
+        renderScores();
+        resultBox.classList.remove('show');
+
+        overlay.querySelector('h2').textContent = 'How to Play';
+        overlay.querySelector('p').innerHTML = 'A number from <strong>5 to 10</strong> counts down once per second. The last two numbers are silent, so <strong>2</strong> and <strong>1</strong> will not appear. Click the big panel when you think the countdown reaches <strong>0</strong>. You will play <strong>5 rounds</strong>. Each round scores how many milliseconds off you were, whether early or late. After round 5, all 5 scores are added together. Lower is better.';
+
+        if (keepOverlayOpen) {
+          overlay.classList.remove('hidden');
+        }
+      }
+
+      overlayStart.addEventListener('click', () => {
+        if (state.currentRound >= state.maxRounds) {
+          resetSet(false);
+        }
+        startRound();
+      });
+
+      nextRoundBtn.addEventListener('click', () => {
+        if (state.currentRound >= state.maxRounds) {
+          resetSet(false);
+        }
+        startRound();
+      });
+
+      restartBtn.addEventListener('click', () => {
+        state.completedSets = [];
+        saveCompletedSets();
+        renderHistory();
+        resetSet(true);
+      });
+
+      clickZone.addEventListener('click', handleClickAttempt);
+      clickZone.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleClickAttempt();
+        }
+      });
+    })();
+  </script>
+
+</body>
+</html>

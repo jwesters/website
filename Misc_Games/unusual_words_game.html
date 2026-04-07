@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Unusual Words: Lasting Streak</title>
+<style>
+  :root{
+    --bg:#f4efe6;
+    --panel:#fffaf2;
+    --ink:#2f261e;
+    --muted:#7c6b59;
+    --accent:#b7791f;
+    --accent2:#8c6239;
+    --good:#2f855a;
+    --bad:#c53030;
+    --shadow:0 12px 30px rgba(0,0,0,.10);
+    --radius:20px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    min-height:100vh;
+    font-family:Arial, Helvetica, sans-serif;
+    background:linear-gradient(180deg,#f7f2ea 0%,#efe6d8 100%);
+    color:var(--ink);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+  }
+  .app{
+    width:min(900px,100%);
+    background:var(--panel);
+    border:2px solid #e8dcc7;
+    border-radius:28px;
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .topbar{
+    padding:18px 22px;
+    background:linear-gradient(180deg,#fffdf8,#f8f1e5);
+    border-bottom:2px solid #ebdec9;
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .titleWrap h1{
+    margin:0;
+    font-size:clamp(1.5rem,2vw,2rem);
+    line-height:1.1;
+  }
+  .subtitle{
+    margin-top:4px;
+    color:var(--muted);
+    font-size:.98rem;
+  }
+  .stats{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .chip{
+    background:#fff;
+    border:2px solid #eadfcd;
+    border-radius:999px;
+    padding:10px 14px;
+    font-weight:700;
+    min-width:120px;
+    text-align:center;
+  }
+  .main{
+    padding:24px;
+  }
+  .card{
+    background:#fffdf9;
+    border:2px solid #eadfcd;
+    border-radius:24px;
+    padding:22px;
+  }
+  .promptLabel{
+    color:var(--muted);
+    font-weight:700;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    font-size:.82rem;
+  }
+  .word{
+    margin:10px 0 8px;
+    font-size:clamp(2rem,5vw,3.25rem);
+    font-weight:800;
+    letter-spacing:.01em;
+    min-height:1.2em;
+  }
+  .instructions{
+    margin:0 0 20px;
+    color:var(--muted);
+    font-size:1rem;
+  }
+  .choices{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:14px;
+  }
+  .choice{
+    appearance:none;
+    width:100%;
+    text-align:left;
+    border:2px solid #e5d6bf;
+    background:#fff;
+    color:var(--ink);
+    border-radius:18px;
+    padding:16px 18px;
+    font-size:1.02rem;
+    line-height:1.4;
+    cursor:pointer;
+    transition:transform .08s ease, border-color .15s ease, background .15s ease, box-shadow .15s ease;
+    box-shadow:0 3px 0 rgba(0,0,0,.04);
+  }
+  .choice:hover:not([disabled]){
+    transform:translateY(-1px);
+    border-color:#d3b280;
+    background:#fffaf0;
+  }
+  .choice:active:not([disabled]){
+    transform:translateY(1px);
+  }
+  .choice.correct{
+    border-color:#99d3b0;
+    background:#edf9f1;
+    color:#1f5137;
+  }
+  .choice.wrong{
+    border-color:#efb1b1;
+    background:#fff1f1;
+    color:#7f1d1d;
+  }
+  .choice:disabled{
+    cursor:default;
+  }
+  .footerRow{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:18px;
+  }
+  .message{
+    min-height:26px;
+    font-weight:700;
+  }
+  .message.good{ color:var(--good); }
+  .message.bad{ color:var(--bad); }
+  .btn{
+    appearance:none;
+    border:none;
+    border-radius:14px;
+    padding:12px 16px;
+    font-size:1rem;
+    font-weight:700;
+    cursor:pointer;
+    background:var(--accent);
+    color:white;
+    box-shadow:0 4px 0 rgba(0,0,0,.10);
+  }
+  .btn.secondary{
+    background:var(--accent2);
+  }
+  .btn:active{
+    transform:translateY(1px);
+  }
+  .empty{
+    text-align:center;
+    color:var(--muted);
+    padding:30px 10px 10px;
+  }
+  .overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(47,38,30,.45);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+  }
+  .hidden{ display:none !important; }
+  .modal{
+    width:min(520px,100%);
+    background:var(--panel);
+    border:2px solid #e8dcc7;
+    border-radius:26px;
+    box-shadow:var(--shadow);
+    padding:24px;
+    text-align:center;
+  }
+  .modal h2{
+    margin:0 0 8px;
+    font-size:2rem;
+  }
+  .modal p{
+    margin:8px 0;
+    font-size:1.05rem;
+  }
+  .modal .big{
+    font-size:3rem;
+    font-weight:800;
+    margin:8px 0 12px;
+    color:var(--accent2);
+  }
+  .modalButtons{
+    margin-top:18px;
+    display:flex;
+    gap:10px;
+    justify-content:center;
+    flex-wrap:wrap;
+  }
+  @media (max-width:640px){
+    .topbar,.main{padding:16px}
+    .card{padding:16px}
+    .chip{min-width:unset; flex:1 1 100px}
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="titleWrap">
+        <h1>Unusual Words</h1>
+        <div class="subtitle">Pick the correct definition. One wrong answer and it’s game over.</div>
+      </div>
+      <div class="stats">
+        <div class="chip">Streak: <span id="streak">0</span></div>
+        <div class="chip">Best: <span id="best">0</span></div>
+</div>
+    </div>
+
+    <div class="main">
+      <div class="card">
+        <div class="promptLabel">Word</div>
+        <div id="word" class="word"></div>
+        <p class="instructions">Click the correct definition from the four choices below.</p>
+        <div id="choices" class="choices"></div>
+        <div class="footerRow">
+          <div id="message" class="message"></div>
+          <div>
+            <button id="startBtn" class="btn">Start Game</button>
+            <button id="restartBtn" class="btn secondary">Restart</button>
+          </div>
+        </div>
+      </div>
+      <div id="emptyMsg" class="empty hidden">You’ve gone through every word in the set. Restart to play again.</div>
+    </div>
+  </div>
+
+  <div id="gameOverOverlay" class="overlay hidden" aria-hidden="true">
+    <div class="modal">
+      <h2>Game Over</h2>
+      <p>Your streak was</p>
+      <div class="big" id="finalScore">0</div>
+      <p id="gameOverWord"></p>
+      <p id="gameOverAnswer"></p>
+      <div class="modalButtons">
+        <button id="playAgainBtn" class="btn">Play Again</button>
+        
+      </div>
+    </div>
+  </div>
+
+<script>
+const WORDS = [{"word": "abate", "definition": "to become less intense or widespread"}, {"word": "abstemious", "definition": "moderate in appetite or consumption"}, {"word": "accede", "definition": "to agree or give in"}, {"word": "accretion", "definition": "gradual growth by addition"}, {"word": "acerbic", "definition": "sharp or bitter in tone"}, {"word": "acquiesce", "definition": "to accept something reluctantly but without protest"}, {"word": "acrimony", "definition": "bitterness in speech or manner"}, {"word": "adroit", "definition": "skillful and clever"}, {"word": "adulation", "definition": "excessive praise or admiration"}, {"word": "aegis", "definition": "protection or support"}, {"word": "aesthetic", "definition": "concerned with beauty or artistic taste"}, {"word": "affable", "definition": "friendly and easy to talk to"}, {"word": "aggrandize", "definition": "to make greater in power or importance"}, {"word": "alacrity", "definition": "cheerful willingness"}, {"word": "alcove", "definition": "a small recessed section of a room"}, {"word": "allay", "definition": "to lessen or relieve"}, {"word": "aloof", "definition": "distant or reserved"}, {"word": "amalgam", "definition": "a mixture or blend"}, {"word": "ameliorate", "definition": "to improve or make better"}, {"word": "amiable", "definition": "pleasant and friendly"}, {"word": "amorphous", "definition": "without a clear shape or form"}, {"word": "anachronism", "definition": "something out of its proper time period"}, {"word": "anathema", "definition": "something greatly disliked or denounced"}, {"word": "anodyne", "definition": "something that soothes or calms"}, {"word": "antediluvian", "definition": "extremely old or old-fashioned"}, {"word": "antipathy", "definition": "strong dislike"}, {"word": "apathy", "definition": "lack of interest or emotion"}, {"word": "aplomb", "definition": "self-confidence under pressure"}, {"word": "apocryphal", "definition": "of doubtful authenticity"}, {"word": "apogee", "definition": "the highest point"}, {"word": "approbation", "definition": "approval or praise"}, {"word": "arcane", "definition": "known by only a few; mysterious"}, {"word": "arduous", "definition": "requiring great effort"}, {"word": "argot", "definition": "specialized vocabulary of a group"}, {"word": "ascetic", "definition": "practicing severe self-discipline"}, {"word": "asperity", "definition": "harshness in tone or manner"}, {"word": "assiduous", "definition": "showing great care and persistence"}, {"word": "atavism", "definition": "a return to ancestral traits"}, {"word": "attenuate", "definition": "to weaken or reduce"}, {"word": "augury", "definition": "a sign of what may happen"}, {"word": "auspicious", "definition": "favorably promising success"}, {"word": "austere", "definition": "severe or plain in style"}, {"word": "avarice", "definition": "extreme greed"}, {"word": "avuncular", "definition": "kindly like an uncle"}, {"word": "axiom", "definition": "a self-evident rule or principle"}, {"word": "baleful", "definition": "threatening harm"}, {"word": "balk", "definition": "to stop short and refuse to continue"}, {"word": "ballyhoo", "definition": "noisy publicity"}, {"word": "banal", "definition": "boring because it is unoriginal"}, {"word": "bedizen", "definition": "to decorate in a gaudy way"}, {"word": "belie", "definition": "to give a false impression of"}, {"word": "benediction", "definition": "a blessing"}, {"word": "beneficent", "definition": "kind and generous"}, {"word": "benevolent", "definition": "well-meaning and helpful"}, {"word": "benign", "definition": "harmless or gentle"}, {"word": "berate", "definition": "to scold angrily"}, {"word": "bilious", "definition": "irritable; unpleasant"}, {"word": "blandishment", "definition": "flattering speech meant to persuade"}, {"word": "blithe", "definition": "carefree and cheerful"}, {"word": "bombastic", "definition": "overblown in language"}, {"word": "boondoggle", "definition": "a wasteful or pointless project"}, {"word": "brusque", "definition": "abrupt and blunt"}, {"word": "bucolic", "definition": "relating to the countryside"}, {"word": "burnish", "definition": "to polish; to improve or enhance"}, {"word": "cacophony", "definition": "a harsh mixture of sounds"}, {"word": "cadge", "definition": "to obtain by begging"}, {"word": "cajole", "definition": "to persuade with flattery"}, {"word": "callow", "definition": "immature and inexperienced"}, {"word": "calumny", "definition": "a false and damaging statement"}, {"word": "canard", "definition": "a false rumor or report"}, {"word": "candor", "definition": "honesty and openness"}, {"word": "capricious", "definition": "suddenly changeable"}, {"word": "captious", "definition": "finding fault over small matters"}, {"word": "carouse", "definition": "to celebrate noisily"}, {"word": "cavil", "definition": "to make petty objections"}, {"word": "celerity", "definition": "speed"}, {"word": "censure", "definition": "strong disapproval"}, {"word": "chary", "definition": "cautious or reluctant"}, {"word": "chasten", "definition": "to discipline or correct"}, {"word": "chicanery", "definition": "deception by trickery"}, {"word": "chimera", "definition": "an impossible dream or illusion"}, {"word": "choleric", "definition": "easily angered"}, {"word": "circumspect", "definition": "careful to consider all risks"}, {"word": "clairvoyant", "definition": "apparently able to perceive what is hidden"}, {"word": "clamor", "definition": "a loud outcry"}, {"word": "clandestine", "definition": "secret or concealed"}, {"word": "clemency", "definition": "mercy"}, {"word": "cogent", "definition": "clear, logical, and convincing"}, {"word": "commensurate", "definition": "equal in size or degree"}, {"word": "compendium", "definition": "a concise collection of information"}, {"word": "complacent", "definition": "too self-satisfied"}, {"word": "conflagration", "definition": "a large destructive fire"}, {"word": "confluence", "definition": "a flowing together; a meeting"}, {"word": "connoisseur", "definition": "an expert judge in matters of taste"}, {"word": "consummate", "definition": "complete and excellent"}, {"word": "contiguous", "definition": "touching or sharing a boundary"}, {"word": "contrite", "definition": "deeply sorry"}, {"word": "copious", "definition": "abundant"}, {"word": "cornucopia", "definition": "an abundant supply"}, {"word": "cosset", "definition": "to pamper"}, {"word": "countermand", "definition": "to cancel a previous order"}, {"word": "covenant", "definition": "a formal agreement"}, {"word": "covert", "definition": "hidden or secret"}, {"word": "credulous", "definition": "too ready to believe"}, {"word": "crescendo", "definition": "a gradual increase in loudness or intensity"}, {"word": "cupidity", "definition": "greed"}, {"word": "curmudgeon", "definition": "a bad-tempered person"}, {"word": "cursory", "definition": "hasty and not thorough"}, {"word": "dearth", "definition": "a lack or shortage"}, {"word": "debacle", "definition": "a sudden and complete failure"}, {"word": "debilitate", "definition": "to weaken"}, {"word": "decorous", "definition": "proper and respectful"}, {"word": "defenestration", "definition": "the act of throwing something out a window"}, {"word": "deleterious", "definition": "harmful"}, {"word": "demagogue", "definition": "a leader who gains support by appealing to emotions"}, {"word": "demur", "definition": "to raise doubts or objections"}, {"word": "denizen", "definition": "an inhabitant or regular visitor"}, {"word": "depredation", "definition": "destructive attack or plundering"}, {"word": "deride", "definition": "to mock"}, {"word": "desultory", "definition": "lacking a clear plan or direction"}, {"word": "diaphanous", "definition": "light, delicate, and almost transparent"}, {"word": "didactic", "definition": "intended to teach, sometimes too much so"}, {"word": "diffident", "definition": "shy because of lack of confidence"}, {"word": "dilatory", "definition": "slow and intended to delay"}, {"word": "dirge", "definition": "a mournful song for the dead"}, {"word": "disabuse", "definition": "to free from a mistaken belief"}, {"word": "discern", "definition": "to perceive clearly"}, {"word": "discomfit", "definition": "to make uneasy or embarrassed"}, {"word": "disparate", "definition": "fundamentally different"}, {"word": "dissemble", "definition": "to disguise one's true motives"}, {"word": "dissonance", "definition": "a lack of harmony"}, {"word": "diurnal", "definition": "active in the daytime; daily"}, {"word": "divest", "definition": "to strip away or remove"}, {"word": "dogged", "definition": "stubbornly persistent"}, {"word": "doldrums", "definition": "a state of inactivity or low spirits"}, {"word": "dolorous", "definition": "sorrowful"}, {"word": "dour", "definition": "stern and gloomy"}, {"word": "droll", "definition": "oddly amusing"}, {"word": "dubious", "definition": "doubtful or suspect"}, {"word": "ebullient", "definition": "overflowing with enthusiasm"}, {"word": "eclectic", "definition": "drawing from many different sources"}, {"word": "efface", "definition": "to erase or make inconspicuous"}, {"word": "effervescent", "definition": "bubbly; lively"}, {"word": "efficacy", "definition": "effectiveness"}, {"word": "effrontery", "definition": "bold disrespect"}, {"word": "egregious", "definition": "outstandingly bad"}, {"word": "elegy", "definition": "a poem or song of mourning"}, {"word": "elicit", "definition": "to draw out a response"}, {"word": "eloquent", "definition": "fluent and persuasive in speaking or writing"}, {"word": "elucidate", "definition": "to make clear"}, {"word": "elusive", "definition": "hard to find, catch, or understand"}, {"word": "emanate", "definition": "to flow out from"}, {"word": "embellish", "definition": "to decorate or make more attractive"}, {"word": "empirical", "definition": "based on observation or experience"}, {"word": "encomium", "definition": "formal praise"}, {"word": "encumber", "definition": "to burden or weigh down"}, {"word": "endemic", "definition": "regularly found in a certain place or group"}, {"word": "enervate", "definition": "to weaken or drain energy"}, {"word": "engender", "definition": "to bring about"}, {"word": "enigma", "definition": "a mystery"}, {"word": "ennui", "definition": "boredom and dissatisfaction"}, {"word": "ephemeral", "definition": "lasting a very short time"}, {"word": "epigram", "definition": "a short witty saying"}, {"word": "epiphany", "definition": "a sudden realization"}, {"word": "equanimity", "definition": "calmness and balance of mind"}, {"word": "equivocate", "definition": "to speak ambiguously"}, {"word": "ersatz", "definition": "artificial; imitation"}, {"word": "erudite", "definition": "very learned"}, {"word": "esoteric", "definition": "understood by only a small number"}, {"word": "ethereal", "definition": "light and delicate; heavenly"}, {"word": "eulogy", "definition": "speech or writing in praise of someone"}, {"word": "euphemism", "definition": "a mild expression used instead of a harsh one"}, {"word": "euphony", "definition": "pleasant sound"}, {"word": "evanescent", "definition": "quickly fading or disappearing"}, {"word": "evince", "definition": "to show clearly"}, {"word": "exacerbate", "definition": "to make worse"}, {"word": "exculpate", "definition": "to clear from blame"}, {"word": "execrable", "definition": "very bad or hateful"}, {"word": "exigent", "definition": "urgent"}, {"word": "exonerate", "definition": "to free from blame"}, {"word": "expedient", "definition": "convenient and practical though possibly improper"}, {"word": "expunge", "definition": "to erase completely"}, {"word": "extant", "definition": "still existing"}, {"word": "extol", "definition": "to praise highly"}, {"word": "extraneous", "definition": "irrelevant or unnecessary"}, {"word": "exuberant", "definition": "full of energy and excitement"}, {"word": "facile", "definition": "appearing neat but achieved without effort; superficial"}, {"word": "factotum", "definition": "a person who does many kinds of work"}, {"word": "fallow", "definition": "inactive; unused"}, {"word": "fastidious", "definition": "very attentive to detail; hard to please"}, {"word": "fatuous", "definition": "silly and pointless"}, {"word": "fecund", "definition": "fertile; productive"}, {"word": "feign", "definition": "to pretend"}, {"word": "felicitous", "definition": "well chosen; pleasing"}, {"word": "fervid", "definition": "intensely enthusiastic"}, {"word": "fetid", "definition": "foul-smelling"}, {"word": "fetter", "definition": "to restrain"}, {"word": "fiat", "definition": "an official order"}, {"word": "fidelity", "definition": "faithfulness"}, {"word": "filch", "definition": "to steal something small"}, {"word": "flagrant", "definition": "clearly offensive"}, {"word": "florid", "definition": "overly elaborate; flushed with color"}, {"word": "forbearance", "definition": "patient self-control"}, {"word": "fortuitous", "definition": "happening by chance, often luckily"}, {"word": "fractious", "definition": "irritable and quarrelsome"}, {"word": "frugal", "definition": "careful with money or resources"}, {"word": "fulminate", "definition": "to protest loudly"}, {"word": "furtive", "definition": "secretive and sneaky"}, {"word": "gainsay", "definition": "to deny or contradict"}, {"word": "garrulous", "definition": "talking a lot about trivial things"}, {"word": "genial", "definition": "friendly and cheerful"}, {"word": "germane", "definition": "relevant to the matter at hand"}, {"word": "glib", "definition": "smooth and insincere"}, {"word": "gloaming", "definition": "twilight"}, {"word": "glower", "definition": "to stare angrily"}, {"word": "gregarious", "definition": "sociable"}, {"word": "guile", "definition": "sly cleverness"}, {"word": "gullible", "definition": "easily fooled"}, {"word": "halcyon", "definition": "peaceful and happy"}, {"word": "harangue", "definition": "a long, forceful speech"}, {"word": "harbinger", "definition": "a sign of something to come"}, {"word": "hector", "definition": "to bully or intimidate"}, {"word": "hedonist", "definition": "someone devoted to pleasure"}, {"word": "hegemony", "definition": "dominance or leadership over others"}, {"word": "histrionic", "definition": "overly dramatic"}, {"word": "hoary", "definition": "very old; grayish white"}, {"word": "hubris", "definition": "excessive pride"}, {"word": "hyperbole", "definition": "deliberate exaggeration"}, {"word": "iconoclast", "definition": "someone who challenges cherished beliefs"}, {"word": "idiosyncrasy", "definition": "a distinctive personal habit or trait"}, {"word": "ignoble", "definition": "dishonorable"}, {"word": "imbibe", "definition": "to drink; to absorb"}, {"word": "immutable", "definition": "unchanging"}, {"word": "impassive", "definition": "showing no emotion"}, {"word": "impecunious", "definition": "having little or no money"}, {"word": "imperturbable", "definition": "not easily upset"}, {"word": "impervious", "definition": "not allowing passage; unaffected"}, {"word": "impetuous", "definition": "acting quickly without thought"}, {"word": "implacable", "definition": "unable to be calmed or satisfied"}, {"word": "implicit", "definition": "suggested rather than stated directly"}, {"word": "importune", "definition": "to beg persistently"}, {"word": "improvident", "definition": "not planning for the future"}, {"word": "impugn", "definition": "to challenge as false or questionable"}, {"word": "inchoate", "definition": "not fully formed"}, {"word": "incisive", "definition": "clear and direct"}, {"word": "incorrigible", "definition": "unable to be corrected"}, {"word": "indefatigable", "definition": "untiring"}, {"word": "indolent", "definition": "lazy"}, {"word": "ineffable", "definition": "too great to be expressed in words"}, {"word": "ineluctable", "definition": "unavoidable"}, {"word": "inept", "definition": "clumsy or incompetent"}, {"word": "inexorable", "definition": "unable to be stopped or persuaded"}, {"word": "ingenuous", "definition": "innocent and straightforward"}, {"word": "inimical", "definition": "harmful or hostile"}, {"word": "iniquity", "definition": "gross injustice or wickedness"}, {"word": "innocuous", "definition": "harmless"}, {"word": "inscrutable", "definition": "impossible to understand or interpret"}, {"word": "insipid", "definition": "lacking flavor or interest"}, {"word": "intransigent", "definition": "unwilling to compromise"}, {"word": "inure", "definition": "to harden by use or exposure"}, {"word": "invective", "definition": "insulting language"}, {"word": "inveterate", "definition": "long-established and unlikely to change"}, {"word": "invidious", "definition": "likely to cause resentment"}, {"word": "irascible", "definition": "easily angered"}, {"word": "jaded", "definition": "tired from overexperience"}, {"word": "jettison", "definition": "to throw off or discard"}, {"word": "jocose", "definition": "playful or joking"}, {"word": "juggernaut", "definition": "a huge, unstoppable force"}, {"word": "juxtapose", "definition": "to place side by side for comparison"}, {"word": "kudos", "definition": "praise or honor"}, {"word": "lachrymose", "definition": "tearful or mournful"}, {"word": "laconic", "definition": "using very few words"}, {"word": "lament", "definition": "to express sorrow"}, {"word": "lampoon", "definition": "to mock publicly in writing or speech"}, {"word": "languid", "definition": "lacking energy"}, {"word": "largesse", "definition": "generous giving"}, {"word": "latent", "definition": "present but hidden"}, {"word": "laudable", "definition": "deserving praise"}, {"word": "legerdemain", "definition": "skillful trickery"}, {"word": "lenient", "definition": "merciful or tolerant"}, {"word": "limpid", "definition": "clear and transparent"}, {"word": "lionize", "definition": "to treat as famous or important"}, {"word": "loquacious", "definition": "very talkative"}, {"word": "lucid", "definition": "clear and easy to understand"}, {"word": "lugubrious", "definition": "looking or sounding sad"}, {"word": "magnanimous", "definition": "generous and forgiving"}, {"word": "maudlin", "definition": "overly sentimental"}, {"word": "maverick", "definition": "an independent-minded person"}, {"word": "mellifluous", "definition": "sweet-sounding"}, {"word": "mendacious", "definition": "dishonest"}, {"word": "mercurial", "definition": "quickly changing in mood"}, {"word": "meticulous", "definition": "very careful and precise"}, {"word": "militate", "definition": "to have a substantial effect, usually against"}, {"word": "minatory", "definition": "threatening"}, {"word": "minutiae", "definition": "small precise details"}, {"word": "misanthrope", "definition": "a person who dislikes humankind"}, {"word": "mitigate", "definition": "to make less severe"}, {"word": "modicum", "definition": "a small amount"}, {"word": "moribund", "definition": "near death or no longer active"}, {"word": "mordant", "definition": "sharply biting in style"}, {"word": "myriad", "definition": "a countless great number"}, {"word": "nascent", "definition": "just beginning"}, {"word": "nebulous", "definition": "vague or ill-defined"}, {"word": "nefarious", "definition": "wicked or criminal"}, {"word": "neophyte", "definition": "a beginner"}, {"word": "noisome", "definition": "foul-smelling or harmful"}, {"word": "nominal", "definition": "existing in name only; very small"}, {"word": "nonchalant", "definition": "casually calm and unconcerned"}, {"word": "nostrum", "definition": "a supposed cure or solution"}, {"word": "noxious", "definition": "harmful or poisonous"}, {"word": "obdurate", "definition": "stubbornly refusing to change"}, {"word": "obfuscate", "definition": "to make unclear or confusing"}, {"word": "oblique", "definition": "indirect or slanting"}, {"word": "obsequious", "definition": "excessively eager to please"}, {"word": "obstinate", "definition": "stubborn"}, {"word": "officious", "definition": "too eager to tell people what to do"}, {"word": "olfactory", "definition": "related to the sense of smell"}, {"word": "ominous", "definition": "suggesting that something bad will happen"}, {"word": "omnipotent", "definition": "all-powerful"}, {"word": "onerous", "definition": "burdensome"}, {"word": "opacity", "definition": "the state of being hard to understand or see through"}, {"word": "opulent", "definition": "rich and luxurious"}, {"word": "oracular", "definition": "mysterious and wise-sounding"}, {"word": "oscillate", "definition": "to move back and forth"}, {"word": "ossify", "definition": "to become rigid or fixed"}, {"word": "ostensible", "definition": "appearing to be true, but not necessarily so"}, {"word": "ostentatious", "definition": "showy in a way meant to impress"}, {"word": "panacea", "definition": "a cure-all"}, {"word": "panegyric", "definition": "formal public praise"}, {"word": "paragon", "definition": "a model of excellence"}, {"word": "parsimonious", "definition": "extremely unwilling to spend"}, {"word": "partisan", "definition": "strongly supporting one side"}, {"word": "paucity", "definition": "scarcity"}, {"word": "pedantic", "definition": "overly concerned with small details or rules"}, {"word": "pellucid", "definition": "very clear"}, {"word": "penchant", "definition": "a strong liking"}, {"word": "penury", "definition": "extreme poverty"}, {"word": "peremptory", "definition": "insisting on immediate obedience"}, {"word": "perennial", "definition": "lasting for a long time; recurring"}, {"word": "perfidy", "definition": "betrayal of trust"}, {"word": "perfunctory", "definition": "done with little care or interest"}, {"word": "peripatetic", "definition": "traveling from place to place"}, {"word": "pernicious", "definition": "highly harmful"}, {"word": "perspicacious", "definition": "quick to understand"}, {"word": "pertinacious", "definition": "holding firmly to a purpose"}, {"word": "peruse", "definition": "to read carefully"}, {"word": "petulant", "definition": "childishly irritable"}, {"word": "phlegmatic", "definition": "calm and not easily excited"}, {"word": "pithy", "definition": "brief but meaningful"}, {"word": "placate", "definition": "to calm or satisfy"}, {"word": "plangent", "definition": "loud and mournful"}, {"word": "plethora", "definition": "too much; an excess"}, {"word": "plucky", "definition": "brave and spirited"}, {"word": "polemic", "definition": "a strong attack on an idea"}, {"word": "portend", "definition": "to warn of something to come"}, {"word": "pragmatic", "definition": "practical rather than idealistic"}, {"word": "precarious", "definition": "not secure; dangerously likely to fall"}, {"word": "precocious", "definition": "developed earlier than usual"}, {"word": "predilection", "definition": "a preference"}, {"word": "preen", "definition": "to groom oneself proudly"}, {"word": "preponderance", "definition": "the greater amount or number"}, {"word": "prescient", "definition": "having knowledge of events before they happen"}, {"word": "probity", "definition": "honesty and moral integrity"}, {"word": "proclivity", "definition": "a natural tendency"}, {"word": "prodigal", "definition": "wastefully extravagant"}, {"word": "prolix", "definition": "using too many words"}, {"word": "propitious", "definition": "favorable"}, {"word": "propriety", "definition": "proper behavior"}, {"word": "prosaic", "definition": "ordinary and dull"}, {"word": "protean", "definition": "able to change easily"}, {"word": "provident", "definition": "careful in planning for the future"}, {"word": "puerile", "definition": "childishly silly"}, {"word": "pugnacious", "definition": "eager to argue or fight"}, {"word": "pulchritude", "definition": "physical beauty"}, {"word": "punctilious", "definition": "very careful about correct behavior"}, {"word": "quagmire", "definition": "a difficult and messy situation"}, {"word": "quaint", "definition": "attractively old-fashioned"}, {"word": "quandary", "definition": "a state of uncertainty"}, {"word": "querulous", "definition": "complaining in a whining way"}, {"word": "quiescent", "definition": "inactive and quiet"}, {"word": "quintessential", "definition": "the most perfect example"}, {"word": "quixotic", "definition": "idealistic in an impractical way"}, {"word": "quotidian", "definition": "everyday; ordinary"}, {"word": "raconteur", "definition": "a skilled storyteller"}, {"word": "rarefied", "definition": "elevated or refined; less dense"}, {"word": "recalcitrant", "definition": "stubbornly resistant"}, {"word": "redolent", "definition": "strongly reminiscent or fragrant"}, {"word": "refulgent", "definition": "shining brightly"}, {"word": "relegate", "definition": "to assign to a lower position"}, {"word": "remonstrate", "definition": "to protest strongly"}, {"word": "renege", "definition": "to go back on a promise"}, {"word": "repine", "definition": "to complain with discontent"}, {"word": "reprobate", "definition": "an unprincipled person"}, {"word": "rescind", "definition": "to cancel officially"}, {"word": "resolute", "definition": "firmly determined"}, {"word": "reticent", "definition": "reserved; not saying much"}, {"word": "revere", "definition": "to respect deeply"}, {"word": "ribald", "definition": "crudely humorous"}, {"word": "rife", "definition": "common or widespread"}, {"word": "risible", "definition": "laughable"}, {"word": "rococo", "definition": "highly ornate in style"}, {"word": "ruminate", "definition": "to think deeply"}, {"word": "sagacious", "definition": "wise and perceptive"}, {"word": "salient", "definition": "most noticeable or important"}, {"word": "salubrious", "definition": "health-giving; pleasant"}, {"word": "sanguine", "definition": "optimistic or cheerful"}, {"word": "sardonic", "definition": "grimly mocking"}, {"word": "sated", "definition": "fully satisfied"}, {"word": "scintilla", "definition": "a tiny amount"}, {"word": "scrupulous", "definition": "careful to do what is right"}, {"word": "sedulous", "definition": "diligent and persistent"}, {"word": "serendipity", "definition": "the finding of valuable things by chance"}, {"word": "serrated", "definition": "having a saw-toothed edge"}, {"word": "solicitous", "definition": "showing concern and care"}, {"word": "somnolent", "definition": "sleepy"}, {"word": "sonorous", "definition": "deep and full in sound"}, {"word": "soporific", "definition": "causing sleep or boredom"}, {"word": "specious", "definition": "seeming true but actually false"}, {"word": "splenetic", "definition": "bad-tempered"}, {"word": "spurious", "definition": "false or fake"}, {"word": "staid", "definition": "serious and respectable"}, {"word": "stentorian", "definition": "very loud and powerful in sound"}, {"word": "stoic", "definition": "enduring pain without complaint"}, {"word": "stolid", "definition": "calm, dependable, and showing little emotion"}, {"word": "strident", "definition": "loud and harsh"}, {"word": "subjugate", "definition": "to bring under control"}, {"word": "sublime", "definition": "of great beauty or excellence"}, {"word": "subterfuge", "definition": "deception used to hide something"}, {"word": "succinct", "definition": "brief and clear"}, {"word": "supercilious", "definition": "behaving as though superior to others"}, {"word": "surfeit", "definition": "an excessive amount"}, {"word": "surreptitious", "definition": "done secretly"}, {"word": "sybaritic", "definition": "devoted to luxury and pleasure"}, {"word": "taciturn", "definition": "habitually quiet"}, {"word": "tangential", "definition": "slightly connected but digressing"}, {"word": "tenacious", "definition": "holding firmly; persistent"}, {"word": "tendentious", "definition": "expressing a particular bias"}, {"word": "tenuous", "definition": "very weak or slight"}, {"word": "timorous", "definition": "easily frightened"}, {"word": "tirade", "definition": "a long angry speech"}, {"word": "toady", "definition": "a person who flatters for advantage"}, {"word": "torpid", "definition": "sluggish; inactive"}, {"word": "tortuous", "definition": "full of twists and turns; complicated"}, {"word": "tractable", "definition": "easy to control or deal with"}, {"word": "transient", "definition": "temporary"}, {"word": "trenchant", "definition": "sharp and forceful"}, {"word": "trepidation", "definition": "fear or anxiety about something that may happen"}, {"word": "truculent", "definition": "eager to fight; aggressively defiant"}, {"word": "turpitude", "definition": "moral corruption"}, {"word": "ubiquitous", "definition": "present everywhere"}, {"word": "umbrage", "definition": "offense or annoyance"}, {"word": "unctuous", "definition": "excessively flattering; oily"}, {"word": "undulate", "definition": "to move in waves"}, {"word": "unfathomable", "definition": "impossible to fully understand"}, {"word": "ungainly", "definition": "awkward and clumsy"}, {"word": "unwonted", "definition": "unusual"}, {"word": "upbraid", "definition": "to scold sharply"}, {"word": "urbane", "definition": "polished and courteous"}, {"word": "usurp", "definition": "to seize power wrongfully"}, {"word": "vacillate", "definition": "to waver between choices"}, {"word": "vacuous", "definition": "lacking thought or expression"}, {"word": "vagary", "definition": "an unpredictable change or action"}, {"word": "vapid", "definition": "dull and lifeless"}, {"word": "variegated", "definition": "marked with different colors or patterns"}, {"word": "vaunted", "definition": "praised or boasted about"}, {"word": "veer", "definition": "to change direction suddenly"}, {"word": "venal", "definition": "open to bribery"}, {"word": "venerate", "definition": "to regard with deep respect"}, {"word": "veracity", "definition": "truthfulness"}, {"word": "verbose", "definition": "using more words than necessary"}, {"word": "verdant", "definition": "green with vegetation"}, {"word": "verisimilitude", "definition": "the appearance of being real"}, {"word": "vernal", "definition": "related to spring"}, {"word": "vex", "definition": "to annoy or trouble"}, {"word": "vicissitude", "definition": "a change in circumstances, often unwelcome"}, {"word": "vigilant", "definition": "carefully watchful"}, {"word": "vilify", "definition": "to speak badly of"}, {"word": "vindicate", "definition": "to clear from blame or justify"}, {"word": "virtuoso", "definition": "a highly skilled performer"}, {"word": "viscous", "definition": "thick and sticky"}, {"word": "vitriolic", "definition": "filled with bitter criticism"}, {"word": "vituperate", "definition": "to scold abusively"}, {"word": "vociferous", "definition": "loud and forceful"}, {"word": "volatile", "definition": "likely to change suddenly; explosive"}, {"word": "voluble", "definition": "speaking easily and at length"}, {"word": "voracious", "definition": "having a huge appetite"}, {"word": "waggish", "definition": "playfully humorous"}, {"word": "wane", "definition": "to decrease gradually"}, {"word": "wanton", "definition": "reckless and without restraint"}, {"word": "welter", "definition": "a confused mass or disorder"}, {"word": "wheedle", "definition": "to coax by flattery"}, {"word": "wizened", "definition": "wrinkled with age"}, {"word": "wry", "definition": "dryly humorous or ironic"}, {"word": "xenial", "definition": "friendly to guests or strangers"}, {"word": "xenophobia", "definition": "fear or dislike of foreigners or strangers"}, {"word": "abecedarian", "definition": "arranged in alphabetical order; also, a beginner learning the basics"}, {"word": "abjure", "definition": "to formally renounce or reject"}, {"word": "abnegation", "definition": "the act of giving up or rejecting something"}, {"word": "abominate", "definition": "to hate intensely"}, {"word": "abrade", "definition": "to scrape or wear away"}, {"word": "abridge", "definition": "to shorten without losing the main sense"}, {"word": "abrogate", "definition": "to officially cancel or repeal"}, {"word": "abscission", "definition": "the act of cutting off or separating"}, {"word": "abscond", "definition": "to leave hurriedly and secretly"}, {"word": "abstruse", "definition": "difficult to understand"}, {"word": "accolade", "definition": "an award or expression of praise"}, {"word": "accrete", "definition": "to grow by gradual addition"}, {"word": "acerbate", "definition": "to make bitter or more severe"}, {"word": "acme", "definition": "the highest point of achievement"}, {"word": "acolyte", "definition": "a follower or devoted assistant"}, {"word": "acumen", "definition": "keen insight or judgment"}, {"word": "adamant", "definition": "firm and unwilling to change"}, {"word": "addle", "definition": "to confuse or muddle"}, {"word": "adjure", "definition": "to urge solemnly"}, {"word": "admonish", "definition": "to warn or scold gently"}, {"word": "adumbrate", "definition": "to foreshadow faintly; to outline"}, {"word": "adventitious", "definition": "happening by chance rather than design"}, {"word": "aerie", "definition": "a high nest of a bird of prey"}, {"word": "afflatus", "definition": "a sudden rush of inspiration"}, {"word": "agape", "definition": "wide open; also, wonder or amazement"}, {"word": "agog", "definition": "very eager or excited"}, {"word": "albedo", "definition": "the measure of how much light a surface reflects"}, {"word": "alembic", "definition": "a device for distilling; something that refines"}, {"word": "algid", "definition": "very cold"}, {"word": "alpenglow", "definition": "the rosy light seen on mountains at sunrise or sunset"}, {"word": "alterity", "definition": "the state of being different or other"}, {"word": "amanuensis", "definition": "a person employed to write from dictation"}, {"word": "ambit", "definition": "the scope or extent of something"}, {"word": "ambrosial", "definition": "deliciously fragrant or pleasing"}, {"word": "ambry", "definition": "a small storage recess or cupboard"}, {"word": "ambuscade", "definition": "a surprise attack from hiding"}, {"word": "amelioration", "definition": "the act of making something better"}, {"word": "amenable", "definition": "willing to cooperate"}, {"word": "ametropic", "definition": "having imperfect focus in vision"}, {"word": "amicable", "definition": "friendly and peaceful"}, {"word": "amity", "definition": "friendship and goodwill"}, {"word": "amplexus", "definition": "an embrace or close holding"}, {"word": "amply", "definition": "fully and more than enough"}, {"word": "anabasis", "definition": "an upward climb or a difficult journey"}, {"word": "anadromous", "definition": "migrating from the sea up rivers to breed"}, {"word": "anaerobic", "definition": "living or occurring without oxygen"}, {"word": "analeptic", "definition": "restorative or stimulating"}, {"word": "anathematize", "definition": "to denounce or curse"}, {"word": "ancillary", "definition": "providing support to a main activity"}, {"word": "andante", "definition": "at a moderate walking speed in music"}, {"word": "anfractuosity", "definition": "a twisting or winding shape"}, {"word": "animadversion", "definition": "critical remark or comment"}, {"word": "animus", "definition": "hostility or ill feeling"}, {"word": "annals", "definition": "historical records"}, {"word": "annular", "definition": "ring-shaped"}, {"word": "antedate", "definition": "to come before in time"}, {"word": "anthology", "definition": "a collection of selected works"}, {"word": "anthropomorphic", "definition": "having human characteristics"}, {"word": "antimacassar", "definition": "a cloth placed on furniture to protect it"}, {"word": "antipode", "definition": "the direct opposite"}, {"word": "antiphonal", "definition": "sung or spoken alternately"}, {"word": "antiquarian", "definition": "concerned with old or rare things"}, {"word": "antlered", "definition": "having antlers"}, {"word": "aperture", "definition": "an opening or gap"}, {"word": "aphorism", "definition": "a short statement expressing a general truth"}, {"word": "apiary", "definition": "a place where bees are kept"}, {"word": "apotheosis", "definition": "the highest point of development or praise"}, {"word": "apposite", "definition": "highly appropriate or relevant"}, {"word": "apropos", "definition": "with regard to; fitting"}, {"word": "aquiline", "definition": "curved like an eagle's beak"}, {"word": "arboreal", "definition": "living in or relating to trees"}, {"word": "ardor", "definition": "great enthusiasm or passion"}, {"word": "arete", "definition": "a sharp mountain ridge"}, {"word": "argosy", "definition": "a large merchant ship; a rich supply"}, {"word": "armature", "definition": "a supporting framework"}, {"word": "arrant", "definition": "complete and utter"}, {"word": "arsenal", "definition": "a stockpile of resources or weapons"}, {"word": "artifice", "definition": "clever trickery or skill"}, {"word": "ascribe", "definition": "to attribute to a cause"}, {"word": "aspersion", "definition": "a damaging remark or criticism"}, {"word": "assonance", "definition": "repetition of vowel sounds"}, {"word": "asterism", "definition": "a pattern of stars"}, {"word": "astral", "definition": "relating to the stars"}, {"word": "atavistic", "definition": "showing ancient or ancestral traits"}, {"word": "attenuant", "definition": "serving to reduce or lessen"}, {"word": "audile", "definition": "a person who learns well by hearing"}, {"word": "augment", "definition": "to make larger"}, {"word": "auric", "definition": "relating to gold"}, {"word": "aurora", "definition": "a natural light display in the sky"}, {"word": "auscultate", "definition": "to listen carefully, especially to the body"}, {"word": "autarky", "definition": "economic independence or self-sufficiency"}, {"word": "autochthonous", "definition": "native to a place"}, {"word": "autodidact", "definition": "a self-taught person"}, {"word": "autumnal", "definition": "relating to autumn"}, {"word": "available", "definition": "able to be used or obtained"}, {"word": "aventurine", "definition": "a quartz with sparkling inclusions"}, {"word": "aver", "definition": "to state confidently"}, {"word": "avian", "definition": "relating to birds"}, {"word": "avow", "definition": "to declare openly"}, {"word": "axenic", "definition": "free from contamination by other organisms"}, {"word": "azimuth", "definition": "an angular direction measured on a horizon"}, {"word": "babblement", "definition": "confused noise or chatter"}, {"word": "bacchanal", "definition": "a noisy celebration"}, {"word": "badge", "definition": "a sign or mark of achievement"}, {"word": "balustrade", "definition": "a row of small columns supporting a railing"}, {"word": "banderole", "definition": "a narrow flag or banner"}, {"word": "baroque", "definition": "highly ornate and elaborate"}, {"word": "basaltic", "definition": "relating to dark volcanic rock"}, {"word": "bastion", "definition": "a stronghold or fortified place"}, {"word": "beatific", "definition": "radiantly happy or blissful"}, {"word": "becalm", "definition": "to make calm; to still"}, {"word": "bedrock", "definition": "the solid foundation beneath soil"}, {"word": "befog", "definition": "to confuse or cloud"}, {"word": "beget", "definition": "to cause or bring about"}, {"word": "behemoth", "definition": "something enormous and powerful"}, {"word": "belvedere", "definition": "a structure built to enjoy a view"}, {"word": "bemuse", "definition": "to puzzle or confuse"}, {"word": "benison", "definition": "a blessing"}, {"word": "beryl", "definition": "a mineral gemstone"}, {"word": "besmirch", "definition": "to damage the reputation of"}, {"word": "bestrew", "definition": "to scatter over"}, {"word": "betoken", "definition": "to indicate or be a sign of"}, {"word": "bevy", "definition": "a large group"}, {"word": "bibliophile", "definition": "a lover of books"}, {"word": "bifurcate", "definition": "to divide into two branches"}, {"word": "billet", "definition": "a place to stay; an order assigning lodging"}, {"word": "bivouac", "definition": "a temporary camp without tents"}, {"word": "blazon", "definition": "to display prominently"}, {"word": "blench", "definition": "to flinch or draw back"}, {"word": "blissful", "definition": "full of happiness"}, {"word": "bloviate", "definition": "to speak at length in a pompous way"}, {"word": "bluestocking", "definition": "an intellectual or literary woman"}, {"word": "bodkin", "definition": "a small pointed tool"}, {"word": "bolide", "definition": "a very bright meteor"}, {"word": "bonhomie", "definition": "good-natured friendliness"}, {"word": "bonsai", "definition": "a miniature ornamental tree"}, {"word": "bookish", "definition": "fond of reading and study"}, {"word": "borborygmus", "definition": "a rumbling sound from the stomach"}, {"word": "bosch", "definition": "woodland or forest"}, {"word": "botanic", "definition": "relating to plants"}, {"word": "bougainvillea", "definition": "a tropical flowering vine"}, {"word": "boustrophedon", "definition": "written in alternating directions line by line"}, {"word": "bower", "definition": "a pleasant shady place under trees or vines"}, {"word": "bracken", "definition": "large coarse ferns"}, {"word": "bravura", "definition": "great skill displayed with flair"}, {"word": "breccia", "definition": "rock made of broken fragments"}, {"word": "bricolage", "definition": "something made from diverse available things"}, {"word": "brigand", "definition": "a robber or outlaw"}, {"word": "brindle", "definition": "streaked with different shades"}, {"word": "bromide", "definition": "a commonplace or boring remark"}, {"word": "brooklet", "definition": "a small stream"}, {"word": "burgeon", "definition": "to begin to grow quickly"}, {"word": "burlesque", "definition": "a comic imitation or parody"}, {"word": "byre", "definition": "a cow shed"}, {"word": "cadence", "definition": "a rhythmic flow of sound"}, {"word": "caesura", "definition": "a pause in a line of poetry or music"}, {"word": "caldera", "definition": "a large volcanic crater"}, {"word": "calico", "definition": "plain-woven cotton cloth"}, {"word": "calligraphy", "definition": "decorative handwriting"}, {"word": "calyx", "definition": "the outer part of a flower"}, {"word": "candelabra", "definition": "branched holders for candles"}, {"word": "canopy", "definition": "a covering overhead"}, {"word": "canticle", "definition": "a song or hymn"}, {"word": "caparison", "definition": "ornamental covering for a horse"}, {"word": "capillary", "definition": "a tiny blood vessel; very narrow"}, {"word": "capstan", "definition": "a rotating device used on ships"}, {"word": "carapace", "definition": "a hard protective shell"}, {"word": "carillon", "definition": "a set of bells played as an instrument"}, {"word": "carmine", "definition": "a vivid red color"}, {"word": "carnelian", "definition": "a reddish gemstone"}, {"word": "cartouche", "definition": "an ornamental scroll design"}, {"word": "catkin", "definition": "a slim flowering spike on certain trees"}, {"word": "cattail", "definition": "a tall wetland plant with a brown seed head"}, {"word": "caudal", "definition": "relating to a tail"}, {"word": "cauldron", "definition": "a large deep cooking pot"}, {"word": "caustic", "definition": "able to burn or corrode; sharply critical"}, {"word": "celadon", "definition": "a pale grayish green color"}, {"word": "celesta", "definition": "a small keyboard instrument with bell-like tones"}, {"word": "cenotaph", "definition": "a monument to someone buried elsewhere"}, {"word": "cerement", "definition": "a burial shroud"}, {"word": "cerise", "definition": "a bright cherry-red color"}, {"word": "cerography", "definition": "the art of writing or engraving on wax"}, {"word": "chamfer", "definition": "a beveled edge"}, {"word": "chandler", "definition": "a dealer in candles or ship supplies"}, {"word": "chaparral", "definition": "dense scrub vegetation"}, {"word": "charnel", "definition": "relating to death or bones"}, {"word": "chatoyant", "definition": "having a changing luster"}, {"word": "chelonian", "definition": "relating to turtles"}, {"word": "cherubic", "definition": "having the innocent look of a child"}, {"word": "chiaroscuro", "definition": "strong contrast between light and dark"}, {"word": "chiming", "definition": "producing a ringing musical sound"}, {"word": "chorus", "definition": "a group singing together"}, {"word": "chthonic", "definition": "relating to the underworld or the earth"}, {"word": "cicada", "definition": "an insect known for its loud song"}, {"word": "cincture", "definition": "a belt or encircling ring"}, {"word": "cinereal", "definition": "ash-gray in color"}, {"word": "cinerary", "definition": "containing ashes"}, {"word": "circlet", "definition": "a small circle or ring"}, {"word": "citadel", "definition": "a fortress protecting a city"}, {"word": "citrine", "definition": "yellowish like a lemon"}, {"word": "clamber", "definition": "to climb awkwardly"}, {"word": "clarion", "definition": "shrill and clear in sound"}, {"word": "clepsydra", "definition": "a water clock"}, {"word": "clime", "definition": "a region known for its weather"}, {"word": "cloister", "definition": "a covered walkway around a courtyard"}, {"word": "cloverleaf", "definition": "a road interchange shaped like clover leaves"}, {"word": "cobble", "definition": "to put together roughly"}, {"word": "cobwebby", "definition": "thin, delicate, and dusty"}, {"word": "coda", "definition": "a concluding passage"}, {"word": "coeval", "definition": "of the same age or period"}, {"word": "colonnade", "definition": "a row of columns"}, {"word": "colophon", "definition": "a publisher's emblem or inscription"}, {"word": "comity", "definition": "friendly social harmony"}, {"word": "concourse", "definition": "an open central area where people gather"}, {"word": "confection", "definition": "a sweet food or elaborate creation"}, {"word": "conifer", "definition": "a cone-bearing tree"}, {"word": "conspectus", "definition": "a general survey or summary"}, {"word": "constellation", "definition": "a group of stars forming a pattern"}, {"word": "consuetude", "definition": "custom or habitual practice"}, {"word": "contour", "definition": "the outline or shape of something"}, {"word": "contralto", "definition": "the lowest female singing voice"}, {"word": "copse", "definition": "a small group of trees"}, {"word": "corbel", "definition": "a supporting bracket built into a wall"}, {"word": "coruscate", "definition": "to flash or sparkle"}, {"word": "coterminous", "definition": "sharing the same boundary or scope"}, {"word": "coterie", "definition": "a small close-knit group"}, {"word": "cottar", "definition": "a farm laborer occupying a cottage"}, {"word": "coulisse", "definition": "a backstage passage in a theater"}, {"word": "couloir", "definition": "a steep mountain gully"}, {"word": "crag", "definition": "a steep rugged rock"}, {"word": "crenellate", "definition": "to provide with battlements"}, {"word": "crepuscular", "definition": "active at twilight"}, {"word": "cribbage", "definition": "a card game scored with pegs"}, {"word": "croft", "definition": "a small enclosed field or farm"}, {"word": "crucible", "definition": "a container for melting substances; severe test"}, {"word": "cryptic", "definition": "having a hidden meaning"}, {"word": "culvert", "definition": "a tunnel carrying water under a road"}, {"word": "cupola", "definition": "a rounded roof or dome"}, {"word": "curio", "definition": "a rare or unusual object"}, {"word": "curlew", "definition": "a wading bird with a long curved bill"}, {"word": "cwm", "definition": "a rounded mountain hollow"}, {"word": "cygnet", "definition": "a young swan"}, {"word": "cynosure", "definition": "the center of attention"}, {"word": "daff", "definition": "to behave foolishly"}, {"word": "dais", "definition": "a raised platform"}, {"word": "dappled", "definition": "marked with spots or patches"}, {"word": "darg", "definition": "a day's work"}, {"word": "davit", "definition": "a small crane on a ship"}, {"word": "dawnlit", "definition": "lit by the early morning light"}, {"word": "daystar", "definition": "the sun"}, {"word": "debonair", "definition": "confident, stylish, and charming"}, {"word": "decant", "definition": "to pour carefully from one container to another"}, {"word": "declivity", "definition": "a downward slope"}, {"word": "defile", "definition": "a narrow pass or gorge"}, {"word": "defray", "definition": "to pay the cost of something"}, {"word": "dehisce", "definition": "to split open naturally"}, {"word": "delft", "definition": "blue-and-white glazed pottery"}, {"word": "deliquesce", "definition": "to become liquid by absorbing moisture"}, {"word": "demesne", "definition": "land attached to a manor"}, {"word": "demitasse", "definition": "a small cup of strong coffee"}, {"word": "demotic", "definition": "ordinary or popular rather than formal"}, {"word": "denticulate", "definition": "having small tooth-like projections"}, {"word": "deodar", "definition": "a type of Himalayan cedar tree"}, {"word": "deracinate", "definition": "to pull up by the roots; uproot"}, {"word": "derelict", "definition": "abandoned or neglected"}, {"word": "descry", "definition": "to catch sight of"}, {"word": "desideratum", "definition": "something needed or wanted"}, {"word": "desuetude", "definition": "a state of disuse"}, {"word": "deterge", "definition": "to cleanse"}, {"word": "detritus", "definition": "scattered fragments or debris"}, {"word": "diadem", "definition": "a crown-like ornament"}, {"word": "diaspora", "definition": "the movement or spread of people from a homeland"}, {"word": "dibble", "definition": "a pointed tool for making planting holes"}, {"word": "dicker", "definition": "to bargain over a price"}, {"word": "dingle", "definition": "a small wooded valley"}, {"word": "dint", "definition": "force or power; an impression"}, {"word": "diorama", "definition": "a miniature three-dimensional scene"}, {"word": "diphthong", "definition": "a sound formed by gliding between two vowels"}, {"word": "dirigible", "definition": "capable of being steered; an airship"}, {"word": "discal", "definition": "relating to a disk"}, {"word": "disport", "definition": "to amuse oneself playfully"}, {"word": "distaff", "definition": "the female side of a family"}, {"word": "ditty", "definition": "a short simple song"}, {"word": "dizain", "definition": "a poem or stanza of ten lines"}, {"word": "dolmen", "definition": "a prehistoric stone tomb"}, {"word": "donjon", "definition": "the main tower of a castle"}, {"word": "dormer", "definition": "a window projecting from a sloping roof"}, {"word": "dovecote", "definition": "a shelter for pigeons or doves"}, {"word": "downy", "definition": "soft like fine feathers"}, {"word": "dray", "definition": "a low cart used for carrying heavy loads"}, {"word": "drizzle", "definition": "light rain"}, {"word": "drystone", "definition": "built of stones without mortar"}, {"word": "ducal", "definition": "relating to a duke"}, {"word": "dulcet", "definition": "sweet and soothing"}, {"word": "dun", "definition": "a dull grayish-brown color"}, {"word": "dyad", "definition": "a pair or group of two"}, {"word": "earthen", "definition": "made of baked clay or soil"}, {"word": "easel", "definition": "a stand for holding a canvas"}, {"word": "ebb", "definition": "to recede or decline"}, {"word": "echolalia", "definition": "the repetition of another's words"}, {"word": "eclogue", "definition": "a short pastoral poem"}, {"word": "ecotone", "definition": "a transition area between ecosystems"}, {"word": "eddy", "definition": "a small circular current"}, {"word": "efflorescence", "definition": "the state of flowering or unfolding"}, {"word": "eglantine", "definition": "a sweetbrier rose"}, {"word": "eidetic", "definition": "relating to vivid mental images"}, {"word": "elan", "definition": "energetic style or enthusiasm"}, {"word": "eldritch", "definition": "strange and eerie"}, {"word": "ell", "definition": "an old unit of length"}, {"word": "elmwood", "definition": "wood from an elm tree"}, {"word": "elocution", "definition": "skill in clear expressive speech"}, {"word": "eluate", "definition": "a substance washed out of another"}, {"word": "embayment", "definition": "a recessed coastal area"}, {"word": "embower", "definition": "to shelter with trees or vines"}, {"word": "embrocation", "definition": "a soothing liquid rubbed on the body"}, {"word": "empyrean", "definition": "the highest heaven or sky"}, {"word": "enamel", "definition": "a glossy protective coating"}, {"word": "encamp", "definition": "to settle in a camp"}, {"word": "enchiridion", "definition": "a small handbook or manual"}, {"word": "enfold", "definition": "to wrap or surround"}, {"word": "engrailed", "definition": "decorated with a scalloped edge"}, {"word": "ensconce", "definition": "to settle securely or comfortably"}, {"word": "entablature", "definition": "the horizontal structure above columns"}, {"word": "entomology", "definition": "the study of insects"}, {"word": "epaulet", "definition": "an ornamental shoulder piece"}, {"word": "epicure", "definition": "a person with refined taste in food"}, {"word": "epistolary", "definition": "relating to letters or letter writing"}, {"word": "equinox", "definition": "the time when day and night are equal"}, {"word": "erg", "definition": "a unit of work or energy"}, {"word": "ermine", "definition": "a white winter fur; the animal itself"}, {"word": "escarpment", "definition": "a long steep slope"}, {"word": "escritoire", "definition": "a writing desk with compartments"}, {"word": "esker", "definition": "a long ridge of sand or gravel from glaciers"}, {"word": "espalier", "definition": "a tree trained to grow flat against a support"}, {"word": "espial", "definition": "the act of spying or observing"}, {"word": "estivate", "definition": "to spend a hot season in shelter"}, {"word": "estival", "definition": "relating to summer"}, {"word": "estuary", "definition": "the tidal mouth of a river"}, {"word": "etching", "definition": "a design made by cutting into a surface"}, {"word": "euphonic", "definition": "pleasant to hear"}, {"word": "eversion", "definition": "the act of turning outward"}, {"word": "exedra", "definition": "a curved outdoor bench or recess"}, {"word": "exiguous", "definition": "very small in amount"}, {"word": "exordium", "definition": "the beginning or introduction of a speech"}, {"word": "expanse", "definition": "a wide continuous area"}, {"word": "expiate", "definition": "to make amends for wrongdoing"}, {"word": "exsert", "definition": "projecting outward"}, {"word": "eyas", "definition": "a young hawk"}, {"word": "fabric", "definition": "the basic structure or texture of something"}, {"word": "falcate", "definition": "curved like a sickle"}, {"word": "fane", "definition": "a temple or shrine"}, {"word": "fanion", "definition": "a small flag"}, {"word": "farrow", "definition": "a litter of piglets"}, {"word": "fathom", "definition": "to understand deeply"}, {"word": "faunal", "definition": "relating to animals of a region"}, {"word": "fealty", "definition": "loyalty"}, {"word": "featherlight", "definition": "extremely light"}, {"word": "feldspar", "definition": "a common rock-forming mineral"}, {"word": "fen", "definition": "low marshy land"}, {"word": "ferny", "definition": "covered with ferns"}, {"word": "fescue", "definition": "a type of grass"}, {"word": "festoon", "definition": "a decorative chain or garland"}, {"word": "fettle", "definition": "condition or state"}, {"word": "fibrous", "definition": "made of fibers; stringy"}, {"word": "figuline", "definition": "made of pottery or clay"}, {"word": "filagree", "definition": "delicate ornamental metalwork"}, {"word": "finial", "definition": "an ornament at the top of a roof or post"}, {"word": "firkin", "definition": "a small wooden barrel"}, {"word": "flagon", "definition": "a large container for drink"}, {"word": "flaxen", "definition": "pale yellow in color"}, {"word": "fleck", "definition": "a small spot or mark"}, {"word": "flitch", "definition": "a side of cured bacon"}, {"word": "flivver", "definition": "an old cheap car"}, {"word": "floriated", "definition": "decorated with floral patterns"}, {"word": "flume", "definition": "a narrow channel for water"}, {"word": "fluvial", "definition": "relating to rivers"}, {"word": "foison", "definition": "abundance; plentifulness"}, {"word": "foliate", "definition": "leafy or decorated with leaves"}, {"word": "forfend", "definition": "to prevent or ward off"}, {"word": "fresco", "definition": "a wall painting done on wet plaster"}, {"word": "friable", "definition": "easily crumbled"}, {"word": "frieze", "definition": "a decorative horizontal band"}, {"word": "frond", "definition": "a large divided leaf"}, {"word": "frore", "definition": "frozen or frosty"}, {"word": "frumenty", "definition": "a dish of boiled wheat"}, {"word": "fulgurate", "definition": "to flash like lightning"}, {"word": "funambulist", "definition": "a tightrope walker"}, {"word": "furbelow", "definition": "a decorative trim or frill"}, {"word": "furze", "definition": "gorse; a prickly shrub"}, {"word": "fuscous", "definition": "dark brown or grayish"}, {"word": "fuscum", "definition": "a dark clouded tone"}, {"word": "fusillade", "definition": "a rapid series of shots or remarks"}, {"word": "gadabout", "definition": "a person who goes out a lot for pleasure"}, {"word": "gainsome", "definition": "pleasant or attractive"}, {"word": "galipot", "definition": "a small pot used by artists or pharmacists"}, {"word": "gambol", "definition": "to skip or run playfully"}, {"word": "garnet", "definition": "a deep red mineral gemstone"}, {"word": "garron", "definition": "a small sturdy horse"}, {"word": "garth", "definition": "an enclosed yard or garden"}, {"word": "gauzy", "definition": "thin and transparent"}, {"word": "gelid", "definition": "icy cold"}, {"word": "gemmation", "definition": "growth by budding"}, {"word": "genuflect", "definition": "to bend the knee in respect"}, {"word": "geode", "definition": "a rock lined inside with crystals"}, {"word": "gibbous", "definition": "more than half full, as the moon"}, {"word": "gimlet", "definition": "a small boring tool; piercing in quality"}, {"word": "glabrous", "definition": "smooth and hairless"}, {"word": "glade", "definition": "an open space in a forest"}, {"word": "glissade", "definition": "a sliding step or glide"}, {"word": "globular", "definition": "round like a globe"}, {"word": "glossolalia", "definition": "speech in an unknown or ecstatic language"}, {"word": "gnomon", "definition": "the pointer on a sundial"}, {"word": "gobbet", "definition": "a lump or fragment"}, {"word": "godet", "definition": "a triangular piece inserted into clothing"}, {"word": "gossamer", "definition": "very light, thin, and delicate"}, {"word": "grange", "definition": "a farmhouse and its buildings"}, {"word": "granary", "definition": "a storehouse for grain"}, {"word": "graticule", "definition": "a network of lines used for measurement"}, {"word": "gravamen", "definition": "the most serious part of a complaint"}, {"word": "grenadine", "definition": "pomegranate syrup"}, {"word": "griffon", "definition": "a mythical winged creature"}, {"word": "grimoire", "definition": "a book of spells or magic lore"}, {"word": "grisaille", "definition": "painting done in shades of gray"}, {"word": "grotto", "definition": "a small cave or cavern"}, {"word": "gudgeon", "definition": "a small freshwater fish; a gullible person"}, {"word": "guinguette", "definition": "a small outdoor café or dance place"}, {"word": "gules", "definition": "the heraldic color red"}, {"word": "gymkhana", "definition": "a sports festival or horse event"}, {"word": "habiliment", "definition": "a piece of clothing"}, {"word": "habitué", "definition": "a regular visitor to a place"}, {"word": "halyard", "definition": "a rope used to raise or lower a sail"}, {"word": "hamadryad", "definition": "a wood nymph or tree spirit in mythology"}, {"word": "hapax", "definition": "a word occurring only once in a text or language record"}, {"word": "haruspex", "definition": "an ancient diviner"}, {"word": "haustorium", "definition": "a structure by which a parasite draws nourishment"}, {"word": "hebdomadal", "definition": "weekly"}, {"word": "heliotrope", "definition": "a plant that turns toward the sun; a purple shade"}, {"word": "hellebore", "definition": "a flowering plant, often blooming in winter"}, {"word": "helmsman", "definition": "a person who steers a ship"}, {"word": "hemicycle", "definition": "a half-circle or semicircular assembly hall"}, {"word": "heptarchy", "definition": "a government by seven rulers"}, {"word": "herbage", "definition": "non-woody plant growth; grass and herbs"}, {"word": "hermetic", "definition": "airtight; sealed off from outside influence"}, {"word": "hesperian", "definition": "relating to the west or evening"}, {"word": "hiemal", "definition": "relating to winter"}, {"word": "hinterland", "definition": "the remote inland region beyond a coast or river"}, {"word": "hirundine", "definition": "relating to swallows"}, {"word": "hodgepodge", "definition": "a confused mixture"}, {"word": "horology", "definition": "the study of clocks and timekeeping"}, {"word": "hortatory", "definition": "encouraging or urging"}, {"word": "hortus", "definition": "a garden"}, {"word": "humectant", "definition": "a substance that retains moisture"}, {"word": "hummock", "definition": "a small rounded hill or mound"}, {"word": "huskily", "definition": "in a rough or hoarse manner"}, {"word": "hyaline", "definition": "glassy, transparent, or translucent"}, {"word": "hyssop", "definition": "an aromatic herb"}, {"word": "ichor", "definition": "the fluid said to flow in the veins of gods"}, {"word": "ilex", "definition": "a holly tree"}, {"word": "imbricate", "definition": "overlapping like roof tiles"}, {"word": "impasto", "definition": "paint laid on thickly"}, {"word": "incarnadine", "definition": "blood-red; to redden"}, {"word": "incunabulum", "definition": "a book printed in the earliest days of printing"}, {"word": "indigene", "definition": "a native person or organism"}, {"word": "indumentum", "definition": "a covering of hairs or scales on a plant or animal"}, {"word": "inglenook", "definition": "a cozy space by a fireplace"}, {"word": "inselberg", "definition": "an isolated hill rising sharply from a plain"}, {"word": "intercalary", "definition": "inserted into a calendar or sequence"}, {"word": "inthralled", "definition": "captivated or enchanted"}, {"word": "inunction", "definition": "the act of applying oil or ointment"}, {"word": "isinglass", "definition": "a transparent substance from fish used in clarifying"}, {"word": "isobar", "definition": "a line on a map connecting equal air pressure"}, {"word": "isthmian", "definition": "relating to an isthmus"}, {"word": "jackstay", "definition": "a rope or bar used for support on a ship"}, {"word": "jacinth", "definition": "a reddish-orange gemstone"}, {"word": "jacquard", "definition": "fabric woven with an intricate pattern"}, {"word": "jaggedly", "definition": "in a rough, uneven manner"}, {"word": "jakes", "definition": "an old-fashioned outhouse"}, {"word": "jalousie", "definition": "a louvered shutter or blind"}, {"word": "jerkin", "definition": "a sleeveless jacket"}, {"word": "jetty", "definition": "a structure extending into water"}, {"word": "jibboom", "definition": "a spar extending from the bowsprit of a ship"}, {"word": "jocund", "definition": "cheerful and lighthearted"}, {"word": "jonquil", "definition": "a fragrant yellow flower"}, {"word": "jotun", "definition": "a giant in Norse mythology"}, {"word": "jubate", "definition": "having a mane"}, {"word": "judder", "definition": "to shake violently"}, {"word": "jugum", "definition": "a ridge or yoke-like structure"}, {"word": "jumentous", "definition": "relating to beasts of burden"}, {"word": "junco", "definition": "a small grayish songbird"}, {"word": "jussive", "definition": "expressing a command in grammar"}, {"word": "kaffiyeh", "definition": "a traditional headdress worn in parts of the Middle East"}, {"word": "kaleidoscopic", "definition": "having complex patterns that change quickly"}, {"word": "kammermusik", "definition": "chamber music"}, {"word": "kapok", "definition": "a silky fiber from tropical trees"}, {"word": "karst", "definition": "landscape formed from dissolved limestone"}, {"word": "kedge", "definition": "a small anchor"}, {"word": "kelpie", "definition": "a water spirit in folklore"}, {"word": "kerf", "definition": "the cut or groove made by a saw"}, {"word": "kestrel", "definition": "a small falcon"}, {"word": "kibble", "definition": "small pellets or bits of food"}, {"word": "kirtle", "definition": "a tunic or dress worn in former times"}, {"word": "knap", "definition": "to shape stone by striking flakes off"}, {"word": "knoll", "definition": "a small rounded hill"}, {"word": "koto", "definition": "a traditional Japanese stringed instrument"}, {"word": "kumquat", "definition": "a small citrus fruit"}, {"word": "kyanite", "definition": "a blue mineral used in ceramics"}];
+
+let remaining = [];
+let current = null;
+let streak = 0;
+let best = Number(localStorage.getItem('unusualWordsBest') || 0);
+let active = false;
+let locked = false;
+
+const streakEl = document.getElementById('streak');
+const bestEl = document.getElementById('best');
+const wordEl = document.getElementById('word');
+const choicesEl = document.getElementById('choices');
+const messageEl = document.getElementById('message');
+const emptyMsgEl = document.getElementById('emptyMsg');
+const gameOverOverlay = document.getElementById('gameOverOverlay');
+const finalScoreEl = document.getElementById('finalScore');
+const gameOverWordEl = document.getElementById('gameOverWord');
+const gameOverAnswerEl = document.getElementById('gameOverAnswer');
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function setMessage(text='', type='') {
+  messageEl.textContent = text;
+  messageEl.className = 'message' + (type ? ' ' + type : '');
+}
+
+function updateStats() {
+  streakEl.textContent = streak;
+  bestEl.textContent = best;
+}
+
+function saveBest() {
+  if (streak > best) {
+    best = streak;
+    localStorage.setItem('unusualWordsBest', String(best));
+  }
+}
+
+function resetDeck() {
+  remaining = shuffle(WORDS);
+  active = false;
+  locked = false;
+  current = null;
+  streak = 0;
+  saveBest();
+  updateStats();
+  wordEl.textContent = ''; // only requested change: no "Press Start" text
+  choicesEl.innerHTML = '';
+  setMessage('');
+  emptyMsgEl.classList.add('hidden');
+}
+
+function startGame() {
+  resetDeck();
+  active = true;
+  nextQuestion();
+}
+
+function nextQuestion() {
+  if (!active) return;
+  if (remaining.length === 0) {
+    wordEl.textContent = 'All done!';
+    choicesEl.innerHTML = '';
+    setMessage('You cleared the whole deck. Amazing run!', 'good');
+    emptyMsgEl.classList.remove('hidden');
+    active = false;
+    return;
+  }
+
+  locked = false;
+  setMessage('');
+  current = remaining.pop();
+  wordEl.textContent = current.word;
+
+  const distractors = shuffle(
+    WORDS.filter(item => item.word !== current.word && item.definition !== current.definition)
+  ).slice(0, 3).map(item => item.definition);
+
+  const options = shuffle([current.definition, ...distractors]);
+  choicesEl.innerHTML = '';
+
+  options.forEach(def => {
+    const btn = document.createElement('button');
+    btn.className = 'choice';
+    btn.textContent = def;
+    btn.addEventListener('click', () => handleChoice(btn, def));
+    choicesEl.appendChild(btn);
+  });
+
+  updateStats();
+}
+
+function handleChoice(btn, chosenDef) {
+  if (locked || !current || !active) return;
+  locked = true;
+
+  const allButtons = [...document.querySelectorAll('.choice')];
+  allButtons.forEach(b => b.disabled = true);
+
+  const correctDef = current.definition;
+  const isCorrect = chosenDef === correctDef;
+
+  allButtons.forEach(b => {
+    if (b.textContent === correctDef) b.classList.add('correct');
+  });
+
+  if (isCorrect) {
+    btn.classList.add('correct');
+    streak++;
+    saveBest();
+    updateStats();
+    setMessage('Next round', 'good');
+    setTimeout(() => {
+      nextQuestion();
+    }, 550);
+  } else {
+    btn.classList.add('wrong');
+    updateStats();
+    setMessage('Incorrect. Game over.', 'bad');
+    active = false;
+    showGameOver(current.word, correctDef, streak);
+  }
+}
+
+function showGameOver(word, correctDef, finalStreak) {
+  finalScoreEl.textContent = finalStreak;
+  gameOverWordEl.textContent = 'Word: ' + word;
+  gameOverAnswerEl.textContent = 'Correct definition: ' + correctDef;
+  gameOverOverlay.classList.remove('hidden');
+  gameOverOverlay.setAttribute('aria-hidden', 'false');
+}
+
+function closeOverlay() {
+  gameOverOverlay.classList.add('hidden');
+  gameOverOverlay.setAttribute('aria-hidden', 'true');
+}
+
+document.getElementById('startBtn').addEventListener('click', () => {
+  closeOverlay();
+  startGame();
+});
+
+document.getElementById('restartBtn').addEventListener('click', () => {
+  closeOverlay();
+  startGame();
+});
+
+document.getElementById('playAgainBtn').addEventListener('click', () => {
+  closeOverlay();
+  startGame();
+});
+
+
+
+bestEl.textContent = best;
+resetDeck();
+</script>
+</body>
+</html>

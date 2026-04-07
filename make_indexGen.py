@@ -386,25 +386,26 @@ def slugify(s: str) -> str:
     return slug.strip("-") or "section"
 
 
-def render_files(files: List[Tuple[str, str]]) -> str:
+def render_files(files: List[Tuple[str, str]], recent_paths: set[str]) -> str:
     files_sorted = sorted(files, key=lambda x: x[0].casefold())
     lis = []
     for name, relpath in files_sorted:
         icon = icon_for(relpath, False)
+        badge = '<span class="new-badge">NEW</span>' if relpath in recent_paths else ""
         lis.append(
-            f'<li><a href="{esc(relpath)}" target="_blank" rel="noopener noreferrer">'
-            f'<span class="icon">{esc(icon)}</span><span>{esc(name)}</span></a></li>'
+            f'<li class="file-item"><a href="{esc(relpath)}" target="_blank" rel="noopener noreferrer">'
+            f'<span class="icon">{esc(icon)}</span><span>{esc(name)}</span></a>{badge}</li>'
         )
     return "<ul>\n" + "\n".join(lis) + "\n</ul>"
 
 
-def render_dir(node: Node, open_by_default: bool = False) -> str:
+def render_dir(node: Node, recent_paths: set[str], open_by_default: bool = False) -> str:
     dir_names = sorted(node.dirs.keys(), key=lambda s: s.casefold())
-    files_html = render_files(node.files) if node.files else ""
+    files_html = render_files(node.files, recent_paths) if node.files else ""
 
     children = []
     for dn in dir_names:
-        children.append(render_dir(node.dirs[dn], open_by_default=False))
+        children.append(render_dir(node.dirs[dn], recent_paths, open_by_default=False))
 
     nested_parts = []
     if children:
@@ -418,7 +419,7 @@ def render_dir(node: Node, open_by_default: bool = False) -> str:
     icon = icon_for(node.name, True)
     open_attr = " open" if open_by_default else ""
     return (
-        f'<details{open_attr}>'
+        f'<details class="dir-block"{open_attr}>'
         f'<summary><span class="icon">{esc(icon)}</span>{esc(node.name)} '
         f'<span class="muted">({total})</span></summary>'
         f'<div class="nested">{nested_html}</div>'
@@ -454,7 +455,7 @@ def render_sidebar(tree: Node) -> str:
     return "\n".join(sections)
 
 
-def render_main_sections(tree: Node) -> str:
+def render_main_sections(tree: Node, recent_paths: set[str]) -> str:
     grouped: Dict[str, List[str]] = {}
     for folder_name in sorted(tree.dirs.keys(), key=lambda s: s.casefold()):
         grouped.setdefault(category_for_top_folder(folder_name), []).append(folder_name)
@@ -472,18 +473,107 @@ def render_main_sections(tree: Node) -> str:
                 f'<section class="folder-block" id="{esc(slugify(folder_name))}">'
                 f'<h2><span class="icon">{esc(icon_for(folder_name, True))}</span>{esc(folder_name)} '
                 f'<span class="muted">({count_in_subtree(folder_node)})</span></h2>'
-                f'{render_dir(folder_node, open_by_default=True)}'
+                f'{render_dir(folder_node, recent_paths, open_by_default=True)}'
                 f'</section>'
             )
         blocks.append(
-            f'<section class="category-block"><div class="category-heading"><span class="icon">{esc(cat_icon)}</span>'
+            f'<section class="category-block searchable-category"><div class="category-heading"><span class="icon">{esc(cat_icon)}</span>'
             f'<span>{esc(cat)}</span></div>'
             + "".join(folder_blocks) + "</section>"
         )
     return "\n".join(blocks)
 
 
-def render_page(root: Path, tree: Node, out_file: str) -> str:
+
+def relative_day_label(mtime: float) -> str:
+    changed_date = datetime.fromtimestamp(mtime).date()
+    today = datetime.now().date()
+    delta_days = (today - changed_date).days
+    if delta_days <= 0:
+        return "Today"
+    if delta_days == 1:
+        return "Yesterday"
+    return f"{delta_days} days ago"
+
+
+def get_recent_files(
+    root: Path,
+    exts: List[str],
+    exclude_dirs: List[str],
+    hide_root_index_html: bool,
+    hide_all_index_html: bool,
+    hide_nsfw_anywhere: bool,
+    days: int = 7,
+) -> List[Tuple[str, float]]:
+    exts_norm = [normalize_ext(e) for e in exts if normalize_ext(e)]
+    if not exts_norm:
+        exts_norm = [".html"]
+
+    cutoff = datetime.now().timestamp() - (days * 24 * 60 * 60)
+    recent: List[Tuple[str, float]] = []
+
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if not should_exclude_dir(d, exclude_dirs)]
+
+        for fn in filenames:
+            p = Path(dirpath) / fn
+            rel = p.relative_to(root).as_posix()
+            lower_rel = rel.casefold()
+            lower_fn = fn.casefold()
+
+            if p.suffix.casefold() not in exts_norm:
+                continue
+            if "/" not in rel:
+                continue
+            if hide_all_index_html and lower_rel.endswith("/index.html"):
+                continue
+            if hide_root_index_html and lower_rel == "index.html":
+                continue
+            if hide_nsfw_anywhere and ("nsfw" in lower_fn):
+                continue
+
+            try:
+                mtime = p.stat().st_mtime
+            except OSError:
+                continue
+
+            if mtime >= cutoff:
+                recent.append((rel, mtime))
+
+    recent.sort(key=lambda x: x[1], reverse=True)
+    return recent
+
+
+def render_recently_changed(recent_files: List[Tuple[str, float]]) -> str:
+    if not recent_files:
+        return (
+            '<section class="category-block">'
+            '<div class="category-heading"><span class="icon">🕒</span><span>Recently changed</span></div>'
+            '<p class="recent-empty">No files were added or changed in the last 7 days.</p>'
+            '</section>'
+        )
+
+    items = []
+    for relpath, mtime in recent_files:
+        name = Path(relpath).name
+        icon = icon_for(relpath, False)
+        changed = relative_day_label(mtime)
+        items.append(
+            f'<li class="file-item"><a href="{esc(relpath)}" target="_blank" rel="noopener noreferrer">'
+            f'<span class="icon">{esc(icon)}</span><span>{esc(name)}</span></a>'
+            f'<span class="muted">({esc(relpath)} · {esc(changed)})</span></li>'
+        )
+
+    return (
+        '<section class="category-block searchable-category recent-section">'
+        '<div class="category-heading"><span class="icon">🕒</span><span>Recently changed</span></div>'
+        '<ul class="recent-list">'
+        + "".join(items) +
+        '</ul></section>'
+    )
+
+
+def render_page(root: Path, tree: Node, out_file: str, recent_files: List[Tuple[str, float]]) -> str:
     now = datetime.now()
     formatted = now.strftime("%B %d, %Y")
     title = "jwesters website"
@@ -491,7 +581,9 @@ def render_page(root: Path, tree: Node, out_file: str) -> str:
     status = "No matching files found." if total_items == 0 else f"{total_items} files indexed"
 
     sidebar_html = render_sidebar(tree)
-    main_html = render_main_sections(tree)
+    recent_paths = {relpath for relpath, _mtime in recent_files}
+    main_html = render_main_sections(tree, recent_paths)
+    recent_html = render_recently_changed(recent_files)
 
     return f'''<!DOCTYPE html>
 <html lang="en">
@@ -545,6 +637,17 @@ def render_page(root: Path, tree: Node, out_file: str) -> str:
   .muted {{ color:var(--muted); font-weight:400; margin-left:6px; font-size:.92em; }}
   .icon {{ display:inline-block; width:24px; text-align:center; margin-right:2px; }}
   .nested {{ padding:0 0 10px 16px; }}
+  .new-badge {{ display:inline-block; margin-left:8px; padding:2px 8px; border-radius:999px; background:#ffe7a8; color:#7a5300; font-size:.75rem; font-weight:700; vertical-align:middle; }}
+  .recent-list {{ padding:0; margin:0; }}
+  .recent-list li {{ padding:8px 0; border-top:1px solid var(--border); }}
+  .recent-list li:first-child {{ border-top:none; }}
+  .recent-empty {{ margin:0; color:var(--muted); }}
+  .search-panel {{ background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px 18px; }}
+  .search-label {{ display:block; font-size:14px; font-weight:700; margin-bottom:8px; color:var(--muted); }}
+  .search-input {{ width:100%; padding:12px 14px; border:1px solid var(--border); border-radius:12px; font-size:16px; background:#fff; color:var(--text); }}
+  .search-input:focus {{ outline:none; border-color:#b9d4f5; box-shadow:0 0 0 4px rgba(11, 102, 208, .10); }}
+  .search-help {{ margin-top:8px; color:var(--muted); font-size:.92em; }}
+  .search-empty {{ display:none; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px; color:var(--muted); }}
   .footer {{ margin-top:18px; color:var(--muted); font-size:.95em; }}
   .footer a {{ font-weight:700; }}
   @media (max-width: 980px) {{
@@ -568,11 +671,102 @@ def render_page(root: Path, tree: Node, out_file: str) -> str:
       </aside>
 
       <main class="content">
+        <section class="search-panel">
+          <label class="search-label" for="site-search">Search files</label>
+          <input id="site-search" class="search-input" type="search" placeholder="Type to filter files and folders..." autocomplete="off" />
+          <div class="search-help">Search updates the file list instantly.</div>
+        </section>
+        <div id="search-empty" class="search-empty">No matching files found.</div>
         {main_html}
+        {recent_html}
         <div class="footer"><a href="https://github.com/jwesters/website">jwesters github repo</a></div>
       </main>
     </div>
   </div>
+<script>
+(function () {{
+  const input = document.getElementById('site-search');
+  const empty = document.getElementById('search-empty');
+  if (!input) return;
+
+  function norm(s) {{
+    return (s || '').toLowerCase().trim();
+  }}
+
+  function applySearch() {{
+    const q = norm(input.value);
+    const fileItems = Array.from(document.querySelectorAll('.file-item'));
+    let visibleFiles = 0;
+
+    fileItems.forEach((li) => {{
+      const text = norm(li.textContent);
+      const match = !q || text.includes(q);
+      li.style.display = match ? '' : 'none';
+      if (match) visibleFiles += 1;
+    }});
+
+    const dirBlocks = Array.from(document.querySelectorAll('details.dir-block'));
+    dirBlocks.forEach((details) => {{
+      const visibleChildFile = details.querySelector('.file-item:not([style*="display: none"])');
+      const visibleChildDir = Array.from(details.querySelectorAll(':scope > .nested > details.dir-block')).some((child) => child.style.display !== 'none');
+      const show = !!visibleChildFile || !!visibleChildDir || !q;
+      details.style.display = show ? '' : 'none';
+      if (q && show) details.open = true;
+    }});
+
+    const folderBlocks = Array.from(document.querySelectorAll('.folder-block'));
+    folderBlocks.forEach((section) => {{
+      const show = !!section.querySelector('.file-item:not([style*="display: none"]), details.dir-block:not([style*="display: none"])');
+      section.style.display = show ? '' : 'none';
+    }});
+
+    const recentSection = document.querySelector('.recent-section');
+    if (recentSection) {{
+      const recentItems = Array.from(recentSection.querySelectorAll('.recent-list li'));
+      let recentVisible = 0;
+      recentItems.forEach((li) => {{
+        const text = norm(li.textContent);
+        const match = !q || text.includes(q);
+        li.style.display = match ? '' : 'none';
+        if (match) recentVisible += 1;
+      }});
+      const heading = recentSection.querySelector('.category-heading');
+      const showRecent = !q || recentVisible > 0;
+      recentSection.style.display = showRecent ? '' : 'none';
+    }}
+
+    const categories = Array.from(document.querySelectorAll('.searchable-category'));
+    categories.forEach((section) => {{
+      if (section.classList.contains('recent-section')) return;
+      const show = !!section.querySelector('.folder-block:not([style*="display: none"])');
+      section.style.display = show ? '' : 'none';
+    }});
+
+    const sideGroups = Array.from(document.querySelectorAll('.side-group'));
+    sideGroups.forEach((group) => {{
+      let visible = 0;
+      Array.from(group.querySelectorAll('li')).forEach((li) => {{
+        const target = li.querySelector('a')?.getAttribute('href');
+        if (!target || !target.startsWith('#')) {{
+          li.style.display = '';
+          visible += 1;
+          return;
+        }}
+        const section = document.querySelector(target);
+        const match = section && section.style.display !== 'none';
+        li.style.display = match ? '' : 'none';
+        if (match) visible += 1;
+      }});
+      group.style.display = visible ? '' : 'none';
+    }});
+
+    const visibleMain = document.querySelector('.searchable-category:not([style*="display: none"])');
+    empty.style.display = (q && !visibleMain && !(recentSection && recentSection.style.display !== 'none')) ? 'block' : 'none';
+  }}
+
+  input.addEventListener('input', applySearch);
+}})();
+</script>
 </body>
 </html>
 '''
@@ -603,7 +797,17 @@ def main() -> int:
         hide_nsfw_anywhere=args.hide_nsfw,
     )
 
-    html_text = render_page(root, tree, args.out)
+    recent_files = get_recent_files(
+        root=root,
+        exts=args.ext,
+        exclude_dirs=args.exclude_dir,
+        hide_root_index_html=args.hide_root_index_html,
+        hide_all_index_html=args.hide_all_index_html,
+        hide_nsfw_anywhere=args.hide_nsfw,
+        days=7,
+    )
+
+    html_text = render_page(root, tree, args.out, recent_files)
     out_path = root / args.out
     out_path.write_text(html_text, encoding="utf-8")
 
