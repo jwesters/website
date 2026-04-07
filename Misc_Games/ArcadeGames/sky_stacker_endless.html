@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sky Stacker</title>
+  <style>
+    :root{
+      --bg1:#dff4ff;
+      --bg2:#b9dcff;
+      --ink:#15324a;
+      --muted:#5a7086;
+      --panel:rgba(255,255,255,.84);
+      --accent:#2b6fff;
+      --accent2:#7c57ff;
+      --shadow:0 14px 34px rgba(21,50,74,.14);
+      --line:rgba(21,50,74,.08);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0}
+    body{
+      font-family:Inter,Segoe UI,Arial,sans-serif;
+      color:var(--ink);
+      overflow:hidden;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(255,255,255,.9), transparent 20%),
+        radial-gradient(circle at 82% 10%, rgba(255,255,255,.75), transparent 18%),
+        linear-gradient(180deg,var(--bg1),var(--bg2));
+    }
+    .app{
+      height:100%;
+      display:grid;
+      grid-template-rows:auto 1fr;
+      gap:12px;
+      padding:12px;
+    }
+    .topbar{
+      background:var(--panel);
+      border:1px solid rgba(255,255,255,.65);
+      border-radius:20px;
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(10px);
+      padding:12px 14px;
+      display:grid;
+      grid-template-columns:minmax(220px,1.2fr) auto auto;
+      gap:14px;
+      align-items:center;
+    }
+    .titleBox h1{margin:0;font-size:1.7rem;line-height:1}
+    .subtitle{margin-top:5px;font-size:.95rem;color:var(--muted)}
+    .stats{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+    .stat{
+      min-width:100px;background:#fff;border-radius:14px;padding:8px 12px;text-align:center;
+      box-shadow:inset 0 0 0 1px rgba(43,111,255,.08);
+    }
+    .label{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+    .value{font-size:1.2rem;font-weight:800}
+    .controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+    button{
+      border:0;border-radius:14px;padding:12px 15px;font-size:.98rem;font-weight:800;cursor:pointer;
+      transition:transform .08s ease, box-shadow .15s ease, opacity .15s ease;
+    }
+    button:hover{transform:translateY(-1px)}
+    button:active{transform:translateY(1px)}
+    .primary{color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 10px 22px rgba(65,88,255,.24)}
+    .secondary{color:var(--ink);background:#fff;box-shadow:0 8px 18px rgba(21,50,74,.08)}
+    .hint{width:100%;text-align:right;font-size:.88rem;color:var(--muted);margin-top:2px}
+    .stageShell{
+      position:relative;min-height:0;border-radius:24px;overflow:hidden;
+      background:linear-gradient(180deg, rgba(255,255,255,.48), rgba(255,255,255,.32));
+      border:1px solid rgba(255,255,255,.62);box-shadow:var(--shadow);
+    }
+    .sky{position:absolute;inset:0;pointer-events:none}
+    .cloud{position:absolute;background:rgba(255,255,255,.78);border-radius:999px;filter:blur(.15px)}
+    .cloud:before,.cloud:after{content:"";position:absolute;background:inherit;border-radius:inherit}
+    .cloud:before{width:54%;height:95%;left:10%;top:-35%}
+    .cloud:after{width:42%;height:80%;right:14%;top:-24%}
+    canvas{display:block;width:100%;height:100%}
+    .overlay{
+      position:absolute;inset:0;background:rgba(12,30,48,.34);display:none;
+      align-items:center;justify-content:center;padding:20px;z-index:20;
+    }
+    .modal{
+      width:min(520px,100%);background:rgba(255,255,255,.95);border:1px solid rgba(255,255,255,.7);
+      border-radius:28px;box-shadow:var(--shadow);backdrop-filter:blur(12px);padding:24px;text-align:center;
+    }
+    .modal h2{margin:0 0 8px;font-size:2rem}
+    .modal p{margin:8px 0;color:var(--muted);line-height:1.5}
+    .badgeRow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:16px 0 6px}
+    .badge{background:#fff;border-radius:999px;padding:10px 14px;font-weight:800;box-shadow:0 6px 16px rgba(21,50,74,.08)}
+    .modalButtons{display:grid;gap:10px;margin-top:18px}
+    @media (max-width: 920px){
+      .topbar{grid-template-columns:1fr}
+      .controls{justify-content:center}
+      .hint{text-align:center}
+      .titleBox h1{font-size:1.45rem}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="titleBox">
+        <h1>Sky Stacker</h1>
+        <div class="subtitle">Stop the moving block. Any overhang gets cut off. Keep stacking as high as you can.</div>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="label">Round</div>
+          <div class="value" id="roundLabel">1</div>
+        </div>
+        <div class="stat">
+          <div class="label">Width</div>
+          <div class="value" id="widthLabel">100%</div>
+        </div>
+        <div class="stat">
+          <div class="label">High Score</div>
+          <div class="value" id="bestLabel">0</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="controls">
+          <button class="primary" id="stopBtn">Stop Block</button>
+          <button class="secondary" id="restartBtn">Restart</button>
+        </div>
+        <div class="hint">Press <strong>Space</strong> to stop too.</div>
+      </div>
+    </div>
+
+    <div class="stageShell" id="stageShell">
+      <div class="sky" id="sky"></div>
+      <canvas id="gameCanvas"></canvas>
+      <div class="overlay" id="overlay"></div>
+    </div>
+  </div>
+
+  <script>
+    const TOTAL_ROUNDS = 999999;
+    const STORAGE_KEY = "sky_stacker_best_round_v5";
+
+    const stageShell = document.getElementById("stageShell");
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const overlay = document.getElementById("overlay");
+    const stopBtn = document.getElementById("stopBtn");
+    const restartBtn = document.getElementById("restartBtn");
+    const roundLabel = document.getElementById("roundLabel");
+    const widthLabel = document.getElementById("widthLabel");
+    const bestLabel = document.getElementById("bestLabel");
+    const sky = document.getElementById("sky");
+
+    const state = {
+      running: false,
+      round: 1,
+      bestRound: Number(localStorage.getItem(STORAGE_KEY) || 0),
+      stageW: 0,
+      stageH: 0,
+      dpr: Math.max(1, window.devicePixelRatio || 1),
+      laneGap: 0,
+      blockH: 0,
+      towerBottomY: 0,
+      playMinX: 0,
+      playMaxX: 0,
+      playWidth: 0,
+      baseLeft: 0,
+      baseWidth: 0,
+      activeLeft: 0,
+      activeWidth: 0,
+      activeDir: 1,
+      activeSpeed: 0,
+      activeExists: false,
+      settled: [],
+      falling: [],
+      animId: 0,
+      lastTs: 0,
+      inputLocked: false,
+      cameraY: 0
+    };
+
+    function makeClouds(){
+      sky.innerHTML = "";
+      for(let i = 0; i < 9; i++){
+        const c = document.createElement("div");
+        c.className = "cloud";
+        const w = 70 + Math.random() * 120;
+        const h = 22 + Math.random() * 18;
+        c.style.width = `${w}px`;
+        c.style.height = `${h}px`;
+        c.style.left = `${Math.random() * 88}%`;
+        c.style.top = `${4 + Math.random() * 80}%`;
+        c.style.opacity = `${0.35 + Math.random() * 0.45}`;
+        sky.appendChild(c);
+      }
+    }
+
+    function resizeCanvas(){
+      const rect = stageShell.getBoundingClientRect();
+      state.stageW = rect.width;
+      state.stageH = rect.height;
+      state.dpr = Math.max(1, window.devicePixelRatio || 1);
+
+      canvas.width = Math.round(rect.width * state.dpr);
+      canvas.height = Math.round(rect.height * state.dpr);
+      canvas.style.width = rect.width + "px";
+      canvas.style.height = rect.height + "px";
+
+      ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+
+      computeLayout();
+      render();
+    }
+
+    function computeLayout(){
+      state.playWidth = Math.min(state.stageW * 0.72, 700);
+      const sidePad = (state.stageW - state.playWidth) / 2;
+      state.playMinX = sidePad;
+      state.playMaxX = sidePad + state.playWidth;
+
+      const usableHeight = state.stageH * 0.82;
+      state.laneGap = Math.max(30, Math.min(usableHeight / (TOTAL_ROUNDS + 2), 62));
+      state.blockH = Math.max(22, Math.min(state.laneGap * 0.58, 42));
+
+      state.towerBottomY = state.stageH - Math.max(30, state.stageH * 0.07);
+    }
+
+    function updateCamera(){
+      const activeLevel = state.activeExists ? state.round : Math.max(0, state.round - 1);
+      const targetY = state.stageH * 0.28;
+      const activeScreenY = yForLevel(activeLevel);
+      if(activeScreenY < targetY){
+        state.cameraY += (targetY - activeScreenY);
+      }
+    }
+
+
+    function worldYForLevel(level){
+      return state.towerBottomY - level * state.laneGap - state.blockH;
+    }
+
+    function yForLevel(level){
+      return worldYForLevel(level) + state.cameraY;
+    }
+
+    function updateHud(){
+      roundLabel.textContent = String(state.round);
+      let currentWidth = state.baseWidth || (state.playWidth * 0.58);
+      if(state.running && state.activeExists) currentWidth = state.activeWidth;
+      const pct = state.playWidth ? Math.max(1, Math.round(currentWidth / state.playWidth * 100)) : 100;
+      widthLabel.textContent = `${pct}%`;
+      bestLabel.textContent = String(state.bestRound);
+    }
+
+    function roundRect(x, y, w, h, r){
+      const rr = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + w, y, x + w, y + h, rr);
+      ctx.arcTo(x + w, y + h, x, y + h, rr);
+      ctx.arcTo(x, y + h, x, y, rr);
+      ctx.arcTo(x, y, x + w, y, rr);
+      ctx.closePath();
+    }
+
+    function drawBlock(x, y, w, h, type){
+      let grad;
+      if(type === "active"){
+        grad = ctx.createLinearGradient(0, y, 0, y + h);
+        grad.addColorStop(0, "#a088ff");
+        grad.addColorStop(1, "#6848ff");
+      } else if(type === "cut"){
+        grad = ctx.createLinearGradient(0, y, 0, y + h);
+        grad.addColorStop(0, "#ffd39c");
+        grad.addColorStop(1, "#ff9859");
+      } else {
+        grad = ctx.createLinearGradient(0, y, 0, y + h);
+        grad.addColorStop(0, "#74c0ff");
+        grad.addColorStop(1, "#3f89ff");
+      }
+
+      ctx.save();
+      roundRect(x, y, w, h, Math.max(6, h * 0.22));
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,.38)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.beginPath();
+      roundRect(x + 2, y + 2, Math.max(0, w - 4), Math.max(0, h * 0.28), Math.max(4, h * 0.18));
+      ctx.fillStyle = "rgba(255,255,255,.20)";
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawGuideLines(){
+      ctx.save();
+      ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--line").trim() || "rgba(21,50,74,.08)";
+      ctx.lineWidth = 1;
+      const maxVisibleLevels = Math.ceil(state.stageH / state.laneGap) + 4;
+      const startLevel = Math.max(0, Math.floor((-state.cameraY) / state.laneGap) - 2);
+      const endLevel = startLevel + maxVisibleLevels;
+      for(let i = startLevel; i <= endLevel; i++){
+        const y = yForLevel(i) + state.blockH + 10;
+        ctx.beginPath();
+        ctx.moveTo(state.playMinX, y);
+        ctx.lineTo(state.playMaxX, y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawFinishLine(){}
+
+    function render(){
+      updateCamera();
+      ctx.clearRect(0, 0, state.stageW, state.stageH);
+      drawGuideLines();
+
+      for(const block of state.settled){
+        drawBlock(block.left, yForLevel(block.level), block.width, state.blockH, "static");
+      }
+
+      for(const piece of state.falling){
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, piece.alpha);
+        drawBlock(piece.left, piece.y, piece.width, state.blockH, "cut");
+        ctx.restore();
+      }
+
+      if(state.running && state.activeExists && state.activeWidth > 0){
+        drawBlock(state.activeLeft, yForLevel(state.round), state.activeWidth, state.blockH, "active");
+      }
+    }
+
+    function cancelLoop(){
+      if(state.animId){
+        cancelAnimationFrame(state.animId);
+        state.animId = 0;
+      }
+    }
+
+    function spawnActiveForRound(){
+      const width = state.baseWidth; state.activeWidth = state.baseWidth;
+      const min = state.playMinX;
+      const max = state.playMaxX - width;
+
+      state.activeWidth = width;
+      state.activeLeft = (state.round % 2 === 0) ? max : min;
+      state.activeDir = (state.round % 2 === 0) ? -1 : 1;
+      state.activeSpeed = Math.max(220, state.playWidth * (0.45 + state.round * 0.04));
+      state.activeExists = true;
+      state.inputLocked = false;
+    }
+
+    function startGame(){
+      cancelLoop();
+      computeLayout();
+
+      state.running = true;
+      state.round = 1;
+      state.settled = [];
+      state.falling = [];
+      state.lastTs = 0;
+      state.inputLocked = false;
+      state.cameraY = 0;
+
+      state.baseWidth = state.playWidth * 0.68;
+      state.baseLeft = (state.stageW - state.baseWidth) / 2;
+
+      state.settled.push({
+        level: 0,
+        left: state.baseLeft,
+        width: state.baseWidth
+      });
+
+      spawnActiveForRound();
+      overlay.style.display = "none";
+      overlay.innerHTML = "";
+      updateHud();
+      render();
+      state.animId = requestAnimationFrame(loop);
+    }
+
+    function addFallingPiece(left, width, dir){
+      if(width <= 0) return;
+      state.falling.push({
+        left,
+        width,
+        y: yForLevel(state.round),
+        vx: dir * (0.8 + Math.random() * 1.2),
+        vy: 0,
+        alpha: 1
+      });
+    }
+
+    function stopActive(){
+      if(!state.running || !state.activeExists || state.inputLocked) return;
+      state.inputLocked = true;
+
+      const prevLeft = state.baseLeft;
+      const prevRight = state.baseLeft + state.baseWidth;
+      const curLeft = state.activeLeft;
+      const curRight = state.activeLeft + state.activeWidth;
+
+      const overlapLeft = Math.max(prevLeft, curLeft);
+      const overlapRight = Math.min(prevRight, curRight);
+      const overlapWidth = overlapRight - overlapLeft;
+
+      if(overlapWidth <= 0){
+        state.activeExists = false;
+        render();
+        endGame(false);
+        return;
+      }
+
+      const lostLeft = overlapLeft - curLeft;
+      const lostRight = curRight - overlapRight;
+
+      if(lostLeft > 0) addFallingPiece(curLeft, lostLeft, -1);
+      if(lostRight > 0) addFallingPiece(overlapRight, lostRight, 1);
+
+      state.settled.push({
+        level: state.round,
+        left: overlapLeft,
+        width: overlapWidth
+      });
+
+      state.baseLeft = overlapLeft;
+      state.baseWidth = overlapWidth;
+      state.activeExists = false;
+      state.activeWidth = overlapWidth;
+      updateHud();
+      render();
+
+      state.round += 1;
+
+      setTimeout(() => {
+        if(!state.running) return;
+        spawnActiveForRound();
+        updateHud();
+        render();
+      }, 150);
+    }
+
+    function endGame(win){
+      state.running = false;
+      state.activeExists = false;
+
+      const reached = Math.max(0, state.round - 1);
+      if(reached > state.bestRound){
+        state.bestRound = reached;
+        localStorage.setItem(STORAGE_KEY, String(reached));
+      }
+
+      updateHud();
+
+      overlay.innerHTML = `
+        <div class="modal">
+          <h2>${win ? "Amazing Run!" : "Game Over"}</h2>
+          <p>${`You made it to round <strong>${reached}</strong>.`}</p>
+          <div class="badgeRow">
+            <div class="badge">Reached: ${reached}</div>
+            <div class="badge">Best: ${state.bestRound}</div>
+          </div>
+          <div class="modalButtons">
+            <button class="primary" id="playAgainBtn">Restart Game</button>
+          </div>
+        </div>
+      `;
+      overlay.style.display = "flex";
+
+      const playAgainBtn = document.getElementById("playAgainBtn");
+      playAgainBtn.addEventListener("click", startGame, { once:true });
+    }
+
+    function updateFalling(dt){
+      for(let i = state.falling.length - 1; i >= 0; i--){
+        const p = state.falling[i];
+        p.vy += 1800 * dt;
+        p.y += p.vy * dt;
+        p.left += p.vx * 60 * dt;
+        p.alpha -= 0.9 * dt;
+
+        if(p.y > state.stageH + 80 || p.alpha <= 0){
+          state.falling.splice(i, 1);
+        }
+      }
+    }
+
+    function loop(ts){
+      if(!state.lastTs) state.lastTs = ts;
+      const dt = Math.min(32, ts - state.lastTs) / 1000;
+      state.lastTs = ts;
+
+      if(state.running && state.activeExists){
+        const min = state.playMinX;
+        const max = state.playMaxX - state.activeWidth;
+
+        state.activeLeft += state.activeDir * state.activeSpeed * dt;
+
+        if(state.activeLeft <= min){
+          state.activeLeft = min;
+          state.activeDir = 1;
+        }
+        if(state.activeLeft >= max){
+          state.activeLeft = max;
+          state.activeDir = -1;
+        }
+      }
+
+      updateFalling(dt);
+      render();
+      state.animId = requestAnimationFrame(loop);
+    }
+
+    stopBtn.addEventListener("click", stopActive);
+    restartBtn.addEventListener("click", startGame);
+
+    window.addEventListener("keydown", (e) => {
+      if(e.code !== "Space") return;
+      e.preventDefault();
+
+      if(overlay.style.display !== "none"){
+        const btn = overlay.querySelector("#playAgainBtn");
+        if(btn) btn.click();
+        return;
+      }
+
+      stopActive();
+    });
+
+    window.addEventListener("resize", () => {
+      makeClouds();
+      resizeCanvas();
+      if(state.running){
+        startGame();
+      } else {
+        updateHud();
+        render();
+      }
+    });
+
+    makeClouds();
+    resizeCanvas();
+    startGame();
+  </script>
+</body>
+</html>
