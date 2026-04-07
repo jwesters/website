@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Word Memory Challenge</title>
+  <style>
+    :root {
+      --bg1: #eef7ff;
+      --bg2: #d7ebff;
+      --panel: rgba(255,255,255,0.92);
+      --panel-strong: #ffffff;
+      --ink: #17324d;
+      --muted: #57738d;
+      --accent: #2b7cff;
+      --accent-2: #6aa7ff;
+      --good: #14965f;
+      --bad: #d14a4a;
+      --shadow: 0 14px 40px rgba(30, 77, 138, 0.18);
+      --radius: 22px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      font-family: "Trebuchet MS", "Segoe UI", Tahoma, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,0.9), rgba(255,255,255,0) 35%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .app {
+      width: min(980px, 100%);
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.8);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px;
+      backdrop-filter: blur(6px);
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 4vw, 2.7rem);
+      line-height: 1.05;
+      letter-spacing: 0.2px;
+    }
+
+    .title p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .pill {
+      min-width: 120px;
+      text-align: center;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #ffffff, #eef5ff);
+      border: 1px solid rgba(87,115,141,0.18);
+    }
+
+    .pill .label {
+      display: block;
+      color: var(--muted);
+      font-size: 0.82rem;
+      margin-bottom: 4px;
+    }
+
+    .pill .value {
+      font-size: 1.35rem;
+      font-weight: 800;
+    }
+
+    .stage {
+      min-height: 520px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .hero, .results {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 10px;
+    }
+
+    .hero h2, .results h2 {
+      margin: 0 0 10px;
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+    }
+
+    .hero p, .results p {
+      margin: 8px auto;
+      color: var(--muted);
+      max-width: 720px;
+      font-size: 1.05rem;
+      line-height: 1.5;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 18px;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 16px;
+      padding: 14px 22px;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      color: white;
+      background: linear-gradient(180deg, var(--accent-2), var(--accent));
+      box-shadow: 0 10px 24px rgba(43,124,255,0.25);
+      transition: transform 0.08s ease, filter 0.15s ease;
+    }
+
+    button:hover { filter: brightness(1.04); }
+    button:active { transform: translateY(1px) scale(0.99); }
+    button.secondary {
+      background: linear-gradient(180deg, #8fa6bf, #6f859e);
+      box-shadow: 0 10px 24px rgba(50,70,92,0.18);
+    }
+
+    .play-area {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    .panel {
+      background: var(--panel-strong);
+      border: 1px solid rgba(87,115,141,0.18);
+      border-radius: 20px;
+      padding: 18px;
+    }
+
+    .panel h3 {
+      margin: 0 0 8px;
+      font-size: 1.15rem;
+    }
+
+    .info-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 0.98rem;
+      margin-bottom: 8px;
+    }
+
+    .progress {
+      width: 100%;
+      height: 14px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #edf4fb;
+      border: 1px solid rgba(87,115,141,0.14);
+    }
+
+    .progress > div {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #7fbbff, #2b7cff);
+      transition: width 1s linear;
+    }
+
+    .words-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .word-card {
+      min-height: 82px;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, #fafdff, #edf5ff);
+      border: 1px solid rgba(87,115,141,0.16);
+      font-size: clamp(1.2rem, 3vw, 1.7rem);
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      text-transform: lowercase;
+    }
+
+    .entry-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .guess-input {
+      width: 100%;
+      border-radius: 16px;
+      border: 2px solid #d7e6f7;
+      background: #fbfdff;
+      padding: 16px 12px;
+      font-size: 1.2rem;
+      text-align: center;
+      color: var(--ink);
+      font-weight: 800;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      text-transform: lowercase;
+    }
+
+    .guess-input:focus {
+      border-color: var(--accent-2);
+      box-shadow: 0 0 0 4px rgba(106, 167, 255, 0.18);
+    }
+
+    .help-text {
+      color: var(--muted);
+      line-height: 1.45;
+      margin-top: 10px;
+    }
+
+    .feedback-box {
+      padding: 14px 16px;
+      border-radius: 16px;
+      font-weight: 700;
+      margin-top: 8px;
+      background: #f5f9ff;
+      border: 1px solid rgba(87,115,141,0.14);
+    }
+
+    .feedback-box.good {
+      background: rgba(20, 150, 95, 0.10);
+      border-color: rgba(20, 150, 95, 0.24);
+      color: var(--good);
+    }
+
+    .feedback-box.bad {
+      background: rgba(209, 74, 74, 0.10);
+      border-color: rgba(209, 74, 74, 0.20);
+      color: var(--bad);
+    }
+
+    .results-grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      text-align: left;
+      margin-top: 18px;
+    }
+
+    .list-box {
+      background: white;
+      border: 1px solid rgba(87,115,141,0.16);
+      border-radius: 18px;
+      padding: 16px;
+    }
+
+    .list-box h4 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+    }
+
+    .chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: #eef5ff;
+      border: 1px solid rgba(87,115,141,0.14);
+      font-weight: 800;
+      text-transform: lowercase;
+    }
+
+    .chip.miss {
+      background: rgba(209,74,74,0.10);
+      color: var(--bad);
+      border-color: rgba(209,74,74,0.18);
+    }
+
+    .chip.hit {
+      background: rgba(20,150,95,0.10);
+      color: var(--good);
+      border-color: rgba(20,150,95,0.18);
+    }
+
+    .tiny {
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+
+    @media (max-width: 760px) {
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+      .results-grid {
+        grid-template-columns: 1fr;
+      }
+      .stage {
+        min-height: 0;
+      }
+      .card {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="card">
+      <div class="topbar">
+        <div class="title">
+          <h1>Word Memory Challenge</h1>
+          <p>Memorize the words, then type back as many as you can remember.</p>
+        </div>
+        <div class="pill">
+          <span class="label">Round</span>
+          <span class="value" id="roundDisplay">1</span>
+        </div>
+        <div class="pill">
+          <span class="label">Need to Pass</span>
+          <span class="value">75%</span>
+        </div>
+      </div>
+
+      <div class="stage" id="stage"></div>
+    </div>
+  </div>
+
+  <script>
+    const stage = document.getElementById('stage');
+    const roundDisplay = document.getElementById('roundDisplay');
+
+    const WORD_BANKS = {"3": ["act", "add", "age", "air", "ant", "arm", "art", "ash", "awe", "bag", "bar", "bat", "bay", "bed", "bee", "bit", "box", "boy", "bud", "bug", "bun", "bus", "can", "cap", "car", "cat", "cow", "cup", "day", "den", "dew", "dig", "dog", "dot", "dry", "ear", "egg", "elm", "end", "fan", "far", "fig", "fin", "fix", "fog", "fox", "fun", "gap", "gas", "gem", "hat", "hen", "hop", "ice", "jar", "jet", "key", "leg", "lip", "map"], "4": ["able", "ache", "acid", "aged", "also", "area", "army", "aunt", "away", "baby", "back", "bake", "ball", "band", "bank", "base", "bath", "bear", "beat", "bell", "belt", "best", "bird", "blow", "blue", "boat", "body", "bolt", "book", "boom", "boot", "born", "both", "bowl", "bulk", "burn", "bush", "busy", "cage", "cake", "calm", "camp", "card", "care", "cart", "case", "cash", "cast", "chat", "chin", "city", "clay", "club", "coat", "code", "coin", "cold", "cook", "cool", "cure"], "5": ["apple", "baker", "basic", "beach", "beard", "bench", "birth", "black", "blame", "block", "board", "brain", "bread", "break", "brick", "brush", "cabin", "candy", "chair", "chase", "cheek", "chess", "chief", "child", "class", "clean", "clear", "clerk", "clock", "cloud", "coast", "color", "dance", "doubt", "draft", "dream", "dress", "drink", "drive", "eager", "earth", "faith", "fancy", "feast", "field", "flame", "flood", "floor", "focus", "frame", "fresh", "fruit", "glass", "grace", "grain", "grant", "grass", "green", "group", "house"], "6": ["absent", "accept", "across", "admire", "almost", "animal", "answer", "arrive", "artist", "banana", "basket", "battle", "beauty", "become", "before", "belong", "beyond", "bottle", "branch", "bright", "broken", "bubble", "button", "camera", "candle", "castle", "cheese", "circle", "coffee", "cookie", "cotton", "course", "danger", "dreamy", "driver", "easily", "energy", "fabric", "farmer", "finger", "flight", "flower", "forest", "friend", "future", "garden", "gentle", "golden", "guitar", "hammer", "health", "island", "jacket", "kitten", "listen", "market", "master", "middle", "mirror", "moment"], "7": ["ability", "another", "balance", "because", "cabinet", "capture", "careful", "ceiling", "century", "chapter", "charity", "comfort", "correct", "country", "counter", "crystal", "curtain", "default", "delight", "diamond", "distant", "drawing", "earlier", "elastic", "evening", "example", "factory", "feather", "fiction", "fortune", "freedom", "gallery", "general", "genuine", "grocery", "happier", "harvest", "healthy", "holiday", "imagine", "improve", "journey", "kitchen", "lantern", "library", "machine", "manager", "measure", "morning", "musical", "natural", "nothing", "officer", "orchard", "outcome", "passage", "patient", "picture", "popular", "teacher"], "8": ["absolute", "airplane", "anything", "backpack", "bathroom", "birthday", "blankets", "building", "business", "calendar", "campfire", "children", "complete", "computer", "daylight", "decorate", "discover", "distance", "elephant", "estimate", "exercise", "favorite", "festival", "football", "generate", "guardian", "handbook", "hospital", "interest", "junction", "keyboard", "language", "laughter", "learning", "magazine", "midnight", "mountain", "notebook", "ordinary", "painting", "parallel", "passport", "personal", "playroom", "possible", "princess", "question", "railroad", "remember", "sandwich", "seashore", "shoulder", "sidewalk", "snowfall", "sunlight", "together", "umbrella", "vacation", "wildlife", "workshop"], "9": ["adventure", "afternoon", "apartment", "beautiful", "blueberry", "butterfly", "cafeteria", "chocolate", "classroom", "companion", "crocodile", "dangerous", "delicious", "different", "direction", "education", "elevators", "fireplace", "fisherman", "gardeners", "happening", "important", "knowledge", "librarian", "lightning", "medicinee", "newspaper", "pineapple", "president", "reception", "rectangle", "something", "spaceship", "strongest", "sunflower", "telephone", "telescope", "treasured", "waterfall", "wonderful", "yardstick", "youngster", "bookstore", "cornfield", "champions", "daydreams", "paintings", "vacations", "campfires", "admirable", "breakfast", "dreamland", "hillsides", "lakeshore", "playrooms", "sandpiper", "starfruit", "workbench", "riverbank", "storybook"], "10": ["adolescent", "adventures", "basketball", "blueprints", "bookstores", "buttercups", "cheerfully", "classrooms", "confidence", "crocodiles", "earthquake", "generation", "importance", "journalist", "neighbours", "newspapers", "passionate", "population", "rainforest", "remembered", "schoolwork", "snowstorms", "spaceships", "sunflowers", "technology", "television", "travellers", "waterfalls", "wonderland", "workplaces", "youngsters", "afterglows", "backpacker", "caretakers", "celebrated", "chocolates", "harmonious", "landscapes", "mastermind", "storybooks", "daydreamer", "friendship", "flashlight", "headphones", "leadership", "marshmallo", "masterwork", "mountainss", "newlywedsx", "notepapers", "photobooks", "riverbanks", "schoolmate", "snowflakes", "watercraft", "windmillss", "songwriter", "drawbridge", "campfiresx", "friendship"]};
+
+    const MAX_LENGTH = 10;
+    const MAX_ROUNDS = (MAX_LENGTH - 3 + 1) * 3;
+
+    const state = {
+      round: 1,
+      words: [],
+      timer: null,
+      timeLeft: 20,
+      phase: 'intro'
+    };
+
+    function configForRound(round) {
+      const tier = Math.floor((round - 1) / 3);
+      const countCycle = [4, 6, 8];
+      const count = countCycle[(round - 1) % 3];
+      const letters = 3 + tier;
+      return { count, letters };
+    }
+
+    function shuffle(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function getWords(count, letters) {
+      const pool = WORD_BANKS[letters] || [];
+      if (pool.length < count) {
+        throw new Error(`Not enough ${letters}-letter words.`);
+      }
+      return shuffle(pool).slice(0, count);
+    }
+
+    function stopTimer() {
+      if (state.timer) {
+        clearInterval(state.timer);
+        state.timer = null;
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function renderIntro() {
+      state.phase = 'intro';
+      stopTimer();
+      roundDisplay.textContent = state.round;
+      const { count, letters } = configForRound(state.round);
+      stage.innerHTML = `
+        <div class="hero">
+          <h2>Ready to play?</h2>
+          <p>
+            You will see <strong>${count}</strong> common English words with <strong>${letters}</strong> letters for <strong>20 seconds</strong>.
+            Then type back the words you remember. Order does not matter.
+          </p>
+          <p>
+            You need to get <strong>at least ${Math.ceil(count * 0.75)} out of ${count}</strong> correct to move on.
+          </p>
+          <div class="button-row">
+            <button id="startBtn">Start Round ${state.round}</button>
+            ${state.round > 1 ? '<button class="secondary" id="restartBtn">Restart Game</button>' : ''}
+          </div>
+        </div>
+      `;
+
+      document.getElementById('startBtn').addEventListener('click', startMemorizePhase);
+      const restartBtn = document.getElementById('restartBtn');
+      if (restartBtn) restartBtn.addEventListener('click', resetGame);
+    }
+
+    function startMemorizePhase() {
+      state.phase = 'memorize';
+      roundDisplay.textContent = state.round;
+      const { count, letters } = configForRound(state.round);
+      state.words = getWords(count, letters);
+      state.timeLeft = 20;
+
+      stage.innerHTML = `
+        <div class="play-area">
+          <div class="panel">
+            <div class="info-line">
+              <div><strong>Memorize these words</strong></div>
+              <div id="timerText">Time left: 20s</div>
+            </div>
+            <div class="progress"><div id="progressBar"></div></div>
+            <div class="words-grid" id="wordsGrid"></div>
+            <div class="help-text">Study the words carefully. When the timer ends, type in the words you remember.</div>
+          </div>
+        </div>
+      `;
+
+      const grid = document.getElementById('wordsGrid');
+      grid.innerHTML = state.words.map(w => `<div class="word-card">${escapeHtml(w)}</div>`).join('');
+
+      const timerText = document.getElementById('timerText');
+      const progressBar = document.getElementById('progressBar');
+      progressBar.style.width = '100%';
+
+      stopTimer();
+      state.timer = setInterval(() => {
+        state.timeLeft -= 1;
+        timerText.textContent = `Time left: ${state.timeLeft}s`;
+        progressBar.style.width = `${(state.timeLeft / 20) * 100}%`;
+        if (state.timeLeft <= 0) {
+          stopTimer();
+          renderInputPhase();
+        }
+      }, 1000);
+    }
+
+    function renderInputPhase() {
+      state.phase = 'input';
+      roundDisplay.textContent = state.round;
+      const count = state.words.length;
+
+      stage.innerHTML = `
+        <div class="play-area">
+          <div class="panel">
+            <h3>Type the words you remember</h3>
+            <div class="help-text">
+              Order does not matter. Fill in as many as you can. Your guesses stay on screen until you press <strong>Submit</strong>.
+            </div>
+            <div class="entry-grid" id="entryGrid"></div>
+            <div class="button-row" style="justify-content:flex-start; margin-top:16px;">
+              <button id="submitBtn">Submit</button>
+              <button class="secondary" id="restartBtn">Restart Game</button>
+            </div>
+            <div class="tiny" style="margin-top:10px;">Tip: leave boxes blank if you are unsure.</div>
+          </div>
+        </div>
+      `;
+
+      const entryGrid = document.getElementById('entryGrid');
+      let html = '';
+      for (let i = 0; i < count; i++) {
+        html += `<input class="guess-input" autocomplete="off" maxlength="20" placeholder="word ${i + 1}" />`;
+      }
+      entryGrid.innerHTML = html;
+
+      const inputs = Array.from(document.querySelectorAll('.guess-input'));
+      inputs.forEach((input, idx) => {
+        input.addEventListener('input', () => {
+          input.value = input.value.toLowerCase().replace(/[^a-z]/g, '');
+        });
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            if (idx < inputs.length - 1) inputs[idx + 1].focus();
+            else document.getElementById('submitBtn').click();
+          }
+        });
+      });
+
+      if (inputs[0]) inputs[0].focus();
+      document.getElementById('submitBtn').addEventListener('click', scoreRound);
+      document.getElementById('restartBtn').addEventListener('click', resetGame);
+    }
+
+    function scoreRound() {
+      const guessInputs = Array.from(document.querySelectorAll('.guess-input'));
+      const rawGuesses = guessInputs.map(i => i.value.trim().toLowerCase()).filter(Boolean);
+      const remainingActual = state.words.slice();
+      const hits = [];
+      const misses = [];
+
+      for (const guess of rawGuesses) {
+        const idx = remainingActual.indexOf(guess);
+        if (idx !== -1) {
+          hits.push(guess);
+          remainingActual.splice(idx, 1);
+        } else {
+          misses.push(guess);
+        }
+      }
+
+      const correct = hits.length;
+      const needed = Math.ceil(state.words.length * 0.75);
+      const passed = correct >= needed;
+      const percent = Math.round((correct / state.words.length) * 100);
+
+      renderResults({ correct, needed, passed, percent, hits, misses, missing: remainingActual });
+    }
+
+    function renderResults({ correct, needed, passed, percent, hits, misses, missing }) {
+      state.phase = 'results';
+      roundDisplay.textContent = state.round;
+
+      const finishedGame = passed && state.round >= MAX_ROUNDS;
+      let title;
+      let message;
+      let buttonText;
+
+      if (finishedGame) {
+        title = 'You are a memory wizard';
+        message = `Amazing job. You finished every round and got ${correct} correct in the final round.`;
+        buttonText = 'Play Again';
+      } else if (passed) {
+        title = 'Round cleared!';
+        message = `Nice work. You got ${correct} correct, which is ${percent}%.`;
+        buttonText = 'Next Round';
+      } else {
+        title = 'Game over';
+        message = `You got ${correct} correct, which is ${percent}%. You needed ${needed} to advance.`;
+        buttonText = 'Play Again';
+      }
+
+      stage.innerHTML = `
+        <div class="results">
+          <h2>${title}</h2>
+          <p>${message}</p>
+          <div class="feedback-box ${passed ? 'good' : 'bad'}">
+            ${finishedGame
+              ? 'You completed the full challenge.'
+              : passed
+                ? `You passed Round ${state.round}.`
+                : 'You did not reach the 75% target this round.'}
+          </div>
+
+          <div class="results-grid">
+            <div class="list-box">
+              <h4>Correct guesses (${hits.length})</h4>
+              <div class="chip-list">${hits.length ? hits.map(v => `<span class="chip hit">${escapeHtml(v)}</span>`).join('') : '<span class="tiny">None</span>'}</div>
+            </div>
+            <div class="list-box">
+              <h4>Guesses that did not match (${misses.length})</h4>
+              <div class="chip-list">${misses.length ? misses.map(v => `<span class="chip miss">${escapeHtml(v)}</span>`).join('') : '<span class="tiny">None</span>'}</div>
+            </div>
+            <div class="list-box">
+              <h4>All words shown</h4>
+              <div class="chip-list">${state.words.map(v => `<span class="chip">${escapeHtml(v)}</span>`).join('')}</div>
+            </div>
+            <div class="list-box">
+              <h4>Words you missed (${missing.length})</h4>
+              <div class="chip-list">${missing.length ? missing.map(v => `<span class="chip">${escapeHtml(v)}</span>`).join('') : '<span class="tiny">None</span>'}</div>
+            </div>
+          </div>
+
+          <div class="button-row">
+            <button id="nextBtn">${buttonText}</button>
+            <button class="secondary" id="restartBtn">Restart Game</button>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('nextBtn').addEventListener('click', () => {
+        if (finishedGame || !passed) {
+          state.round = 1;
+        } else {
+          state.round += 1;
+        }
+        renderIntro();
+      });
+      document.getElementById('restartBtn').addEventListener('click', resetGame);
+    }
+
+    function resetGame() {
+      stopTimer();
+      state.round = 1;
+      state.words = [];
+      state.timeLeft = 20;
+      renderIntro();
+    }
+
+    renderIntro();
+  </script>
+</body>
+</html>

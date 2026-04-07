@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Target Practice</title>
+  <style>
+    :root{
+      --bg1:#eef7ff;
+      --bg2:#d7ebff;
+      --panel:rgba(255,255,255,.94);
+      --ink:#17324d;
+      --muted:#5b748d;
+      --accent:#2b7cff;
+      --accent2:#67a2ff;
+      --danger:#d44e4e;
+      --good:#169160;
+      --shadow:0 18px 42px rgba(27,73,134,.18);
+      --radius:24px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;font-family:"Trebuchet MS","Segoe UI",Tahoma,sans-serif;color:var(--ink)}
+    body{
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,.88), rgba(255,255,255,0) 34%),
+        linear-gradient(180deg,var(--bg1),var(--bg2));
+      display:flex;align-items:center;justify-content:center;padding:18px;
+    }
+    .app{width:min(1100px,100%)}
+    .card{
+      background:var(--panel);
+      border:1px solid rgba(255,255,255,.85);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:20px;
+      backdrop-filter:blur(6px);
+    }
+    .topbar{display:grid;grid-template-columns:1fr auto auto auto;gap:12px;align-items:center;margin-bottom:14px}
+    h1{margin:0;font-size:clamp(1.9rem,4vw,2.8rem);line-height:1.05}
+    .subtitle{margin-top:6px;color:var(--muted)}
+    .pill{min-width:115px;text-align:center;padding:12px 14px;border-radius:16px;background:linear-gradient(180deg,#fff,#edf5ff);border:1px solid rgba(91,116,141,.18)}
+    .pill .label{display:block;font-size:.82rem;color:var(--muted);margin-bottom:5px}
+    .pill .value{font-size:1.35rem;font-weight:900}
+    .stage{
+      position:relative;
+      height:min(74vh,760px);
+      min-height:560px;
+      background:linear-gradient(180deg,rgba(255,255,255,.7),rgba(239,247,255,.92));
+      border:1px solid rgba(91,116,141,.14);
+      border-radius:24px;
+      overflow:hidden;
+    }
+    .hero,.overlay,.resultScreen{
+      position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;
+    }
+    .hero h2,.resultScreen h2{margin:0 0 10px;font-size:clamp(1.7rem,4vw,2.5rem)}
+    .hero p,.resultScreen p{max-width:760px;color:var(--muted);line-height:1.5;font-size:1.05rem;margin:8px auto}
+    .buttonRow{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:16px}
+    button{appearance:none;border:0;border-radius:16px;padding:14px 22px;color:#fff;font-weight:900;font-size:1rem;cursor:pointer;background:linear-gradient(180deg,var(--accent2),var(--accent));box-shadow:0 10px 24px rgba(43,124,255,.24)}
+    button.secondary{background:linear-gradient(180deg,#8ea6bf,#6f859e);box-shadow:0 10px 24px rgba(40,55,75,.16)}
+    .hud{position:absolute;left:14px;right:14px;top:14px;display:flex;justify-content:space-between;gap:12px;z-index:3;pointer-events:none}
+    .hudBox{padding:10px 14px;border-radius:16px;background:rgba(255,255,255,.84);border:1px solid rgba(91,116,141,.15);font-weight:800;box-shadow:0 8px 18px rgba(50,80,120,.08)}
+    .playfield{position:absolute;inset:0}
+    .countdown{
+      font-size:clamp(4rem,18vw,9rem);
+      font-weight:900;
+      color:var(--ink);
+      text-shadow:0 8px 22px rgba(255,255,255,.6);
+      letter-spacing:2px;
+    }
+    .overlay{background:rgba(238,247,255,.22);z-index:4}
+    .target{
+      position:absolute;
+      width:72px;height:72px;border-radius:50%;
+      border:none;padding:0;margin:0;cursor:pointer;
+      background:
+        radial-gradient(circle at center,
+          #f7e8a1 0 10%,
+          #111 10% 18%,
+          #1d6cff 18% 34%,
+          #fff 34% 50%,
+          #e63f3f 50% 68%,
+          #fff 68% 84%,
+          #e63f3f 84% 100%);
+      box-shadow:0 10px 26px rgba(25,60,110,.22);
+      transform:translate(-50%,-50%) scale(1);
+      transition:transform .08s ease, filter .15s ease, opacity .18s ease;
+    }
+    .target:hover{filter:brightness(1.04);transform:translate(-50%,-50%) scale(1.05)}
+    .target.hit{animation:pop .18s ease forwards;pointer-events:none}
+    @keyframes pop{from{transform:translate(-50%,-50%) scale(1)}to{transform:translate(-50%,-50%) scale(.2);opacity:0}}
+    .progressWrap{position:absolute;left:18px;right:18px;bottom:18px;z-index:3}
+    .progressBar{height:16px;border-radius:999px;overflow:hidden;background:#edf4fb;border:1px solid rgba(91,116,141,.15)}
+    .progressFill{height:100%;width:100%;background:linear-gradient(90deg,#7eb8ff,#2b7cff);transition:width .05s linear}
+    .small{font-size:.94rem;color:var(--muted)}
+    @media (max-width:760px){
+      .topbar{grid-template-columns:1fr 1fr;}
+      .stage{min-height:520px;height:72vh}
+      .target{width:64px;height:64px}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="card">
+      <div class="topbar">
+        <div>
+          <h1>Target Practice</h1>
+          <div class="subtitle">Hit every bullseye before the timer runs out.</div>
+        </div>
+        <div class="pill"><span class="label">Round</span><span class="value" id="roundDisplay">1</span></div>
+        <div class="pill"><span class="label">Time</span><span class="value" id="timeDisplay">5.0s</span></div>
+        <div class="pill"><span class="label">High Score</span><span class="value" id="highDisplay">0</span></div>
+      </div>
+      <div class="stage" id="stage"></div>
+    </div>
+  </div>
+
+  <script>
+    const stage = document.getElementById('stage');
+    const roundDisplay = document.getElementById('roundDisplay');
+    const timeDisplay = document.getElementById('timeDisplay');
+    const highDisplay = document.getElementById('highDisplay');
+
+    const STORAGE_KEY = 'target_practice_high_score_v1';
+
+    const state = {
+      round: 1,
+      high: Number(localStorage.getItem(STORAGE_KEY) || 0),
+      active: false,
+      remaining: 0,
+      roundTime: 5,
+      animationId: null,
+      endAt: 0,
+      playfieldRect: null
+    };
+
+    highDisplay.textContent = state.high;
+
+    function getRoundTime(round){
+      return 5 + (Math.floor((round - 1) / 4) * 0.5);
+    }
+
+    function updateHeader(){
+      roundDisplay.textContent = state.round;
+      timeDisplay.textContent = `${getRoundTime(state.round).toFixed(1)}s`;
+      highDisplay.textContent = state.high;
+    }
+
+    function saveHigh(roundCompleted){
+      if (roundCompleted > state.high) {
+        state.high = roundCompleted;
+        localStorage.setItem(STORAGE_KEY, String(state.high));
+        highDisplay.textContent = state.high;
+      }
+    }
+
+    function stopLoop(){
+      if (state.animationId) {
+        cancelAnimationFrame(state.animationId);
+        state.animationId = null;
+      }
+    }
+
+    function renderIntro(){
+      state.active = false;
+      stopLoop();
+      updateHeader();
+      stage.innerHTML = `
+        <div class="hero">
+          <h2>Ready?</h2>
+          <p>
+            A countdown will appear first. When it ends, bullseyes will pop up in random spots.
+            Hit all of them before time runs out. Each round adds one more bullseye.
+          </p>
+          <p>
+            On rounds 4, 8, 12, and so on, you get an extra <strong>0.5 seconds</strong>.
+          </p>
+          <div class="buttonRow">
+            <button id="startBtn">Start Game</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('startBtn').addEventListener('click', startCountdown);
+    }
+
+    function startCountdown(){
+      state.active = false;
+      stopLoop();
+      updateHeader();
+      stage.innerHTML = `
+        <div class="playfield"></div>
+        <div class="overlay"><div class="countdown" id="countdown">3</div></div>
+      `;
+      const cd = document.getElementById('countdown');
+      const sequence = ['3','2','1','GO!'];
+      let idx = 0;
+      cd.textContent = sequence[idx];
+      const interval = setInterval(() => {
+        idx++;
+        if (idx >= sequence.length) {
+          clearInterval(interval);
+          launchRound();
+          return;
+        }
+        cd.textContent = sequence[idx];
+      }, 700);
+    }
+
+    function launchRound(){
+      state.roundTime = getRoundTime(state.round);
+      state.remaining = state.round;
+      updateHeader();
+      stage.innerHTML = `
+        <div class="hud">
+          <div class="hudBox">Targets Left: <span id="targetsLeft">${state.remaining}</span></div>
+          <div class="hudBox">Time Left: <span id="timeLeftLabel">${state.roundTime.toFixed(1)}</span>s</div>
+        </div>
+        <div class="playfield" id="playfield"></div>
+        <div class="progressWrap"><div class="progressBar"><div class="progressFill" id="progressFill"></div></div></div>
+      `;
+      const playfield = document.getElementById('playfield');
+      playfield.addEventListener('click', missClick);
+      placeTargets(playfield, state.round);
+      startTimer();
+    }
+
+    function placeTargets(playfield, count){
+      const rect = stage.getBoundingClientRect();
+      const padding = 52;
+      const minDistance = window.innerWidth < 760 ? 78 : 90;
+      const points = [];
+
+      for (let i = 0; i < count; i++) {
+        let tries = 0;
+        let x, y, ok;
+        do {
+          x = padding + Math.random() * (rect.width - padding * 2);
+          y = 90 + Math.random() * (rect.height - 170);
+          ok = true;
+          for (const p of points) {
+            const dx = p.x - x;
+            const dy = p.y - y;
+            if (Math.hypot(dx, dy) < minDistance) {
+              ok = false;
+              break;
+            }
+          }
+          tries++;
+          if (tries > 250) ok = true;
+        } while (!ok);
+        points.push({x,y});
+      }
+
+      for (const p of points) {
+        const btn = document.createElement('button');
+        btn.className = 'target';
+        btn.setAttribute('aria-label', 'Bullseye');
+        btn.style.left = `${p.x}px`;
+        btn.style.top = `${p.y}px`;
+        btn.addEventListener('click', hitTarget);
+        playfield.appendChild(btn);
+      }
+    }
+
+    function hitTarget(e){
+      if (!state.active) return;
+      const target = e.currentTarget;
+      if (target.classList.contains('hit')) return;
+      target.classList.add('hit');
+      state.remaining -= 1;
+      document.getElementById('targetsLeft').textContent = state.remaining;
+      if (state.remaining <= 0) {
+        state.active = false;
+        stopLoop();
+        saveHigh(state.round);
+        showRoundClear();
+      }
+    }
+
+    function missClick(e){
+      if (!state.active) return;
+      if (e.target.closest('.target')) return;
+      state.active = false;
+      stopLoop();
+      saveHigh(state.round - 1);
+      showGameOver('You clicked outside a bullseye.');
+    }
+
+    function startTimer(){
+      state.active = true;
+      state.endAt = performance.now() + (state.roundTime * 1000);
+      const timeLeftLabel = document.getElementById('timeLeftLabel');
+      const fill = document.getElementById('progressFill');
+
+      function frame(now){
+        if (!state.active) return;
+        const msLeft = Math.max(0, state.endAt - now);
+        const secsLeft = msLeft / 1000;
+        timeLeftLabel.textContent = secsLeft.toFixed(1);
+        fill.style.width = `${(secsLeft / state.roundTime) * 100}%`;
+        if (msLeft <= 0) {
+          state.active = false;
+          stopLoop();
+          saveHigh(state.round - 1);
+          showGameOver();
+          return;
+        }
+        state.animationId = requestAnimationFrame(frame);
+      }
+      state.animationId = requestAnimationFrame(frame);
+    }
+
+    function showRoundClear(){
+      stage.innerHTML += `
+        <div class="overlay" id="clearOverlay">
+          <div>
+            <div class="countdown" style="font-size:clamp(2.5rem,8vw,4.5rem)">Round ${state.round} Clear!</div>
+            <div class="small" style="margin-top:8px">Get ready for the next round.</div>
+          </div>
+        </div>
+      `;
+      setTimeout(() => {
+        state.round += 1;
+        startCountdown();
+      }, 1100);
+    }
+
+    function showGameOver(reason = 'The timer ran out.'){
+      updateHeader();
+      stage.innerHTML = `
+        <div class="resultScreen">
+          <h2>Game Over</h2>
+          <p>${reason}</p>
+          <p>You reached <strong>Round ${state.round}</strong>.</p>
+          <p>Highest round: <strong>${state.high}</strong></p>
+          <div class="buttonRow">
+            <button id="playAgainBtn">Play Again</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('playAgainBtn').addEventListener('click', () => {
+        state.round = 1;
+        renderIntro();
+      });
+    }
+
+    renderIntro();
+  </script>
+</body>
+</html>
