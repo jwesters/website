@@ -107,6 +107,24 @@ CUSTOM_ICONS = {
     "Misc": "🛠️",
     "Misc_Games": "🎮",
     "Tetris_Games": "🧱",
+    "SnakesAndLadders.html": "🎲",
+    "snakes_and_ladders.html": "🎲",
+    "Go.html": "⚫",
+    "go_game.html": "⚫",
+    "Scrabble.html": "🔠",
+    "scrabble_like_game.html": "🔠",
+    "ascii_art_generator.html": "🖼️",
+    "Image_to_ASCII_Art.html": "🖼️",
+    "Pool-ball Drop Stack.html": "🎱",
+    "pool_ball_drop_stack.html": "🎱",
+    "Paint_Maze_Arcade.html": "🎨",
+    "paint_maze_arcade.html": "🎨",
+    "Arrow_Escape.html": "🏹",
+    "arrow_escape.html": "🏹",
+    "Stacker.html": "🧱",
+    "autorunner.html": "🏃",
+    "snake.html": "🐍",
+    "word_definition_quiz.html": "📚",
 }
 
 # ---- Keyword rules (longest keyword match wins)
@@ -203,6 +221,21 @@ ICON_RULES = [
     ("weight", "⚖️"),
     ("time", "⏰"),
     ("clock", "⏰"),
+    ("pool", "🎱"),
+    ("ball", "🎱"),
+    ("paint", "🎨"),
+    ("arcade", "🕹️"),
+    ("arrow", "🏹"),
+    ("escape", "🚪"),
+    ("snake", "🐍"),
+    ("ladder", "🪜"),
+    ("scrabble", "🔠"),
+    ("letter", "🔤"),
+    ("ascii", "🖼️"),
+    ("stack", "🧱"),
+    ("runner", "🏃"),
+    ("run", "🏃"),
+    ("go", "⚫"),
 
     # Site / repo
     ("index", "🏠"),
@@ -575,7 +608,7 @@ def render_recently_changed(recent_files: List[Tuple[str, float]]) -> str:
 
 def render_page(root: Path, tree: Node, out_file: str, recent_files: List[Tuple[str, float]]) -> str:
     now = datetime.now()
-    formatted = now.strftime("%B %d, %Y")
+    formatted = now.strftime("%B %d, %Y at %I:%M %p")
     title = "jwesters website"
     total_items = count_in_subtree(tree)
     status = "No matching files found." if total_items == 0 else f"{total_items} files indexed"
@@ -613,8 +646,9 @@ def render_page(root: Path, tree: Node, out_file: str, recent_files: List[Tuple[
   .hero {{ background:linear-gradient(135deg, #ffffff, #f8fbff); border:1px solid var(--border); border-radius:24px; box-shadow:var(--shadow); padding:24px; margin-bottom:20px; }}
   .hero h1 {{ margin:0 0 8px; font-size:30px; }}
   .hero p {{ margin:0; color:var(--muted); line-height:1.5; }}
-  .layout {{ display:grid; grid-template-columns:320px minmax(0, 1fr); gap:20px; align-items:start; }}
-  .sidebar {{ position:sticky; top:18px; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px; }}
+  .layout {{ display:grid; grid-template-columns:320px minmax(0, 1fr); grid-template-areas:"sidebar search" "sidebar content"; gap:20px; align-items:start; }}
+  .layout-search {{ grid-area:search; }}
+  .sidebar {{ grid-area:sidebar; position:sticky; top:18px; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px; }}
   .sidebar h2 {{ margin:0 0 14px; font-size:18px; }}
   .side-group + .side-group {{ margin-top:14px; padding-top:14px; border-top:1px solid var(--border); }}
   .side-group h3 {{ margin:0 0 8px; font-size:14px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }}
@@ -622,7 +656,7 @@ def render_page(root: Path, tree: Node, out_file: str, recent_files: List[Tuple[
   .side-group li {{ margin:4px 0; }}
   .side-group a {{ display:block; padding:7px 8px; border-radius:10px; }}
   .side-group a:hover {{ background:#f3f7ff; text-decoration:none; }}
-  .content {{ display:flex; flex-direction:column; gap:18px; }}
+  .content {{ grid-area:content; display:flex; flex-direction:column; gap:18px; }}
   .category-block {{ background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px; }}
   .category-heading {{ display:flex; align-items:center; gap:10px; font-size:20px; font-weight:700; margin-bottom:14px; }}
   .folder-block + .folder-block {{ margin-top:14px; }}
@@ -651,7 +685,7 @@ def render_page(root: Path, tree: Node, out_file: str, recent_files: List[Tuple[
   .footer {{ margin-top:18px; color:var(--muted); font-size:.95em; }}
   .footer a {{ font-weight:700; }}
   @media (max-width: 980px) {{
-    .layout {{ grid-template-columns:1fr; }}
+    .layout {{ grid-template-columns:1fr; grid-template-areas:"search" "sidebar" "content"; }}
     .sidebar {{ position:static; }}
   }}
 </style>
@@ -665,17 +699,18 @@ def render_page(root: Path, tree: Node, out_file: str, recent_files: List[Tuple[
     </header>
 
     <div class="layout">
+      <section class="search-panel layout-search">
+        <label class="search-label" for="site-search">Search files</label>
+        <input id="site-search" class="search-input" type="search" placeholder="Type to filter files and folders..." autocomplete="off" />
+        <div class="search-help">Search updates the file list instantly.</div>
+      </section>
+
       <aside class="sidebar">
         <h2>Browse by category</h2>
         {sidebar_html}
       </aside>
 
       <main class="content">
-        <section class="search-panel">
-          <label class="search-label" for="site-search">Search files</label>
-          <input id="site-search" class="search-input" type="search" placeholder="Type to filter files and folders..." autocomplete="off" />
-          <div class="search-help">Search updates the file list instantly.</div>
-        </section>
         <div id="search-empty" class="search-empty">No matching files found.</div>
         {main_html}
         {recent_html}

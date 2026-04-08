@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pool-ball Drop Stack</title>
+  <style>
+    :root{
+      --bg1:#eef6ff;
+      --bg2:#dfeeff;
+      --ink:#16324a;
+      --muted:#58728c;
+      --accent:#2f80ed;
+      --accent-dark:#1d63bf;
+      --line:#c7dcf3;
+      --danger:#cf4d5d;
+      --shadow:0 10px 30px rgba(22,50,74,.13);
+    }
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;
+      min-height:100%;
+      font-family:"Trebuchet MS","Segoe UI",Arial,sans-serif;
+      background:radial-gradient(circle at top,#f8fcff 0%,var(--bg1) 40%,var(--bg2) 100%);
+      color:var(--ink);
+    }
+    body{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:12px;
+    }
+    .app{
+      width:min(940px,100%);
+      background:rgba(255,255,255,.84);
+      border:1px solid #d8e8fa;
+      border-radius:20px;
+      box-shadow:var(--shadow);
+      padding:12px;
+      backdrop-filter:blur(4px);
+    }
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:4px 4px 10px;
+      flex-wrap:wrap;
+    }
+    h1{
+      margin:0;
+      font-size:clamp(1.35rem,2.4vw,1.95rem);
+      line-height:1.05;
+      letter-spacing:.02em;
+    }
+    .subtitle{
+      margin:4px 0 0;
+      color:var(--muted);
+      font-size:.9rem;
+    }
+    .controls{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    button{
+      border:0;
+      border-radius:12px;
+      padding:10px 15px;
+      font-size:.95rem;
+      font-weight:700;
+      cursor:pointer;
+      color:#fff;
+      background:linear-gradient(180deg,var(--accent),var(--accent-dark));
+      box-shadow:0 6px 16px rgba(47,128,237,.24);
+      transition:transform .08s ease, filter .15s ease;
+    }
+    button:hover{filter:brightness(1.04)}
+    button:active{transform:translateY(1px) scale(.995)}
+    button.secondary{
+      color:var(--ink);
+      background:linear-gradient(180deg,#fafdff,#e6f1fc);
+      box-shadow:0 6px 16px rgba(66,102,146,.12);
+    }
+    .game-shell{
+      position:relative;
+      background:linear-gradient(180deg,#f9fcff 0%,#ecf5ff 100%);
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:10px;
+      overflow:hidden;
+    }
+    .hud{
+      display:flex;
+      align-items:center;
+      justify-content:flex-start;
+      gap:10px;
+      margin-bottom:8px;
+      flex-wrap:wrap;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      background:rgba(255,255,255,.78);
+      border:1px solid #d7e7f8;
+      border-radius:999px;
+      padding:6px 10px;
+      font-weight:700;
+      min-height:40px;
+      font-size:.85rem;
+    }
+    #nextBallCanvas{
+      display:block;
+      width:32px;
+      height:32px;
+      border-radius:50%;
+      background:transparent;
+    }
+    .canvas-wrap{
+      position:relative;
+      display:grid;
+      place-items:center;
+    }
+    canvas#gameCanvas{
+      display:block;
+      width:min(100%,500px);
+      aspect-ratio:9 / 13;
+      background:linear-gradient(180deg,#ffffff 0%,#eef7ff 100%);
+      border-radius:16px;
+      border:1px solid #d6e5f7;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.65), inset 0 -12px 30px rgba(67,132,211,.08);
+      touch-action:none;
+      cursor:crosshair;
+    }
+    .overlay{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+      background:rgba(235,245,255,.42);
+      border-radius:16px;
+      backdrop-filter:blur(2px);
+    }
+    .card{
+      width:min(430px,calc(100% - 12px));
+      background:rgba(255,255,255,.96);
+      border:1px solid #d9e8f8;
+      border-radius:18px;
+      box-shadow:0 12px 30px rgba(22,50,74,.16);
+      padding:20px;
+      text-align:center;
+    }
+    .card h2{
+      margin:0 0 8px;
+      font-size:clamp(1.35rem,2.7vw,1.8rem);
+    }
+    .card p{
+      margin:0;
+      color:var(--muted);
+      line-height:1.45;
+      font-size:.95rem;
+    }
+    .actions{
+      margin-top:16px;
+      display:flex;
+      justify-content:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .hidden{display:none !important}
+    .gameover h2{color:var(--danger)}
+    .small-note{
+      color:var(--muted);
+      font-size:.9rem;
+      margin-top:10px;
+    }
+    @media (max-width:700px){
+      .app{padding:10px;border-radius:16px}
+      .game-shell{padding:8px}
+      .card{padding:18px 14px}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div>
+        <h1>Pool-ball Drop Stack</h1>
+        
+      </div>
+      <div class="controls">
+        <button id="restartTopBtn" class="secondary">Restart</button>
+      </div>
+    </div>
+
+    <div class="game-shell">
+      <div class="hud">
+        <div class="pill">Next ball: <canvas id="nextBallCanvas" width="40" height="40" aria-label="Next ball preview"></canvas></div>
+        <div class="pill">Score: <span id="scoreText">0</span></div>
+        <div class="pill">High: <span id="highScoreText">0</span></div>
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas id="gameCanvas" width="500" height="720" aria-label="Ball drop merge game"></canvas>
+
+        <div id="startOverlay" class="overlay">
+          <div class="card">
+            <h2>Pool-ball Drop Stack</h2>
+            <p>Click to drop the next ball. Matching balls merge into the next number. Two 15 balls evaporate. Keep the settled stack below the top line.</p>
+            <div class="actions">
+              <button id="startBtn">Start Game</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="gameOverOverlay" class="overlay hidden">
+          <div class="card gameover">
+            <h2>Game Over</h2>
+            <p>The settled stack reached above the top line.</p>
+            <div class="small-note" id="finalBallCount"></div>
+            <div class="actions">
+              <button id="restartBtn">Play Again</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const nextBallCanvas = document.getElementById('nextBallCanvas');
+  const nextCtx = nextBallCanvas.getContext('2d');
+
+
+  function setupHiDPICanvas(canvasEl, ctxRef, logicalWidth, logicalHeight){
+    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    canvasEl.width = Math.round(logicalWidth * dpr);
+    canvasEl.height = Math.round(logicalHeight * dpr);
+    ctxRef.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function resizeCanvases(){
+    setupHiDPICanvas(canvas, ctx, W, H);
+    setupHiDPICanvas(nextBallCanvas, nextCtx, 40, 40);
+    drawNextBallPreview();
+  }
+
+  const startOverlay = document.getElementById('startOverlay');
+  const gameOverOverlay = document.getElementById('gameOverOverlay');
+  const startBtn = document.getElementById('startBtn');
+  const restartBtn = document.getElementById('restartBtn');
+  const restartTopBtn = document.getElementById('restartTopBtn');
+  const finalBallCount = document.getElementById('finalBallCount');
+  const scoreText = document.getElementById('scoreText');
+  const highScoreText = document.getElementById('highScoreText');
+
+  const W = 500;
+  const H = 720;
+
+  const MAX_VALUE = 15;
+  const BASE_R = 24.75;
+  
+  
+
+  const BALL_STYLES = {
+    1:{fill:'#f7d21b', stripe:false},
+    2:{fill:'#2f6fe4', stripe:false},
+    3:{fill:'#e1422f', stripe:false},
+    4:{fill:'#7c40d6', stripe:false},
+    5:{fill:'#f28a1f', stripe:false},
+    6:{fill:'#228d57', stripe:false},
+    7:{fill:'#7a1f14', stripe:false},
+    8:{fill:'#202020', stripe:false},
+    9:{fill:'#f7d21b', stripe:true},
+    10:{fill:'#2f6fe4', stripe:true},
+    11:{fill:'#e1422f', stripe:true},
+    12:{fill:'#7c40d6', stripe:true},
+    13:{fill:'#f28a1f', stripe:true},
+    14:{fill:'#228d57', stripe:true},
+    15:{fill:'#202020', stripe:true}
+  };
+
+  const world = {
+    left: 68,
+    right: W - 68,
+    floor: H - 44,
+    topLine: 108,
+    gravity: 0.42,
+    bounce: 0.025,
+    air: 0.996,
+    rollDamping: 0.988,
+    settleSpeed: 0.12,
+    settleFrames: 16,
+    spawnY: 42,
+    collisionIterations: 3,
+    cellSize: 78,
+    snapStrength: 0.72,
+    maxSnapGap: 8,
+  };
+
+  const state = {
+    started: false,
+    over: false,
+    balls: [],
+    canDrop: false,
+    previewX: (world.left + world.right) / 2,
+    ballCount: 0,
+    currentValue: 1,
+    nextValue: 1,
+    fx: [],
+    lastId: 0,
+    score: 0,
+    highScore: 0,
+    nextDropAllowedAt: 0,
+    lineBreachStart: 0,
+  };
+
+  function radiusForValue(v){
+  let r = BASE_R;
+  for (let i = 2; i <= v; i++){
+    if (i <= 8){
+      r *= 1.10;
+    } else {
+      r *= 1.075;
+    }
+  }
+  return r;
+}
+
+  function clampDropX(x, r){
+    return Math.max(world.left + r, Math.min(world.right - r, x));
+  }
+
+  function ballStyle(v){
+    return BALL_STYLES[v] || BALL_STYLES[1];
+  }
+
+  function gridKey(cx, cy){
+    return `${cx},${cy}`;
+  }
+
+  function buildSpatialGrid(){
+    const grid = new Map();
+    for (const ball of state.balls){
+      if (ball.remove) continue;
+      const minX = Math.floor((ball.x - ball.r) / world.cellSize);
+      const maxX = Math.floor((ball.x + ball.r) / world.cellSize);
+      const minY = Math.floor((ball.y - ball.r) / world.cellSize);
+      const maxY = Math.floor((ball.y + ball.r) / world.cellSize);
+      for (let cx = minX; cx <= maxX; cx++){
+        for (let cy = minY; cy <= maxY; cy++){
+          const key = gridKey(cx, cy);
+          if (!grid.has(key)) grid.set(key, []);
+          grid.get(key).push(ball);
+        }
+      }
+    }
+    return grid;
+  }
+
+  function getNearbyFromGrid(ball, grid){
+    const out = new Set();
+    const minX = Math.floor((ball.x - ball.r) / world.cellSize) - 1;
+    const maxX = Math.floor((ball.x + ball.r) / world.cellSize) + 1;
+    const minY = Math.floor((ball.y - ball.r) / world.cellSize) - 1;
+    const maxY = Math.floor((ball.y + ball.r) / world.cellSize) + 1;
+    for (let cx = minX; cx <= maxX; cx++){
+      for (let cy = minY; cy <= maxY; cy++){
+        const bucket = grid.get(gridKey(cx, cy));
+        if (!bucket) continue;
+        for (const other of bucket){
+          if (other !== ball && !other.remove) out.add(other);
+        }
+      }
+    }
+    return out;
+  }
+
+  function createBall(value, x, y = world.spawnY){
+    return {
+      id: ++state.lastId,
+      value,
+      r: radiusForValue(value),
+      x,
+      y,
+      vx: 0,
+      vy: 0,
+      settled: false,
+      settleCounter: 0,
+      remove: false,
+      mergeCooldown: 2,
+    };
+  }
+
+  function loadHighScore(){
+    const raw = localStorage.getItem('ballDropStackHighScoreV15');
+    const parsed = Number(raw);
+    state.highScore = Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
+    updateScoreDisplays();
+  }
+
+  function saveHighScore(){
+    localStorage.setItem('ballDropStackHighScoreV15', String(state.highScore));
+  }
+
+  function updateScoreDisplays(){
+    scoreText.textContent = String(state.score);
+    highScoreText.textContent = String(state.highScore);
+  }
+
+  function addScoreForMerge(value){
+    let points = 0;
+    if (value <= 5) points = value * 2;
+    else if (value <= 7) points = value * 4;
+    else if (value <= 9) points = value * 6;
+    else if (value <= 11) points = value * 8;
+    else if (value <= 13) points = value * 10;
+    else if (value === 14) points = 200;
+    else if (value === 15) points = 250;
+
+    state.score += points;
+    if (state.score > state.highScore){
+      state.highScore = state.score;
+      saveHighScore();
+    }
+    updateScoreDisplays();
+  }
+
+  function hasBallAbove6(){
+    return state.balls.some(b => !b.remove && b.value > 6);
+  }
+
+  function chooseNextValue(){
+    const allowHigh = hasBallAbove6();
+    let table = [
+      {v:1,w:18.5},
+      {v:2,w:17.5},
+      {v:3,w:15.0},
+      {v:4,w:13.5},
+      {v:5,w:11.5},
+      {v:6,w:9.5},
+      {v:7,w:5.5},
+      {v:8,w:4.5},
+      {v:9,w:3.0},
+      {v:10,w:1.5},
+    ];
+    if (!allowHigh) table = table.filter(item => item.v <= 7);
+    const total = table.reduce((sum, item) => sum + item.w, 0);
+    let roll = Math.random() * total;
+    for (const item of table){
+      roll -= item.w;
+      if (roll <= 0) return item.v;
+    }
+    return table[table.length - 1].v;
+  }
+
+
+  function resetRound(started){
+    state.started = started;
+    state.over = false;
+    state.balls = [];
+    state.canDrop = started;
+    state.ballCount = 0;
+    state.fx = [];
+    state.score = 0;
+    state.currentValue = chooseNextValue();
+    state.nextValue = chooseNextValue();
+    state.previewX = (world.left + world.right) / 2;
+    state.nextDropAllowedAt = 0;
+    state.lineBreachStart = 0;
+    finalBallCount.textContent = '';
+    startOverlay.classList.toggle('hidden', started);
+    gameOverOverlay.classList.add('hidden');
+    updateScoreDisplays();
+    drawNextBallPreview();
+  }
+
+  function resetToMenu(){
+    resetRound(false);
+  }
+
+  function startGame(){
+    resetRound(true);
+  }
+
+  function dropBall(x){
+    const now = performance.now();
+    if (!state.started || state.over || !state.canDrop) return;
+    if (now < state.nextDropAllowedAt) return;
+
+    const value = state.currentValue;
+    const r = radiusForValue(value);
+    const ball = createBall(value, clampDropX(x, r));
+
+    state.balls.push(ball);
+    state.nextDropAllowedAt = now + 500;
+    state.ballCount += 1;
+    state.currentValue = state.nextValue;
+    state.nextValue = chooseNextValue();
+    drawNextBallPreview();
+  }
+
+
+  function isBallSupported(ball, grid){
+    if (Math.abs((ball.y + ball.r) - world.floor) < 1.2) return true;
+
+    for (const other of getNearbyFromGrid(ball, grid)){
+      const dx = ball.x - other.x;
+      const dy = ball.y - other.y;
+      const dist = Math.hypot(dx, dy);
+      const target = ball.r + other.r;
+      const inContact = dist <= target + 1.6;
+      const otherBelow = other.y > ball.y + 0.5;
+      const verticalSupport = dy < -Math.abs(dx) * 0.18;
+      if (inContact && otherBelow && verticalSupport) return true;
+    }
+    return false;
+  }
+
+  function snapBallToSupport(ball, grid){
+    let snapped = false;
+    const floorGap = world.floor - (ball.y + ball.r);
+    if (floorGap >= 0 && floorGap <= world.maxSnapGap && Math.abs(ball.vx) < 0.35 && Math.abs(ball.vy) < 0.6){
+      ball.y += floorGap * world.snapStrength;
+      if (floorGap < 0.7) ball.y = world.floor - ball.r;
+      snapped = true;
+    }
+
+    let best = null;
+    let bestGap = Infinity;
+    for (const other of getNearbyFromGrid(ball, grid)){
+      const dx = ball.x - other.x;
+      const dy = ball.y - other.y;
+      const dist = Math.hypot(dx, dy);
+      const target = ball.r + other.r;
+      const gap = target - dist;
+      const absGap = Math.abs(gap);
+      const otherBelow = other.y > ball.y + 0.5;
+      const verticalSupport = dy < -Math.abs(dx) * 0.15;
+      if (otherBelow && verticalSupport && absGap < bestGap && absGap <= world.maxSnapGap){
+        bestGap = absGap;
+        best = {other, dx, dy, dist, target};
+      }
+    }
+
+    if (best && best.dist > 0.0001 && Math.abs(ball.vx) < 0.35 && Math.abs(ball.vy) < 0.6){
+      const nx = best.dx / best.dist;
+      const ny = best.dy / best.dist;
+      const desiredX = best.other.x + nx * best.target;
+      const desiredY = best.other.y + ny * best.target;
+      ball.x += (desiredX - ball.x) * world.snapStrength;
+      ball.y += (desiredY - ball.y) * world.snapStrength;
+      if (Math.abs(desiredX - ball.x) < 0.7) ball.x = desiredX;
+      if (Math.abs(desiredY - ball.y) < 0.7) ball.y = desiredY;
+      snapped = true;
+    }
+
+    return snapped;
+  }
+
+  function anyBallAboveTopLine(){
+    return state.balls.some(b => !b.remove && (b.y - b.r) < world.topLine);
+  }
+
+  function updateGameOverTimer(){
+    const breached = anyBallAboveTopLine();
+    const now = performance.now();
+
+    if (breached){
+      if (!state.lineBreachStart) state.lineBreachStart = now;
+      if (now - state.lineBreachStart >= 1000){
+        return true;
+      }
+    } else {
+      state.lineBreachStart = 0;
+    }
+    return false;
+  }
+
+  function triggerGameOver(){
+    state.over = true;
+    state.canDrop = false;
+    state.nextDropAllowedAt = Infinity;
+    state.lineBreachStart = 0;
+    finalBallCount.textContent = `Balls dropped: ${state.ballCount}`;
+    gameOverOverlay.classList.remove('hidden');
+  }
+
+
+  function updateCooldowns(){
+    for (const ball of state.balls){
+      if (!ball.remove && ball.mergeCooldown > 0) ball.mergeCooldown--;
+    }
+  }
+
+  function integrate(ball){
+    if (ball.remove || ball.settled) return;
+    ball.vy += world.gravity;
+    ball.vx *= world.rollDamping;
+    ball.vy *= world.air;
+
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+
+    if (ball.x - ball.r < world.left){
+      ball.x = world.left + ball.r;
+      ball.vx = Math.abs(ball.vx) * world.bounce;
+      if (Math.abs(ball.vx) < 0.1) ball.vx = 0;
+    }
+    if (ball.x + ball.r > world.right){
+      ball.x = world.right - ball.r;
+      ball.vx = -Math.abs(ball.vx) * world.bounce;
+      if (Math.abs(ball.vx) < 0.1) ball.vx = 0;
+    }
+    if (ball.y + ball.r > world.floor){
+      ball.y = world.floor - ball.r;
+      if (Math.abs(ball.vy) < 0.4) ball.vy = 0;
+      else ball.vy = -Math.abs(ball.vy) * world.bounce;
+      ball.vx *= 0.94;
+      if (Math.abs(ball.vx) < 0.1) ball.vx = 0;
+    }
+
+    const cornerFloor = Math.abs((ball.y + ball.r) - world.floor) < 0.6;
+    const cornerLeft = Math.abs((ball.x - ball.r) - world.left) < 0.6;
+    const cornerRight = Math.abs((ball.x + ball.r) - world.right) < 0.6;
+    if (cornerFloor && (cornerLeft || cornerRight) && Math.abs(ball.vx) < 0.18 && Math.abs(ball.vy) < 0.18){
+      ball.vx = 0;
+      ball.vy = 0;
+    }
+  }
+
+  function solvePair(a, b){
+    if (a.remove || b.remove) return;
+    let dx = b.x - a.x;
+    let dy = b.y - a.y;
+    let dist = Math.hypot(dx, dy);
+    const minDist = a.r + b.r;
+
+    if (dist === 0){
+      dx = 0.001;
+      dy = 0;
+      dist = 0.001;
+    }
+    if (dist >= minDist) return;
+
+    const nx = dx / dist;
+    const ny = dy / dist;
+    const overlap = minDist - dist;
+
+    const baseMassA = Math.max(1, a.r * a.r);
+    const baseMassB = Math.max(1, b.r * b.r);
+
+    const aOnGround = Math.abs((a.y + a.r) - world.floor) < 1.2;
+    const bOnGround = Math.abs((b.y + b.r) - world.floor) < 1.2;
+
+    const groundedMassA = baseMassA * (aOnGround ? (1.8 + a.value * 0.18) : 1);
+    const groundedMassB = baseMassB * (bOnGround ? (1.8 + b.value * 0.18) : 1);
+
+    let moveA = groundedMassB / (groundedMassA + groundedMassB);
+    let moveB = groundedMassA / (groundedMassA + groundedMassB);
+
+    if (a.settled && aOnGround) moveA *= 0.18;
+    else if (a.settled) moveA *= 0.38;
+
+    if (b.settled && bOnGround) moveB *= 0.18;
+    else if (b.settled) moveB *= 0.38;
+
+    a.x -= nx * overlap * moveA;
+    a.y -= ny * overlap * moveA;
+    b.x += nx * overlap * moveB;
+    b.y += ny * overlap * moveB;
+
+    const rvx = b.vx - a.vx;
+    const rvy = b.vy - a.vy;
+    const impact = rvx * nx + rvy * ny;
+
+    if (impact < 0){
+      const restitution = 0.01;
+      const impulse = (-(1 + restitution) * impact) / ((1 / groundedMassA) + (1 / groundedMassB));
+
+      if (!a.settled){
+        const dampA = aOnGround ? 0.35 : 0.5;
+        a.vx -= (impulse / groundedMassA) * nx * dampA;
+        a.vy -= (impulse / groundedMassA) * ny * dampA;
+      }
+      if (!b.settled){
+        const dampB = bOnGround ? 0.35 : 0.5;
+        b.vx += (impulse / groundedMassB) * nx * dampB;
+        b.vy += (impulse / groundedMassB) * ny * dampB;
+      }
+    }
+
+    const tangentX = -ny;
+    const tangentY = nx;
+    const tangentSpeed = rvx * tangentX + rvy * tangentY;
+    const frictionImpulse = tangentSpeed * 0.016;
+    if (!a.settled){
+      const groundDragA = aOnGround ? 0.28 : 0.4;
+      a.vx += frictionImpulse * tangentX * groundDragA;
+      a.vy += frictionImpulse * tangentY * groundDragA;
+    }
+    if (!b.settled){
+      const groundDragB = bOnGround ? 0.28 : 0.4;
+      b.vx -= frictionImpulse * tangentX * groundDragB;
+      b.vy -= frictionImpulse * tangentY * groundDragB;
+    }
+
+    if (a.settled && Math.hypot(a.vx, a.vy) > (aOnGround ? 0.42 : 0.24)){
+      a.settled = false;
+      a.settleCounter = 0;
+    }
+    if (b.settled && Math.hypot(b.vx, b.vy) > (bOnGround ? 0.42 : 0.24)){
+      b.settled = false;
+      b.settleCounter = 0;
+    }
+  }
+
+  function solveCollisions(){
+    for (let iter = 0; iter < world.collisionIterations; iter++){
+      const grid = buildSpatialGrid();
+      for (const ball of state.balls){
+        if (ball.remove) continue;
+        for (const other of getNearbyFromGrid(ball, grid)){
+          if (other.id <= ball.id) continue;
+          solvePair(ball, other);
+        }
+      }
+      for (const ball of state.balls){
+        if (ball.remove) continue;
+        if (ball.x - ball.r < world.left){
+          ball.x = world.left + ball.r;
+          ball.vx = Math.abs(ball.vx) * world.bounce;
+          if (Math.abs(ball.vx) < 0.1) ball.vx = 0;
+        }
+        if (ball.x + ball.r > world.right){
+          ball.x = world.right - ball.r;
+          ball.vx = -Math.abs(ball.vx) * world.bounce;
+          if (Math.abs(ball.vx) < 0.1) ball.vx = 0;
+        }
+        if (ball.y + ball.r > world.floor){
+          ball.y = world.floor - ball.r;
+          if (Math.abs(ball.vy) < 0.4) ball.vy = 0;
+          else ball.vy = -Math.abs(ball.vy) * world.bounce;
+          ball.vx *= 0.94;
+          if (Math.abs(ball.vx) < 0.1) ball.vx = 0;
+        }
+      }
+    }
+  }
+
+  function releaseFloatingBalls(){
+    const grid = buildSpatialGrid();
+    for (const ball of state.balls){
+      if (ball.remove || !ball.settled) continue;
+      if (!isBallSupported(ball, grid)){
+        ball.settled = false;
+        ball.settleCounter = 0;
+        ball.vy = Math.max(ball.vy, 0.35);
+      }
+    }
+  }
+
+  function queueBurst(x, y, color, count, size){
+    for (let i = 0; i < count; i++){
+      const angle = Math.random() * Math.PI * 2;
+      const speed = (1.2 + Math.random() * 2.4) * size;
+      state.fx.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 24 + Math.floor(Math.random() * 10),
+        maxLife: 34,
+        color,
+        radius: 2 + Math.random() * 4 * size,
+      });
+    }
+  }
+
+  function cleanupRemoved(){
+    state.balls = state.balls.filter(b => !b.remove);
+  }
+
+
+  function areBallsTouching(a, b){
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const dist = Math.hypot(dx, dy);
+    return dist <= a.r + b.r + 1.8;
+  }
+
+  function collectMergeGroup(seed, grid){
+    if (!seed || seed.remove || seed.mergeCooldown > 0) return null;
+    const stack = [seed];
+    const group = [];
+    const seen = new Set([seed.id]);
+
+    while (stack.length){
+      const ball = stack.pop();
+      if (ball.remove || ball.mergeCooldown > 0 || ball.value !== seed.value) continue;
+      group.push(ball);
+      for (const other of getNearbyFromGrid(ball, grid)){
+        if (other.remove || other.value !== seed.value || other.mergeCooldown > 0) continue;
+        if (seen.has(other.id)) continue;
+        if (!areBallsTouching(ball, other)) continue;
+        seen.add(other.id);
+        stack.push(other);
+      }
+    }
+
+    return group.length >= 2 ? group : null;
+  }
+
+  function mergeGroup(group){
+    const value = group[0].value;
+    const count = group.length;
+    const x = group.reduce((sum, ball) => sum + ball.x, 0) / count;
+    const y = group.reduce((sum, ball) => sum + ball.y, 0) / count;
+    const vx = group.reduce((sum, ball) => sum + ball.vx, 0) / count;
+    const vy = group.reduce((sum, ball) => sum + ball.vy, 0) / count;
+
+    for (const ball of group){
+      ball.remove = true;
+    }
+
+    for (let i = 0; i < count - 1; i++){
+      addScoreForMerge(value);
+    }
+
+    if (value === MAX_VALUE){
+      queueBurst(x, y, '#9ed5ff', 18 + count * 4, 1.35);
+      cleanupRemoved();
+      return true;
+    }
+
+    const nextValue = value + 1;
+    const merged = createBall(nextValue, x, y);
+    merged.vx = vx * 0.08;
+    merged.vy = vy * 0.08;
+    merged.mergeCooldown = 2;
+    state.balls.push(merged);
+    queueBurst(x, y, ballStyle(nextValue).fill, 12 + count * 2, 1.05 + count * 0.05);
+    cleanupRemoved();
+    return true;
+  }
+
+  function processMerges(){
+    let mergesThisFrame = 0;
+    let found = true;
+    while (found && mergesThisFrame < 4){
+      found = false;
+      const grid = buildSpatialGrid();
+      for (const ball of state.balls){
+        if (!ball || ball.remove || ball.mergeCooldown > 0) continue;
+        const group = collectMergeGroup(ball, grid);
+        if (group){
+          mergeGroup(group);
+          solveCollisions();
+          found = true;
+          mergesThisFrame++;
+          break;
+        }
+      }
+    }
+  }
+
+  function updateSettling(ball, grid){
+    if (ball.remove) return;
+
+    snapBallToSupport(ball, grid);
+
+    const speed = Math.hypot(ball.vx, ball.vy);
+    const supported = isBallSupported(ball, grid);
+    const touchingFloor = Math.abs((ball.y + ball.r) - world.floor) < 0.8;
+    const touchingLeft = Math.abs((ball.x - ball.r) - world.left) < 0.8;
+    const touchingRight = Math.abs((ball.x + ball.r) - world.right) < 0.8;
+    const cornerTrap = touchingFloor && (touchingLeft || touchingRight) && speed < 0.18;
+
+    if ((speed < world.settleSpeed && supported) || cornerTrap){
+      ball.settleCounter++;
+      ball.vx *= 0.8;
+      ball.vy *= 0.15;
+
+      if (cornerTrap && ball.settleCounter >= 4){
+        ball.vx = 0;
+        ball.vy = 0;
+      }
+
+      if (ball.settleCounter >= world.settleFrames || (cornerTrap && ball.settleCounter >= 6)){
+        ball.vx = 0;
+        ball.vy = 0;
+        ball.settled = true;
+      }
+    } else {
+      ball.settleCounter = 0;
+      if (speed > 0.12) ball.settled = false;
+    }
+  }
+
+  function updateFX(){
+    for (const p of state.fx){
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vx *= 0.96;
+      p.vy *= 0.96;
+      p.life--;
+    }
+    state.fx = state.fx.filter(p => p.life > 0);
+  }
+
+  function update(){
+    if (!state.started || state.over){
+      updateFX();
+      return;
+    }
+
+    updateCooldowns();
+
+    for (const ball of state.balls){
+      if (!ball.remove && !ball.settled) integrate(ball);
+    }
+
+    solveCollisions();
+    processMerges();
+    releaseFloatingBalls();
+
+    const grid = buildSpatialGrid();
+    for (const ball of state.balls){
+      if (!ball.remove) updateSettling(ball, grid);
+    }
+
+    updateFX();
+
+    if (!state.over && updateGameOverTimer()){
+      triggerGameOver();
+    }
+  }
+
+  function roundRectPath(ctxRef, x, y, w, h, r){
+    ctxRef.beginPath();
+    ctxRef.moveTo(x + r, y);
+    ctxRef.arcTo(x + w, y, x + w, y + h, r);
+    ctxRef.arcTo(x + w, y + h, x, y + h, r);
+    ctxRef.arcTo(x, y + h, x, y, r);
+    ctxRef.arcTo(x, y, x + w, y, r);
+    ctxRef.closePath();
+  }
+
+  function drawBallOnContext(ctxRef, x, y, value, r, preview=false){
+    const style = ballStyle(value);
+
+    ctxRef.save();
+    ctxRef.beginPath();
+    ctxRef.arc(x, y, r, 0, Math.PI * 2);
+    ctxRef.clip();
+
+    if (style.stripe){
+      ctxRef.fillStyle = '#ffffff';
+      ctxRef.fillRect(x - r - 1, y - r - 1, r * 2 + 2, r * 2 + 2);
+      ctxRef.fillStyle = style.fill;
+      ctxRef.fillRect(x - r - 1, y - r * 0.46, r * 2 + 2, r * 0.92);
+    } else {
+      const bodyGrad = ctxRef.createRadialGradient(x - r * 0.35, y - r * 0.45, r * 0.18, x, y, r);
+      bodyGrad.addColorStop(0, '#ffffff');
+      bodyGrad.addColorStop(0.18, style.fill);
+      bodyGrad.addColorStop(1, style.fill);
+      ctxRef.fillStyle = bodyGrad;
+      ctxRef.fillRect(x - r - 1, y - r - 1, r * 2 + 2, r * 2 + 2);
+    }
+
+    const shine = ctxRef.createRadialGradient(x - r * 0.35, y - r * 0.42, r * 0.05, x - r * 0.35, y - r * 0.42, r * 0.45);
+    shine.addColorStop(0, 'rgba(255,255,255,.95)');
+    shine.addColorStop(1, 'rgba(255,255,255,0)');
+    ctxRef.fillStyle = shine;
+    ctxRef.beginPath();
+    ctxRef.arc(x - r * 0.18, y - r * 0.2, r * 0.7, 0, Math.PI * 2);
+    ctxRef.fill();
+
+    ctxRef.restore();
+
+    ctxRef.strokeStyle = preview ? 'rgba(16,44,72,.5)' : 'rgba(16,44,72,.72)';
+    ctxRef.lineWidth = Math.max(1.4, r * 0.08);
+    ctxRef.beginPath();
+    ctxRef.arc(x, y, r, 0, Math.PI * 2);
+    ctxRef.stroke();
+
+    const whiteR = Math.max(8, r * 0.42);
+    ctxRef.fillStyle = 'rgba(255,255,255,.96)';
+    ctxRef.beginPath();
+    ctxRef.arc(x, y, whiteR, 0, Math.PI * 2);
+    ctxRef.fill();
+    ctxRef.strokeStyle = 'rgba(18,58,92,.15)';
+    ctxRef.lineWidth = 1;
+    ctxRef.stroke();
+
+    const label = String(value);
+    ctxRef.fillStyle = '#111';
+    ctxRef.textAlign = 'center';
+    ctxRef.textBaseline = 'middle';
+    if (label.length === 1){
+      ctxRef.font = `700 ${Math.max(14, Math.round(r * 0.78))}px Trebuchet MS, Arial, sans-serif`;
+    } else {
+      ctxRef.font = `700 ${Math.max(12, Math.round(r * 0.58))}px Trebuchet MS, Arial, sans-serif`;
+    }
+    ctxRef.fillText(label, x, y + 0.5);
+  }
+
+  function drawNextBallPreview(){
+    nextCtx.clearRect(0, 0, 40, 40);
+    const r = Math.min(17, radiusForValue(state.nextValue));
+    drawBallOnContext(nextCtx, 20, 20, state.nextValue, r, true);
+  }
+
+  function drawFX(){
+    for (const p of state.fx){
+      const alpha = Math.max(0, p.life / p.maxLife);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawScene(){
+    ctx.clearRect(0, 0, W, H);
+
+    ctx.fillStyle = '#eef7ff';
+    roundRectPath(ctx, 14, 14, W - 28, H - 28, 16);
+    ctx.fill();
+
+    ctx.save();
+    roundRectPath(ctx, world.left, 30, world.right - world.left, world.floor - 30, 14);
+    ctx.clip();
+
+    const bg = ctx.createLinearGradient(0, 30, 0, world.floor);
+    bg.addColorStop(0, '#ffffff');
+    bg.addColorStop(1, '#e9f4ff');
+    ctx.fillStyle = bg;
+    ctx.fillRect(world.left, 30, world.right - world.left, world.floor - 30);
+
+    ctx.strokeStyle = 'rgba(89,136,184,.08)';
+    ctx.lineWidth = 1;
+    for (let y = 48; y < world.floor; y += 26){
+      ctx.beginPath();
+      ctx.moveTo(world.left + 12, y);
+      ctx.lineTo(world.right - 12, y);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    ctx.strokeStyle = '#74a8db';
+    ctx.lineWidth = 7;
+    roundRectPath(ctx, world.left, 30, world.right - world.left, world.floor - 30, 14);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#db5066';
+    ctx.setLineDash([8, 8]);
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(world.left + 10, world.topLine);
+    ctx.lineTo(world.right - 10, world.topLine);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#62a1de';
+    ctx.fillRect(world.left - 10, world.floor, world.right - world.left + 20, 10);
+
+    if (state.started && !state.over && state.canDrop){
+      const r = radiusForValue(state.currentValue);
+      const px = clampDropX(state.previewX, r);
+      ctx.strokeStyle = 'rgba(47,128,237,.38)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 7]);
+      ctx.beginPath();
+      ctx.moveTo(px, 36);
+      ctx.lineTo(px, world.topLine - 10);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      drawBallOnContext(ctx, px, world.spawnY, state.currentValue, r, true);
+    }
+
+    for (const ball of state.balls){
+      drawBallOnContext(ctx, ball.x, ball.y, ball.value, ball.r, false);
+    }
+
+    drawFX();
+  }
+
+  function frame(){
+    update();
+    drawScene();
+    requestAnimationFrame(frame);
+  }
+
+  function getPointerPos(evt){
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = W / rect.width;
+    const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+    return { x: (clientX - rect.left) * scaleX };
+  }
+
+  function handleMove(evt){
+    const p = getPointerPos(evt);
+    state.previewX = p.x;
+  }
+
+  function handleDrop(evt){
+    if (evt.cancelable) evt.preventDefault();
+    const p = getPointerPos(evt);
+    state.previewX = p.x;
+    dropBall(state.previewX);
+  }
+
+  canvas.addEventListener('mousemove', handleMove);
+  canvas.addEventListener('click', handleDrop);
+  canvas.addEventListener('touchstart', (evt) => {
+    handleMove(evt);
+    handleDrop(evt);
+  }, { passive: false });
+  canvas.addEventListener('touchmove', (evt) => {
+    if (evt.cancelable) evt.preventDefault();
+    handleMove(evt);
+  }, { passive: false });
+
+  startBtn.addEventListener('click', startGame);
+  restartBtn.addEventListener('click', startGame);
+  restartTopBtn.addEventListener('click', resetToMenu);
+
+  window.addEventListener('resize', resizeCanvases);
+  resizeCanvases();
+
+  loadHighScore();
+  resetToMenu();
+  frame();
+})();
+</script>
+</body>
+</html>
