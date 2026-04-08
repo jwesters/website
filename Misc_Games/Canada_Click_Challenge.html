@@ -1,0 +1,1137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Canada City Click Challenge</title>
+<style>
+  :root {
+    --bg:#e8edf2;
+    --panel:#ffffff;
+    --text:#1e293b;
+    --muted:#64748b;
+    --accent:#1d4ed8;
+    --accent2:#16a34a;
+    --danger:#dc2626;
+    --land:#d9dee6;
+    --ocean:#eef3f7;
+    --outline:#b8c3d1;
+    --shadow:0 10px 28px rgba(15,23,42,.12);
+    --radius:18px;
+  }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font-family:Arial, Helvetica, sans-serif; }
+  body { overflow:hidden; }
+  body.mobile-ui { overflow:auto; }
+  .app {
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+    min-height:100dvh;
+    gap:10px;
+    padding:10px;
+  }
+  body.mobile-ui .app {
+    min-height:100dvh;
+    height:auto;
+  }
+  .topbar {
+    background:var(--panel);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:10px 14px;
+  }
+  .topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .titlebox { display:flex; flex-direction:column; gap:4px; min-width:220px; }
+  .title { font-size:clamp(22px, 4vw, 32px); font-weight:800; letter-spacing:.2px; }
+  .subtitle { color:var(--muted); font-size:14px; }
+  .stats { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .pill {
+    background:#f8fafc; border:1px solid #e2e8f0; border-radius:999px;
+    padding:8px 12px; font-size:14px; font-weight:700;
+  }
+  #timerPill {
+    font-size:clamp(24px, 3.8vw, 34px);
+    padding:12px 18px;
+    font-weight:900;
+    min-width:170px;
+    text-align:center;
+  }
+  .mapWrap {
+    position:relative;
+    background:var(--panel);
+    border-radius:24px;
+    box-shadow:var(--shadow);
+    overflow:hidden;
+    width:100%;
+    aspect-ratio:1.66 / 1;
+    min-height:540px;
+    height:min(calc(100dvh - 118px), 84dvh);
+    touch-action:none;
+  }
+  canvas { width:100%; height:100%; display:block; background:var(--ocean); cursor:crosshair; }
+  .hud { position:absolute; left:12px; top:12px; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
+  .hudCard {
+    background:rgba(255,255,255,.92);
+    backdrop-filter: blur(6px);
+    border:1px solid rgba(226,232,240,.95);
+    border-radius:14px;
+    padding:10px 12px;
+    box-shadow:var(--shadow);
+    max-width:min(92vw, 380px);
+  }
+  body.mobile-ui .hudCard.target-flash {
+    animation:targetPulse 1.2s ease-out 1;
+  }
+  @keyframes targetPulse {
+    0% { transform:translateY(0); box-shadow:var(--shadow); }
+    20% { transform:translateY(0); box-shadow:0 0 0 4px rgba(29,78,216,.15), 0 14px 30px rgba(15,23,42,.18); }
+    100% { transform:translateY(0); box-shadow:var(--shadow); }
+  }
+  .hudLabel { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px; }
+  .targetCity { font-size:clamp(24px, 4vw, 34px); font-weight:900; }
+  .btnRow { display:flex; gap:8px; flex-wrap:wrap; }
+  button {
+    appearance:none; border:none; cursor:pointer; border-radius:12px;
+    background:var(--accent); color:#fff; padding:12px 16px; font-size:15px; font-weight:700;
+    box-shadow:var(--shadow);
+  }
+  button.secondary { background:#334155; }
+  button.green { background:var(--accent2); }
+  button.ghost { background:#fff; color:var(--text); border:1px solid #cbd5e1; box-shadow:none; }
+  button:disabled { opacity:.55; cursor:not-allowed; }
+  .overlay {
+    position:absolute; inset:0; background:rgba(15,23,42,.34);
+    display:none; align-items:center; justify-content:center; padding:16px; z-index:3;
+  }
+  .overlay.show { display:flex; }
+  .resultOverlay { background:transparent; padding:16px; justify-content:flex-start; align-items:flex-end; }
+  .resultOverlay .modal { width:min(92vw, 460px); }
+  .resultOverlay.corner-top-left { justify-content:flex-start; align-items:flex-start; }
+  .resultOverlay.corner-top-right { justify-content:flex-end; align-items:flex-start; }
+  .resultOverlay.corner-bottom-left { justify-content:flex-start; align-items:flex-end; }
+  .resultOverlay.corner-bottom-right { justify-content:flex-end; align-items:flex-end; }
+  .modal {
+    width:min(92vw, 580px); max-height:88vh; overflow:auto;
+    background:#fff; border-radius:24px; box-shadow:0 20px 60px rgba(0,0,0,.24);
+    padding:22px;
+  }
+  .modal h2 { margin:0 0 8px; font-size:clamp(26px, 5vw, 34px); }
+  .modal p { margin:8px 0; line-height:1.45; }
+  .scoreBig { font-size:clamp(40px, 9vw, 56px); font-weight:900; margin:10px 0 6px; }
+  .muted { color:var(--muted); }
+  .roundSummary { margin:14px 0; border:1px solid #e2e8f0; border-radius:16px; overflow:hidden; }
+  .row { display:grid; grid-template-columns:1fr auto; gap:10px; padding:12px 14px; border-top:1px solid #e2e8f0; }
+  .row:first-child { border-top:none; }
+  .copyBox { margin-top:14px; padding:12px; border-radius:14px; background:#f8fafc; border:1px solid #e2e8f0; word-break:break-word; font-size:14px; }
+  .small { font-size:13px; }
+  .textInput { width:100%; padding:12px 14px; font-size:16px; border-radius:12px; border:1px solid #cbd5e1; outline:none; margin-top:10px; }
+  .textInput:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(29,78,216,.12); }
+  .loadingBox { margin-top:14px; padding:12px 14px; border-radius:14px; background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; font-weight:700; display:none; }
+  .loadingBox.show { display:block; }
+  @media (max-width: 700px) {
+    body.mobile-ui { overflow:auto; }
+    .app { padding:8px; gap:8px; }
+    .topbar { padding:10px 12px; }
+    .subtitle { display:none; }
+    .stats { width:100%; justify-content:space-between; }
+    .pill { font-size:13px; padding:8px 10px; }
+    #timerPill { font-size:clamp(22px, 7vw, 30px); min-width:140px; padding:10px 14px; }
+    .mapWrap {
+      aspect-ratio:auto;
+      min-height:68dvh;
+      height:calc(100dvh - 126px);
+      border-radius:18px;
+    }
+    body.mobile-ui .mapWrap {
+      min-height:calc(100dvh - 126px);
+      height:calc(100dvh - 126px);
+    }
+    .hud { left:8px; top:8px; }
+    .hudCard { max-width:min(70vw, 260px); padding:8px 10px; }
+    .targetCity { font-size:clamp(20px, 8vw, 30px); }
+    button { flex:1 1 auto; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="titlebox">
+      <div class="title">Canada City Click Challenge</div>
+      <div class="subtitle">Guess the city by clicking the map of Canada. Closer = more points.</div>
+    </div>
+    <div class="stats">
+      <div class="pill" id="roundPill">Round 1 / 5</div>
+      <div class="pill" id="totalPill">Total: 0</div>
+      <div class="pill" id="timerPill">Time: 30.0s</div>
+      <div class="pill" id="seedPill">Seed: —</div>
+    </div>
+  </div>
+
+  <div class="mapWrap" id="mapWrap">
+    <canvas id="map"></canvas>
+
+    <div class="hud">
+      <div class="hudCard">
+        <div class="hudLabel">Find this city</div>
+        <div class="targetCity" id="targetCity">Loading…</div>
+      </div>
+    </div>
+
+    <div class="overlay show" id="startOverlay">
+      <div class="modal">
+        <h2>Ready?</h2>
+        <p>You’ll get 5 random Canadian cities. Click where you think each one is on the map of Canada.</p>
+        <div class="copyBox">
+          <div style="font-weight:800; margin-bottom:6px;">Rules</div>
+          <div class="small">You get 1 click per round and 30 seconds to answer. A correct click inside the city area earns 1000 points. You lose 1 point for every 2 km away from the nearest point on that city area, with a minimum of 0. If time runs out, that round scores 0.</div>
+        </div>
+        <p class="muted">After every guess, the game reveals the correct city area, your click, and the round score. At the end, you’ll get a challenge link with the same seed so others can play the exact same cities.</p>
+        <div class="loadingBox" id="loadingBox">Loading city locations…</div>
+        <div class="btnRow" style="margin-top:16px;">
+          <button class="green" id="startBtn">Start Game</button>
+          <button class="ghost" id="enterSeedStartBtn">Enter Seed</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay resultOverlay corner-bottom-left" id="roundOverlay">
+      <div class="modal">
+        <h2 id="roundResultTitle">Round Result</h2>
+        <div class="scoreBig" id="roundScoreBig">0 points</div>
+        <p id="roundResultText"></p>
+        <p class="muted" id="roundDistanceText"></p>
+        <div class="btnRow" style="margin-top:16px;">
+          <button class="green" id="nextRoundBtn">Next Round</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay" id="finalOverlay">
+      <div class="modal">
+        <h2>Game Over</h2>
+        <div class="scoreBig" id="finalScoreBig">0 / 5000</div>
+        <p id="finalMessage"></p>
+        <div class="roundSummary" id="summaryBox"></div>
+        <p class="muted" style="margin-top:10px;">Click any city name above to open a Wikipedia article for that city.</p>
+        <div class="copyBox">
+          <div style="font-weight:800; margin-bottom:6px;">Challenge link</div>
+          <div id="challengeLink" class="small"></div>
+        </div>
+        <div class="btnRow" style="margin-top:16px;">
+          <button class="green" id="copyLinkBtn">Copy Challenge Link</button>
+          <button class="secondary" id="playSameSeedBtn">Play Same Seed Again</button>
+          <button class="ghost" id="newGameBtn">New Random Game</button>
+          <button class="ghost" id="enterSeedFinalBtn">Enter Seed</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay" id="seedOverlay">
+      <div class="modal">
+        <h2>Enter Seed</h2>
+        <p>Type in a seed to play that exact 5-city challenge.</p>
+        <input class="textInput" id="seedInput" type="text" maxlength="80" placeholder="Enter a seed" autocomplete="off" spellcheck="false">
+        <p class="muted small" id="seedError" style="min-height:18px;"></p>
+        <div class="btnRow" style="margin-top:16px;">
+          <button class="green" id="playSeedBtn">Play Seed</button>
+          <button class="ghost" id="cancelSeedBtn">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<script>
+const CANADA = {"name": "Canada", "polygons": [[[[-122.84, 49.0], [-125.625, 50.417], [-127.436, 50.831], [-127.993, 51.716], [-127.85, 52.33], [-129.13, 52.755], [-129.305, 53.562], [-130.515, 54.288], [-130.536, 54.803], [-129.98, 55.285], [-130.008, 55.916], [-131.708, 56.552], [-133.356, 58.41], [-134.945, 59.271], [-135.476, 59.788], [-137.452, 58.905], [-139.039, 60.0], [-140.013, 60.277], [-140.998, 60.306], [-140.986, 69.712], [-136.504, 68.898], [-134.415, 69.627], [-132.929, 69.505], [-129.795, 70.194], [-129.108, 69.779], [-128.362, 70.013], [-128.138, 70.484], [-127.447, 70.377], [-125.756, 69.481], [-124.425, 70.158], [-124.29, 69.4], [-123.061, 69.564], [-122.683, 69.856], [-121.472, 69.798], [-117.603, 69.011], [-115.247, 68.906], [-113.898, 68.399], [-115.305, 67.903], [-113.497, 67.688], [-109.946, 67.981], [-108.88, 67.381], [-107.792, 67.887], [-108.813, 68.312], [-108.167, 68.654], [-106.15, 68.8], [-104.338, 68.018], [-103.221, 68.098], [-101.454, 67.647], [-98.443, 67.782], [-98.559, 68.404], [-97.669, 68.579], [-96.12, 68.239], [-96.126, 67.293], [-95.489, 68.091], [-94.685, 68.064], [-94.233, 69.069], [-96.471, 70.09], [-96.391, 71.195], [-95.209, 71.921], [-93.89, 71.76], [-92.878, 71.319], [-91.52, 70.191], [-92.407, 69.7], [-90.547, 69.498], [-90.552, 68.475], [-89.215, 69.259], [-88.02, 68.615], [-88.317, 67.873], [-87.35, 67.199], [-86.306, 67.921], [-85.577, 68.785], [-85.522, 69.882], [-82.623, 69.658], [-81.28, 69.162], [-81.22, 68.666], [-81.964, 68.133], [-81.259, 67.597], [-81.387, 67.111], [-83.345, 66.412], [-84.735, 66.257], [-85.769, 66.558], [-87.323, 64.776], [-88.483, 64.099], [-89.914, 64.033], [-90.704, 63.61], [-90.77, 62.96], [-91.933, 62.835], [-93.157, 62.025], [-94.242, 60.899], [-94.629, 60.11], [-94.685, 58.949], [-93.215, 58.782], [-92.297, 57.087], [-90.898, 57.285], [-89.04, 56.852], [-87.324, 55.999], [-85.012, 55.303], [-82.273, 55.148], [-82.436, 54.282], [-82.125, 53.277], [-81.401, 52.158], [-79.913, 51.208], [-79.143, 51.534], [-78.602, 52.562], [-79.124, 54.141], [-79.83, 54.668], [-78.229, 55.136], [-77.096, 55.837], [-76.541, 56.534], [-76.623, 57.203], [-77.302, 58.052], [-78.517, 58.805], [-77.337, 59.853], [-77.773, 60.758], [-78.107, 62.32], [-77.411, 62.551], [-74.668, 62.181], [-73.84, 62.444], [-71.677, 61.525], [-71.374, 61.137], [-69.59, 61.061], [-69.62, 60.221], [-69.288, 58.957], [-68.375, 58.801], [-67.65, 58.212], [-66.202, 58.767], [-65.245, 59.871], [-64.584, 60.336], [-61.397, 56.967], [-61.799, 56.339], [-59.57, 55.204], [-57.975, 54.945], [-57.333, 54.627], [-56.937, 53.78], [-56.158, 53.647], [-55.756, 53.27], [-55.683, 52.147], [-57.127, 51.42], [-58.775, 51.064], [-60.033, 50.243], [-61.724, 50.08], [-63.863, 50.291], [-66.399, 50.229], [-67.236, 49.512], [-68.511, 49.068], [-71.105, 46.822], [-70.255, 46.986], [-68.65, 48.3], [-66.552, 49.133], [-65.056, 49.233], [-64.171, 48.742], [-65.115, 48.071], [-64.472, 46.238], [-63.173, 45.739], [-61.521, 45.884], [-60.518, 47.008], [-60.449, 46.283], [-59.803, 45.92], [-61.04, 45.265], [-64.247, 44.266], [-65.364, 43.545], [-66.123, 43.619], [-66.162, 44.465], [-64.425, 45.292], [-67.137, 45.138], [-67.791, 45.703], [-67.79, 47.066], [-68.234, 47.355], [-68.905, 47.185], [-69.237, 47.448], [-70.0, 46.693], [-70.66, 45.46], [-71.405, 45.255], [-71.505, 45.008], [-74.867, 45.0], [-76.5, 44.018], [-76.82, 43.629], [-78.72, 43.625], [-79.172, 43.466], [-78.939, 42.864], [-80.247, 42.366], [-81.278, 42.209], [-82.439, 41.675], [-83.142, 41.976], [-82.138, 43.571], [-82.551, 45.348], [-83.593, 45.817], [-83.47, 45.995], [-83.891, 46.117], [-84.142, 46.512], [-84.605, 46.44], [-84.876, 46.9], [-88.378, 48.303], [-89.273, 48.02], [-90.83, 48.27], [-91.64, 48.14], [-94.329, 48.671], [-94.64, 48.84], [-94.818, 49.389], [-95.156, 49.384], [-95.159, 49.0], [-122.84, 49.0]]], [[[-83.994, 62.453], [-83.25, 62.914], [-81.877, 62.905], [-81.898, 62.711], [-83.069, 62.159], [-83.775, 62.182], [-83.994, 62.453]]], [[[-79.776, 72.803], [-80.876, 73.333], [-80.834, 73.693], [-78.064, 73.652], [-76.34, 73.103], [-76.251, 72.826], [-79.776, 72.803]]], [[[-80.315, 62.086], [-79.929, 62.386], [-79.266, 62.159], [-79.658, 61.633], [-80.1, 61.718], [-80.315, 62.086]]], [[[-93.613, 74.98], [-94.157, 74.592], [-96.821, 74.928], [-96.289, 75.378], [-94.851, 75.647], [-93.613, 74.98]]], [[[-93.721, 77.634], [-96.17, 77.555], [-96.436, 77.835], [-94.423, 77.82], [-93.721, 77.634]]], [[[-96.754, 78.766], [-95.559, 78.418], [-95.83, 78.057], [-97.31, 77.851], [-98.124, 78.083], [-98.553, 78.458], [-98.632, 78.872], [-96.754, 78.766]]], [[[-88.15, 74.392], [-92.422, 74.838], [-92.89, 75.883], [-93.894, 76.319], [-95.962, 76.441], [-97.121, 76.751], [-96.745, 77.161], [-94.684, 77.098], [-93.574, 76.776], [-91.605, 76.779], [-90.742, 76.45], [-90.97, 76.074], [-89.187, 75.61], [-86.379, 75.482], [-84.79, 75.699], [-81.129, 75.714], [-80.058, 75.337], [-79.834, 74.923], [-80.458, 74.657], [-81.949, 74.442], [-83.229, 74.564], [-88.15, 74.392]]], [[[-111.264, 78.153], [-109.854, 77.996], [-110.187, 77.697], [-112.051, 77.409], [-113.534, 77.732], [-112.725, 78.051], [-111.264, 78.153]]], [[[-111.5, 78.85], [-109.663, 78.602], [-112.542, 78.408], [-112.526, 78.551], [-111.5, 78.85]]], [[[-55.407, 51.588], [-56.796, 49.812], [-56.143, 50.15], [-55.471, 49.936], [-55.822, 49.587], [-54.935, 49.313], [-54.474, 49.557], [-53.477, 49.249], [-53.786, 48.517], [-53.086, 48.688], [-52.648, 47.536], [-53.069, 46.655], [-54.179, 46.807], [-53.962, 47.625], [-54.24, 47.752], [-55.401, 46.885], [-55.997, 46.92], [-55.291, 47.39], [-56.251, 47.633], [-59.266, 47.603], [-59.419, 47.899], [-58.797, 48.252], [-59.232, 48.523], [-58.392, 49.126], [-57.359, 50.718], [-56.739, 51.287], [-55.871, 51.632], [-55.407, 51.588]]], [[[-84.464, 65.372], [-81.642, 64.455], [-81.553, 63.98], [-80.817, 64.057], [-80.103, 63.726], [-80.991, 63.411], [-82.547, 63.652], [-83.109, 64.102], [-85.523, 63.052], [-85.867, 63.637], [-87.222, 63.541], [-86.353, 64.036], [-85.884, 65.739], [-85.161, 65.657], [-84.976, 65.218], [-84.464, 65.372]]], [[[-78.771, 72.352], [-77.825, 72.75], [-74.229, 71.767], [-74.099, 71.331], [-72.242, 71.557], [-71.2, 70.92], [-68.786, 70.525], [-67.915, 70.122], [-66.969, 69.186], [-68.805, 68.72], [-66.45, 68.067], [-64.862, 67.848], [-63.425, 66.928], [-61.852, 66.862], [-62.163, 66.16], [-63.918, 64.999], [-65.149, 65.426], [-66.721, 66.388], [-68.015, 66.263], [-68.141, 65.69], [-65.32, 64.383], [-64.669, 63.393], [-65.014, 62.674], [-68.783, 63.746], [-66.328, 62.28], [-66.166, 61.931], [-68.877, 62.33], [-71.023, 62.911], [-72.235, 63.398], [-71.886, 63.68], [-74.834, 64.679], [-74.819, 64.389], [-77.71, 64.23], [-78.556, 64.573], [-77.897, 65.309], [-73.96, 65.455], [-74.294, 65.812], [-73.945, 66.311], [-72.651, 67.285], [-73.312, 68.069], [-74.843, 68.555], [-76.869, 68.895], [-76.229, 69.148], [-77.287, 69.77], [-78.169, 69.826], [-78.957, 70.167], [-79.492, 69.872], [-81.305, 69.743], [-88.682, 70.411], [-89.513, 70.762], [-88.468, 71.218], [-89.888, 71.223], [-90.205, 72.235], [-89.437, 73.129], [-88.408, 73.538], [-85.826, 73.804], [-86.562, 73.157], [-85.774, 72.534], [-84.85, 73.34], [-82.316, 73.751], [-80.6, 72.717], [-80.749, 72.062], [-78.771, 72.352]]], [[[-94.504, 74.135], [-92.42, 74.1], [-90.51, 73.857], [-92.004, 72.966], [-93.196, 72.772], [-94.269, 72.025], [-95.41, 72.062], [-96.034, 72.94], [-96.018, 73.437], [-95.496, 73.862], [-94.504, 74.135]]], [[[-122.855, 76.117], [-119.104, 77.512], [-116.199, 77.645], [-116.336, 76.877], [-117.106, 76.53], [-121.5, 75.9], [-122.855, 76.117]]], [[[-133.18, 54.17], [-131.75, 54.12], [-132.049, 52.985], [-131.179, 52.18], [-131.578, 52.182], [-133.055, 53.411], [-133.18, 54.17]]], [[[-105.492, 79.302], [-100.825, 78.8], [-99.671, 77.908], [-102.95, 78.343], [-105.176, 78.38], [-104.21, 78.677], [-105.42, 78.918], [-105.492, 79.302]]], [[[-123.51, 48.51], [-124.013, 48.371], [-125.655, 48.825], [-125.955, 49.18], [-126.85, 49.53], [-127.03, 49.815], [-128.059, 49.995], [-128.445, 50.539], [-128.358, 50.771], [-125.755, 50.295], [-124.921, 49.475], [-123.923, 49.062], [-123.51, 48.51]]], [[[-121.538, 74.449], [-117.556, 74.186], [-115.511, 73.475], [-119.22, 72.52], [-120.46, 71.82], [-120.46, 71.384], [-123.092, 70.902], [-123.62, 71.34], [-125.929, 71.869], [-123.94, 73.68], [-124.918, 74.293], [-121.538, 74.449]]], [[[-107.819, 75.846], [-105.881, 75.969], [-105.705, 75.48], [-106.313, 75.005], [-109.7, 74.85], [-112.223, 74.417], [-113.744, 74.394], [-113.871, 74.72], [-111.794, 75.163], [-116.312, 75.043], [-117.71, 75.222], [-116.346, 76.199], [-115.405, 76.479], [-112.591, 76.141], [-110.814, 75.549], [-109.067, 75.473], [-110.497, 76.43], [-109.581, 76.794], [-108.549, 76.678], [-107.819, 75.846]]], [[[-107.516, 73.236], [-105.402, 72.673], [-104.465, 70.993], [-100.981, 70.024], [-101.089, 69.584], [-102.731, 69.504], [-102.093, 69.12], [-102.43, 68.753], [-105.96, 69.18], [-109.0, 68.78], [-113.313, 68.536], [-113.855, 69.007], [-115.22, 69.28], [-116.108, 69.168], [-117.34, 69.96], [-112.416, 70.366], [-114.35, 70.6], [-117.905, 70.541], [-118.432, 70.909], [-116.113, 71.309], [-117.656, 71.295], [-119.402, 71.559], [-117.866, 72.706], [-115.189, 73.315], [-114.167, 73.121], [-114.666, 72.653], [-112.441, 72.955], [-111.05, 72.45], [-109.92, 72.961], [-109.007, 72.633], [-108.188, 71.651], [-107.686, 72.065], [-108.396, 73.09], [-107.516, 73.236]]], [[[-100.438, 72.706], [-101.54, 73.36], [-100.356, 73.844], [-99.164, 73.633], [-97.38, 73.76], [-97.12, 73.47], [-98.054, 72.991], [-96.54, 72.56], [-96.72, 71.66], [-98.36, 71.273], [-99.323, 71.356], [-100.015, 71.738], [-102.5, 72.51], [-102.48, 72.83], [-100.438, 72.706]]], [[[-106.94, 73.46], [-105.26, 73.64], [-104.5, 73.42], [-105.38, 72.76], [-106.94, 73.46]]], [[[-98.5, 76.72], [-97.736, 76.257], [-97.704, 75.743], [-98.16, 75.0], [-99.809, 74.897], [-100.884, 75.057], [-100.863, 75.641], [-102.502, 75.564], [-102.566, 76.337], [-101.49, 76.305], [-99.983, 76.646], [-98.577, 76.589], [-98.5, 76.72]]], [[[-96.71, 80.158], [-95.323, 80.907], [-94.298, 80.977], [-94.735, 81.206], [-92.41, 81.257], [-91.133, 80.723], [-87.81, 80.32], [-87.02, 79.66], [-85.814, 79.337], [-87.188, 79.039], [-89.035, 78.287], [-92.877, 78.343], [-93.951, 78.751], [-93.936, 79.114], [-93.145, 79.38], [-94.974, 79.372], [-96.076, 79.705], [-96.71, 80.158]]], [[[-91.587, 81.894], [-86.97, 82.28], [-85.5, 82.652], [-84.26, 82.6], [-83.18, 82.32], [-82.42, 82.86], [-79.307, 83.131], [-75.719, 83.064], [-72.832, 83.233], [-65.827, 83.028], [-61.85, 82.629], [-61.894, 82.362], [-67.658, 81.501], [-65.48, 81.507], [-69.47, 80.617], [-71.18, 79.8], [-73.88, 79.43], [-76.908, 79.323], [-75.529, 79.198], [-76.22, 79.019], [-75.393, 78.526], [-77.889, 77.9], [-78.363, 77.509], [-79.76, 77.21], [-79.62, 76.983], [-77.911, 77.022], [-77.889, 76.778], [-80.561, 76.178], [-83.174, 76.454], [-86.112, 76.299], [-89.491, 76.472], [-89.616, 76.952], [-87.767, 77.178], [-88.26, 77.9], [-87.65, 77.97], [-84.976, 77.539], [-86.34, 78.18], [-87.962, 78.372], [-87.152, 78.759], [-85.379, 78.997], [-85.095, 79.345], [-86.507, 79.736], [-86.932, 80.251], [-83.409, 80.1], [-81.848, 80.464], [-87.599, 80.516], [-89.367, 80.856], [-91.368, 81.553], [-91.587, 81.894]]], [[[-75.216, 67.444], [-75.866, 67.149], [-76.987, 67.099], [-77.236, 67.588], [-76.812, 68.149], [-75.895, 68.287], [-75.114, 68.01], [-75.216, 67.444]]], [[[-96.257, 69.49], [-95.648, 69.108], [-96.27, 68.757], [-97.617, 69.06], [-98.432, 68.951], [-99.797, 69.4], [-98.218, 70.144], [-96.257, 69.49]]], [[[-64.519, 49.873], [-62.858, 49.706], [-61.836, 49.289], [-61.806, 49.105], [-63.589, 49.401], [-64.519, 49.873]]], [[[-64.015, 47.036], [-63.664, 46.55], [-62.012, 46.443], [-62.504, 46.033], [-62.874, 45.968], [-64.143, 46.393], [-64.393, 46.727], [-64.015, 47.036]]]]};
+const CITY_POOL = [{"name": "Toronto", "province": "Ontario", "population": 2794356}, {"name": "Montreal", "province": "Quebec", "population": 1762949}, {"name": "Calgary", "province": "Alberta", "population": 1306784}, {"name": "Edmonton", "province": "Alberta", "population": 1010899}, {"name": "Mississauga", "province": "Ontario", "population": 828854}, {"name": "Brampton", "province": "Ontario", "population": 656480}, {"name": "Hamilton", "province": "Ontario", "population": 569353}, {"name": "Surrey", "province": "British Columbia", "population": 568322}, {"name": "Laval", "province": "Quebec", "population": 438366}, {"name": "Halifax", "province": "Nova Scotia", "population": 439819}, {"name": "Markham", "province": "Ontario", "population": 338503}, {"name": "Vaughan", "province": "Ontario", "population": 323103}, {"name": "Gatineau", "province": "Quebec", "population": 291041}, {"name": "Saskatoon", "province": "Saskatchewan", "population": 266141}, {"name": "Kitchener", "province": "Ontario", "population": 256885}, {"name": "Burnaby", "province": "British Columbia", "population": 249125}, {"name": "Regina", "province": "Saskatchewan", "population": 226404}, {"name": "Richmond", "province": "British Columbia", "population": 209937}, {"name": "Oakville", "province": "Ontario", "population": 213759}, {"name": "Burlington", "province": "Ontario", "population": 186948}, {"name": "Oshawa", "province": "Ontario", "population": 175383}, {"name": "Sherbrooke", "province": "Quebec", "population": 172950}, {"name": "Greater Sudbury", "province": "Ontario", "population": 166004}, {"name": "Abbotsford", "province": "British Columbia", "population": 153524}, {"name": "Guelph", "province": "Ontario", "population": 143740}, {"name": "Saguenay", "province": "Quebec", "population": 144723}, {"name": "Kelowna", "province": "British Columbia", "population": 144576}, {"name": "Barrie", "province": "Ontario", "population": 147829}, {"name": "Coquitlam", "province": "British Columbia", "population": 148625}, {"name": "Trois-Rivières", "province": "Quebec", "population": 139163}, {"name": "Moncton", "province": "New Brunswick", "population": 79470}, {"name": "Saint John", "province": "New Brunswick", "population": 68150}, {"name": "St. Catharines", "province": "Ontario", "population": 133113}, {"name": "Cambridge", "province": "Ontario", "population": 138479}, {"name": "Whitby", "province": "Ontario", "population": 138501}, {"name": "Ajax", "province": "Ontario", "population": 126666}, {"name": "Waterloo", "province": "Ontario", "population": 121436}, {"name": "Brantford", "province": "Ontario", "population": 104688}, {"name": "Red Deer", "province": "Alberta", "population": 106736}, {"name": "Lethbridge", "province": "Alberta", "population": 106550}, {"name": "St. John's", "province": "Newfoundland and Labrador", "population": 110525}, {"name": "Thunder Bay", "province": "Ontario", "population": 108843}, {"name": "Chatham-Kent", "province": "Ontario", "population": 103671}, {"name": "Victoria", "province": "British Columbia", "population": 91967}, {"name": "Nanaimo", "province": "British Columbia", "population": 100442}, {"name": "Kamloops", "province": "British Columbia", "population": 97902}, {"name": "Prince George", "province": "British Columbia", "population": 74170}, {"name": "Medicine Hat", "province": "Alberta", "population": 63171}, {"name": "Grande Prairie", "province": "Alberta", "population": 69473}, {"name": "Airdrie", "province": "Alberta", "population": 70525}, {"name": "Okotoks", "province": "Alberta", "population": 30405}, {"name": "Cochrane", "province": "Alberta", "population": 32577}, {"name": "Chestermere", "province": "Alberta", "population": 22247}, {"name": "Leduc", "province": "Alberta", "population": 34509}, {"name": "Spruce Grove", "province": "Alberta", "population": 37792}, {"name": "St. Albert", "province": "Alberta", "population": 68232}, {"name": "Fort McMurray", "province": "Alberta", "population": 68002}, {"name": "Cold Lake", "province": "Alberta", "population": 15573}, {"name": "Lloydminster", "province": "Alberta/Saskatchewan", "population": 35235}, {"name": "Estevan", "province": "Saskatchewan", "population": 11300}, {"name": "Moose Jaw", "province": "Saskatchewan", "population": 33000}, {"name": "Swift Current", "province": "Saskatchewan", "population": 16600}, {"name": "Yorkton", "province": "Saskatchewan", "population": 16700}, {"name": "Prince Albert", "province": "Saskatchewan", "population": 37300}, {"name": "North Battleford", "province": "Saskatchewan", "population": 13700}, {"name": "Selkirk", "province": "Manitoba", "population": 10600}, {"name": "Steinbach", "province": "Manitoba", "population": 17000}, {"name": "Brandon", "province": "Manitoba", "population": 51313}, {"name": "Portage la Prairie", "province": "Manitoba", "population": 13800}, {"name": "Thompson", "province": "Manitoba", "population": 13200}, {"name": "Flin Flon", "province": "Manitoba", "population": 4900}, {"name": "Winnipeg", "province": "Manitoba", "population": 749607}, {"name": "Dauphin", "province": "Manitoba", "population": 8500}, {"name": "Morden", "province": "Manitoba", "population": 9000}, {"name": "Winkler", "province": "Manitoba", "population": 13000}, {"name": "Kenora", "province": "Ontario", "population": 15000}, {"name": "Dryden", "province": "Ontario", "population": 7900}, {"name": "Sarnia", "province": "Ontario", "population": 71594}, {"name": "Windsor", "province": "Ontario", "population": 229660}, {"name": "London", "province": "Ontario", "population": 422324}, {"name": "Woodstock", "province": "Ontario", "population": 41000}, {"name": "Stratford", "province": "Ontario", "population": 32000}, {"name": "Ingersoll", "province": "Ontario", "population": 14000}, {"name": "Tillsonburg", "province": "Ontario", "population": 16000}, {"name": "Simcoe", "province": "Ontario", "population": 16000}, {"name": "Norfolk", "province": "Ontario", "population": 65000}, {"name": "Milton", "province": "Ontario", "population": 132979}, {"name": "Newmarket", "province": "Ontario", "population": 87942}, {"name": "Aurora", "province": "Ontario", "population": 62057}, {"name": "Kingston", "province": "Ontario", "population": 123798}, {"name": "Belleville", "province": "Ontario", "population": 55800}, {"name": "Quinte West", "province": "Ontario", "population": 43000}, {"name": "Cobourg", "province": "Ontario", "population": 19500}, {"name": "Port Hope", "province": "Ontario", "population": 16700}, {"name": "Peterborough", "province": "Ontario", "population": 84387}, {"name": "Kawartha Lakes", "province": "Ontario", "population": 79000}, {"name": "Orillia", "province": "Ontario", "population": 33000}, {"name": "Midland", "province": "Ontario", "population": 18000}, {"name": "Collingwood", "province": "Ontario", "population": 24500}, {"name": "Wasaga Beach", "province": "Ontario", "population": 24000}, {"name": "Bradford", "province": "Ontario", "population": 35000}, {"name": "Orangeville", "province": "Ontario", "population": 34000}, {"name": "Caledon", "province": "Ontario", "population": 76000}, {"name": "Brockville", "province": "Ontario", "population": 21000}, {"name": "Cornwall", "province": "Ontario", "population": 47000}, {"name": "Pembroke", "province": "Ontario", "population": 14000}, {"name": "Renfrew", "province": "Ontario", "population": 9000}, {"name": "Ottawa", "province": "Ontario", "population": 1017449}, {"name": "Carleton Place", "province": "Ontario", "population": 42000}, {"name": "Arnprior", "province": "Ontario", "population": 9000}, {"name": "Valleyfield", "province": "Quebec", "population": 42000}, {"name": "Drummondville", "province": "Quebec", "population": 79705}, {"name": "Victoriaville", "province": "Quebec", "population": 49000}, {"name": "Thetford Mines", "province": "Quebec", "population": 26000}, {"name": "Rimouski", "province": "Quebec", "population": 49900}, {"name": "Rivière-du-Loup", "province": "Quebec", "population": 35000}, {"name": "Baie-Comeau", "province": "Quebec", "population": 23000}, {"name": "Sept-Îles", "province": "Quebec", "population": 25000}, {"name": "Matane", "province": "Quebec", "population": 13000}, {"name": "Gaspé", "province": "Quebec", "population": 15000}, {"name": "Rouyn-Noranda", "province": "Quebec", "population": 43000}, {"name": "Val-d'Or", "province": "Quebec", "population": 33000}, {"name": "Amos", "province": "Quebec", "population": 13000}, {"name": "Mont-Tremblant", "province": "Quebec", "population": 10000}, {"name": "Joliette", "province": "Quebec", "population": 21000}, {"name": "Saint-Hyacinthe", "province": "Quebec", "population": 58000}, {"name": "Granby", "province": "Quebec", "population": 69000}, {"name": "Boucherville", "province": "Quebec", "population": 42000}, {"name": "Châteauguay", "province": "Quebec", "population": 50000}, {"name": "La Prairie", "province": "Quebec", "population": 26000}, {"name": "Longueuil", "province": "Quebec", "population": 246816}, {"name": "Brossard", "province": "Quebec", "population": 91800}, {"name": "Saint-Jean-sur-Richelieu", "province": "Quebec", "population": 98000}, {"name": "Saint-Jérôme", "province": "Quebec", "population": 80000}, {"name": "Mascouche", "province": "Quebec", "population": 55000}, {"name": "Terrebonne", "province": "Quebec", "population": 119944}, {"name": "Lévis", "province": "Quebec", "population": 149683}, {"name": "Québec City", "province": "Quebec", "population": 549459}, {"name": "L'Ancienne-Lorette", "province": "Quebec", "population": 17000}, {"name": "Shawinigan", "province": "Quebec", "population": 49000}, {"name": "Dolbeau-Mistassini", "province": "Quebec", "population": 14000}, {"name": "Alma", "province": "Quebec", "population": 31000}, {"name": "Roberval", "province": "Quebec", "population": 10000}, {"name": "Bathurst", "province": "New Brunswick", "population": 12000}, {"name": "Miramichi", "province": "New Brunswick", "population": 17000}, {"name": "Dieppe", "province": "New Brunswick", "population": 28114}, {"name": "Riverview", "province": "New Brunswick", "population": 20000}, {"name": "Charlottetown", "province": "Prince Edward Island", "population": 38709}, {"name": "Summerside", "province": "Prince Edward Island", "population": 16000}, {"name": "Sydney", "province": "Nova Scotia", "population": 30015}, {"name": "New Glasgow", "province": "Nova Scotia", "population": 9000}, {"name": "Truro", "province": "Nova Scotia", "population": 13000}, {"name": "Kentville", "province": "Nova Scotia", "population": 7000}, {"name": "Amherst", "province": "Nova Scotia", "population": 9500}, {"name": "Whitehorse", "province": "Yukon", "population": 28000}, {"name": "Yellowknife", "province": "Northwest Territories", "population": 20000}, {"name": "Iqaluit", "province": "Nunavut", "population": 7740}];
+
+const TOTAL_ROUNDS = 5;
+const ROUND_TIME_LIMIT_MS = 30000;
+const SCORE_KM_PER_POINT = 2;
+const canvas = document.getElementById('map');
+const ctx = canvas.getContext('2d');
+const mapWrap = document.getElementById('mapWrap');
+
+const roundPill = document.getElementById('roundPill');
+const totalPill = document.getElementById('totalPill');
+const seedPill = document.getElementById('seedPill');
+const timerPill = document.getElementById('timerPill');
+const targetCityEl = document.getElementById('targetCity');
+const loadingBox = document.getElementById('loadingBox');
+const startBtn = document.getElementById('startBtn');
+const enterSeedStartBtn = document.getElementById('enterSeedStartBtn');
+
+const startOverlay = document.getElementById('startOverlay');
+const roundOverlay = document.getElementById('roundOverlay');
+const finalOverlay = document.getElementById('finalOverlay');
+const seedOverlay = document.getElementById('seedOverlay');
+
+const roundScoreBig = document.getElementById('roundScoreBig');
+const roundResultText = document.getElementById('roundResultText');
+const roundDistanceText = document.getElementById('roundDistanceText');
+const roundResultTitle = document.getElementById('roundResultTitle');
+const finalScoreBig = document.getElementById('finalScoreBig');
+const finalMessage = document.getElementById('finalMessage');
+const summaryBox = document.getElementById('summaryBox');
+const challengeLink = document.getElementById('challengeLink');
+const seedInput = document.getElementById('seedInput');
+const seedError = document.getElementById('seedError');
+const nextRoundBtn = document.getElementById('nextRoundBtn');
+
+const state = {
+  seed: '',
+  rng: null,
+  candidates: [],
+  cities: [],
+  roundIndex: 0,
+  totalScore: 0,
+  results: [],
+  target: null,
+  guessed: false,
+  clickPoint: null,
+  nearestPoint: null,
+  reveal: false,
+  roundDeadline: 0,
+  timerInterval: null,
+  uiMode: 'desktop',
+  map: {
+    baseScale: 1,
+    scale: 1,
+    minScale: 1,
+    maxScale: 18,
+    offsetX: 0,
+    offsetY: 0,
+    bounds: null
+  }
+};
+
+function xmur3(str) {
+  let h = 1779033703 ^ str.length;
+  for (let i = 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+    h = h << 13 | h >>> 19;
+  }
+  return function() {
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    return (h ^= h >>> 16) >>> 0;
+  };
+}
+
+function sfc32(a, b, c, d) {
+  return function() {
+    a >>>= 0; b >>>= 0; c >>>= 0; d >>>= 0;
+    let t = (a + b) | 0;
+    a = b ^ b >>> 9;
+    b = c + (c << 3) | 0;
+    c = (c << 21 | c >>> 11);
+    d = d + 1 | 0;
+    t = t + d | 0;
+    c = c + t | 0;
+    return (t >>> 0) / 4294967296;
+  };
+}
+
+function makeRng(seed) {
+  const seedFn = xmur3(seed);
+  return sfc32(seedFn(), seedFn(), seedFn(), seedFn());
+}
+
+function randomSeed() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let out = '';
+  const arr = new Uint32Array(8);
+  crypto.getRandomValues(arr);
+  for (const v of arr) out += chars[v % chars.length];
+  return out;
+}
+
+function shuffleWithRng(arr, rng) {
+  const copy = arr.slice();
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function normalizeText(s) {
+  return (s || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/gi, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function provinceTokens(province) {
+  return normalizeText(province).split(/\s*\/\s*|\s+/).filter(Boolean);
+}
+
+function detectUiMode() {
+  const coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  const touchPoints = navigator.maxTouchPoints || 0;
+  const narrowViewport = window.innerWidth <= 700;
+  const tabletTouch = window.innerWidth <= 1024 && (coarse || touchPoints > 0);
+  return (narrowViewport || tabletTouch) ? 'mobile' : 'desktop';
+}
+
+function applyUiMode() {
+  state.uiMode = detectUiMode();
+  document.body.classList.toggle('mobile-ui', state.uiMode === 'mobile');
+}
+
+function isMobileLayout() {
+  return state.uiMode === 'mobile';
+}
+
+function projectLonLat(lon, lat) {
+  const bounds = state.map.bounds || getGameplayBounds();
+  return {
+    x: lon - bounds.minLon,
+    y: bounds.maxLat - lat
+  };
+}
+
+function screenToWorld(sx, sy) {
+  return {
+    x: (sx - state.map.offsetX) / state.map.scale,
+    y: (sy - state.map.offsetY) / state.map.scale
+  };
+}
+
+function worldToScreen(wx, wy) {
+  return {
+    x: wx * state.map.scale + state.map.offsetX,
+    y: wy * state.map.scale + state.map.offsetY
+  };
+}
+
+function screenToLonLat(sx, sy) {
+  const p = screenToWorld(sx, sy);
+  const bounds = state.map.bounds || getGameplayBounds();
+  return {
+    lon: p.x + bounds.minLon,
+    lat: bounds.maxLat - p.y
+  };
+}
+
+function normalizeDeltaLon(dlon) {
+  while (dlon > 180) dlon -= 360;
+  while (dlon < -180) dlon += 360;
+  return dlon;
+}
+
+function haversineKm(a, b) {
+  const R = 6371;
+  const toRad = deg => deg * Math.PI / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLon = toRad(normalizeDeltaLon(b.lon - a.lon));
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const sin1 = Math.sin(dLat / 2);
+  const sin2 = Math.sin(dLon / 2);
+  const h = sin1 * sin1 + Math.cos(lat1) * Math.cos(lat2) * sin2 * sin2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+function bearingDegrees(from, to) {
+  const toRad = deg => deg * Math.PI / 180;
+  const toDeg = rad => rad * 180 / Math.PI;
+  const lat1 = toRad(from.lat), lat2 = toRad(to.lat);
+  const dLon = toRad(normalizeDeltaLon(to.lon - from.lon));
+  const y = Math.sin(dLon) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+
+function destinationPoint(from, bearingDeg, distanceKm) {
+  const R = 6371;
+  const toRad = deg => deg * Math.PI / 180;
+  const toDeg = rad => rad * 180 / Math.PI;
+  const ang = distanceKm / R;
+  const br = toRad(bearingDeg);
+  const lat1 = toRad(from.lat);
+  const lon1 = toRad(from.lon);
+
+  const lat2 = Math.asin(Math.sin(lat1) * Math.cos(ang) + Math.cos(lat1) * Math.sin(ang) * Math.cos(br));
+  const lon2 = lon1 + Math.atan2(Math.sin(br) * Math.sin(ang) * Math.cos(lat1), Math.cos(ang) - Math.sin(lat1) * Math.sin(lat2));
+  let lon = ((toDeg(lon2) + 540) % 360) - 180;
+  return { lon, lat: toDeg(lat2) };
+}
+
+function pointInRing(point, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1];
+    const xj = ring[j][0], yj = ring[j][1];
+    const intersects = ((yi > point.lat) !== (yj > point.lat)) &&
+      (point.lon < (xj - xi) * (point.lat - yi) / ((yj - yi) || 1e-12) + xi);
+    if (intersects) inside = !inside;
+  }
+  return inside;
+}
+
+function pointInPolygonWithHoles(point, rings) {
+  if (!pointInRing(point, rings[0])) return false;
+  for (let i = 1; i < rings.length; i++) {
+    if (pointInRing(point, rings[i])) return false;
+  }
+  return true;
+}
+
+function pointInCanada(point) {
+  for (const poly of CANADA.polygons) {
+    if (pointInPolygonWithHoles(point, poly)) return true;
+  }
+  return false;
+}
+
+function getCityRadiusKm(city) {
+  const pop = Math.max(1000, city.population || 1000);
+  return Math.max(12, Math.min(45, 10 + Math.log10(pop) * 5.8));
+}
+
+function nearestPointOnCityArea(point, city) {
+  const center = { lon: city.lon, lat: city.lat };
+  const radiusKm = city.radiusKm;
+  const centerDistance = haversineKm(point, center);
+  if (centerDistance <= radiusKm) return { lon: point.lon, lat: point.lat, distanceKm: 0 };
+  const bearing = bearingDegrees(center, point);
+  const nearest = destinationPoint(center, bearing, radiusKm);
+  return { lon: nearest.lon, lat: nearest.lat, distanceKm: centerDistance - radiusKm };
+}
+
+function getCanadaBounds() {
+  let minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
+  for (const poly of CANADA.polygons) {
+    for (const ring of poly) {
+      for (const pt of ring) {
+        minLon = Math.min(minLon, pt[0]);
+        maxLon = Math.max(maxLon, pt[0]);
+        minLat = Math.min(minLat, pt[1]);
+        maxLat = Math.max(maxLat, pt[1]);
+      }
+    }
+  }
+  return { minLon, maxLon, minLat, maxLat };
+}
+
+function getGameplayBounds() {
+  const base = getCanadaBounds();
+  const mobile = isMobileLayout();
+  const portrait = window.matchMedia('(orientation: portrait)').matches;
+
+  const width = base.maxLon - base.minLon;
+  const height = base.maxLat - base.minLat;
+
+  let padX = width * 0.028;
+  let padTop = height * 0.025;
+  let padBottom = height * 0.05;
+
+  if (mobile && portrait) {
+    padX = width * 0.075;
+    padTop = height * 0.065;
+    padBottom = height * 0.16;
+  } else if (mobile) {
+    padX = width * 0.055;
+    padTop = height * 0.05;
+    padBottom = height * 0.11;
+  }
+
+  return {
+    minLon: base.minLon - padX,
+    maxLon: base.maxLon + padX,
+    minLat: Math.max(35, base.minLat - padBottom),
+    maxLat: Math.min(86, base.maxLat + padTop)
+  };
+}
+
+function fitMap() {
+  const bounds = getGameplayBounds();
+  state.map.bounds = bounds;
+  const mobile = isMobileLayout();
+  const shortSide = Math.min(canvas.width, canvas.height);
+  const pad = Math.max(mobile ? 18 : 22, shortSide * (mobile ? 0.03 : 0.028));
+  const boxW = Math.max(1, bounds.maxLon - bounds.minLon);
+  const boxH = Math.max(1, bounds.maxLat - bounds.minLat);
+  const fitScale = Math.min((canvas.width - pad * 2) / boxW, (canvas.height - pad * 2) / boxH);
+  const startScale = fitScale * (mobile ? 1.0 : 1.18);
+  state.map.baseScale = fitScale;
+  state.map.minScale = fitScale * (mobile ? 0.92 : 1.0);
+  state.map.scale = startScale;
+  state.map.maxScale = fitScale * (mobile ? 14 : 16);
+  state.map.offsetX = (canvas.width - boxW * startScale) / 2;
+  state.map.offsetY = (canvas.height - boxH * startScale) / 2;
+}
+
+function resetView() { fitMap(); draw(); }
+
+function resizeCanvas() {
+  applyUiMode();
+  const rect = mapWrap.getBoundingClientRect();
+  const ratio = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  canvas.width = Math.max(1, Math.floor(rect.width * ratio));
+  canvas.height = Math.max(1, Math.floor(rect.height * ratio));
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+  fitMap();
+  draw();
+}
+
+function revealCurrentTarget() {
+  if (!state.target) return;
+  targetCityEl.textContent = state.target.name;
+
+  if (state.uiMode === 'mobile') {
+    const wrapRect = mapWrap.getBoundingClientRect();
+    window.scrollTo(0, window.scrollY + wrapRect.top - 8);
+
+    setTimeout(() => {
+      const hud = document.querySelector('.hudCard');
+      if (!hud) return;
+      const hudRect = hud.getBoundingClientRect();
+      if (hudRect.top < 0 || hudRect.bottom > window.innerHeight) {
+        window.scrollTo(0, window.scrollY + hudRect.top - 16);
+      }
+      hud.classList.add('target-flash');
+      setTimeout(() => hud.classList.remove('target-flash'), 1200);
+    }, 50);
+  }
+}
+
+function applyZoom(clientX, clientY, factor) {
+  const rect = canvas.getBoundingClientRect();
+  const x = (clientX - rect.left) * (canvas.width / rect.width);
+  const y = (clientY - rect.top) * (canvas.height / rect.height);
+  const before = screenToWorld(x, y);
+  state.map.scale = Math.max(state.map.minScale, Math.min(state.map.maxScale, state.map.scale * factor));
+  state.map.offsetX = x - before.x * state.map.scale;
+  state.map.offsetY = y - before.y * state.map.scale;
+  draw();
+}
+
+function drawCanada(fillStyle, strokeStyle = null, lineWidth = 1) {
+  ctx.beginPath();
+  for (const poly of CANADA.polygons) {
+    for (const ring of poly) {
+      for (let i = 0; i < ring.length; i++) {
+        const pt = projectLonLat(ring[i][0], ring[i][1]);
+        if (i === 0) ctx.moveTo(pt.x, pt.y);
+        else ctx.lineTo(pt.x, pt.y);
+      }
+      ctx.closePath();
+    }
+  }
+  ctx.fillStyle = fillStyle;
+  ctx.fill('evenodd');
+  if (strokeStyle) {
+    ctx.strokeStyle = strokeStyle;
+    ctx.lineWidth = lineWidth;
+    ctx.stroke();
+  }
+}
+
+function drawMarker(point, color, size = 7) {
+  if (!point) return;
+  const p = projectLonLat(point.lon, point.lat);
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(255,255,255,.95)';
+  ctx.stroke();
+}
+
+function drawLine(a, b) {
+  if (!a || !b) return;
+  const p1 = projectLonLat(a.lon, a.lat);
+  const p2 = projectLonLat(b.lon, b.lat);
+  ctx.beginPath();
+  ctx.moveTo(p1.x, p1.y);
+  ctx.lineTo(p2.x, p2.y);
+  ctx.lineWidth = 2;
+  ctx.setLineDash([8,6]);
+  ctx.strokeStyle = 'rgba(37,99,235,.9)';
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawCityArea(city, fillStyle, strokeStyle) {
+  if (!city || city.lon == null || city.lat == null) return;
+  const centerPt = projectLonLat(city.lon, city.lat);
+  const east = destinationPoint({ lon: city.lon, lat: city.lat }, 90, city.radiusKm);
+  const edge = projectLonLat(east.lon, east.lat);
+  const r = Math.max(5 / state.map.scale, Math.abs(edge.x - centerPt.x));
+  ctx.beginPath();
+  ctx.arc(centerPt.x, centerPt.y, r, 0, Math.PI * 2);
+  ctx.fillStyle = fillStyle;
+  ctx.fill();
+  ctx.lineWidth = 2 / state.map.scale;
+  ctx.strokeStyle = strokeStyle;
+  ctx.stroke();
+}
+
+function draw() {
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--ocean').trim();
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  ctx.save();
+  ctx.setTransform(state.map.scale,0,0,state.map.scale,state.map.offsetX,state.map.offsetY);
+
+  drawCanada(getComputedStyle(document.documentElement).getPropertyValue('--land').trim(), getComputedStyle(document.documentElement).getPropertyValue('--outline').trim(), 1.2 / state.map.scale);
+
+  if (state.reveal && state.target) {
+    drawCityArea(state.target, 'rgba(22,163,74,.25)', 'rgba(22,163,74,1)');
+    if (state.clickPoint && state.nearestPoint) {
+      drawLine(state.clickPoint, state.nearestPoint);
+      drawMarker(state.nearestPoint, '#2563eb', 6 / state.map.scale);
+      drawMarker(state.clickPoint, '#dc2626', 7 / state.map.scale);
+    }
+  }
+
+  ctx.restore();
+}
+
+function clearRoundTimer() {
+  if (state.timerInterval) {
+    clearInterval(state.timerInterval);
+    state.timerInterval = null;
+  }
+}
+
+function updateTimerDisplay() {
+  const remainingMs = Math.max(0, state.roundDeadline - Date.now());
+  const seconds = (remainingMs / 1000).toFixed(1);
+  timerPill.textContent = `Time: ${seconds}s`;
+  timerPill.style.color = remainingMs <= 5000 ? '#b91c1c' : '';
+  timerPill.style.borderColor = remainingMs <= 5000 ? '#fecaca' : '';
+}
+
+function startRoundTimer() {
+  clearRoundTimer();
+  state.roundDeadline = Date.now() + ROUND_TIME_LIMIT_MS;
+  updateTimerDisplay();
+  state.timerInterval = setInterval(() => {
+    updateTimerDisplay();
+    if (Date.now() >= state.roundDeadline) handleTimeout();
+  }, 100);
+}
+
+function getTargetScreenCenter(city) {
+  if (!city) return { x: canvas.width / 2, y: canvas.height / 2 };
+  const p = worldToScreen(projectLonLat(city.lon, city.lat).x, projectLonLat(city.lon, city.lat).y);
+  return p;
+}
+
+function placeRoundOverlayAwayFromTarget(city) {
+  const center = getTargetScreenCenter(city);
+  roundOverlay.classList.remove('corner-top-left', 'corner-top-right', 'corner-bottom-left', 'corner-bottom-right');
+  const horizontal = center.x > canvas.width / 2 ? 'left' : 'right';
+  const vertical = center.y > canvas.height / 2 ? 'top' : 'bottom';
+  roundOverlay.classList.add(`corner-${vertical}-${horizontal}`);
+}
+
+function setSeed(seed) {
+  state.seed = seed;
+  state.rng = makeRng(seed);
+  seedPill.textContent = 'Seed: ' + seed;
+}
+
+function cacheKeyFor(city) {
+  return `${normalizeText(city.name)}|${normalizeText(city.province)}`;
+}
+
+function readGeoCache() {
+  try {
+    return JSON.parse(localStorage.getItem('canadaCityClickCoordsV1') || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function writeGeoCache(cache) {
+  try { localStorage.setItem('canadaCityClickCoordsV1', JSON.stringify(cache)); } catch {}
+}
+
+async function geocodeCity(city) {
+  const key = cacheKeyFor(city);
+  const cache = readGeoCache();
+  if (cache[key] && Number.isFinite(cache[key].lat) && Number.isFinite(cache[key].lon)) {
+    return { ...city, lat: cache[key].lat, lon: cache[key].lon, radiusKm: getCityRadiusKm(city) };
+  }
+
+  const query = `${city.name}, ${city.province}, Canada`;
+  const url = 'https://geocoding-api.open-meteo.com/v1/search?count=10&language=en&format=json&countryCode=CA&name=' + encodeURIComponent(city.name);
+  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  if (!res.ok) throw new Error('Geocoding request failed');
+  const data = await res.json();
+  const results = Array.isArray(data.results) ? data.results : [];
+  const cityNameNorm = normalizeText(city.name);
+  const provinceNormTokens = provinceTokens(city.province);
+
+  let best = null;
+  let bestScore = -1;
+  for (const result of results) {
+    const resultName = normalizeText(result.name || '');
+    const admin1 = normalizeText(result.admin1 || '');
+    let score = 0;
+    if (resultName === cityNameNorm) score += 10;
+    else if (resultName.includes(cityNameNorm) || cityNameNorm.includes(resultName)) score += 6;
+    if (provinceNormTokens.some(tok => admin1.includes(tok))) score += 10;
+    if ((result.country_code || '').toUpperCase() === 'CA') score += 2;
+    if (score > bestScore) { bestScore = score; best = result; }
+  }
+
+  if (!best || !Number.isFinite(best.latitude) || !Number.isFinite(best.longitude)) {
+    const backupUrl = 'https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&countryCode=CA&name=' + encodeURIComponent(query);
+    const backupRes = await fetch(backupUrl, { headers: { 'Accept': 'application/json' } });
+    const backupData = await backupRes.json();
+    if (Array.isArray(backupData.results) && backupData.results[0]) best = backupData.results[0];
+  }
+
+  if (!best || !Number.isFinite(best.latitude) || !Number.isFinite(best.longitude)) throw new Error('No geocoding match');
+
+  cache[key] = { lat: best.latitude, lon: best.longitude };
+  writeGeoCache(cache);
+  return { ...city, lat: best.latitude, lon: best.longitude, radiusKm: getCityRadiusKm(city) };
+}
+
+async function buildSelectedCities() {
+  const order = shuffleWithRng(CITY_POOL, state.rng);
+  const selected = [];
+  for (const candidate of order) {
+    try {
+      const resolved = await geocodeCity(candidate);
+      if (!pointInCanada({ lon: resolved.lon, lat: resolved.lat })) continue;
+      selected.push(resolved);
+      if (selected.length >= TOTAL_ROUNDS) break;
+    } catch (err) {
+      console.warn('Skipping city', candidate.name, err);
+    }
+  }
+  if (selected.length < TOTAL_ROUNDS) throw new Error('Not enough city locations could be loaded.');
+  return selected;
+}
+
+async function startGame(seed = null) {
+  startBtn.disabled = true;
+  enterSeedStartBtn.disabled = true;
+  loadingBox.classList.add('show');
+  nextRoundBtn.textContent = 'Next Round';
+  try {
+    setSeed(seed || randomSeed());
+    state.candidates = [];
+    state.cities = await buildSelectedCities();
+    state.roundIndex = 0;
+    state.totalScore = 0;
+    state.results = [];
+    state.guessed = false;
+    state.reveal = false;
+    state.clickPoint = null;
+    state.nearestPoint = null;
+    state.target = state.cities[0];
+    updateHeader();
+    hideAllOverlays();
+    revealCurrentTarget();
+    startRoundTimer();
+    draw();
+  } catch (err) {
+    console.error(err);
+    loadingBox.textContent = 'Could not load city locations. Please try again.';
+    loadingBox.classList.add('show');
+    startOverlay.classList.add('show');
+  } finally {
+    startBtn.disabled = false;
+    enterSeedStartBtn.disabled = false;
+  }
+}
+
+function updateHeader() {
+  roundPill.textContent = `Round ${Math.min(state.roundIndex + 1, TOTAL_ROUNDS)} / ${TOTAL_ROUNDS}`;
+  totalPill.textContent = `Total: ${state.totalScore}`;
+  if (state.target && state.roundIndex < TOTAL_ROUNDS) targetCityEl.textContent = state.target.name;
+  updateTimerDisplay();
+}
+
+function hideAllOverlays() {
+  startOverlay.classList.remove('show');
+  roundOverlay.classList.remove('show');
+  finalOverlay.classList.remove('show');
+  seedOverlay.classList.remove('show');
+}
+
+function openSeedOverlay() {
+  seedError.textContent = '';
+  seedInput.value = new URL(window.location.href).searchParams.get('seed') || state.seed || '';
+  seedOverlay.classList.add('show');
+  setTimeout(() => { seedInput.focus(); seedInput.select(); }, 20);
+}
+
+function closeSeedOverlay() {
+  seedOverlay.classList.remove('show');
+  seedError.textContent = '';
+}
+
+function submitSeed() {
+  const seed = seedInput.value.trim();
+  if (!seed) {
+    seedError.textContent = 'Please enter a seed.';
+    seedInput.focus();
+    return;
+  }
+  closeSeedOverlay();
+  startGame(seed);
+}
+
+function handleGuess(lonLat) {
+  if (!state.target || state.guessed || state.reveal) return;
+  clearRoundTimer();
+  state.guessed = true;
+  state.clickPoint = lonLat;
+  const nearest = nearestPointOnCityArea(lonLat, state.target);
+  state.nearestPoint = nearest;
+  state.reveal = true;
+
+  const distanceKm = Math.round(nearest.distanceKm);
+  const score = Math.max(0, 1000 - Math.floor(distanceKm / SCORE_KM_PER_POINT));
+  state.totalScore += score;
+  state.results.push({
+    round: state.roundIndex + 1,
+    city: state.target.name,
+    province: state.target.province,
+    score,
+    distanceKm,
+    clickedInside: distanceKm === 0
+  });
+  updateHeader();
+  draw();
+
+  roundResultTitle.textContent = `Round ${state.roundIndex + 1} Result`;
+  roundScoreBig.textContent = `${score} points`;
+  roundResultText.textContent = distanceKm === 0
+    ? `Nice — you clicked directly on ${state.target.name}.`
+    : `The correct city was ${state.target.name}.`;
+  roundDistanceText.textContent = distanceKm === 0
+    ? 'Distance from city area: 0 km'
+    : `Distance from nearest point on the city area: ${distanceKm.toLocaleString()} km`;
+  nextRoundBtn.textContent = state.roundIndex === TOTAL_ROUNDS - 1 ? 'Show Results' : 'Next Round';
+  placeRoundOverlayAwayFromTarget(state.target);
+  roundOverlay.classList.add('show');
+}
+
+function handleTimeout() {
+  if (!state.target || state.guessed || state.reveal) return;
+  clearRoundTimer();
+  state.guessed = true;
+  state.clickPoint = null;
+  state.nearestPoint = null;
+  state.reveal = true;
+
+  state.results.push({
+    round: state.roundIndex + 1,
+    city: state.target.name,
+    province: state.target.province,
+    score: 0,
+    distanceKm: 0,
+    clickedInside: false,
+    timedOut: true
+  });
+  updateHeader();
+  draw();
+
+  roundResultTitle.textContent = `Round ${state.roundIndex + 1} Result`;
+  roundScoreBig.textContent = '0 points';
+  roundResultText.textContent = `Time ran out. The correct city was ${state.target.name}.`;
+  roundDistanceText.textContent = 'You did not make a guess within 30 seconds.';
+  nextRoundBtn.textContent = state.roundIndex === TOTAL_ROUNDS - 1 ? 'Show Results' : 'Next Round';
+  placeRoundOverlayAwayFromTarget(state.target);
+  roundOverlay.classList.add('show');
+}
+
+function advanceRound() {
+  roundOverlay.classList.remove('show');
+  state.roundIndex += 1;
+  if (state.roundIndex >= TOTAL_ROUNDS) {
+    showFinal();
+    return;
+  }
+  state.target = state.cities[state.roundIndex];
+  state.guessed = false;
+  state.reveal = false;
+  state.clickPoint = null;
+  state.nearestPoint = null;
+  updateHeader();
+  revealCurrentTarget();
+  startRoundTimer();
+  draw();
+}
+
+function showFinal() {
+  clearRoundTimer();
+  finalScoreBig.textContent = `${state.totalScore} / ${TOTAL_ROUNDS * 1000}`;
+  finalMessage.textContent = state.totalScore === TOTAL_ROUNDS * 1000
+    ? 'Perfect score. Absolutely nailed it.'
+    : `You finished with ${state.totalScore.toLocaleString()} points across ${TOTAL_ROUNDS} rounds.`;
+  summaryBox.innerHTML = '';
+  for (const r of state.results) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    const wikiUrl = `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(`${r.city}, ${r.province}`)}`;
+    row.innerHTML = `<div><strong>Round ${r.round}:</strong> <a href="${wikiUrl}" target="_blank" rel="noopener noreferrer">${r.city}</a> <span class="muted">• ${r.timedOut ? 'Timed out' : `${r.distanceKm.toLocaleString()} km away`}</span></div><div><strong>${r.score}</strong></div>`;
+    summaryBox.appendChild(row);
+  }
+  const link = new URL(window.location.href);
+  link.searchParams.set('seed', state.seed);
+  challengeLink.textContent = link.toString();
+  finalOverlay.classList.add('show');
+}
+
+function copyChallenge() {
+  const text = challengeLink.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyLinkBtn');
+    const old = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = old, 1200);
+  }).catch(() => {
+    alert('Copy failed. You can still copy the link manually.');
+  });
+}
+
+function getCanvasEventPos(evt) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (evt.clientX - rect.left) * (canvas.width / rect.width),
+    y: (evt.clientY - rect.top) * (canvas.height / rect.height)
+  };
+}
+
+let dragInfo = null;
+const pointers = new Map();
+let pinchStart = null;
+let movedDuringPointer = false;
+let lastTapTime = 0;
+
+canvas.addEventListener('pointerdown', evt => {
+  canvas.setPointerCapture(evt.pointerId);
+  pointers.set(evt.pointerId, { x: evt.clientX, y: evt.clientY });
+  movedDuringPointer = false;
+  if (pointers.size === 1) {
+    dragInfo = { pointerId: evt.pointerId, startX: evt.clientX, startY: evt.clientY, offsetX: state.map.offsetX, offsetY: state.map.offsetY };
+  } else if (pointers.size === 2) {
+    const pts = [...pointers.values()];
+    pinchStart = { dist: Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y), scale: state.map.scale };
+  }
+});
+
+canvas.addEventListener('pointermove', evt => {
+  if (!pointers.has(evt.pointerId)) return;
+  pointers.set(evt.pointerId, { x: evt.clientX, y: evt.clientY });
+
+  if (pointers.size === 2 && pinchStart) {
+    const pts = [...pointers.values()];
+    const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+    const factor = dist / (pinchStart.dist || dist);
+    const centerX = (pts[0].x + pts[1].x) / 2;
+    const centerY = (pts[0].y + pts[1].y) / 2;
+    const rect = canvas.getBoundingClientRect();
+    const sx = (centerX - rect.left) * (canvas.width / rect.width);
+    const sy = (centerY - rect.top) * (canvas.height / rect.height);
+    const before = screenToWorld(sx, sy);
+    state.map.scale = Math.max(state.map.minScale, Math.min(state.map.maxScale, pinchStart.scale * factor));
+    state.map.offsetX = sx - before.x * state.map.scale;
+    state.map.offsetY = sy - before.y * state.map.scale;
+    movedDuringPointer = true;
+    draw();
+    return;
+  }
+
+  if (dragInfo && dragInfo.pointerId === evt.pointerId && pointers.size === 1) {
+    const dx = evt.clientX - dragInfo.startX;
+    const dy = evt.clientY - dragInfo.startY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) movedDuringPointer = true;
+    state.map.offsetX = dragInfo.offsetX + dx * (canvas.width / canvas.getBoundingClientRect().width);
+    state.map.offsetY = dragInfo.offsetY + dy * (canvas.height / canvas.getBoundingClientRect().height);
+    draw();
+  }
+});
+
+function endPointer(evt) {
+  pointers.delete(evt.pointerId);
+  if (dragInfo && dragInfo.pointerId === evt.pointerId) dragInfo = null;
+  if (pointers.size < 2) pinchStart = null;
+}
+
+canvas.addEventListener('pointerup', evt => {
+  const now = Date.now();
+  const pos = getCanvasEventPos(evt);
+  const isTap = !movedDuringPointer && pointers.size <= 1;
+  endPointer(evt);
+  if (isTap) {
+    if (now - lastTapTime < 300) { resetView(); lastTapTime = 0; return; }
+    lastTapTime = now;
+    if (!state.reveal && !roundOverlay.classList.contains('show') && !finalOverlay.classList.contains('show') && !startOverlay.classList.contains('show')) {
+      handleGuess(screenToLonLat(pos.x, pos.y));
+    }
+  }
+});
+canvas.addEventListener('pointercancel', endPointer);
+
+canvas.addEventListener('wheel', evt => {
+  evt.preventDefault();
+  const factor = evt.deltaY < 0 ? 1.14 : 1 / 1.14;
+  applyZoom(evt.clientX, evt.clientY, factor);
+}, { passive:false });
+
+document.getElementById('startBtn').addEventListener('click', () => {
+  loadingBox.textContent = 'Loading city locations…';
+  const urlSeed = new URL(window.location.href).searchParams.get('seed');
+  startGame(urlSeed || null);
+});
+document.getElementById('enterSeedStartBtn').addEventListener('click', openSeedOverlay);
+document.getElementById('enterSeedFinalBtn').addEventListener('click', openSeedOverlay);
+document.getElementById('playSeedBtn').addEventListener('click', submitSeed);
+document.getElementById('cancelSeedBtn').addEventListener('click', closeSeedOverlay);
+seedInput.addEventListener('keydown', evt => {
+  if (evt.key === 'Enter') submitSeed();
+  if (evt.key === 'Escape') closeSeedOverlay();
+});
+seedOverlay.addEventListener('click', evt => { if (evt.target === seedOverlay) closeSeedOverlay(); });
+document.getElementById('nextRoundBtn').addEventListener('click', advanceRound);
+document.getElementById('copyLinkBtn').addEventListener('click', copyChallenge);
+document.getElementById('playSameSeedBtn').addEventListener('click', () => startGame(state.seed));
+document.getElementById('newGameBtn').addEventListener('click', () => startGame());
+
+const restartBtn = document.getElementById('restartBtn');
+if (restartBtn) {
+  restartBtn.addEventListener('click', () => {
+    clearRoundTimer();
+    timerPill.textContent = 'Time: 30.0s';
+    loadingBox.textContent = 'Loading city locations…';
+    loadingBox.classList.remove('show');
+    startOverlay.classList.add('show');
+    roundOverlay.classList.remove('show');
+    finalOverlay.classList.remove('show');
+    seedOverlay.classList.remove('show');
+    state.reveal = false;
+    draw();
+  });
+}
+
+window.addEventListener('resize', resizeCanvas);
+window.addEventListener('orientationchange', resizeCanvas);
+window.addEventListener('load', resizeCanvas);
+
+resizeCanvas();
+draw();
+
+</script>
+</body>
+</html>
