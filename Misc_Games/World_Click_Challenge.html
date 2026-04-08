@@ -105,6 +105,50 @@
   .resultOverlay.corner-top-right { justify-content:flex-end; align-items:flex-start; }
   .resultOverlay.corner-bottom-left { justify-content:flex-start; align-items:flex-end; }
   .resultOverlay.corner-bottom-right { justify-content:flex-end; align-items:flex-end; }
+  body.mobile-ui .app {
+    height:auto;
+    min-height:100dvh;
+    overflow:visible;
+  }
+  body.mobile-ui {
+    overflow:auto;
+  }
+  body.mobile-ui .mapWrap {
+    min-height:calc(100dvh - 108px);
+  }
+  body.mobile-ui .resultOverlay {
+    padding:0;
+    justify-content:center;
+    align-items:flex-end;
+    background:linear-gradient(to top, rgba(15,23,42,.38), rgba(15,23,42,.10) 34%, rgba(15,23,42,0));
+  }
+  body.mobile-ui .resultOverlay .modal {
+    width:100%;
+    max-width:none;
+    max-height:min(45dvh, 360px);
+    border-radius:20px 20px 0 0;
+    margin:0;
+    padding:18px 16px calc(18px + env(safe-area-inset-bottom));
+    box-shadow:0 -16px 36px rgba(0,0,0,.22);
+  }
+  body.mobile-ui .resultOverlay.corner-top-left,
+  body.mobile-ui .resultOverlay.corner-top-right,
+  body.mobile-ui .resultOverlay.corner-bottom-left,
+  body.mobile-ui .resultOverlay.corner-bottom-right {
+    justify-content:center;
+    align-items:flex-end;
+  }
+  body.mobile-ui .hudCard {
+    max-width:min(92vw, 280px);
+  }
+  body.mobile-ui .hudCard.target-flash {
+    animation:targetPulse 1.2s ease-out 1;
+  }
+  @keyframes targetPulse {
+    0% { transform:translateY(0); box-shadow:var(--shadow); }
+    20% { transform:translateY(0); box-shadow:0 0 0 4px rgba(29,78,216,.15), 0 14px 30px rgba(15,23,42,.18); }
+    100% { transform:translateY(0); box-shadow:var(--shadow); }
+  }
   .modal {
     width:min(92vw, 560px); max-height:88vh; overflow:auto;
     background:#fff; border-radius:24px; box-shadow:0 20px 60px rgba(0,0,0,.24);
@@ -348,6 +392,7 @@ const totalPill = document.getElementById('totalPill');
 const seedPill = document.getElementById('seedPill');
 const timerPill = document.getElementById('timerPill');
 const targetCountryEl = document.getElementById('targetCountry');
+const targetHudCard = targetCountryEl.closest('.hudCard');
 
 const startOverlay = document.getElementById('startOverlay');
 const roundOverlay = document.getElementById('roundOverlay');
@@ -381,6 +426,7 @@ const state = {
   reveal: false,
   roundDeadline: 0,
   timerInterval: null,
+  uiMode: 'desktop',
   map: {
     baseScale: 1,
     scale: 1,
@@ -554,6 +600,46 @@ function nearestPointOnCountry(point, country) {
   return { lon: best.lon, lat: best.lat, distanceKm: bestDist };
 }
 
+function detectUiMode() {
+  const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  const touchPoints = navigator.maxTouchPoints || 0;
+  const smallScreen = Math.min(window.innerWidth, window.innerHeight) <= 900;
+  return (coarse || touchPoints > 0 || smallScreen) ? 'mobile' : 'desktop';
+}
+
+function applyUiMode() {
+  state.uiMode = detectUiMode();
+  document.body.classList.toggle('mobile-ui', state.uiMode === 'mobile');
+}
+
+function revealCurrentTarget(){
+  if(!currentCountry) return;
+  targetCountryEl.textContent = currentCountry.name;
+
+  if(document.body.classList.contains('mobile-ui')){
+    const wrap = document.getElementById('mapWrap');
+
+    // Force immediate jump to map (more reliable than smooth scroll)
+    const rect = wrap.getBoundingClientRect();
+    window.scrollTo(0, window.scrollY + rect.top - 10);
+
+    // Ensure HUD is visible after layout settles
+    setTimeout(()=>{
+      const hud = document.querySelector('.hudCard');
+      if(hud){
+        const hudRect = hud.getBoundingClientRect();
+        if(hudRect.top < 0 || hudRect.bottom > window.innerHeight){
+          window.scrollTo(0, window.scrollY + hudRect.top - 20);
+        }
+        hud.classList.add('target-flash');
+        setTimeout(()=>hud.classList.remove('target-flash'), 1200);
+      }
+    }, 50);
+  }
+}
+  });
+}
+
 function fitMap() {
   const pad = 18;
   const availW = canvas.width - pad * 2;
@@ -572,6 +658,7 @@ function resetView() {
 }
 
 function resizeCanvas() {
+  applyUiMode();
   const rect = mapWrap.getBoundingClientRect();
   const ratio = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
   canvas.width = Math.floor(rect.width * ratio);
@@ -711,8 +798,12 @@ function getCountryScreenCenter(country) {
 }
 
 function placeRoundOverlayAwayFromCountry(country) {
-  const center = getCountryScreenCenter(country);
   roundOverlay.classList.remove('corner-top-left', 'corner-top-right', 'corner-bottom-left', 'corner-bottom-right');
+  if (state.uiMode === 'mobile') {
+    roundOverlay.classList.add('corner-bottom-left');
+    return;
+  }
+  const center = getCountryScreenCenter(country);
   const horizontal = center.x > canvas.width / 2 ? 'left' : 'right';
   const vertical = center.y > canvas.height / 2 ? 'top' : 'bottom';
   roundOverlay.classList.add(`corner-${vertical}-${horizontal}`);
@@ -743,6 +834,7 @@ function startGame(seed = null) {
   hideAllOverlays();
   startRoundTimer();
   draw();
+  revealCurrentTarget();
 }
 
 function updateHeader() {
@@ -866,6 +958,7 @@ function advanceRound() {
   updateHeader();
   startRoundTimer();
   draw();
+  revealCurrentTarget();
 }
 
 function showFinal() {
@@ -1022,6 +1115,7 @@ document.getElementById('copyLinkBtn').addEventListener('click', copyChallenge);
 document.getElementById('playSameSeedBtn').addEventListener('click', () => startGame(state.seed));
 document.getElementById('newGameBtn').addEventListener('click', () => startGame());
 window.addEventListener('resize', resizeCanvas);
+applyUiMode();
 resizeCanvas();
 draw();
 </script>
