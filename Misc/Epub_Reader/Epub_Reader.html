@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Custom Children’s EPUB Library</title>
+<style>
+:root {
+  --bg:#f3f6fb;
+  --panel:#ffffff;
+  --line:#d9e1ee;
+  --text:#1d2a3a;
+  --muted:#617287;
+  --accent:#2c6bed;
+  --accent-soft:#eaf1ff;
+}
+* { box-sizing:border-box; }
+html, body { margin:0; padding:0; height:100%; font-family:Arial, Helvetica, sans-serif; color:var(--text); background:var(--bg); }
+body { display:grid; grid-template-rows:auto 1fr; min-height:100vh; }
+header {
+  background:linear-gradient(180deg,#ffffff 0%, #f8fbff 100%);
+  border-bottom:1px solid var(--line);
+  padding:14px 16px;
+}
+h1 { margin:0 0 6px 0; font-size:1.35rem; }
+.sub { color:var(--muted); font-size:.95rem; line-height:1.4; }
+.layout {
+  min-height:0;
+  display:grid;
+  grid-template-columns:320px 260px 1fr;
+}
+.sidebar, .toc {
+  min-height:0;
+  background:var(--panel);
+  display:flex;
+  flex-direction:column;
+}
+.sidebar { border-right:1px solid var(--line); }
+.toc { border-right:1px solid var(--line); }
+.controls, .toc-head {
+  padding:12px;
+  border-bottom:1px solid var(--line);
+}
+input[type="search"] {
+  width:100%;
+  padding:11px 12px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  font-size:1rem;
+}
+.count, .small-note { color:var(--muted); font-size:.9rem; line-height:1.4; }
+.book-list, .toc-list {
+  overflow:auto;
+  padding:8px;
+}
+.book, .toc-item {
+  width:100%;
+  text-align:left;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:10px 12px;
+  margin:0 0 8px 0;
+  cursor:pointer;
+}
+.book:hover, .book.active, .toc-item:hover {
+  border-color:var(--accent);
+  background:var(--accent-soft);
+}
+.title { font-size:.98rem; font-weight:700; line-height:1.25; }
+.author { color:var(--muted); font-size:.9rem; margin-top:4px; }
+.viewer {
+  min-width:0;
+  min-height:0;
+  display:grid;
+  grid-template-rows:auto 1fr;
+}
+.viewer-top {
+  background:var(--panel);
+  border-bottom:1px solid var(--line);
+  padding:12px 14px;
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.selected-title { font-weight:700; }
+.selected-author { color:var(--muted); margin-top:2px; font-size:.92rem; }
+.actions {
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+button.btn, a.btn {
+  appearance:none;
+  border:1px solid var(--accent);
+  background:var(--accent);
+  color:#fff;
+  text-decoration:none;
+  border-radius:10px;
+  padding:10px 12px;
+  font-size:.95rem;
+  cursor:pointer;
+}
+button.btn.secondary, a.btn.secondary {
+  background:#fff;
+  color:var(--accent);
+}
+.reader-wrap {
+  position:relative;
+  min-height:0;
+  background:#dfe7f3;
+}
+#reader {
+  width:100%;
+  height:100%;
+}
+.empty {
+  height:100%;
+  display:grid;
+  place-items:center;
+  padding:28px;
+}
+.empty-card {
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:24px;
+  max-width:720px;
+}
+.empty-card h2 { margin-top:0; }
+.note { color:var(--muted); line-height:1.45; }
+.range-wrap {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:var(--muted);
+  font-size:.92rem;
+}
+input[type="range"] { width:120px; }
+.toc-item {
+  display:block;
+  text-decoration:none;
+  color:var(--text);
+}
+.toc-depth-1 { margin-left:14px; }
+.toc-depth-2 { margin-left:28px; }
+#errorBox {
+  display:none;
+  margin:10px 14px 0;
+  padding:10px 12px;
+  border:1px solid #f0c8c8;
+  background:#fff2f2;
+  color:#8a2d2d;
+  border-radius:10px;
+}
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns:1fr;
+    grid-template-rows:36vh 24vh 1fr;
+  }
+  .sidebar, .toc {
+    border-right:0;
+    border-bottom:1px solid var(--line);
+  }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Children’s EPUB Library</h1>
+  <div class="sub">This version matches your custom book list and expects those EPUB files to live in an <strong>epubs</strong> folder beside this HTML file. Click a title to load the local EPUB in the browser and show its table of contents.</div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="controls">
+      <input id="search" type="search" placeholder="Search by title or author">
+      <div class="count" id="count"></div>
+      <div class="small-note">Expected folder: <code>epubs/</code></div>
+    </div>
+    <div class="book-list" id="bookList"></div>
+  </aside>
+
+  <aside class="toc">
+    <div class="toc-head">
+      <div><strong>Table of contents</strong></div>
+      <div class="small-note" id="tocNote">Load a book to see its chapters.</div>
+    </div>
+    <div class="toc-list" id="tocList"></div>
+  </aside>
+
+  <main class="viewer">
+    <div class="viewer-top">
+      <div>
+        <div class="selected-title" id="selectedTitle">Select a book</div>
+        <div class="selected-author" id="selectedAuthor">It will load from your local epubs folder.</div>
+      </div>
+      <div class="actions">
+        <button id="prevBtn" class="btn secondary" type="button" disabled>Previous</button>
+        <button id="nextBtn" class="btn secondary" type="button" disabled>Next</button>
+        <div class="range-wrap">
+          <label for="fontSize">Font</label>
+          <input id="fontSize" type="range" min="80" max="160" step="10" value="100">
+          <span id="fontSizeLabel">100%</span>
+        </div>
+        <a id="openFile" class="btn" href="#" target="_blank" rel="noopener noreferrer" style="display:none;">Open EPUB file</a>
+      </div>
+    </div>
+    <div id="errorBox"></div>
+    <div class="reader-wrap" id="readerWrap">
+      <div class="empty" id="emptyState">
+        <div class="empty-card">
+          <h2>Ready to read</h2>
+          <p class="note">This page uses <strong>epub.js</strong> to load local EPUB files in the browser. Put the EPUBs in an <code>epubs</code> folder beside this HTML file, keep the filenames exactly as listed in the package manifest, and then click any title.</p>
+          <p class="note">If you open this as a plain <code>file://</code> page, some browsers may block loading local files. Hosting it on GitHub Pages or any small local web server works best.</p>
+        </div>
+      </div>
+      <div id="reader" style="display:none;"></div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/epubjs/dist/epub.min.js"></script>
+<script>
+const books = [{"title": "The House at Pooh Corner", "author": "A. A. Milne", "localFile": "epubs/a-a-milne_the-house-at-pooh-corner.epub"}, {"title": "Winnie the Pooh", "author": "A. A. Milne", "localFile": "epubs/a-a-milne_winnie-the-pooh.epub"}, {"title": "Black Beauty", "author": "Anna Sewell", "localFile": "epubs/anna-sewell_black-beauty.epub"}, {"title": "Short Fiction", "author": "Beatrix Potter", "localFile": "epubs/beatrix-potter_short-fiction.epub"}, {"title": "The Adventures of Pinocchio", "author": "Carlo Collodi", "localFile": "epubs/carlo-collodi_the-adventures-of-pinocchio.epub"}, {"title": "The Enchanted Castle", "author": "E. Nesbit", "localFile": "epubs/e-nesbit_the-enchanted-castle.epub"}, {"title": "The Railway Children", "author": "E. Nesbit", "localFile": "epubs/e-nesbit_the-railway-children.epub"}, {"title": "The Story of the Amulet", "author": "E. Nesbit", "localFile": "epubs/e-nesbit_the-story-of-the-amulet.epub"}, {"title": "Pollyanna Grows Up", "author": "Eleanor H. Porter", "localFile": "epubs/eleanor-h-porter_pollyanna-grows-up.epub"}, {"title": "Pollyanna", "author": "Eleanor H. Porter", "localFile": "epubs/eleanor-h-porter_pollyanna.epub"}, {"title": "Bambi", "author": "Felix Salten", "localFile": "epubs/felix-salten_bambi_whittaker-chambers.epub"}, {"title": "Short Fiction", "author": "George MacDonald", "localFile": "epubs/george-macdonald_short-fiction.epub"}, {"title": "The Princess and the Goblin", "author": "George MacDonald", "localFile": "epubs/george-macdonald_the-princess-and-the-goblin.epub"}, {"title": "The Story of Doctor Dolittle", "author": "Hugh Lofting", "localFile": "epubs/hugh-lofting_the-story-of-doctor-dolittle.epub"}, {"title": "The Voyages of Doctor Dolittle", "author": "Hugh Lofting", "localFile": "epubs/hugh-lofting_the-voyages-of-doctor-dolittle.epub"}, {"title": "Household Tales", "author": "Jacob Grimm & Wilhelm Grimm", "localFile": "epubs/jacob-grimm-wilhelm-grimm_household-tales_margaret-hunt.epub"}, {"title": "The Swiss Family Robinson", "author": "Johann David Wyss", "localFile": "epubs/johann-david-wyss_the-swiss-family-robinson_mary-jane-godwin-william-godwin.epub"}, {"title": "The Wind in the Willows", "author": "Kenneth Grahame", "localFile": "epubs/kenneth-grahame_the-wind-in-the-willows.epub"}, {"title": "Dorothy and the Wizard in Oz", "author": "L. Frank Baum", "localFile": "epubs/l-frank-baum_dorothy-and-the-wizard-in-oz.epub"}, {"title": "Ozma of Oz", "author": "L. Frank Baum", "localFile": "epubs/l-frank-baum_ozma-of-oz.epub"}, {"title": "The Road to Oz", "author": "L. Frank Baum", "localFile": "epubs/l-frank-baum_the-road-to-oz.epub"}, {"title": "Anne of Green Gables", "author": "L. M. Montgomery", "localFile": "epubs/l-m-montgomery_anne-of-green-gables.epub"}, {"title": "Alice’s Adventures in Wonderland", "author": "Lewis Carroll", "localFile": "epubs/lewis-carroll_alices-adventures-in-wonderland_john-tenniel.epub"}, {"title": "Through the Looking-Glass", "author": "Lewis Carroll", "localFile": "epubs/lewis-carroll_through-the-looking-glass_john-tenniel.epub"}, {"title": "The Prince and the Pauper", "author": "Mark Twain", "localFile": "epubs/mark-twain_the-prince-and-the-pauper.epub"}, {"title": "Our Baseball Club and how it Won the Championship", "author": "Noah Brooks", "localFile": "epubs/noah-brooks_our-baseball-club-and-how-it-won-the-championship.epub"}, {"title": "Children’s Stories", "author": "Oscar Wilde", "localFile": "epubs/oscar-wilde_childrens-stories.epub"}, {"title": "Kidnapped", "author": "Robert Louis Stevenson", "localFile": "epubs/robert-louis-stevenson_kidnapped.epub"}, {"title": "Treasure Island", "author": "Robert Louis Stevenson", "localFile": "epubs/robert-louis-stevenson_treasure-island.epub"}, {"title": "Just So Stories", "author": "Rudyard Kipling", "localFile": "epubs/rudyard-kipling_just-so-stories.epub"}];
+
+const searchInput = document.getElementById('search');
+const bookList = document.getElementById('bookList');
+const countEl = document.getElementById('count');
+const selectedTitle = document.getElementById('selectedTitle');
+const selectedAuthor = document.getElementById('selectedAuthor');
+const tocList = document.getElementById('tocList');
+const tocNote = document.getElementById('tocNote');
+const openFile = document.getElementById('openFile');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const readerEl = document.getElementById('reader');
+const emptyState = document.getElementById('emptyState');
+const errorBox = document.getElementById('errorBox');
+const fontSize = document.getElementById('fontSize');
+const fontSizeLabel = document.getElementById('fontSizeLabel');
+
+let filtered = [...books];
+let activeIndex = -1;
+let book = null;
+let rendition = null;
+
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function renderList() {
+  const q = searchInput.value.trim().toLowerCase();
+  filtered = books.filter(book => {
+    const hay = (book.title + " " + book.author).toLowerCase();
+    return hay.includes(q);
+  });
+
+  countEl.textContent = `${filtered.length} book${filtered.length === 1 ? "" : "s"}`;
+  bookList.innerHTML = "";
+
+  filtered.forEach((bookItem, index) => {
+    const btn = document.createElement('button');
+    btn.className = 'book' + (index === activeIndex ? ' active' : '');
+    btn.innerHTML = `
+      <div class="title">${escapeHtml(bookItem.title)}</div>
+      <div class="author">${escapeHtml(bookItem.author)}</div>
+    `;
+    btn.addEventListener('click', () => selectBook(index));
+    bookList.appendChild(btn);
+  });
+
+  if (activeIndex >= filtered.length) {
+    activeIndex = -1;
+  }
+}
+
+function resetReader(message = "") {
+  tocList.innerHTML = "";
+  tocNote.textContent = message || "Load a book to see its chapters.";
+  prevBtn.disabled = true;
+  nextBtn.disabled = true;
+}
+
+function showError(message) {
+  errorBox.style.display = 'block';
+  errorBox.textContent = message;
+}
+
+function clearError() {
+  errorBox.style.display = 'none';
+  errorBox.textContent = '';
+}
+
+function flattenToc(items, depth = 0, result = []) {
+  items.forEach(item => {
+    result.push({ label: item.label || "Untitled", href: item.href, depth });
+    if (item.subitems && item.subitems.length) {
+      flattenToc(item.subitems, depth + 1, result);
+    }
+  });
+  return result;
+}
+
+function renderToc(toc) {
+  tocList.innerHTML = "";
+  const flat = flattenToc(toc || []);
+  if (!flat.length) {
+    tocNote.textContent = "This EPUB didn’t provide a visible table of contents.";
+    return;
+  }
+  tocNote.textContent = `${flat.length} section${flat.length === 1 ? "" : "s"}`;
+  flat.forEach(item => {
+    const a = document.createElement('a');
+    a.href = "#";
+    a.className = `toc-item toc-depth-${Math.min(item.depth, 2)}`;
+    a.textContent = item.label;
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (rendition && item.href) rendition.display(item.href);
+    });
+    tocList.appendChild(a);
+  });
+}
+
+async function selectBook(index) {
+  activeIndex = index;
+  renderList();
+  clearError();
+  resetReader("Loading table of contents...");
+
+  const selected = filtered[index];
+  selectedTitle.textContent = selected.title;
+  selectedAuthor.textContent = `${selected.author} · ${selected.localFile}`;
+  openFile.href = selected.localFile;
+  openFile.style.display = 'inline-flex';
+
+  emptyState.style.display = 'none';
+  readerEl.style.display = 'block';
+
+  try {
+    if (book) {
+      try { book.destroy(); } catch (e) {}
+      book = null;
+    }
+    if (rendition) {
+      try { rendition.destroy(); } catch (e) {}
+      rendition = null;
+    }
+
+    book = ePub(selected.localFile);
+    rendition = book.renderTo("reader", {
+      width: "100%",
+      height: "100%",
+      spread: "auto"
+    });
+
+    rendition.themes.default({
+      "body": {
+        "font-size": fontSize.value + "%",
+        "line-height": "1.5"
+      }
+    });
+
+    await rendition.display();
+
+    prevBtn.disabled = false;
+    nextBtn.disabled = false;
+
+    const navigation = await book.loaded.navigation;
+    renderToc(navigation.toc || []);
+
+  } catch (err) {
+    console.error(err);
+    showError("Couldn’t load this EPUB. Make sure the file exists in the epubs folder and that the page is being served from a web server rather than opened directly as a file.");
+    resetReader("The EPUB couldn’t be loaded.");
+  }
+}
+
+searchInput.addEventListener('input', () => {
+  activeIndex = -1;
+  renderList();
+});
+
+prevBtn.addEventListener('click', () => {
+  if (rendition) rendition.prev();
+});
+
+nextBtn.addEventListener('click', () => {
+  if (rendition) rendition.next();
+});
+
+fontSize.addEventListener('input', () => {
+  fontSizeLabel.textContent = fontSize.value + "%";
+  if (rendition) {
+    rendition.themes.fontSize(fontSize.value + "%");
+  }
+});
+
+fontSizeLabel.textContent = fontSize.value + "%";
+renderList();
+resetReader();
+</script>
+</body>
+</html>
