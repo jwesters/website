@@ -249,7 +249,7 @@ let book = null;
 let rendition = null;
 
 function escapeHtml(text) {
-  return text
+  return String(text)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -259,40 +259,29 @@ function escapeHtml(text) {
 
 function renderList() {
   const q = searchInput.value.trim().toLowerCase();
-  filtered = books.filter(book => {
-    const hay = (book.title + " " + book.author).toLowerCase();
-    return hay.includes(q);
-  });
-
-  countEl.textContent = `${filtered.length} book${filtered.length === 1 ? "" : "s"}`;
-  bookList.innerHTML = "";
-
+  filtered = books.filter(book => (book.title + ' ' + book.author).toLowerCase().includes(q));
+  countEl.textContent = `${filtered.length} book${filtered.length === 1 ? '' : 's'}`;
+  bookList.innerHTML = '';
   filtered.forEach((bookItem, index) => {
     const btn = document.createElement('button');
     btn.className = 'book' + (index === activeIndex ? ' active' : '');
-    btn.innerHTML = `
-      <div class="title">${escapeHtml(bookItem.title)}</div>
-      <div class="author">${escapeHtml(bookItem.author)}</div>
-    `;
+    btn.innerHTML = `<div class="title">${escapeHtml(bookItem.title)}</div><div class="author">${escapeHtml(bookItem.author)}</div>`;
     btn.addEventListener('click', () => selectBook(index));
     bookList.appendChild(btn);
   });
-
-  if (activeIndex >= filtered.length) {
-    activeIndex = -1;
-  }
+  if (activeIndex >= filtered.length) activeIndex = -1;
 }
 
-function resetReader(message = "") {
-  tocList.innerHTML = "";
-  tocNote.textContent = message || "Load a book to see its chapters.";
+function resetReader(message='') {
+  tocList.innerHTML = '';
+  tocNote.textContent = message || 'Load a book to see its chapters.';
   prevBtn.disabled = true;
   nextBtn.disabled = true;
 }
 
 function showError(message) {
   errorBox.style.display = 'block';
-  errorBox.textContent = message;
+  errorBox.innerHTML = message;
 }
 
 function clearError() {
@@ -300,88 +289,127 @@ function clearError() {
   errorBox.textContent = '';
 }
 
+function destroyCurrentBook() {
+  if (book) { try { book.destroy(); } catch (e) {} }
+  if (rendition) { try { rendition.destroy(); } catch (e) {} }
+  book = null;
+  rendition = null;
+  readerEl.innerHTML = '';
+}
+
 function flattenToc(items, depth = 0, result = []) {
-  items.forEach(item => {
-    result.push({ label: item.label || "Untitled", href: item.href, depth });
-    if (item.subitems && item.subitems.length) {
-      flattenToc(item.subitems, depth + 1, result);
-    }
+  (items || []).forEach(item => {
+    result.push({ label: item.label || 'Untitled', href: item.href, depth });
+    if (item.subitems && item.subitems.length) flattenToc(item.subitems, depth + 1, result);
   });
   return result;
 }
 
-function renderToc(toc) {
-  tocList.innerHTML = "";
-  const flat = flattenToc(toc || []);
-  if (!flat.length) {
-    tocNote.textContent = "This EPUB didn’t provide a visible table of contents.";
+function renderSpineFallback(spineItems) {
+  tocList.innerHTML = '';
+  const items = (spineItems || []).map((item, i) => ({
+    label: item.idref || item.href || `Section ${i+1}`,
+    href: item.href || item.idref || null,
+    depth: 0
+  }));
+  if (!items.length) {
+    tocNote.textContent = 'No table of contents was found.';
     return;
   }
-  tocNote.textContent = `${flat.length} section${flat.length === 1 ? "" : "s"}`;
-  flat.forEach(item => {
-    const a = document.createElement('a');
-    a.href = "#";
-    a.className = `toc-item toc-depth-${Math.min(item.depth, 2)}`;
-    a.textContent = item.label;
-    a.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (rendition && item.href) rendition.display(item.href);
-    });
-    tocList.appendChild(a);
+  tocNote.textContent = `Showing ${items.length} section${items.length === 1 ? '' : 's'} from the EPUB spine.`;
+  items.forEach(item => addTocItem(item));
+}
+
+function addTocItem(item) {
+  const a = document.createElement('a');
+  a.href = '#';
+  a.className = `toc-item toc-depth-${Math.min(item.depth || 0, 2)}`;
+  a.textContent = item.label;
+  a.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (rendition && item.href) rendition.display(item.href);
   });
+  tocList.appendChild(a);
+}
+
+function renderToc(toc) {
+  tocList.innerHTML = '';
+  const flat = flattenToc(toc || []);
+  if (!flat.length) return false;
+  tocNote.textContent = `${flat.length} section${flat.length === 1 ? '' : 's'}`;
+  flat.forEach(addTocItem);
+  return true;
+}
+
+async function checkFileExists(url) {
+  try {
+    const resp = await fetch(url, { method: 'GET' });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    return true;
+  } catch (err) {
+    return false;
+  }
 }
 
 async function selectBook(index) {
   activeIndex = index;
   renderList();
   clearError();
-  resetReader("Loading table of contents...");
+  resetReader('Loading table of contents...');
 
   const selected = filtered[index];
   selectedTitle.textContent = selected.title;
   selectedAuthor.textContent = `${selected.author} · ${selected.localFile}`;
   openFile.href = selected.localFile;
   openFile.style.display = 'inline-flex';
-
   emptyState.style.display = 'none';
   readerEl.style.display = 'block';
 
+  destroyCurrentBook();
+
+  const exists = await checkFileExists(selected.localFile);
+  if (!exists) {
+    showError(`Couldn’t find <code>${escapeHtml(selected.localFile)}</code>. Make sure the EPUB file is in your <code>epubs</code> folder and that the filename matches exactly.`);
+    resetReader('The EPUB file could not be found.');
+    return;
+  }
+
   try {
-    if (book) {
-      try { book.destroy(); } catch (e) {}
-      book = null;
-    }
-    if (rendition) {
-      try { rendition.destroy(); } catch (e) {}
-      rendition = null;
-    }
-
     book = ePub(selected.localFile);
-    rendition = book.renderTo("reader", {
-      width: "100%",
-      height: "100%",
-      spread: "auto"
+    rendition = book.renderTo('reader', {
+      width: '100%',
+      height: '100%',
+      spread: 'auto',
+      flow: 'paginated'
     });
 
-    rendition.themes.default({
-      "body": {
-        "font-size": fontSize.value + "%",
-        "line-height": "1.5"
-      }
-    });
+    rendition.themes.fontSize(fontSize.value + '%');
 
+    await book.opened;
     await rendition.display();
 
     prevBtn.disabled = false;
     nextBtn.disabled = false;
 
-    const navigation = await book.loaded.navigation;
-    renderToc(navigation.toc || []);
+    let tocRendered = false;
+    try {
+      const navigation = await book.loaded.navigation;
+      tocRendered = renderToc(navigation && navigation.toc ? navigation.toc : []);
+    } catch (e) {}
 
+    if (!tocRendered) {
+      try {
+        const spine = await book.loaded.spine;
+        const spineItems = spine && spine.items ? spine.items : [];
+        renderSpineFallback(spineItems);
+      } catch (e) {
+        tocNote.textContent = 'No table of contents was found for this book.';
+      }
+    }
   } catch (err) {
     console.error(err);
-    showError("Couldn’t load this EPUB. Make sure the file exists in the epubs folder and that the page is being served from a web server rather than opened directly as a file.");
-    resetReader("The EPUB couldn’t be loaded.");
+    showError('Couldn’t load this EPUB in the browser. If you opened the page directly as a <code>file://</code> file, host it with GitHub Pages or a small local web server instead. Also confirm the EPUB is valid and not blocked by the browser.');
+    resetReader('The EPUB couldn’t be loaded.');
   }
 }
 
@@ -389,23 +417,13 @@ searchInput.addEventListener('input', () => {
   activeIndex = -1;
   renderList();
 });
-
-prevBtn.addEventListener('click', () => {
-  if (rendition) rendition.prev();
-});
-
-nextBtn.addEventListener('click', () => {
-  if (rendition) rendition.next();
-});
-
+prevBtn.addEventListener('click', () => { if (rendition) rendition.prev(); });
+nextBtn.addEventListener('click', () => { if (rendition) rendition.next(); });
 fontSize.addEventListener('input', () => {
-  fontSizeLabel.textContent = fontSize.value + "%";
-  if (rendition) {
-    rendition.themes.fontSize(fontSize.value + "%");
-  }
+  fontSizeLabel.textContent = fontSize.value + '%';
+  if (rendition) rendition.themes.fontSize(fontSize.value + '%');
 });
-
-fontSizeLabel.textContent = fontSize.value + "%";
+fontSizeLabel.textContent = fontSize.value + '%';
 renderList();
 resetReader();
 </script>
