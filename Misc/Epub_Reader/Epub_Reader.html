@@ -341,14 +341,20 @@ function renderToc(toc) {
   return true;
 }
 
-async function checkFileExists(url) {
-  try {
-    const resp = await fetch(url, { method: 'GET' });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    return true;
-  } catch (err) {
-    return false;
+async function fetchEpubBuffer(url) {
+  const resp = await fetch(url, { cache: 'no-store' });
+  if (!resp.ok) {
+    throw new Error(`HTTP ${resp.status}`);
   }
+  return await resp.arrayBuffer();
+}
+
+function withTimeout(promise, ms, label = 'Request') {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${Math.round(ms / 1000)} seconds`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
 async function selectBook(index) {
@@ -367,15 +373,10 @@ async function selectBook(index) {
 
   destroyCurrentBook();
 
-  const exists = await checkFileExists(selected.localFile);
-  if (!exists) {
-    showError(`Couldn’t find <code>${escapeHtml(selected.localFile)}</code>. Make sure the EPUB file is in your <code>epubs</code> folder and that the filename matches exactly.`);
-    resetReader('The EPUB file could not be found.');
-    return;
-  }
-
   try {
-    book = ePub(selected.localFile);
+    const buffer = await withTimeout(fetchEpubBuffer(selected.localFile), 15000, 'EPUB load');
+
+    book = ePub(buffer);
     rendition = book.renderTo('reader', {
       width: '100%',
       height: '100%',
@@ -385,21 +386,21 @@ async function selectBook(index) {
 
     rendition.themes.fontSize(fontSize.value + '%');
 
-    await book.opened;
-    await rendition.display();
+    await withTimeout(book.ready || book.opened, 15000, 'EPUB parsing');
+    await withTimeout(rendition.display(), 15000, 'Initial page render');
 
     prevBtn.disabled = false;
     nextBtn.disabled = false;
 
     let tocRendered = false;
     try {
-      const navigation = await book.loaded.navigation;
+      const navigation = await withTimeout(book.loaded.navigation, 10000, 'TOC load');
       tocRendered = renderToc(navigation && navigation.toc ? navigation.toc : []);
     } catch (e) {}
 
     if (!tocRendered) {
       try {
-        const spine = await book.loaded.spine;
+        const spine = await withTimeout(book.loaded.spine, 10000, 'Spine load');
         const spineItems = spine && spine.items ? spine.items : [];
         renderSpineFallback(spineItems);
       } catch (e) {
@@ -408,8 +409,14 @@ async function selectBook(index) {
     }
   } catch (err) {
     console.error(err);
-    showError('Couldn’t load this EPUB in the browser. If you opened the page directly as a <code>file://</code> file, host it with GitHub Pages or a small local web server instead. Also confirm the EPUB is valid and not blocked by the browser.');
-    resetReader('The EPUB couldn’t be loaded.');
+    const msg = String(err && err.message ? err.message : err);
+    if (msg.startsWith('HTTP 404')) {
+      showError(`Couldn’t find <code>${escapeHtml(selected.localFile)}</code>. Make sure the EPUB file is in your <code>epubs</code> folder and that the filename matches exactly, including capitalization.`);
+      resetReader('The EPUB file could not be found.');
+    } else {
+      showError(`Couldn’t load this EPUB in the browser. Details: <code>${escapeHtml(msg)}</code>. On GitHub Pages, this usually means the EPUB file is malformed, too large/slow, or the browser couldn’t parse the ZIP stream properly. This version now fetches the EPUB into memory first, which fixes the common GitHub Pages issue where clicking the raw file downloads it but epub.js hangs while loading it by URL.`);
+      resetReader('The EPUB couldn’t be loaded.');
+    }
   }
 }
 
