@@ -37,8 +37,15 @@ input[type="search"] { width:100%; padding:11px 12px; border:1px solid var(--lin
 .selected-title { font-weight:700; }
 .selected-author { color:var(--muted); margin-top:2px; font-size:.92rem; }
 .actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-button.btn, a.btn { appearance:none; border:1px solid var(--accent); background:var(--accent); color:#fff; text-decoration:none; border-radius:10px; padding:10px 12px; font-size:.95rem; cursor:pointer; }
-button.btn.secondary, a.btn.secondary { background:#fff; color:var(--accent); }
+button.btn, a.btn, select.btn { appearance:none; border:1px solid var(--accent); background:var(--accent); color:#fff; text-decoration:none; border-radius:10px; padding:10px 12px; font-size:.95rem; cursor:pointer; }
+button.btn.secondary, a.btn.secondary, select.btn.secondary { background:#fff; color:var(--accent); }
+button.btn:disabled { opacity:.55; cursor:not-allowed; }
+.layout.reading-mode { grid-template-columns:1fr; }
+.layout.reading-mode .sidebar, .layout.reading-mode .toc { display:none; }
+.viewer-top .group { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.tts-word-active { text-decoration: underline 3px; text-underline-offset: 3px; background: #fff7c4; border-radius: 3px; }
+.tts-sentence-active { background:#fff7c4; border-radius:4px; }
+.status-pill { color:var(--muted); font-size:.9rem; padding:2px 0; }
 .reader-wrap { position:relative; min-height:0; background:#dfe7f3; overflow:auto; }
 #reader { width:100%; min-height:100%; }
 .empty { height:100%; display:grid; place-items:center; padding:28px; }
@@ -91,10 +98,23 @@ input[type="range"] { width:120px; }
         <div id="selectedAuthor" class="selected-author">Choose a title from the list</div>
       </div>
       <div class="actions">
-        <a id="openFile" class="btn secondary" href="#" target="_blank" rel="noopener" style="display:none;">Open EPUB file</a>
-        <button id="prevBtn" class="btn secondary" disabled>Previous</button>
-        <button id="nextBtn" class="btn secondary" disabled>Next</button>
-        <label class="range-wrap">Text size <input id="fontSize" type="range" min="85" max="150" step="5" value="100"> <span id="fontSizeLabel">100%</span></label>
+        <div class="group">
+          <button id="readingModeBtn" class="btn secondary" type="button">Reading view</button>
+          <button id="fullscreenBtn" class="btn secondary" type="button">Fullscreen</button>
+          <button id="prevBtn" class="btn secondary" disabled>Previous</button>
+          <button id="nextBtn" class="btn secondary" disabled>Next</button>
+        </div>
+        <div class="group">
+          <button id="ttsPlayBtn" class="btn secondary" type="button" disabled>Read aloud</button>
+          <button id="ttsPauseBtn" class="btn secondary" type="button" disabled>Pause</button>
+          <button id="ttsStopBtn" class="btn secondary" type="button" disabled>Stop</button>
+          <label class="range-wrap">Speed <input id="ttsRate" type="range" min="70" max="130" step="5" value="100"> <span id="ttsRateLabel">1.0×</span></label>
+          <select id="ttsVoice" class="btn secondary" title="Voice"></select>
+        </div>
+        <div class="group">
+          <label class="range-wrap">Text size <input id="fontSize" type="range" min="85" max="150" step="5" value="100"> <span id="fontSizeLabel">100%</span></label>
+          <span id="ttsStatus" class="status-pill">Read aloud off</span>
+        </div>
       </div>
     </div>
     <div id="errorBox"></div>
@@ -131,7 +151,6 @@ const selectedTitle = document.getElementById('selectedTitle');
 const selectedAuthor = document.getElementById('selectedAuthor');
 const tocList = document.getElementById('tocList');
 const tocNote = document.getElementById('tocNote');
-const openFile = document.getElementById('openFile');
 const prevBtn = document.getElementById('prevBtn');
 const nextBtn = document.getElementById('nextBtn');
 const readerEl = document.getElementById('reader');
@@ -139,12 +158,29 @@ const emptyState = document.getElementById('emptyState');
 const errorBox = document.getElementById('errorBox');
 const fontSize = document.getElementById('fontSize');
 const fontSizeLabel = document.getElementById('fontSizeLabel');
+const layoutEl = document.querySelector('.layout');
+const readingModeBtn = document.getElementById('readingModeBtn');
+const fullscreenBtn = document.getElementById('fullscreenBtn');
+const ttsPlayBtn = document.getElementById('ttsPlayBtn');
+const ttsPauseBtn = document.getElementById('ttsPauseBtn');
+const ttsStopBtn = document.getElementById('ttsStopBtn');
+const ttsVoice = document.getElementById('ttsVoice');
+const ttsRate = document.getElementById('ttsRate');
+const ttsRateLabel = document.getElementById('ttsRateLabel');
+const ttsStatus = document.getElementById('ttsStatus');
 let filtered = [...books];
 let activeIndex = -1;
 let currentBook = null;
 let currentChapterPath = null;
 let currentSpineIndex = -1;
 let currentAssetUrls = [];
+let currentUtterance = null;
+let currentWordSpans = [];
+let currentSpeechText = '';
+let currentActiveWord = null;
+let speechPaused = false;
+let availableVoices = [];
+let sentenceNodes = [];
 
 function escapeHtml(text) { return String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
 function showError(message) { errorBox.style.display='block'; errorBox.innerHTML=message; }
@@ -166,6 +202,162 @@ function joinPath(base, relative) {
 function splitHref(href) { const [file,frag=''] = String(href||'').split('#'); return {file, frag}; }
 function dataUrlFromBlob(blob) { return URL.createObjectURL(blob); }
 function clearAssetUrls() { currentAssetUrls.forEach(url=>{ try { URL.revokeObjectURL(url); } catch(e) {} }); currentAssetUrls=[]; }
+
+function setReadingMode(on) {
+  layoutEl.classList.toggle('reading-mode', !!on);
+  readingModeBtn.textContent = on ? 'Show library' : 'Reading view';
+}
+function updateFullscreenLabel() {
+  fullscreenBtn.textContent = document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen';
+}
+async function toggleFullscreen() {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else await document.documentElement.requestFullscreen();
+  } catch (e) {}
+  updateFullscreenLabel();
+}
+function clearTtsHighlight() {
+  if (currentActiveWord) currentActiveWord.classList.remove('tts-word-active');
+  currentActiveWord = null;
+  sentenceNodes.forEach(n => n.classList.remove('tts-sentence-active'));
+}
+function stopSpeech(resetPaused=true) {
+  try { window.speechSynthesis.cancel(); } catch(e) {}
+  currentUtterance = null;
+  clearTtsHighlight();
+  if (resetPaused) speechPaused = false;
+  updateTtsButtons();
+}
+function updateTtsButtons() {
+  const hasContent = !!currentSpeechText.trim();
+  const supported = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+  ttsPlayBtn.disabled = !supported || !hasContent;
+  ttsPauseBtn.disabled = !supported || !hasContent || (!currentUtterance && !speechPaused);
+  ttsStopBtn.disabled = !supported || !hasContent || (!currentUtterance && !speechPaused);
+  if (!supported) ttsStatus.textContent = 'Read aloud not supported on this device/browser';
+  else if (speechPaused) ttsStatus.textContent = 'Read aloud paused';
+  else if (currentUtterance) ttsStatus.textContent = 'Reading aloud';
+  else ttsStatus.textContent = hasContent ? 'Read aloud ready' : 'Read aloud off';
+}
+function populateVoices() {
+  if (!('speechSynthesis' in window)) return;
+  const voices = window.speechSynthesis.getVoices() || [];
+  availableVoices = voices.slice().sort((a,b) => (a.lang + a.name).localeCompare(b.lang + b.name));
+  const previous = ttsVoice.value;
+  ttsVoice.innerHTML = '';
+  const auto = document.createElement('option');
+  auto.value = '';
+  auto.textContent = 'Default voice';
+  ttsVoice.appendChild(auto);
+  availableVoices.forEach((voice, idx) => {
+    const opt = document.createElement('option');
+    opt.value = String(idx);
+    const localTag = voice.localService ? 'local' : 'cloud';
+    opt.textContent = `${voice.name} (${voice.lang}, ${localTag})`;
+    ttsVoice.appendChild(opt);
+  });
+  if ([...ttsVoice.options].some(o => o.value === previous)) ttsVoice.value = previous;
+  else {
+    const en = availableVoices.findIndex(v => /^en([-_]|$)/i.test(v.lang));
+    if (en >= 0) ttsVoice.value = String(en);
+  }
+}
+function wrapReadableText(root) {
+  currentWordSpans = [];
+  currentSpeechText = '';
+  sentenceNodes = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+      const parent = node.parentElement;
+      if (!parent) return NodeFilter.FILTER_REJECT;
+      const tag = parent.tagName ? parent.tagName.toLowerCase() : '';
+      if (['script','style','svg','math','noscript'].includes(tag)) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
+  const textNodes = [];
+  while (walker.nextNode()) textNodes.push(walker.currentNode);
+  let globalIndex = 0;
+  for (const node of textNodes) {
+    const text = node.nodeValue || '';
+    currentSpeechText += text;
+    const frag = document.createDocumentFragment();
+    let last = 0;
+    const regex = /\S+/g;
+    let m;
+    while ((m = regex.exec(text)) !== null) {
+      if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)));
+      const span = document.createElement('span');
+      span.className = 'tts-word';
+      span.textContent = m[0];
+      span.dataset.start = String(globalIndex + m.index);
+      span.dataset.end = String(globalIndex + m.index + m[0].length);
+      frag.appendChild(span);
+      currentWordSpans.push(span);
+      last = m.index + m[0].length;
+    }
+    if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+    node.parentNode.replaceChild(frag, node);
+    globalIndex += text.length;
+  }
+  // Basic sentence blocks for fallback highlighting.
+  root.querySelectorAll('p, li, h1, h2, h3, h4, h5, h6, blockquote').forEach(el => sentenceNodes.push(el));
+}
+function highlightSentenceByWord(span) {
+  sentenceNodes.forEach(n => n.classList.remove('tts-sentence-active'));
+  const block = span ? span.closest('p, li, h1, h2, h3, h4, h5, h6, blockquote') : null;
+  if (block) block.classList.add('tts-sentence-active');
+}
+function highlightWordAtChar(charIndex) {
+  if (!currentWordSpans.length) return;
+  let match = null;
+  for (const span of currentWordSpans) {
+    const start = Number(span.dataset.start);
+    const end = Number(span.dataset.end);
+    if (charIndex >= start && charIndex < end) { match = span; break; }
+  }
+  if (!match) {
+    for (let i = currentWordSpans.length - 1; i >= 0; i--) {
+      const span = currentWordSpans[i];
+      if (charIndex >= Number(span.dataset.start)) { match = span; break; }
+    }
+  }
+  if (match && match !== currentActiveWord) {
+    if (currentActiveWord) currentActiveWord.classList.remove('tts-word-active');
+    currentActiveWord = match;
+    currentActiveWord.classList.add('tts-word-active');
+    highlightSentenceByWord(currentActiveWord);
+    currentActiveWord.scrollIntoView({block:'nearest', inline:'nearest'});
+  }
+}
+function selectedVoice() {
+  const idx = ttsVoice.value;
+  if (idx === '' || !availableVoices[Number(idx)]) return null;
+  return availableVoices[Number(idx)];
+}
+function startSpeech(fromStart=false) {
+  if (!('speechSynthesis' in window) || !currentSpeechText.trim()) return;
+  try { window.speechSynthesis.cancel(); } catch(e) {}
+  clearTtsHighlight();
+  const utter = new SpeechSynthesisUtterance(currentSpeechText);
+  utter.rate = Number(ttsRate.value) / 100;
+  const voice = selectedVoice();
+  if (voice) utter.voice = voice;
+  utter.onboundary = (event) => {
+    if (typeof event.charIndex === 'number') highlightWordAtChar(event.charIndex);
+  };
+  utter.onstart = () => { speechPaused = false; currentUtterance = utter; updateTtsButtons(); };
+  utter.onpause = () => { speechPaused = true; updateTtsButtons(); };
+  utter.onresume = () => { speechPaused = false; updateTtsButtons(); };
+  utter.onend = () => { currentUtterance = null; speechPaused = false; clearTtsHighlight(); updateTtsButtons(); };
+  utter.onerror = () => { currentUtterance = null; speechPaused = false; updateTtsButtons(); };
+  currentUtterance = utter;
+  speechPaused = false;
+  window.speechSynthesis.speak(utter);
+  updateTtsButtons();
+}
 
 function renderList() {
   const q = searchInput.value.trim().toLowerCase();
@@ -190,6 +382,8 @@ function resetReader(message='') {
   readerEl.innerHTML = '';
   currentChapterPath = null;
   currentSpineIndex = -1;
+  stopSpeech();
+  updateTtsButtons();
 }
 
 async function fetchArrayBuffer(url) {
@@ -366,8 +560,12 @@ async function displayChapter(targetHref) {
     a.dataset.epubTarget = resolvedFile + (parts.frag ? '#' + parts.frag : '');
   }
 
+  stopSpeech();
   readerEl.innerHTML = `<article class="reader-doc">${body.innerHTML}</article>`;
   readerEl.style.setProperty('--reader-font-size', fontSize.value + '%');
+  const article = readerEl.querySelector('.reader-doc');
+  if (article) wrapReadableText(article);
+  updateTtsButtons();
   readerEl.querySelectorAll('a[data-epub-target]').forEach(a => {
     a.addEventListener('click', ev => { ev.preventDefault(); displayChapter(a.dataset.epubTarget); });
   });
@@ -391,8 +589,6 @@ async function selectBook(index) {
   const selected = filtered[index];
   selectedTitle.textContent = selected.title;
   selectedAuthor.textContent = `${selected.author} · ${selected.localFile}`;
-  openFile.href = selected.localFile;
-  openFile.style.display = 'inline-flex';
   try {
     currentBook = await loadBookFromFile(selected.localFile);
     await renderToc(currentBook);
@@ -405,7 +601,7 @@ async function selectBook(index) {
       showError(`Couldn’t find <code>${escapeHtml(selected.localFile)}</code>. Make sure the EPUB file is in your <code>epubs</code> folder and that the filename matches exactly.`);
       resetReader('The EPUB file could not be found.');
     } else {
-      showError(`Couldn’t load this EPUB in the browser. Details: <code>${escapeHtml(msg)}</code>. This is the v6 file. If you still see the old selector error after uploading this exact file, GitHub Pages or your browser is serving a cached older file.`);
+      showError(`Couldn’t load this EPUB in the browser. Details: <code>${escapeHtml(msg)}</code>. This is the updated local-reader file. If you still see the old selector error after uploading this exact file, GitHub Pages or your browser is serving a cached older file.`);
       resetReader('The EPUB couldn’t be loaded.');
     }
   }
@@ -415,7 +611,30 @@ searchInput.addEventListener('input', () => { activeIndex = -1; renderList(); })
 prevBtn.addEventListener('click', async () => { if (!currentBook || currentSpineIndex <= 0) return; await displayChapter(currentBook.spine[currentSpineIndex - 1].href); });
 nextBtn.addEventListener('click', async () => { if (!currentBook || currentSpineIndex >= currentBook.spine.length - 1) return; await displayChapter(currentBook.spine[currentSpineIndex + 1].href); });
 fontSize.addEventListener('input', () => { fontSizeLabel.textContent = fontSize.value + '%'; readerEl.style.setProperty('--reader-font-size', fontSize.value + '%'); });
+readingModeBtn.addEventListener('click', () => setReadingMode(!layoutEl.classList.contains('reading-mode')));
+fullscreenBtn.addEventListener('click', toggleFullscreen);
+document.addEventListener('fullscreenchange', updateFullscreenLabel);
+ttsRate.addEventListener('input', () => { ttsRateLabel.textContent = (Number(ttsRate.value)/100).toFixed(1) + '×'; if (currentUtterance) startSpeech(true); else updateTtsButtons(); });
+ttsPlayBtn.addEventListener('click', () => {
+  if (!('speechSynthesis' in window)) return;
+  if (speechPaused) { try { window.speechSynthesis.resume(); } catch(e) {} speechPaused = false; updateTtsButtons(); return; }
+  startSpeech(true);
+});
+ttsPauseBtn.addEventListener('click', () => {
+  if (!('speechSynthesis' in window)) return;
+  try { window.speechSynthesis.pause(); speechPaused = true; } catch(e) {}
+  updateTtsButtons();
+});
+ttsStopBtn.addEventListener('click', () => stopSpeech());
+ttsVoice.addEventListener('change', () => { if (currentUtterance || speechPaused) startSpeech(true); });
+if ('speechSynthesis' in window) {
+  populateVoices();
+  window.speechSynthesis.onvoiceschanged = populateVoices;
+}
+ttsRateLabel.textContent = (Number(ttsRate.value)/100).toFixed(1) + '×';
 fontSizeLabel.textContent = fontSize.value + '%';
+updateFullscreenLabel();
+updateTtsButtons();
 renderList();
 resetReader();
 </script>
