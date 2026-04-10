@@ -187,6 +187,34 @@ body.mobile-device { min-height:100dvh; }
   display:inline;
 }
 
+
+.mobile-device .toc {
+  display:none;
+}
+.mobile-device.mobile-book-selected.mobile-show-toc .toc {
+  display:flex;
+}
+.mobile-device.mobile-book-selected .toc {
+  border-bottom:1px solid var(--line);
+}
+.mobile-device:not(.mobile-book-selected) .toc,
+.mobile-device:not(.mobile-book-selected) .toc-head,
+.mobile-device:not(.mobile-book-selected) .toc-list {
+  display:none !important;
+}
+.mobile-device.fullscreen-fallback,
+.mobile-device.fullscreen-fallback body {
+  background:var(--bg);
+}
+.mobile-device.fullscreen-fallback header {
+  display:none !important;
+}
+.mobile-device.fullscreen-fallback .viewer-top {
+  position:sticky;
+  top:0;
+  z-index:20;
+}
+
 @media (max-width: 1100px) {
   .layout { grid-template-columns:1fr; grid-template-rows:minmax(180px, 34vh) minmax(120px, 22vh) minmax(0, 1fr); }
   .sidebar, .toc { border-right:0; border-bottom:1px solid var(--line); }
@@ -279,7 +307,7 @@ body.mobile-device { min-height:100dvh; }
       </div>
       <div id="reader" style="display:none;"></div>
       <div id="mobileReaderDock" class="reader-dock mobile-only compact" style="display:none;">
-        <button id="mobileLibraryBtn" class="btn secondary" type="button">Library</button>
+        <button id="mobileContentsBtn" class="btn secondary" type="button" disabled>Contents</button>
         <button id="mobileControlsToggleBtn" class="btn secondary" type="button">
           <span class="dock-toggle-label-open">Controls</span>
           <span class="dock-toggle-label-close">Hide</span>
@@ -338,7 +366,7 @@ const ttsRateLabel = document.getElementById('ttsRateLabel');
 const ttsStatus = document.getElementById('ttsStatus');
 const mobileReaderDock = document.getElementById('mobileReaderDock');
 const mobileControlsToggleBtn = document.getElementById('mobileControlsToggleBtn');
-const mobileLibraryBtn = document.getElementById('mobileLibraryBtn');
+const mobileContentsBtn = document.getElementById('mobileContentsBtn');
 const mobileTtsPlayBtn = document.getElementById('mobileTtsPlayBtn');
 const mobileTtsPauseBtn = document.getElementById('mobileTtsPauseBtn');
 const mobileTtsStopBtn = document.getElementById('mobileTtsStopBtn');
@@ -360,14 +388,32 @@ let speechPaused = false;
 let availableVoices = [];
 let sentenceNodes = [];
 let isMobileDevice = false;
+let mobileBookSelected = false;
+let mobileShowToc = false;
+let fullscreenFallbackOn = false;
 
 function escapeHtml(text) { return String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
 
 function updateMobileBookUi() {
   const bookOpen = isMobileDevice && !!currentBook;
   document.body.classList.toggle('book-open', bookOpen);
+  document.body.classList.toggle('mobile-book-selected', isMobileDevice && mobileBookSelected);
+  document.body.classList.toggle('mobile-show-toc', isMobileDevice && mobileShowToc && mobileBookSelected);
   viewerTop.classList.toggle('book-open-mobile', bookOpen);
   readerWrap.classList.toggle('book-open-mobile', bookOpen);
+  if (mobileContentsBtn) {
+    mobileContentsBtn.disabled = !(isMobileDevice && mobileBookSelected);
+    mobileContentsBtn.textContent = (isMobileDevice && mobileBookSelected && mobileShowToc) ? 'Hide contents' : 'Contents';
+  }
+}
+function setMobileTocVisible(show) {
+  mobileShowToc = !!show;
+  updateMobileBookUi();
+}
+function setMobileBookSelected(selected) {
+  mobileBookSelected = !!selected;
+  if (!mobileBookSelected) mobileShowToc = false;
+  updateMobileBookUi();
 }
 
 function detectMobileDevice() {
@@ -414,8 +460,19 @@ function focusReaderForMobile() {
 function showLibraryForMobile() {
   if (!isMobileDevice) return;
   mobileReaderDock.classList.remove('expanded');
+  setMobileTocVisible(false);
   setReadingMode(false);
   document.querySelector('.sidebar')?.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function toggleMobileContents() {
+  if (!isMobileDevice || !mobileBookSelected) return;
+  const next = !mobileShowToc;
+  setMobileTocVisible(next);
+  if (next) {
+    document.querySelector('.toc')?.scrollIntoView({behavior:'smooth', block:'start'});
+  } else {
+    readerEl.parentElement.scrollIntoView({behavior:'smooth', block:'start'});
+  }
 }
 
 function showError(message) { errorBox.style.display='block'; errorBox.innerHTML=message; }
@@ -441,15 +498,28 @@ function clearAssetUrls() { currentAssetUrls.forEach(url=>{ try { URL.revokeObje
 function setReadingMode(on) {
   layoutEl.classList.toggle('reading-mode', !!on);
   readingModeBtn.textContent = on ? 'Show library' : 'Reading view';
+  if (isMobileDevice && !on) setMobileTocVisible(false);
 }
 function updateFullscreenLabel() {
-  fullscreenBtn.textContent = document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen';
+  const on = !!document.fullscreenElement || fullscreenFallbackOn;
+  fullscreenBtn.textContent = on ? 'Exit fullscreen' : 'Fullscreen';
 }
 async function toggleFullscreen() {
   try {
-    if (document.fullscreenElement) await document.exitFullscreen();
-    else await document.documentElement.requestFullscreen();
-  } catch (e) {}
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+      fullscreenFallbackOn = false;
+    } else if (document.documentElement.requestFullscreen) {
+      await document.documentElement.requestFullscreen();
+      fullscreenFallbackOn = false;
+    } else {
+      fullscreenFallbackOn = !fullscreenFallbackOn;
+    }
+  } catch (e) {
+    fullscreenFallbackOn = !fullscreenFallbackOn;
+  }
+  document.body.classList.toggle('fullscreen-fallback', fullscreenFallbackOn);
+  if (isMobileDevice && (document.fullscreenElement || fullscreenFallbackOn)) setReadingMode(true);
   updateFullscreenLabel();
 }
 function clearTtsHighlight() {
@@ -620,6 +690,7 @@ function resetReader(message='') {
   currentChapterPath = null;
   currentSpineIndex = -1;
   if (mobileReaderDock) mobileReaderDock.classList.remove('expanded');
+  setMobileBookSelected(false);
   stopSpeech();
   updateTtsButtons();
   updateMobileBookUi();
@@ -742,7 +813,7 @@ function addTocItem(item) {
   a.href = '#';
   a.className = `toc-item toc-depth-${Math.min(item.depth || 0, 2)}`;
   a.textContent = item.label;
-  a.addEventListener('click', (e) => { e.preventDefault(); if (item.href) displayChapter(item.href); });
+  a.addEventListener('click', (e) => { e.preventDefault(); if (item.href) { displayChapter(item.href); if (isMobileDevice) setMobileTocVisible(false); } });
   tocList.appendChild(a);
 }
 
@@ -830,7 +901,8 @@ async function selectBook(index) {
   selectedAuthor.textContent = `${selected.author} · ${selected.localFile}`;
   try {
     currentBook = await loadBookFromFile(selected.localFile);
-    updateMobileBookUi();
+    setMobileBookSelected(true);
+    setMobileTocVisible(isMobileDevice);
     await renderToc(currentBook);
     const first = currentBook.spine[0]?.href;
     if (first) await displayChapter(first); else resetReader('This EPUB has no readable spine items.');
@@ -852,7 +924,7 @@ searchInput.addEventListener('input', () => { activeIndex = -1; renderList(); })
 prevBtn.addEventListener('click', async () => { if (!currentBook || currentSpineIndex <= 0) return; await displayChapter(currentBook.spine[currentSpineIndex - 1].href); });
 nextBtn.addEventListener('click', async () => { if (!currentBook || currentSpineIndex >= currentBook.spine.length - 1) return; await displayChapter(currentBook.spine[currentSpineIndex + 1].href); });
 fontSize.addEventListener('input', () => { fontSizeLabel.textContent = fontSize.value + '%'; readerEl.style.setProperty('--reader-font-size', fontSize.value + '%'); });
-readingModeBtn.addEventListener('click', () => setReadingMode(!layoutEl.classList.contains('reading-mode')));
+readingModeBtn.addEventListener('click', () => { const next = !layoutEl.classList.contains('reading-mode'); setReadingMode(next); if (!next && isMobileDevice) showLibraryForMobile(); });
 fullscreenBtn.addEventListener('click', toggleFullscreen);
 document.addEventListener('fullscreenchange', updateFullscreenLabel);
 ttsRate.addEventListener('input', () => { ttsRateLabel.textContent = (Number(ttsRate.value)/100).toFixed(1) + '×'; syncTtsMirrors(); if (currentUtterance) startSpeech(true); else updateTtsButtons(); });
@@ -873,7 +945,7 @@ if ('speechSynthesis' in window) {
   window.speechSynthesis.onvoiceschanged = populateVoices;
 }
 
-mobileLibraryBtn.addEventListener('click', showLibraryForMobile);
+mobileContentsBtn.addEventListener('click', toggleMobileContents);
 mobileControlsToggleBtn.addEventListener('click', () => {
   mobileReaderDock.classList.toggle('expanded');
 });
