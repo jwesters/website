@@ -122,6 +122,70 @@ body.mobile-device { min-height:100dvh; }
   width:auto;
 }
 .mobile-device .status-pill { width:100%; }
+.mobile-device.book-open header { display:none; }
+.mobile-device .viewer-top.book-open-mobile {
+  padding:6px 8px;
+}
+.mobile-device .viewer-top.book-open-mobile .selected-wrap {
+  display:none;
+}
+.mobile-device .viewer-top.book-open-mobile .group {
+  gap:4px;
+}
+.mobile-device .viewer-top.book-open-mobile button.btn,
+.mobile-device .viewer-top.book-open-mobile a.btn,
+.mobile-device .viewer-top.book-open-mobile select.btn {
+  padding:6px 8px;
+  border-radius:8px;
+  font-size:.78rem;
+}
+.mobile-device .viewer-top.book-open-mobile .range-wrap {
+  font-size:.78rem;
+  gap:4px;
+}
+.mobile-device .viewer-top.book-open-mobile input[type="range"] {
+  width:74px;
+}
+.mobile-device .viewer-top.book-open-mobile .status-pill {
+  display:none;
+}
+.mobile-device .reader-wrap.book-open-mobile {
+  padding-bottom:74px;
+}
+.mobile-device .reader-dock.compact {
+  gap:6px;
+  padding:8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+}
+.mobile-device .reader-dock.compact button.btn,
+.mobile-device .reader-dock.compact a.btn,
+.mobile-device .reader-dock.compact select.btn {
+  padding:6px 8px;
+  border-radius:8px;
+  font-size:.78rem;
+}
+.mobile-device .reader-dock.compact .range-wrap,
+.mobile-device .reader-dock.compact .status-pill {
+  display:none;
+}
+.mobile-dock-panel {
+  display:none;
+  width:100%;
+  gap:6px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+.mobile-device .reader-dock.expanded .mobile-dock-panel {
+  display:flex;
+}
+.mobile-device .reader-dock .dock-toggle-label-close {
+  display:none;
+}
+.mobile-device .reader-dock.expanded .dock-toggle-label-open {
+  display:none;
+}
+.mobile-device .reader-dock.expanded .dock-toggle-label-close {
+  display:inline;
+}
 
 @media (max-width: 1100px) {
   .layout { grid-template-columns:1fr; grid-template-rows:minmax(180px, 34vh) minmax(120px, 22vh) minmax(0, 1fr); }
@@ -181,7 +245,7 @@ body.mobile-device { min-height:100dvh; }
 
   <main class="viewer">
     <div class="viewer-top">
-      <div>
+      <div class="selected-wrap">
         <div id="selectedTitle" class="selected-title">No book selected</div>
         <div id="selectedAuthor" class="selected-author">Choose a title from the list</div>
       </div>
@@ -214,14 +278,20 @@ body.mobile-device { min-height:100dvh; }
         </div>
       </div>
       <div id="reader" style="display:none;"></div>
-      <div id="mobileReaderDock" class="reader-dock mobile-only" style="display:none;">
+      <div id="mobileReaderDock" class="reader-dock mobile-only compact" style="display:none;">
         <button id="mobileLibraryBtn" class="btn secondary" type="button">Library</button>
-        <button id="mobileTtsPlayBtn" class="btn secondary" type="button" disabled>Read aloud</button>
-        <button id="mobileTtsPauseBtn" class="btn secondary" type="button" disabled>Pause</button>
-        <button id="mobileTtsStopBtn" class="btn secondary" type="button" disabled>Stop</button>
-        <label class="range-wrap">Speed <input id="mobileTtsRate" type="range" min="70" max="130" step="5" value="100"> <span id="mobileTtsRateLabel">1.0×</span></label>
-        <select id="mobileTtsVoice" class="btn secondary" title="Voice"></select>
-        <span id="mobileTtsStatus" class="status-pill">Read aloud off</span>
+        <button id="mobileControlsToggleBtn" class="btn secondary" type="button">
+          <span class="dock-toggle-label-open">Controls</span>
+          <span class="dock-toggle-label-close">Hide</span>
+        </button>
+        <div class="mobile-dock-panel">
+          <button id="mobileTtsPlayBtn" class="btn secondary" type="button" disabled>Read</button>
+          <button id="mobileTtsPauseBtn" class="btn secondary" type="button" disabled>Pause</button>
+          <button id="mobileTtsStopBtn" class="btn secondary" type="button" disabled>Stop</button>
+          <label class="range-wrap">Speed <input id="mobileTtsRate" type="range" min="70" max="130" step="5" value="100"> <span id="mobileTtsRateLabel">1.0×</span></label>
+          <select id="mobileTtsVoice" class="btn secondary" title="Voice"></select>
+          <span id="mobileTtsStatus" class="status-pill">Read aloud off</span>
+        </div>
       </div>
     </div>
   </main>
@@ -245,6 +315,7 @@ const searchInput = document.getElementById('search');
 const bookList = document.getElementById('bookList');
 const countEl = document.getElementById('count');
 const selectedTitle = document.getElementById('selectedTitle');
+const viewerTop = document.querySelector('.viewer-top');
 const selectedAuthor = document.getElementById('selectedAuthor');
 const tocList = document.getElementById('tocList');
 const tocNote = document.getElementById('tocNote');
@@ -266,6 +337,7 @@ const ttsRate = document.getElementById('ttsRate');
 const ttsRateLabel = document.getElementById('ttsRateLabel');
 const ttsStatus = document.getElementById('ttsStatus');
 const mobileReaderDock = document.getElementById('mobileReaderDock');
+const mobileControlsToggleBtn = document.getElementById('mobileControlsToggleBtn');
 const mobileLibraryBtn = document.getElementById('mobileLibraryBtn');
 const mobileTtsPlayBtn = document.getElementById('mobileTtsPlayBtn');
 const mobileTtsPauseBtn = document.getElementById('mobileTtsPauseBtn');
@@ -291,6 +363,13 @@ let isMobileDevice = false;
 
 function escapeHtml(text) { return String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
 
+function updateMobileBookUi() {
+  const bookOpen = isMobileDevice && !!currentBook;
+  document.body.classList.toggle('book-open', bookOpen);
+  viewerTop.classList.toggle('book-open-mobile', bookOpen);
+  readerWrap.classList.toggle('book-open-mobile', bookOpen);
+}
+
 function detectMobileDevice() {
   const ua = navigator.userAgent || '';
   const uaMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
@@ -306,8 +385,11 @@ function detectMobileDevice() {
       fontSizeLabel.textContent = '115%';
       readerEl.style.setProperty('--reader-font-size', '115%');
     }
+  } else {
+    mobileReaderDock.classList.remove('expanded');
   }
   syncTtsMirrors();
+  updateMobileBookUi();
 }
 function syncTtsMirrors() {
   if (!mobileTtsRate) return;
@@ -331,6 +413,7 @@ function focusReaderForMobile() {
 }
 function showLibraryForMobile() {
   if (!isMobileDevice) return;
+  mobileReaderDock.classList.remove('expanded');
   setReadingMode(false);
   document.querySelector('.sidebar')?.scrollIntoView({behavior:'smooth', block:'start'});
 }
@@ -536,8 +619,10 @@ function resetReader(message='') {
   readerEl.innerHTML = '';
   currentChapterPath = null;
   currentSpineIndex = -1;
+  if (mobileReaderDock) mobileReaderDock.classList.remove('expanded');
   stopSpeech();
   updateTtsButtons();
+  updateMobileBookUi();
 }
 
 async function fetchArrayBuffer(url) {
@@ -745,6 +830,7 @@ async function selectBook(index) {
   selectedAuthor.textContent = `${selected.author} · ${selected.localFile}`;
   try {
     currentBook = await loadBookFromFile(selected.localFile);
+    updateMobileBookUi();
     await renderToc(currentBook);
     const first = currentBook.spine[0]?.href;
     if (first) await displayChapter(first); else resetReader('This EPUB has no readable spine items.');
@@ -788,6 +874,9 @@ if ('speechSynthesis' in window) {
 }
 
 mobileLibraryBtn.addEventListener('click', showLibraryForMobile);
+mobileControlsToggleBtn.addEventListener('click', () => {
+  mobileReaderDock.classList.toggle('expanded');
+});
 mobileTtsPlayBtn.addEventListener('click', () => ttsPlayBtn.click());
 mobileTtsPauseBtn.addEventListener('click', () => ttsPauseBtn.click());
 mobileTtsStopBtn.addEventListener('click', () => ttsStopBtn.click());
