@@ -215,6 +215,29 @@ body.mobile-device { min-height:100dvh; }
   z-index:20;
 }
 
+.mobile-control-hidden { display:none !important; }
+.mobile-device .hide-until-book { display:none !important; }
+.mobile-device.mobile-book-selected .hide-until-book { display:flex !important; }
+.mobile-device.mobile-book-selected .hide-until-book.inline-flex { display:inline-flex !important; }
+.mobile-device.mobile-book-selected .hide-until-book.block { display:block !important; }
+.mobile-device:not(.mobile-book-selected) #emptyState { display:none !important; }
+.mobile-device:not(.mobile-book-selected) #mobileReaderDock { display:none !important; }
+.mobile-device:not(.mobile-book-selected) #reader { display:none !important; }
+.mobile-device:not(.mobile-book-selected) .viewer-top { display:none !important; }
+.mobile-device .viewer-top .group.mobile-hide { display:none !important; }
+.mobile-device .reader-dock {
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  z-index:40;
+}
+.mobile-device .reader-wrap { padding-bottom:120px; }
+.mobile-device .reader-wrap.book-open-mobile { padding-bottom:120px; }
+.mobile-device .mobile-dock-panel { align-items:flex-start; }
+.mobile-device .mobile-dock-panel .speed-row { width:100%; display:flex; align-items:center; gap:8px; }
+.mobile-device .mobile-dock-panel .speed-row input[type="range"] { flex:1; min-width:120px; }
+
 @media (max-width: 1100px) {
   .layout { grid-template-columns:1fr; grid-template-rows:minmax(180px, 34vh) minmax(120px, 22vh) minmax(0, 1fr); }
   .sidebar, .toc { border-right:0; border-bottom:1px solid var(--line); }
@@ -252,7 +275,7 @@ body.mobile-device { min-height:100dvh; }
 <body>
 <header>
   <h1>Children’s EPUB Library</h1>
-  <div class="sub">This version is standalone for GitHub Pages. It reads local EPUB files from your <strong>epubs</strong> folder without loading epub.js from a CDN.</div>
+  
 </header>
 <div class="layout">
   <aside class="sidebar">
@@ -273,16 +296,16 @@ body.mobile-device { min-height:100dvh; }
 
   <main class="viewer">
     <div class="viewer-top">
-      <div class="selected-wrap">
+      <div class="selected-wrap hide-until-book block">
         <div id="selectedTitle" class="selected-title">No book selected</div>
         <div id="selectedAuthor" class="selected-author">Choose a title from the list</div>
       </div>
       <div class="actions">
         <div class="group">
-          <button id="readingModeBtn" class="btn secondary" type="button">Reading view</button>
-          <button id="fullscreenBtn" class="btn secondary" type="button">Fullscreen</button>
-          <button id="prevBtn" class="btn secondary" disabled>Previous</button>
-          <button id="nextBtn" class="btn secondary" disabled>Next</button>
+          <button id="readingModeBtn" class="btn secondary hide-until-book" type="button">Reading view</button>
+          <button id="fullscreenBtn" class="btn secondary mobile-control-hidden hide-until-book" type="button">Fullscreen</button>
+          <button id="prevBtn" class="btn secondary hide-until-book" disabled>Previous</button>
+          <button id="nextBtn" class="btn secondary hide-until-book" disabled>Next</button>
         </div>
         <div class="group tts-controls desktop-only">
           <button id="ttsPlayBtn" class="btn secondary" type="button" disabled>Read aloud</button>
@@ -316,7 +339,7 @@ body.mobile-device { min-height:100dvh; }
           <button id="mobileTtsPlayBtn" class="btn secondary" type="button" disabled>Read</button>
           <button id="mobileTtsPauseBtn" class="btn secondary" type="button" disabled>Pause</button>
           <button id="mobileTtsStopBtn" class="btn secondary" type="button" disabled>Stop</button>
-          <label class="range-wrap">Speed <input id="mobileTtsRate" type="range" min="70" max="130" step="5" value="100"> <span id="mobileTtsRateLabel">1.0×</span></label>
+          <label class="range-wrap speed-row">Read speed <input id="mobileTtsRate" type="range" min="70" max="130" step="5" value="100"> <span id="mobileTtsRateLabel">1.0×</span></label>
           <select id="mobileTtsVoice" class="btn secondary" title="Voice"></select>
           <span id="mobileTtsStatus" class="status-pill">Read aloud off</span>
         </div>
@@ -405,6 +428,16 @@ function updateMobileBookUi() {
     mobileContentsBtn.disabled = !(isMobileDevice && mobileBookSelected);
     mobileContentsBtn.textContent = (isMobileDevice && mobileBookSelected && mobileShowToc) ? 'Hide contents' : 'Contents';
   }
+  if (mobileReaderDock) {
+    mobileReaderDock.style.display = (isMobileDevice && mobileBookSelected) ? '' : 'none';
+  }
+  if (isMobileDevice) {
+    viewerTop.style.display = mobileBookSelected ? '' : 'none';
+    emptyState.style.display = mobileBookSelected ? 'none' : 'none';
+    readerEl.style.display = mobileBookSelected ? 'block' : 'none';
+  } else {
+    viewerTop.style.display = '';
+  }
 }
 function setMobileTocVisible(show) {
   mobileShowToc = !!show;
@@ -447,7 +480,7 @@ function syncTtsMirrors() {
   mobileTtsStopBtn.disabled = ttsStopBtn.disabled;
   mobileTtsVoice.innerHTML = ttsVoice.innerHTML;
   mobileTtsVoice.value = ttsVoice.value;
-  mobileReaderDock.style.display = isMobileDevice ? '' : 'none';
+  mobileReaderDock.style.display = (isMobileDevice && mobileBookSelected) ? '' : 'none';
 }
 function focusReaderForMobile() {
   if (!isMobileDevice) return;
