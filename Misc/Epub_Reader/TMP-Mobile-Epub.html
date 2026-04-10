@@ -311,7 +311,7 @@ body.mobile-device { min-height:100dvh; }
           <button id="ttsPlayBtn" class="btn secondary" type="button" disabled>Read aloud</button>
           <button id="ttsPauseBtn" class="btn secondary" type="button" disabled>Pause</button>
           <button id="ttsStopBtn" class="btn secondary" type="button" disabled>Stop</button>
-          <label class="range-wrap">Speed <input id="ttsRate" type="range" min="70" max="130" step="5" value="100"> <span id="ttsRateLabel">1.0×</span></label>
+          <label class="range-wrap">Speed <input id="ttsRate" type="range" min="50" max="200" step="25" value="100"> <span id="ttsRateLabel">1.0×</span></label>
           <select id="ttsVoice" class="btn secondary" title="Voice"></select>
         </div>
         <div class="group">
@@ -339,7 +339,7 @@ body.mobile-device { min-height:100dvh; }
           <button id="mobileTtsPlayBtn" class="btn secondary" type="button" disabled>Read</button>
           <button id="mobileTtsPauseBtn" class="btn secondary" type="button" disabled>Pause</button>
           <button id="mobileTtsStopBtn" class="btn secondary" type="button" disabled>Stop</button>
-          <label class="range-wrap speed-row">Read speed <input id="mobileTtsRate" type="range" min="70" max="130" step="5" value="100"> <span id="mobileTtsRateLabel">1.0×</span></label>
+          <button id="mobileTtsSpeedBtn" class="btn secondary" type="button" title="Change read speed">Speed: <span id="mobileTtsRateLabel">1.0×</span></button>
           <select id="mobileTtsVoice" class="btn secondary" title="Voice"></select>
           <span id="mobileTtsStatus" class="status-pill">Read aloud off</span>
         </div>
@@ -394,7 +394,7 @@ const mobileTtsPlayBtn = document.getElementById('mobileTtsPlayBtn');
 const mobileTtsPauseBtn = document.getElementById('mobileTtsPauseBtn');
 const mobileTtsStopBtn = document.getElementById('mobileTtsStopBtn');
 const mobileTtsVoice = document.getElementById('mobileTtsVoice');
-const mobileTtsRate = document.getElementById('mobileTtsRate');
+const mobileTtsSpeedBtn = document.getElementById('mobileTtsSpeedBtn');
 const mobileTtsRateLabel = document.getElementById('mobileTtsRateLabel');
 const mobileTtsStatus = document.getElementById('mobileTtsStatus');
 let filtered = [...books];
@@ -410,6 +410,8 @@ let currentActiveWord = null;
 let speechPaused = false;
 let availableVoices = [];
 let sentenceNodes = [];
+let currentSpeechCharIndex = 0;
+const TTS_RATE_STEPS = [50, 75, 100, 125, 150, 175, 200];
 let isMobileDevice = false;
 let mobileBookSelected = false;
 let mobileShowToc = false;
@@ -471,9 +473,9 @@ function detectMobileDevice() {
   updateMobileBookUi();
 }
 function syncTtsMirrors() {
-  if (!mobileTtsRate) return;
-  mobileTtsRate.value = ttsRate.value;
+  if (!mobileTtsSpeedBtn) return;
   mobileTtsRateLabel.textContent = ttsRateLabel.textContent;
+  mobileTtsSpeedBtn.setAttribute('aria-label', `Read speed ${ttsRateLabel.textContent}`);
   mobileTtsStatus.textContent = ttsStatus.textContent;
   mobileTtsPlayBtn.disabled = ttsPlayBtn.disabled;
   mobileTtsPauseBtn.disabled = ttsPauseBtn.disabled;
@@ -560,10 +562,25 @@ function clearTtsHighlight() {
   currentActiveWord = null;
   sentenceNodes.forEach(n => n.classList.remove('tts-sentence-active'));
 }
+function setTtsRateValue(value) {
+  const bounded = Math.max(50, Math.min(200, Number(value) || 100));
+  ttsRate.value = String(bounded);
+  ttsRateLabel.textContent = (bounded / 100).toFixed(1) + '×';
+  syncTtsMirrors();
+}
+function cycleMobileTtsRate() {
+  const current = Number(ttsRate.value) || 100;
+  const idx = TTS_RATE_STEPS.indexOf(current);
+  const next = TTS_RATE_STEPS[(idx >= 0 ? idx + 1 : 0) % TTS_RATE_STEPS.length];
+  setTtsRateValue(next);
+  if (currentUtterance || speechPaused) restartSpeechFromCurrentPosition();
+  else updateTtsButtons();
+}
 function stopSpeech(resetPaused=true) {
   try { window.speechSynthesis.cancel(); } catch(e) {}
   currentUtterance = null;
   clearTtsHighlight();
+  currentSpeechCharIndex = 0;
   if (resetPaused) speechPaused = false;
   updateTtsButtons();
 }
@@ -677,22 +694,48 @@ function selectedVoice() {
   if (idx === '' || !availableVoices[Number(idx)]) return null;
   return availableVoices[Number(idx)];
 }
-function startSpeech(fromStart=false) {
+function restartSpeechFromCurrentPosition() {
+  const startAt = Math.max(0, Math.min(currentSpeechText.length, currentSpeechCharIndex || 0));
+  startSpeech(startAt);
+}
+function startSpeech(startAt=0) {
   if (!('speechSynthesis' in window) || !currentSpeechText.trim()) return;
+  const safeStart = Math.max(0, Math.min(currentSpeechText.length - 1, Number(startAt) || 0));
   try { window.speechSynthesis.cancel(); } catch(e) {}
   clearTtsHighlight();
-  const utter = new SpeechSynthesisUtterance(currentSpeechText);
+  const speechText = safeStart > 0 ? currentSpeechText.slice(safeStart) : currentSpeechText;
+  currentSpeechCharIndex = safeStart;
+  const utter = new SpeechSynthesisUtterance(speechText);
   utter.rate = Number(ttsRate.value) / 100;
   const voice = selectedVoice();
   if (voice) utter.voice = voice;
   utter.onboundary = (event) => {
-    if (typeof event.charIndex === 'number') highlightWordAtChar(event.charIndex);
+    if (typeof event.charIndex === 'number') {
+      currentSpeechCharIndex = safeStart + event.charIndex;
+      highlightWordAtChar(currentSpeechCharIndex);
+    }
   };
-  utter.onstart = () => { speechPaused = false; currentUtterance = utter; updateTtsButtons(); };
+  utter.onstart = () => {
+    speechPaused = false;
+    currentUtterance = utter;
+    if (safeStart > 0) highlightWordAtChar(safeStart);
+    updateTtsButtons();
+  };
   utter.onpause = () => { speechPaused = true; updateTtsButtons(); };
   utter.onresume = () => { speechPaused = false; updateTtsButtons(); };
-  utter.onend = () => { currentUtterance = null; speechPaused = false; clearTtsHighlight(); updateTtsButtons(); };
-  utter.onerror = () => { currentUtterance = null; speechPaused = false; updateTtsButtons(); };
+  utter.onend = () => {
+    currentUtterance = null;
+    speechPaused = false;
+    currentSpeechCharIndex = 0;
+    clearTtsHighlight();
+    updateTtsButtons();
+  };
+  utter.onerror = () => {
+    currentUtterance = null;
+    speechPaused = false;
+    clearTtsHighlight();
+    updateTtsButtons();
+  };
   currentUtterance = utter;
   speechPaused = false;
   window.speechSynthesis.speak(utter);
@@ -960,11 +1003,15 @@ fontSize.addEventListener('input', () => { fontSizeLabel.textContent = fontSize.
 readingModeBtn.addEventListener('click', () => { const next = !layoutEl.classList.contains('reading-mode'); setReadingMode(next); if (!next && isMobileDevice) showLibraryForMobile(); });
 fullscreenBtn.addEventListener('click', toggleFullscreen);
 document.addEventListener('fullscreenchange', updateFullscreenLabel);
-ttsRate.addEventListener('input', () => { ttsRateLabel.textContent = (Number(ttsRate.value)/100).toFixed(1) + '×'; syncTtsMirrors(); if (currentUtterance) startSpeech(true); else updateTtsButtons(); });
+ttsRate.addEventListener('input', () => {
+  setTtsRateValue(ttsRate.value);
+  if (currentUtterance || speechPaused) restartSpeechFromCurrentPosition();
+  else updateTtsButtons();
+});
 ttsPlayBtn.addEventListener('click', () => {
   if (!('speechSynthesis' in window)) return;
   if (speechPaused) { try { window.speechSynthesis.resume(); } catch(e) {} speechPaused = false; updateTtsButtons(); return; }
-  startSpeech(true);
+  startSpeech(0);
 });
 ttsPauseBtn.addEventListener('click', () => {
   if (!('speechSynthesis' in window)) return;
@@ -972,7 +1019,7 @@ ttsPauseBtn.addEventListener('click', () => {
   updateTtsButtons();
 });
 ttsStopBtn.addEventListener('click', () => stopSpeech());
-ttsVoice.addEventListener('change', () => { if (currentUtterance || speechPaused) startSpeech(true); });
+ttsVoice.addEventListener('change', () => { if (currentUtterance || speechPaused) restartSpeechFromCurrentPosition(); });
 if ('speechSynthesis' in window) {
   populateVoices();
   window.speechSynthesis.onvoiceschanged = populateVoices;
@@ -985,11 +1032,10 @@ mobileControlsToggleBtn.addEventListener('click', () => {
 mobileTtsPlayBtn.addEventListener('click', () => ttsPlayBtn.click());
 mobileTtsPauseBtn.addEventListener('click', () => ttsPauseBtn.click());
 mobileTtsStopBtn.addEventListener('click', () => ttsStopBtn.click());
-mobileTtsRate.addEventListener('input', () => { ttsRate.value = mobileTtsRate.value; ttsRate.dispatchEvent(new Event('input')); });
+mobileTtsSpeedBtn.addEventListener('click', cycleMobileTtsRate);
 mobileTtsVoice.addEventListener('change', () => { ttsVoice.value = mobileTtsVoice.value; ttsVoice.dispatchEvent(new Event('change')); });
 window.addEventListener('resize', detectMobileDevice);
-ttsRateLabel.textContent = (Number(ttsRate.value)/100).toFixed(1) + '×';
-mobileTtsRateLabel.textContent = ttsRateLabel.textContent;
+setTtsRateValue(ttsRate.value);
 fontSizeLabel.textContent = fontSize.value + '%';
 detectMobileDevice();
 updateFullscreenLabel();
