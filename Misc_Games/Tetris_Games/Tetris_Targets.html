@@ -365,6 +365,32 @@
 
   body.is-mobile .sidebar .sideBox:first-child .label:first-of-type{display:none}
 
+
+  .seedModalSection{padding:14px 0;border-top:1px solid #e3ecf4}
+  .seedModalSection:first-of-type{border-top:0;padding-top:0}
+  .seedField{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+  .seedField input{
+    flex:1 1 260px;padding:12px 14px;border-radius:14px;border:1px solid #d7e4ef;
+    background:#fff;color:var(--text);font:inherit;box-shadow:inset 0 1px 0 rgba(255,255,255,.85)
+  }
+  .seedHelp{margin-top:10px;font-size:13px;color:var(--muted);line-height:1.45}
+  .editorWrap{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:start;margin-top:16px}
+  .editorPanel{display:flex;flex-direction:column;gap:12px}
+  .editorSeedBox{padding:14px;border-radius:18px;background:linear-gradient(180deg,#fff,#f2f7fc);border:1px solid #dbe5ef}
+  .editorSeedBox textarea{
+    width:100%;min-height:86px;resize:vertical;padding:12px 14px;border-radius:14px;border:1px solid #d7e4ef;
+    background:#fff;color:var(--text);font:inherit;line-height:1.35
+  }
+  .editorBtnCol{display:flex;flex-direction:column;gap:10px}
+  .editorCanvasWrap{padding:12px;border-radius:22px;background:linear-gradient(180deg,#f9fcff,#eff5fb);border:1px solid #dbe5ef;box-shadow:var(--shadow-soft)}
+  #editorCanvas{display:block;background:linear-gradient(180deg,var(--wellTop),var(--wellBottom));border-radius:18px;touch-action:manipulation}
+  .editorStats{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+  .editorStats .chip{background:#fff}
+  @media (max-width: 760px){
+    .editorWrap{grid-template-columns:1fr}
+    #editorCanvas{width:100%;height:auto}
+  }
+
 </style>
 </head>
 <body>
@@ -404,6 +430,8 @@
         <p class="splashText"></p>
         <div class="splashBtns">
           <button type="button" class="primary" id="splashLevelsBtn" onclick="window.openTargetTetrisLevelSelect && window.openTargetTetrisLevelSelect()">Level Select</button>
+          <button type="button" id="splashSeedBtn">Load Seed / Level Editor</button>
+
         </div>
         <div class="splashHint">Best times save on this device.</div>
       </div>
@@ -515,6 +543,67 @@
         <button class="primary" id="resumeBtn">Resume</button>
         <button id="pauseRestartBtn">Restart Level</button>
         <button id="pauseLevelsBtn">Level Select</button>
+        <button id="pauseMenuBtn">Return to Main Menu</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="overlay hidden" id="seedOverlay">
+    <div class="modal" style="max-width:700px">
+      <div class="modalHead">
+        <div>
+          <h2>Load Seed or Build a Level</h2>
+          <p>Paste a seed to play a custom level, or open the editor to make your own target layout.</p>
+        </div>
+      </div>
+      <div class="seedModalSection">
+        <div class="label">Enter Seed</div>
+        <div class="seedField">
+          <input type="text" id="seedInput" placeholder="Paste a seed here" autocomplete="off" spellcheck="false" />
+          <button type="button" class="primary" id="playSeedBtn">Play Seed</button>
+        </div>
+        <div class="seedHelp" id="seedMessage">Seed format is generated automatically from the level editor.</div>
+      </div>
+      <div class="seedModalSection">
+        <div class="label">Make Your Own Level</div>
+        <div class="btnRow" style="margin-top:12px">
+          <button type="button" id="openEditorBtn">Open Level Editor</button>
+          <button type="button" id="seedReturnBtn">Return to Main Menu</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="editorOverlay">
+    <div class="modal" style="max-width:980px">
+      <div class="modalHead">
+        <div>
+          <h2>Level Editor</h2>
+          <p>Click any cell to add or remove a glowing target. When you are done, generate a seed and use it to replay or share the level.</p>
+        </div>
+      </div>
+      <div class="editorWrap">
+        <div class="editorCanvasWrap">
+          <canvas id="editorCanvas" width="300" height="600" aria-label="Level editor grid"></canvas>
+          <div class="editorStats">
+            <span class="chip" id="editorTargetCount">Targets: 0</span>
+          </div>
+        </div>
+        <div class="editorPanel">
+          <div class="editorSeedBox">
+            <div class="label">Generated Seed</div>
+            <textarea id="editorSeedOutput" readonly placeholder="Your generated seed will appear here"></textarea>
+            <div class="seedHelp" id="editorMessage">Tip: keep at least one target on the board before generating a seed.</div>
+          </div>
+          <div class="editorBtnCol">
+            <button type="button" class="primary" id="generateSeedBtn">Generate Seed</button>
+            <button type="button" id="playEditorSeedBtn">Play This Level</button>
+            <button type="button" id="clearEditorBtn">Clear Grid</button>
+            <button type="button" id="editorBackBtn">Back</button>
+            <button type="button" id="editorReturnBtn">Return to Main Menu</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -527,6 +616,7 @@
   const TOTAL_LEVELS = 250;
   const PAGE_SIZE = 10;
   const STORAGE_KEY = 'target_tetris_progress_v1';
+  const CUSTOM_SEED_PREFIX = 'TTS1';
   const DEFAULT_DROP_MS = 600;
 
   const palette = {
@@ -568,6 +658,24 @@
   const splashOverlay = document.getElementById('splashOverlay');
   const splashStartBtn = document.getElementById('splashStartBtn');
   const splashLevelsBtn = document.getElementById('splashLevelsBtn');
+  const splashSeedBtn = document.getElementById('splashSeedBtn');
+  const seedOverlay = document.getElementById('seedOverlay');
+  const seedInput = document.getElementById('seedInput');
+  const playSeedBtn = document.getElementById('playSeedBtn');
+  const openEditorBtn = document.getElementById('openEditorBtn');
+  const seedReturnBtn = document.getElementById('seedReturnBtn');
+  const seedMessage = document.getElementById('seedMessage');
+  const editorOverlay = document.getElementById('editorOverlay');
+  const editorCanvas = document.getElementById('editorCanvas');
+  const ectx = editorCanvas.getContext('2d');
+  const editorTargetCount = document.getElementById('editorTargetCount');
+  const editorSeedOutput = document.getElementById('editorSeedOutput');
+  const editorMessage = document.getElementById('editorMessage');
+  const generateSeedBtn = document.getElementById('generateSeedBtn');
+  const playEditorSeedBtn = document.getElementById('playEditorSeedBtn');
+  const clearEditorBtn = document.getElementById('clearEditorBtn');
+  const editorBackBtn = document.getElementById('editorBackBtn');
+  const editorReturnBtn = document.getElementById('editorReturnBtn');
   const prevPageBtn = document.getElementById('prevPageBtn');
   const nextPageBtn = document.getElementById('nextPageBtn');
   const resultTag = document.getElementById('resultTag');
@@ -579,6 +687,7 @@
   const resumeBtn = document.getElementById('resumeBtn');
   const pauseRestartBtn = document.getElementById('pauseRestartBtn');
   const pauseLevelsBtn = document.getElementById('pauseLevelsBtn');
+  const pauseMenuBtn = document.getElementById('pauseMenuBtn');
   const mobilePauseBtn = document.getElementById('mobilePauseBtn');
   const mobileLeftBtn = document.getElementById('mobileLeftBtn');
   const mobileRightBtn = document.getElementById('mobileRightBtn');
@@ -623,7 +732,12 @@
     timerMs: 0,
     currentPage: 0,
     audioCtx: null,
-    interacted: false
+    interacted: false,
+    customSeed: null,
+    customTargets: null,
+    customLabel: '',
+    editorTargets: new Set(),
+    currentBestKey: '1'
   };
 
   function makeBoard() {
@@ -662,6 +776,72 @@
     return function spawn() {
       if (!bag.length) {
         bag = makeBag(level, cycle++);
+      }
+      const id = bag.shift();
+      const shape = cloneShape(pieces[id]);
+      return {
+        id,
+        name: shapeNames[id],
+        shape,
+        x: Math.floor((COLS - shape[0].length) / 2),
+        y: 0
+      };
+    };
+  }
+
+
+
+  function hashString(str) {
+    let h = 2166136261 >>> 0;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  function encodeSeedFromTargets(targets) {
+    const rows = Array.from({length: ROWS}, () => Array(COLS).fill(0));
+    targets.forEach(({x, y}) => {
+      if (x >= 0 && x < COLS && y >= 0 && y < ROWS) rows[y][x] = 1;
+    });
+    const encodedRows = rows.map(row => {
+      const bits = row.reduce((acc, cell) => (acc << 1) | (cell ? 1 : 0), 0);
+      return bits.toString(36).padStart(2, '0');
+    });
+    return `${CUSTOM_SEED_PREFIX}-${encodedRows.join('')}`.toUpperCase();
+  }
+
+  function decodeSeed(seed) {
+    if (!seed) return null;
+    const normalized = String(seed).trim().toUpperCase();
+    const parts = normalized.split('-');
+    if (parts.length !== 2 || parts[0] !== CUSTOM_SEED_PREFIX) return null;
+    const body = parts[1];
+    if (body.length !== ROWS * 2) return null;
+    const targets = [];
+    for (let y = 0; y < ROWS; y++) {
+      const chunk = body.slice(y * 2, y * 2 + 2);
+      const value = parseInt(chunk, 36);
+      if (!Number.isFinite(value) || value < 0 || value > 1023) return null;
+      for (let x = 0; x < COLS; x++) {
+        const bit = (value >> (COLS - 1 - x)) & 1;
+        if (bit) targets.push({x, y});
+      }
+    }
+    if (!targets.length) return null;
+    return { seed: normalized, targets };
+  }
+
+  function createSpawnerFromSeed(seedString) {
+    const seedHash = hashString(seedString || '');
+    let bag = [];
+    let cycle = 0;
+    return function spawn() {
+      if (!bag.length) {
+        const rand = seededRandom(seedHash + cycle * 97 + 8128);
+        bag = shuffle([1,2,3,4,5,6,7], rand);
+        cycle++;
       }
       const id = bag.shift();
       const shape = cloneShape(pieces[id]);
@@ -796,7 +976,7 @@
     return Math.max(170, DEFAULT_DROP_MS - Math.floor((level - 1) * 3.5));
   }
 
-  function startLevel(level) {
+  function startLevel(level, options = {}) {
     document.body.classList.add('controls-active');
     state.currentLevel = level;
     state.board = makeBoard();
@@ -808,13 +988,19 @@
     state.won = false;
     state.running = true;
     state.paused = false;
+    state.customSeed = options.customSeed || null;
+    state.customTargets = options.customTargets || null;
+    state.customLabel = options.customLabel || '';
+    state.currentBestKey = state.customSeed ? `seed:${state.customSeed}` : String(level);
 
-    const levelData = buildLevel(level);
+    const levelData = state.customTargets
+      ? { targets: state.customTargets.map(t => ({ x: t.x, y: t.y })) }
+      : buildLevel(level);
     state.targets = new Set(levelData.targets.map(t => targetKey(t.x, t.y)));
     state.totalTargets = state.targets.size;
     state.completedTargets = 0;
 
-    state.spawn = createSpawner(level);
+    state.spawn = state.customSeed ? createSpawnerFromSeed(state.customSeed) : createSpawner(level);
     state.current = state.spawn();
     state.next = state.spawn();
 
@@ -823,13 +1009,24 @@
       state.gameOver = true;
     }
 
-    levelValue.textContent = level;
-    bestTimeValue.textContent = state.bestTimes[level] ? formatTime(state.bestTimes[level]) : '—';
+    levelValue.textContent = state.customLabel || level;
+    bestTimeValue.textContent = state.bestTimes[state.currentBestKey] ? formatTime(state.bestTimes[state.currentBestKey]) : '—';
     updateProgressText();
     drawNext();
     hideResult();
     closeLevelSelect();
+    closeSeedOverlay();
+    closeEditorOverlay();
+    closeSplash();
     requestAnimationFrame(loop);
+  }
+
+  function startSeedLevel(seedString, targets) {
+    startLevel(1, {
+      customSeed: seedString,
+      customTargets: targets,
+      customLabel: 'Seed'
+    });
   }
 
   function updateProgressText() {
@@ -959,39 +1156,39 @@
     return ghost.y - 1;
   }
 
-  function drawCell(x, y, colorTriplet, alpha = 1, scale = 1) {
+  function drawCell(x, y, colorTriplet, alpha = 1, scale = 1, targetCtx = ctx) {
     const px = x * BLOCK;
     const py = y * BLOCK;
     const pad = 2.5 + (1 - scale) * 6;
     const size = BLOCK - pad * 2;
     const radius = 8;
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.shadowBlur = 16;
-    ctx.shadowColor = colorTriplet[1] + '66';
-    const grd = ctx.createLinearGradient(px, py, px, py + BLOCK);
+    targetCtx.save();
+    targetCtx.globalAlpha = alpha;
+    targetCtx.shadowBlur = 16;
+    targetCtx.shadowColor = colorTriplet[1] + '66';
+    const grd = targetCtx.createLinearGradient(px, py, px, py + BLOCK);
     grd.addColorStop(0, colorTriplet[2]);
     grd.addColorStop(.35, colorTriplet[0]);
     grd.addColorStop(1, colorTriplet[1]);
-    roundRect(ctx, px + pad, py + pad, size, size, radius);
-    ctx.fillStyle = grd;
-    ctx.fill();
-    ctx.lineWidth = 1.3;
-    ctx.strokeStyle = 'rgba(255,255,255,.62)';
-    ctx.stroke();
-    ctx.beginPath();
-    roundRect(ctx, px + pad + 2, py + pad + 2, size - 4, Math.max(6, size * .26), radius - 3);
-    const shine = ctx.createLinearGradient(px, py, px, py + size * .5);
+    roundRect(targetCtx, px + pad, py + pad, size, size, radius);
+    targetCtx.fillStyle = grd;
+    targetCtx.fill();
+    targetCtx.lineWidth = 1.3;
+    targetCtx.strokeStyle = 'rgba(255,255,255,.62)';
+    targetCtx.stroke();
+    targetCtx.beginPath();
+    roundRect(targetCtx, px + pad + 2, py + pad + 2, size - 4, Math.max(6, size * .26), radius - 3);
+    const shine = targetCtx.createLinearGradient(px, py, px, py + size * .5);
     shine.addColorStop(0, 'rgba(255,255,255,.55)');
     shine.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = shine;
-    ctx.fill();
-    ctx.beginPath();
-    roundRect(ctx, px + pad + 1.5, py + pad + 1.5, size - 3, size - 3, radius - 2);
-    ctx.strokeStyle = 'rgba(255,255,255,.14)';
-    ctx.lineWidth = .8;
-    ctx.stroke();
-    ctx.restore();
+    targetCtx.fillStyle = shine;
+    targetCtx.fill();
+    targetCtx.beginPath();
+    roundRect(targetCtx, px + pad + 1.5, py + pad + 1.5, size - 3, size - 3, radius - 2);
+    targetCtx.strokeStyle = 'rgba(255,255,255,.14)';
+    targetCtx.lineWidth = .8;
+    targetCtx.stroke();
+    targetCtx.restore();
   }
 
   function roundRect(context, x, y, w, h, r) {
@@ -1233,35 +1430,39 @@
     state.running = false;
     state.won = true;
     playWinSound();
-    const currentBest = state.bestTimes[state.currentLevel];
+    const currentBest = state.bestTimes[state.currentBestKey];
     const newBest = currentBest == null || state.timerMs < currentBest;
-    if (newBest) state.bestTimes[state.currentLevel] = state.timerMs;
+    if (newBest) state.bestTimes[state.currentBestKey] = state.timerMs;
     if (state.currentLevel < TOTAL_LEVELS && state.unlockedLevel < state.currentLevel + 1) {
       state.unlockedLevel = state.currentLevel + 1;
     }
     saveProgress();
-    bestTimeValue.textContent = formatTime(state.bestTimes[state.currentLevel]);
+    bestTimeValue.textContent = formatTime(state.bestTimes[state.currentBestKey]);
 
     showResult({
       tag: newBest ? 'New Best Time' : 'Level Complete',
       title: 'You beat the level!',
       time: formatTime(state.timerMs),
       text: newBest
-        ? `Great run. New best time for Level ${state.currentLevel}.`
-        : `Level ${state.currentLevel} cleared. Best time: ${formatTime(state.bestTimes[state.currentLevel])}.`,
+        ? `Great run. ${state.customSeed ? 'New best time for this seed.' : `New best time for Level ${state.currentLevel}.`}`
+        : `${state.customSeed ? 'Seed cleared.' : `Level ${state.currentLevel} cleared.`} Best time: ${formatTime(state.bestTimes[state.currentBestKey])}.`,
       buttons: [
-        state.currentLevel < state.unlockedLevel && state.currentLevel < TOTAL_LEVELS ? {
+        !state.customSeed && state.currentLevel < state.unlockedLevel && state.currentLevel < TOTAL_LEVELS ? {
           text: 'Next Level',
           primary: true,
           onClick: () => startLevel(state.currentLevel + 1)
         } : null,
         {
           text: 'Replay',
-          onClick: () => startLevel(state.currentLevel)
+          onClick: () => state.customSeed ? startSeedLevel(state.customSeed, state.customTargets) : startLevel(state.currentLevel)
         },
         {
-          text: 'Level Select',
-          onClick: () => openLevelSelect(state.currentLevel)
+          text: state.customSeed ? 'Return to Main Menu' : 'Level Select',
+          onClick: () => state.customSeed ? openSplash() : openLevelSelect(state.currentLevel)
+        },
+        {
+          text: 'Return to Main Menu',
+          onClick: () => openSplash()
         }
       ].filter(Boolean)
     });
@@ -1277,8 +1478,9 @@
       time: formatTime(state.timerMs),
       text: `You ran out of space before covering all ${state.totalTargets} targets.`,
       buttons: [
-        { text: 'Try Again', primary: true, onClick: () => startLevel(state.currentLevel) },
-        { text: 'Level Select', onClick: () => openLevelSelect(state.currentLevel) }
+        { text: 'Try Again', primary: true, onClick: () => state.customSeed ? startSeedLevel(state.customSeed, state.customTargets) : startLevel(state.currentLevel) },
+        { text: state.customSeed ? 'Return to Main Menu' : 'Level Select', onClick: () => state.customSeed ? openSplash() : openLevelSelect(state.currentLevel) },
+        { text: 'Return to Main Menu', onClick: () => openSplash() }
       ]
     });
   }
@@ -1319,6 +1521,8 @@
 
   function closeLevelSelect() {
     levelOverlay.classList.add('hidden');
+    closeSeedOverlay();
+    closeEditorOverlay();
   }
 
   function renderLevelGrid() {
@@ -1360,6 +1564,133 @@
   }
 
 
+
+
+  function setSeedMessage(text, isBad = false) {
+    seedMessage.textContent = text;
+    seedMessage.style.color = isBad ? 'var(--bad)' : 'var(--muted)';
+  }
+
+  function setEditorMessage(text, isBad = false) {
+    editorMessage.textContent = text;
+    editorMessage.style.color = isBad ? 'var(--bad)' : 'var(--muted)';
+  }
+
+  function closeSeedOverlay() {
+    seedOverlay.classList.add('hidden');
+  }
+
+  function openSeedOverlay() {
+    state.running = false;
+    state.paused = false;
+    hideResult();
+    pauseOverlay.classList.add('hidden');
+    levelOverlay.classList.add('hidden');
+    editorOverlay.classList.add('hidden');
+    splashOverlay.classList.add('hidden');
+    closeEditorOverlay();
+    setSeedMessage('Seed format is generated automatically from the level editor.');
+    seedInput.value = state.customSeed || '';
+    seedOverlay.classList.remove('hidden');
+    setTimeout(() => seedInput.focus(), 0);
+  }
+
+  function closeEditorOverlay() {
+    editorOverlay.classList.add('hidden');
+  }
+
+  function renderEditor() {
+    ectx.clearRect(0, 0, editorCanvas.width, editorCanvas.height);
+    ectx.fillStyle = '#f7fbff';
+    ectx.fillRect(0, 0, editorCanvas.width, editorCanvas.height);
+
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        ectx.fillStyle = 'rgba(255,255,255,.9)';
+        ectx.fillRect(x * BLOCK, y * BLOCK, BLOCK, BLOCK);
+        if (state.editorTargets.has(targetKey(x, y))) {
+          drawCell(x, y, [palette[1][0], palette[1][1], palette[1][2]], 1, 0.92, ectx);
+        }
+      }
+    }
+
+    ectx.save();
+    ectx.strokeStyle = 'rgba(198,213,228,.92)';
+    ectx.lineWidth = 1;
+    for (let x = 0; x <= COLS; x++) {
+      ectx.beginPath();
+      ectx.moveTo(x * BLOCK + 0.5, 0);
+      ectx.lineTo(x * BLOCK + 0.5, ROWS * BLOCK);
+      ectx.stroke();
+    }
+    for (let y = 0; y <= ROWS; y++) {
+      ectx.beginPath();
+      ectx.moveTo(0, y * BLOCK + 0.5);
+      ectx.lineTo(COLS * BLOCK, y * BLOCK + 0.5);
+      ectx.stroke();
+    }
+    ectx.restore();
+
+    editorTargetCount.textContent = `Targets: ${state.editorTargets.size}`;
+  }
+
+  function openEditor(prefillTargets = null) {
+    state.running = false;
+    state.paused = false;
+    hideResult();
+    pauseOverlay.classList.add('hidden');
+    levelOverlay.classList.add('hidden');
+    seedOverlay.classList.add('hidden');
+    splashOverlay.classList.add('hidden');
+    state.editorTargets = new Set((prefillTargets || []).map(t => targetKey(t.x, t.y)));
+    editorSeedOutput.value = '';
+    setEditorMessage('Tip: keep at least one target on the board before generating a seed.');
+    renderEditor();
+    editorOverlay.classList.remove('hidden');
+  }
+
+  function getEditorTargets() {
+    return [...state.editorTargets].map(parseKey);
+  }
+
+  function generateEditorSeed(showMessage = true) {
+    const targets = getEditorTargets();
+    if (!targets.length) {
+      editorSeedOutput.value = '';
+      setEditorMessage('Add at least one target before generating a seed.', true);
+      return null;
+    }
+    const seed = encodeSeedFromTargets(targets);
+    editorSeedOutput.value = seed;
+    if (showMessage) setEditorMessage('Seed generated. You can copy it, share it, or play it now.');
+    return { seed, targets };
+  }
+
+  function playSeedFromInput() {
+    const decoded = decodeSeed(seedInput.value);
+    if (!decoded) {
+      setSeedMessage('That seed is not valid. Paste a seed generated by the editor and try again.', true);
+      return;
+    }
+    setSeedMessage('Loading custom seed...');
+    startSeedLevel(decoded.seed, decoded.targets);
+  }
+
+  function handleEditorCanvasPointer(clientX, clientY) {
+    const rect = editorCanvas.getBoundingClientRect();
+    const scaleX = editorCanvas.width / rect.width;
+    const scaleY = editorCanvas.height / rect.height;
+    const x = Math.floor(((clientX - rect.left) * scaleX) / BLOCK);
+    const y = Math.floor(((clientY - rect.top) * scaleY) / BLOCK);
+    if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return;
+    const key = targetKey(x, y);
+    if (state.editorTargets.has(key)) state.editorTargets.delete(key);
+    else state.editorTargets.add(key);
+    editorSeedOutput.value = '';
+    setEditorMessage('Targets updated. Generate a fresh seed when you are ready.');
+    renderEditor();
+  }
+
   function closeSplash() {
     splashOverlay.classList.add('hidden');
   }
@@ -1372,6 +1703,8 @@
     pauseOverlay.classList.add('hidden');
     resultOverlay.classList.add('hidden');
     levelOverlay.classList.add('hidden');
+    closeSeedOverlay();
+    closeEditorOverlay();
   }
 
   function loop(time = 0) {
@@ -1435,13 +1768,13 @@
     state.interacted = true;
     if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
       e.preventDefault();
-      if (!levelOverlay.classList.contains('hidden')) return;
+      if (!levelOverlay.classList.contains('hidden') || !seedOverlay.classList.contains('hidden') || !editorOverlay.classList.contains('hidden')) return;
       if (!resultOverlay.classList.contains('hidden')) return;
       if (state.paused) resumeGame();
       else pauseGame();
       return;
     }
-    if (!levelOverlay.classList.contains('hidden')) return;
+    if (!levelOverlay.classList.contains('hidden') || !seedOverlay.classList.contains('hidden') || !editorOverlay.classList.contains('hidden')) return;
     if (state.paused) return;
     if (!resultOverlay.classList.contains('hidden')) return;
     if (e.key === 'ArrowLeft') { e.preventDefault(); moveCurrent(-1); }
@@ -1454,12 +1787,15 @@
   resumeBtn.addEventListener('click', resumeGame);
   pauseRestartBtn.addEventListener('click', () => { pauseOverlay.classList.add('hidden'); startLevel(state.currentLevel); });
   pauseLevelsBtn.addEventListener('click', () => { pauseOverlay.classList.add('hidden'); state.paused = false; openLevelSelect(state.currentLevel); });
+  pauseMenuBtn.addEventListener('click', () => { pauseOverlay.classList.add('hidden'); state.paused = false; openSplash(); });
   prevPageBtn.addEventListener('click', () => { if (state.currentPage > 0) { state.currentPage--; renderLevelGrid(); } });
   nextPageBtn.addEventListener('click', () => { if ((state.currentPage + 1) * PAGE_SIZE < TOTAL_LEVELS) { state.currentPage++; renderLevelGrid(); } });
 
   function handleSplashStart() {
     closeSplash();
     levelOverlay.classList.add('hidden');
+    closeSeedOverlay();
+    closeEditorOverlay();
     resultOverlay.classList.add('hidden');
     pauseOverlay.classList.add('hidden');
     setTimeout(() => startLevel(1), 0);
@@ -1470,6 +1806,8 @@
     resultOverlay.classList.add('hidden');
     pauseOverlay.classList.add('hidden');
     levelOverlay.classList.add('hidden');
+    closeSeedOverlay();
+    closeEditorOverlay();
     setTimeout(() => openLevelSelect(1), 0);
   }
 
@@ -1478,6 +1816,38 @@
 
   if (splashStartBtn) splashStartBtn.addEventListener('click', handleSplashStart);
   if (splashLevelsBtn) splashLevelsBtn.addEventListener('click', handleSplashLevels);
+  if (splashSeedBtn) splashSeedBtn.addEventListener('click', openSeedOverlay);
+  if (playSeedBtn) playSeedBtn.addEventListener('click', playSeedFromInput);
+  if (seedInput) seedInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); playSeedFromInput(); } });
+  if (openEditorBtn) openEditorBtn.addEventListener('click', () => {
+    const decoded = decodeSeed(seedInput.value);
+    openEditor(decoded ? decoded.targets : []);
+  });
+  if (seedReturnBtn) seedReturnBtn.addEventListener('click', openSplash);
+  if (generateSeedBtn) generateSeedBtn.addEventListener('click', () => generateEditorSeed(true));
+  if (playEditorSeedBtn) playEditorSeedBtn.addEventListener('click', () => {
+    const data = generateEditorSeed(false);
+    if (!data) { setEditorMessage('Add at least one target before playing this level.', true); return; }
+    setEditorMessage('Loading your custom level...');
+    startSeedLevel(data.seed, data.targets);
+  });
+  if (clearEditorBtn) clearEditorBtn.addEventListener('click', () => {
+    state.editorTargets = new Set();
+    editorSeedOutput.value = '';
+    setEditorMessage('Grid cleared. Add targets to build a new level.');
+    renderEditor();
+  });
+  if (editorBackBtn) editorBackBtn.addEventListener('click', openSeedOverlay);
+  if (editorReturnBtn) editorReturnBtn.addEventListener('click', openSplash);
+  if (editorCanvas) {
+    editorCanvas.addEventListener('click', (e) => handleEditorCanvasPointer(e.clientX, e.clientY));
+    editorCanvas.addEventListener('touchstart', (e) => {
+      const touch = e.touches && e.touches[0];
+      if (!touch) return;
+      e.preventDefault();
+      handleEditorCanvasPointer(touch.clientX, touch.clientY);
+    }, { passive:false });
+  }
   ['pointerdown','keydown'].forEach(evt => window.addEventListener(evt, () => { state.interacted = true; ensureAudio(); }, { once:false }));
   bindPress(mobileLeftBtn, 'left');
   bindPress(mobileRightBtn, 'right');
