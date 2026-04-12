@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hex Merge Bloom</title>
+<style>
+  :root{
+    --bg1:#fff7d6;
+    --bg2:#dff8ff;
+    --panel:#ffffffcc;
+    --line:#244a66;
+    --text:#16324a;
+    --muted:#537089;
+    --accent:#ff7fb0;
+    --accent2:#5fd3ff;
+    --good:#61d34f;
+    --shadow:0 14px 36px rgba(30,70,110,.16);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+    color:var(--text);
+    background:
+      radial-gradient(circle at 15% 18%, #fffadf 0 15%, transparent 16%),
+      radial-gradient(circle at 85% 14%, #ffd6ec 0 11%, transparent 12%),
+      radial-gradient(circle at 18% 85%, #d8fff0 0 13%, transparent 14%),
+      radial-gradient(circle at 80% 76%, #d9ebff 0 12%, transparent 13%),
+      linear-gradient(180deg,var(--bg1),var(--bg2));
+    overflow:hidden;
+  }
+  .wrap{
+    max-width:1200px;
+    margin:0 auto;
+    padding:18px;
+    height:100%;
+    display:grid;
+    grid-template-columns: 330px minmax(0,1fr);
+    gap:18px;
+  }
+  .panel{
+    background:var(--panel);
+    backdrop-filter: blur(10px);
+    border:3px solid rgba(255,255,255,.85);
+    border-radius:28px;
+    box-shadow:var(--shadow);
+  }
+  .sidebar{
+    padding:18px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  h1{
+    margin:0;
+    font-size:clamp(1.7rem, 2.6vw, 2.5rem);
+    line-height:1;
+    letter-spacing:.3px;
+  }
+  .sub{
+    color:var(--muted);
+    font-size:0.98rem;
+  }
+  .statRow{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+  }
+  .stat{
+    background:#fff;
+    border-radius:22px;
+    border:3px solid #eef5ff;
+    padding:14px 16px;
+    box-shadow: inset 0 0 0 1px rgba(50,90,130,.04);
+  }
+  .stat .label{
+    color:var(--muted);
+    font-weight:700;
+    font-size:.85rem;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+  }
+  .stat .value{
+    margin-top:6px;
+    font-size:1.8rem;
+    font-weight:900;
+  }
+  .nextCard, .rules {
+    background:#fff;
+    border-radius:24px;
+    padding:16px;
+    border:3px solid #eef5ff;
+  }
+  .nextCard h2, .rules h2{
+    margin:0 0 12px 0;
+    font-size:1.05rem;
+  }
+  .nextArea{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:150px;
+    border-radius:22px;
+    background:linear-gradient(180deg,#f8fcff,#edf7ff);
+    border:3px dashed #cfe3f6;
+  }
+  .buttons{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  button{
+    appearance:none;
+    border:none;
+    padding:13px 18px;
+    border-radius:999px;
+    font-weight:900;
+    font-size:1rem;
+    cursor:pointer;
+    color:#173654;
+    background:linear-gradient(180deg,#ffffff,#f4fbff);
+    box-shadow:0 8px 18px rgba(40,90,130,.14);
+    border:3px solid #ffffff;
+  }
+  button.primary{
+    background:linear-gradient(180deg,#ffb5d2,#ff83b2);
+    color:#fff;
+  }
+  button.secondary{
+    background:linear-gradient(180deg,#9ee7ff,#66d6ff);
+    color:#fff;
+  }
+  button:hover{filter:brightness(1.02)}
+  .rules ul{margin:8px 0 0 18px;padding:0}
+  .rules li{margin:8px 0;color:#33516c}
+  .boardPanel{
+    position:relative;
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+  }
+  .boardTop{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:8px 8px 2px;
+  }
+  .message{
+    min-height:28px;
+    font-weight:800;
+    color:#365772;
+  }
+  .legend{
+    color:#5c768d;
+    font-size:.95rem;
+    text-align:right;
+  }
+  .boardWrap{
+    flex:1;
+    min-height:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:auto;
+    padding:8px;
+    -webkit-overflow-scrolling:touch;
+  }
+  svg{max-width:100%;height:auto;overflow:visible}
+  #boardSvg{width:100%;max-width:980px}
+  .cell-hit{cursor:pointer}
+  .cell-hit.empty:hover + g .hex-face,
+  .cell-hit.empty:hover ~ g .hex-face { filter:none; }
+  .hex-face{
+    transition: transform .14s ease, filter .14s ease, opacity .14s ease;
+    transform-origin:center;
+    transform-box:fill-box;
+  }
+  .merge-pulse .hex-face,
+  .merge-pulse .cell-label{
+    animation:mergePulse .22s ease;
+  }
+  @keyframes mergePulse{
+    0%{transform:scale(1)}
+    35%{transform:scale(1.18)}
+    100%{transform:scale(1)}
+  }
+  .merge-fly{
+    pointer-events:none;
+    transform-origin:center;
+    transform-box:fill-box;
+    animation:mergeFly .2s ease forwards;
+  }
+  @keyframes mergeFly{
+    0%{opacity:.95; transform:translate(0,0) scale(1)}
+    100%{opacity:0; transform:translate(var(--dx), var(--dy)) scale(.32)}
+  }
+  .cell-group.empty:hover .hex-face{ filter:brightness(1.03); }
+  .cell-outline{ stroke:rgba(34,74,102,.35); stroke-width:3; }
+  .cell-label{ font-weight:900; font-size:26px; fill:#173654; text-anchor:middle; dominant-baseline:middle; pointer-events:none; }
+  .rulesModal{
+    position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+    background:rgba(22,50,74,.28); padding:18px; z-index:20;
+  }
+  .rulesModal.show{display:flex}
+  .rulesCard{
+    width:min(640px, 100%); background:#fff; border-radius:28px; padding:24px;
+    box-shadow:var(--shadow); border:4px solid #fff;
+  }
+  .rulesCard h2{margin:0 0 14px; font-size:1.8rem}
+  .rulesCard p{margin:10px 0; color:#33516c; line-height:1.5}
+  .rulesCard .buttons{margin-top:16px; justify-content:flex-end}
+  .overlay{
+    position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+    background:rgba(240,249,255,.66); border-radius:28px;
+  }
+  .overlay.show{display:flex}
+  .gameOverCard{
+    background:#fff; border-radius:28px; padding:24px; max-width:420px; text-align:center;
+    box-shadow:var(--shadow); border:4px solid #fff;
+  }
+  .gameOverCard h2{margin:0 0 10px;font-size:2rem}
+  .gameOverCard p{color:#4e6b84}
+  .tiny{font-size:.9rem;color:#647f95}
+
+  .confirmModal{
+    position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+    background:rgba(22,50,74,.28); padding:18px; z-index:25;
+  }
+  .confirmModal.show{display:flex}
+  .confirmCard{
+    width:min(460px, 100%); background:#fff; border-radius:28px; padding:24px;
+    box-shadow:var(--shadow); border:4px solid #fff; text-align:center;
+  }
+  .confirmCard h2{margin:0 0 10px; font-size:1.9rem}
+  .confirmCard p{margin:0; color:#4f6c85; line-height:1.45}
+  .confirmCard .buttons{margin-top:18px; justify-content:center}
+  @media (max-width: 920px){
+    body{overflow:auto}
+    .wrap{grid-template-columns:1fr; height:auto; padding:12px; gap:12px}
+    .sidebar{padding:14px; gap:12px}
+    .stat{padding:12px 14px}
+    .stat .value{font-size:1.45rem}
+    .nextCard{padding:14px}
+    .nextArea{min-height:112px}
+    .buttons{gap:8px}
+    button{padding:11px 15px; font-size:.95rem}
+    .boardPanel{padding:10px}
+    .boardTop{padding:4px 4px 0}
+    .boardWrap{min-height:56vh; padding:0}
+    #boardSvg{width:100%; height:auto; max-width:100%;}
+  }
+  @media (max-width: 620px){
+    h1{font-size:1.55rem}
+    .wrap{padding:10px; gap:10px}
+    .statRow{gap:8px}
+    .stat .label{font-size:.76rem}
+    .stat .value{font-size:1.2rem}
+    .nextCard h2{font-size:.96rem; margin-bottom:8px}
+    .nextArea{min-height:94px; border-radius:18px}
+    .boardPanel{padding:8px}
+    .boardWrap{min-height:42vh; justify-content:flex-start; align-items:flex-start}
+    #boardSvg{min-width:560px; width:560px;}
+    .rulesCard{padding:18px; border-radius:22px}
+    .rulesCard h2{font-size:1.45rem}
+    .rulesCard p{font-size:.96rem; line-height:1.42}
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <aside class="panel sidebar">
+      <div>
+        <h1>Hex Merge Bloom</h1>
+        
+      </div>
+
+      <div class="statRow">
+        <div class="stat"><div class="label">Score</div><div class="value" id="score">0</div></div>
+        <div class="stat"><div class="label">Best</div><div class="value" id="best">0</div></div>
+      </div>
+
+      <div class="nextCard">
+        <h2>Next Hex</h2>
+        <div class="nextArea" id="nextPreview"></div>
+        
+      </div>
+
+      <div class="buttons">
+        <button class="primary" id="newGameBtn">New Game</button>
+        <button class="secondary" id="rulesBtn">Rules</button>
+      </div>
+    </aside>
+
+    <main class="panel boardPanel">
+      <div class="boardTop">
+        <div class="message" id="message"></div>
+        <div class="legend"></div>
+      </div>
+      <div class="boardWrap">
+        <svg id="boardSvg" viewBox="40 50 760 760" preserveAspectRatio="xMidYMid meet" aria-label="Hex board"></svg>
+      </div>
+      <div class="overlay" id="overlay">
+        <div class="gameOverCard">
+          <h2>Game Over!</h2>
+          <p>No empty hexes remain, so there are no more moves.</p>
+          <p><strong>Final Score:</strong> <span id="finalScore">0</span></p>
+          <button class="primary" id="playAgainBtn">Play Again</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="rulesModal" id="rulesModal" aria-hidden="true">
+    <div class="rulesCard">
+      <h2>How It Works</h2>
+      <p>Drop a number onto any empty hex.</p>
+      <p>Matching adjacent hexes merge into the newly dropped tile.</p>
+      <p>Chain merges continue automatically if the upgraded tile matches neighbors again.</p>
+      <p>Score adds absorbed values, with a bonus for merging multiple neighbors at once.</p>
+      <p>Game ends when the board is full.</p>
+      <div class="buttons"><button class="primary" id="closeRulesBtn">Close</button></div>
+    </div>
+  </div>
+
+
+  <div class="confirmModal" id="confirmModal" aria-hidden="true">
+    <div class="confirmCard">
+      <h2>Are you sure?</h2>
+      <p>Your current board and score will be reset.</p>
+      <div class="buttons">
+        <button type="button" id="confirmNoBtn">No</button>
+        <button type="button" class="primary" id="confirmYesBtn">Yes</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const ROWS = [6,5,6,5,6,5,6,5,6];
+  const HEX_SIZE = 58;
+  const HEX_W = Math.sqrt(3) * HEX_SIZE;
+  const HEX_H = 2 * HEX_SIZE;
+  const ROW_STEP = 1.5 * HEX_SIZE;
+  const START_X = 130;
+  const START_Y = 90;
+  const PROBABILITIES = [
+    {value:1, weight:32.5},
+    {value:2, weight:30},
+    {value:4, weight:20},
+    {value:8, weight:10},
+    {value:16, weight:5},
+    {value:32, weight:2.5}
+  ];
+
+  const COLORS = {
+    1:'#ffda63',
+    2:'#ffa95e',
+    4:'#ff7db0',
+    8:'#b78cff',
+    16:'#71d7ff',
+    32:'#63e7b1',
+    64:'#79ef67',
+    128:'#c1f15d',
+    256:'#ffd166',
+    512:'#ff9671',
+    1024:'#ff6f91',
+    2048:'#9d7bff',
+    4096:'#58cfff',
+    8192:'#43df93'
+  };
+
+  const boardSvg = document.getElementById('boardSvg');
+  const scoreEl = document.getElementById('score');
+  const bestEl = document.getElementById('best');
+  const messageEl = document.getElementById('message');
+  const nextPreview = document.getElementById('nextPreview');
+  const overlay = document.getElementById('overlay');
+  const finalScoreEl = document.getElementById('finalScore');
+  const newGameBtn = document.getElementById('newGameBtn');
+  const playAgainBtn = document.getElementById('playAgainBtn');
+  const confirmModal = document.getElementById('confirmModal');
+  const confirmYesBtn = document.getElementById('confirmYesBtn');
+  const confirmNoBtn = document.getElementById('confirmNoBtn');
+
+  const BEST_KEY = 'hex_merge_bloom_best';
+
+  let cells = [];
+  let board = [];
+  let score = 0;
+  let best = Number(localStorage.getItem(BEST_KEY) || 0);
+  let nextValue = 1;
+  let gameOver = false;
+
+  bestEl.textContent = best;
+
+  function buildCells() {
+    let id = 0;
+    cells = [];
+    for (let r = 0; r < ROWS.length; r++) {
+      const cols = ROWS[r];
+      const rowOffset = (r % 2 === 1) ? HEX_W / 2 : 0;
+      for (let c = 0; c < cols; c++) {
+        const x = START_X + rowOffset + c * HEX_W;
+        const y = START_Y + r * ROW_STEP;
+        cells.push({ id:id++, r, c, x, y });
+      }
+    }
+  }
+
+  function hexPoints(cx, cy, s) {
+    const pts = [];
+    for (let i = 0; i < 6; i++) {
+      const angle = Math.PI / 180 * (60 * i - 30);
+      const x = cx + s * Math.cos(angle);
+      const y = cy + s * Math.sin(angle);
+      pts.push(`${x.toFixed(2)},${y.toFixed(2)}`);
+    }
+    return pts.join(' ');
+  }
+
+  function getColor(value) {
+    if (COLORS[value]) return COLORS[value];
+    const exp = Math.log2(value);
+    const hue = (exp * 31 + 44) % 360;
+    return `hsl(${hue} 88% 72%)`;
+  }
+
+  function getTextColor(value) {
+    return value >= 128 ? '#143246' : '#16324a';
+  }
+
+  function weightedRandom() {
+    const total = PROBABILITIES.reduce((a, b) => a + b.weight, 0);
+    let roll = Math.random() * total;
+    for (const item of PROBABILITIES) {
+      if (roll < item.weight) return item.value;
+      roll -= item.weight;
+    }
+    return PROBABILITIES[0].value;
+  }
+
+
+  function neighbors(index) {
+    const cell = cells[index];
+    const rowLens = ROWS;
+    const isOdd = cell.r % 2 === 1;
+    const candidateCoords = [
+      [cell.r, cell.c - 1],
+      [cell.r, cell.c + 1],
+      [cell.r - 1, isOdd ? cell.c : cell.c - 1],
+      [cell.r - 1, isOdd ? cell.c + 1 : cell.c],
+      [cell.r + 1, isOdd ? cell.c : cell.c - 1],
+      [cell.r + 1, isOdd ? cell.c + 1 : cell.c],
+    ];
+    const result = [];
+    for (const [r, c] of candidateCoords) {
+      if (r < 0 || r >= rowLens.length) continue;
+      if (c < 0 || c >= rowLens[r]) continue;
+      const idx = cells.findIndex(k => k.r === r && k.c === c);
+      if (idx !== -1) result.push(idx);
+    }
+    return result;
+  }
+
+  const neighborMap = [];
+
+  function computeNeighborMap() {
+    neighborMap.length = 0;
+    for (let i = 0; i < cells.length; i++) neighborMap[i] = neighbors(i);
+  }
+
+  function createCellGroup(cell, value) {
+    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    group.setAttribute('class', `cell-group ${value === 0 ? 'empty' : 'filled'}`);
+    group.dataset.index = cell.id;
+
+    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    poly.setAttribute('points', hexPoints(cell.x, cell.y, HEX_SIZE));
+    poly.setAttribute('class', 'hex-face cell-outline');
+    poly.setAttribute('fill', value === 0 ? 'rgba(255,255,255,.55)' : getColor(value));
+    group.appendChild(poly);
+
+    const shine = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    shine.setAttribute('points', hexPoints(cell.x, cell.y - 4, HEX_SIZE * 0.92));
+    shine.setAttribute('fill', value === 0 ? 'rgba(255,255,255,.18)' : 'rgba(255,255,255,.19)');
+    shine.setAttribute('stroke', 'none');
+    group.appendChild(shine);
+
+    if (value !== 0) {
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', cell.x);
+      text.setAttribute('y', cell.y + 2);
+      text.setAttribute('class', 'cell-label');
+      text.setAttribute('fill', getTextColor(value));
+      text.textContent = value;
+      group.appendChild(text);
+    }
+
+    const hit = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    hit.setAttribute('points', hexPoints(cell.x, cell.y, HEX_SIZE));
+    hit.setAttribute('fill', 'transparent');
+    hit.setAttribute('class', `cell-hit ${value === 0 ? 'empty' : 'filled'}`);
+    hit.addEventListener('click', () => handleMove(cell.id));
+    group.appendChild(hit);
+
+    return group;
+  }
+
+  function renderBoard() {
+    boardSvg.innerHTML = '';
+    for (const cell of cells) {
+      boardSvg.appendChild(createCellGroup(cell, board[cell.id] || 0));
+    }
+  }
+
+  function renderNext() {
+    const color = getColor(nextValue);
+    nextPreview.innerHTML = `
+      <svg width="150" height="130" viewBox="0 0 180 150" aria-label="next tile">
+        <polygon points="90,12 150,45 150,105 90,138 30,105 30,45"
+                 fill="${color}" stroke="rgba(34,74,102,.45)" stroke-width="4"></polygon>
+        <polygon points="90,20 143,49 143,100 90,129 37,100 37,49"
+                 fill="rgba(255,255,255,.18)"></polygon>
+        <text x="90" y="86" text-anchor="middle" font-size="34" font-weight="900" fill="#173654">${nextValue}</text>
+      </svg>`;
+  }
+
+  function updateScore() {
+    scoreEl.textContent = score;
+    if (score > best) {
+      best = score;
+      localStorage.setItem(BEST_KEY, String(best));
+      bestEl.textContent = best;
+    }
+  }
+
+  function setMessage(text='') {
+    messageEl.textContent = text || '';
+  }
+
+  function emptyCount() {
+    return board.filter(v => !v).length;
+  }
+
+  async function handleMove(index) {
+    if (gameOver) return;
+    if (board[index] !== 0) {
+      return;
+      return;
+    }
+
+    const placedValue = nextValue;
+    board[index] = placedValue;
+    renderBoard();
+    const mergeSummary = await performChainMerges(index);
+    nextValue = weightedRandom();
+    renderAll();
+
+    if (mergeSummary.events === 0) {
+      setMessage('');
+    } else {
+      setMessage('');
+    }
+
+    if (emptyCount() === 0) {
+      gameOver = true;
+      finalScoreEl.textContent = score;
+      overlay.classList.add('show');
+      setMessage('');
+    }
+  }
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function animateMergeStep(targetIndex, sameIndices, targetValue) {
+    if (sameIndices.length === 0) return Promise.resolve();
+
+    const targetCell = cells[targetIndex];
+    for (const idx of sameIndices) {
+      const cell = cells[idx];
+      const ghost = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      ghost.setAttribute('class', 'merge-fly');
+      ghost.style.setProperty('--dx', `${(targetCell.x - cell.x).toFixed(1)}px`);
+      ghost.style.setProperty('--dy', `${(targetCell.y - cell.y).toFixed(1)}px`);
+
+      const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+      poly.setAttribute('points', hexPoints(cell.x, cell.y, HEX_SIZE));
+      poly.setAttribute('fill', getColor(targetValue));
+      poly.setAttribute('stroke', 'rgba(34,74,102,.35)');
+      poly.setAttribute('stroke-width', '3');
+      ghost.appendChild(poly);
+
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', cell.x);
+      text.setAttribute('y', cell.y + 2);
+      text.setAttribute('class', 'cell-label');
+      text.setAttribute('fill', getTextColor(targetValue));
+      text.textContent = targetValue;
+      ghost.appendChild(text);
+
+      boardSvg.appendChild(ghost);
+    }
+
+    return sleep(150);
+  }
+
+  async function performChainMerges(index) {
+    let events = 0;
+    let absorbedTiles = 0;
+    let scoreGained = 0;
+    let chainMultiplier = 1;
+
+    while (true) {
+      const value = board[index];
+      const same = neighborMap[index].filter(n => board[n] === value);
+      if (same.length === 0) break;
+
+      events++;
+      absorbedTiles += same.length;
+      const absorbedValueTotal = same.reduce((sum, n) => sum + board[n], 0);
+      const mergeMultiplier = same.length; // 1 neighbor = x1, 2 neighbors = x2, 3 neighbors = x3 ...
+      const gained = absorbedValueTotal * mergeMultiplier * chainMultiplier;
+      score += gained;
+      scoreGained += gained;
+
+      await animateMergeStep(index, same, value);
+
+      for (const n of same) board[n] = 0;
+      board[index] = value * 2;
+
+      renderBoard();
+      updateScore();
+      await sleep(60);
+      chainMultiplier += 1;
+    }
+
+    if (events > 0) {
+      const finalGroup = boardSvg.querySelector(`.cell-group[data-index="${index}"]`);
+      if (finalGroup) {
+        finalGroup.classList.remove('merge-pulse');
+        void finalGroup.getBoundingClientRect();
+        finalGroup.classList.add('merge-pulse');
+      }
+      await sleep(110);
+    }
+
+    updateScore();
+    return { events, absorbedTiles, scoreGained };
+  }
+
+  function renderAll() {
+    renderBoard();
+    renderNext();
+    updateScore();
+  }
+
+  function newGame() {
+    board = new Array(cells.length).fill(0);
+    score = 0;
+    gameOver = false;
+    overlay.classList.remove('show');
+    nextValue = weightedRandom();
+    renderAll();
+    setMessage('');
+  }
+
+  
+  const rulesBtn = document.getElementById('rulesBtn');
+  const rulesModal = document.getElementById('rulesModal');
+  const closeRulesBtn = document.getElementById('closeRulesBtn');
+
+  rulesBtn.addEventListener('click', () => {
+    rulesModal.classList.add('show');
+  });
+
+  closeRulesBtn.addEventListener('click', () => {
+    rulesModal.classList.remove('show');
+  });
+
+  rulesModal.addEventListener('click', (e) => {
+    if (e.target === rulesModal) rulesModal.classList.remove('show');
+  });
+
+  function showNewGameConfirm(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (confirmModal) confirmModal.classList.add('show');
+  }
+
+  function hideNewGameConfirm(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (confirmModal) confirmModal.classList.remove('show');
+  }
+
+  if (newGameBtn) {
+    newGameBtn.onclick = showNewGameConfirm;
+  }
+  if (confirmNoBtn) {
+    confirmNoBtn.onclick = hideNewGameConfirm;
+  }
+  if (confirmYesBtn) {
+    confirmYesBtn.onclick = (e) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      hideNewGameConfirm();
+      newGame();
+    };
+  }
+  if (confirmModal) {
+    confirmModal.onclick = (e) => {
+      if (e.target === confirmModal) hideNewGameConfirm(e);
+    };
+  }
+  if (playAgainBtn) playAgainBtn.onclick = newGame;
+
+  buildCells();
+  computeNeighborMap();
+  newGame();
+})();
+</script>
+</body>
+</html>
