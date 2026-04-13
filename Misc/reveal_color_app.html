@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reveal Color Tool</title>
+<style>
+  :root{
+    --bg:#0f1220;
+    --panel:#171b2e;
+    --panel2:#1f2540;
+    --text:#eef2ff;
+    --muted:#b8c0e0;
+    --accent:#8fb4ff;
+    --line:#313a63;
+    --good:#90e0a5;
+    --danger:#ff8f8f;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:Arial, Helvetica, sans-serif;
+    background:linear-gradient(180deg,#0d1020,#121731 55%,#0e1328);
+    color:var(--text);
+  }
+  .wrap{
+    max-width:1280px;
+    margin:0 auto;
+    padding:18px;
+  }
+  h1{
+    margin:0 0 10px;
+    font-size:clamp(1.6rem, 2.4vw, 2.35rem);
+    text-align:center;
+  }
+  .sub{
+    text-align:center;
+    color:var(--muted);
+    margin:0 0 18px;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:340px 1fr;
+    gap:18px;
+  }
+  .panel{
+    background:rgba(23,27,46,.95);
+    border:1px solid var(--line);
+    border-radius:18px;
+    box-shadow:0 18px 40px rgba(0,0,0,.28);
+  }
+  .controls{
+    padding:16px;
+    position:sticky;
+    top:14px;
+    align-self:start;
+  }
+  .control{margin-bottom:14px}
+  .row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+  }
+  label{
+    display:block;
+    margin-bottom:6px;
+    font-weight:700;
+    font-size:.95rem;
+  }
+  .hint{
+    color:var(--muted);
+    font-size:.84rem;
+    line-height:1.35;
+  }
+  input[type="range"]{width:100%}
+  input[type="color"], input[type="file"], button, select{
+    width:100%;
+    border-radius:12px;
+    border:1px solid var(--line);
+    background:var(--panel2);
+    color:var(--text);
+    padding:10px 12px;
+    font-size:0.95rem;
+  }
+  input[type="checkbox"]{transform:scale(1.12)}
+  button{
+    cursor:pointer;
+    font-weight:700;
+    transition:transform .05s ease, filter .15s ease, background .2s ease;
+  }
+  button:hover{filter:brightness(1.08)}
+  button:active{transform:translateY(1px)}
+  .btn-primary{
+    background:linear-gradient(180deg,#7ca6ff,#5f89e8);
+    color:#09101f;
+    border:none;
+  }
+  .btn-secondary{background:#232a48}
+  .btn-good{background:linear-gradient(180deg,#9ef3b2,#73cf8a); color:#072010; border:none;}
+  .btn-mini{
+    width:auto;
+    padding:8px 12px;
+    font-size:.88rem;
+  }
+  .value{
+    color:var(--accent);
+    font-weight:700;
+    min-width:62px;
+    text-align:right;
+  }
+  .viewer{padding:16px;}
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-bottom:12px;
+  }
+  .topbar-right{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .zoomWrap{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:#20284a;
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:8px 12px;
+    min-width:260px;
+  }
+  .zoomWrap input[type="range"]{
+    margin:0;
+  }
+  .tabs{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .tab{
+    width:auto;
+    padding:10px 14px;
+  }
+  .tab.active{
+    background:linear-gradient(180deg,#7ca6ff,#5f89e8);
+    color:#09101f;
+    border:none;
+  }
+  .canvas-wrap{
+    background:#0a0d19;
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:12px;
+    min-height:520px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    position:relative;
+  }
+  .stage{
+    position:relative;
+    width:100%;
+    height:calc(100vh - 260px);
+    min-height:420px;
+    max-height:820px;
+    overflow:hidden;
+    border-radius:12px;
+    background:
+      linear-gradient(45deg, rgba(255,255,255,.04) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.04) 75%),
+      linear-gradient(45deg, rgba(255,255,255,.04) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.04) 75%);
+    background-position:0 0, 10px 10px;
+    background-size:20px 20px;
+  }
+  .canvas-stack{
+    position:absolute;
+    left:0;
+    top:0;
+    transform-origin:top left;
+    user-select:none;
+  }
+  canvas{
+    display:block;
+    image-rendering:auto;
+  }
+  #overlayCanvas{
+    position:absolute;
+    left:0;
+    top:0;
+    cursor:crosshair;
+    touch-action:none;
+  }
+  .empty{
+    color:var(--muted);
+    text-align:center;
+    line-height:1.5;
+    padding:32px 18px;
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:10;
+    pointer-events:none;
+  }
+  .status{
+    margin-top:12px;
+    color:var(--muted);
+    min-height:22px;
+  }
+  .twocol{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+  .threecol{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:10px;
+  }
+  .toolSection{
+    display:none;
+  }
+  .toolSection.active{
+    display:block;
+  }
+  .modalBack{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.58);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    z-index:999;
+  }
+  .modalBack.show{display:flex}
+  .modal{
+    width:min(560px, 100%);
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:18px;
+    box-shadow:0 18px 50px rgba(0,0,0,.45);
+    padding:18px;
+  }
+  .modal h2{
+    margin:0 0 10px;
+    font-size:1.25rem;
+  }
+  .modal .closeRow{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:10px;
+    gap:12px;
+  }
+  .shortcutList{
+    display:grid;
+    grid-template-columns:140px 1fr;
+    gap:10px 14px;
+    align-items:start;
+    font-size:.95rem;
+  }
+  .keycap{
+    display:inline-block;
+    min-width:44px;
+    text-align:center;
+    padding:7px 10px;
+    border-radius:10px;
+    background:#20284a;
+    border:1px solid var(--line);
+    font-weight:700;
+    color:var(--accent);
+  }
+  .shortcutDesc{
+    color:var(--muted);
+    line-height:1.4;
+  }
+  @media (max-width: 980px){
+    .grid{grid-template-columns:1fr}
+    .controls{position:static}
+    .stage{height:60vh; min-height:340px;}
+    .topbar{align-items:stretch}
+    .topbar-right{width:100%}
+    .zoomWrap{min-width:0; width:100%}
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Reveal Color Tool</h1>
+    <p class="sub">Upload an image, place a grayscale layer over it, and erase the top layer to reveal the color underneath.</p>
+
+    <div class="grid">
+      <div class="panel controls">
+        <div class="control">
+          <label for="upload">Upload Image</label>
+          <input id="upload" type="file" accept="image/*" />
+        </div>
+
+        <div class="control">
+          <label for="modeSelect">Tool</label>
+          <select id="modeSelect">
+            <option value="brush">Brush Eraser</option>
+            <option value="magic">Magic Wand</option>
+            <option value="pan">Pan</option>
+          </select>
+          <div class="hint">Choose a tool. The options below update based on the selected tool.</div>
+        </div>
+
+        <div id="brushSection" class="toolSection active">
+          <div class="control">
+            <div class="row">
+              <label for="brushSize">Eraser Size</label>
+              <div class="value" id="brushSizeVal">50 px</div>
+            </div>
+            <input id="brushSize" type="range" min="5" max="180" value="50" />
+          </div>
+
+          <div class="control">
+            <div class="row">
+              <label for="softBrush">Soft Edge</label>
+              <input id="softBrush" type="checkbox" checked />
+            </div>
+            <div class="hint">Toggle between a soft brush and a hard-edged brush.</div>
+          </div>
+        </div>
+
+        <div id="magicSection" class="toolSection">
+          <div class="control">
+            <div class="row">
+              <label for="tolerance">Magic Wand Tolerance</label>
+              <div class="value" id="toleranceVal">30</div>
+            </div>
+            <input id="tolerance" type="range" min="0" max="100" value="30" />
+            <div class="hint">Higher tolerance grabs a wider range of similar grayscale values.</div>
+          </div>
+        </div>
+
+        <div id="panSection" class="toolSection">
+          <div class="control">
+            <label>Pan Tool</label>
+            <div class="hint">Drag to move around the image. You can also hold Space while using other tools to pan temporarily.</div>
+          </div>
+        </div>
+
+        <div class="control">
+          <div class="row">
+            <label for="grayMode">Grayscale Style</label>
+          </div>
+          <select id="grayMode">
+            <option value="gray">Standard Grayscale</option>
+            <option value="contrast">High Contrast Grayscale</option>
+            <option value="bw">Black & White Threshold</option>
+          </select>
+        </div>
+
+        <div class="control" id="thresholdWrap">
+          <div class="row">
+            <label for="threshold">B/W Threshold</label>
+            <div class="value" id="thresholdVal">128</div>
+          </div>
+          <input id="threshold" type="range" min="0" max="255" value="128" />
+          <div class="hint">Used only when Black &amp; White Threshold is selected.</div>
+        </div>
+
+        <div class="threecol">
+          <button id="undoBtn" class="btn-secondary">Undo</button>
+          <button id="redoBtn" class="btn-secondary">Redo</button>
+          <button id="resetBtn" class="btn-secondary">Reset</button>
+        </div>
+
+        <div class="twocol" style="margin-top:10px;">
+          <button id="downloadPNG" class="btn-good">Download PNG</button>
+          <button id="downloadJPG" class="btn-good">Download JPG</button>
+        </div>
+
+        <div class="twocol" style="margin-top:10px;">
+          <button id="fitBtn" class="btn-secondary">Fit to Window</button>
+          <button id="shortcutsBtn" class="btn-secondary">Shortcuts</button>
+        </div>
+
+        <div class="status" id="status">Upload an image to begin.</div>
+      </div>
+
+      <div class="panel viewer">
+        <div class="topbar">
+          <div class="tabs">
+            <button class="tab active" data-view="edit">Edit View</button>
+            <button class="tab" data-view="original">Original</button>
+            <button class="tab" data-view="split">Side by Side</button>
+          </div>
+
+          <div class="topbar-right">
+            <div class="zoomWrap">
+              <label for="zoomRange" style="margin:0; white-space:nowrap;">Zoom</label>
+              <input id="zoomRange" type="range" min="20" max="400" value="100" />
+              <div class="value" id="zoomVal" style="min-width:56px;">100%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="canvas-wrap">
+          <div class="stage" id="stage">
+            <div class="empty" id="emptyState">No image loaded yet.<br><br>Upload an image to start editing.</div>
+
+            <div class="canvas-stack" id="editStack">
+              <canvas id="baseCanvas"></canvas>
+              <canvas id="overlayCanvas"></canvas>
+            </div>
+
+            <div class="canvas-stack" id="originalStack" style="display:none;">
+              <canvas id="originalCanvas"></canvas>
+            </div>
+
+            <div class="canvas-stack" id="splitStack" style="display:none;">
+              <canvas id="splitCanvas"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modalBack" id="shortcutsModal">
+    <div class="modal">
+      <div class="closeRow">
+        <h2>Keyboard Shortcuts</h2>
+        <button id="closeModalBtn" class="btn-secondary btn-mini">Close</button>
+      </div>
+      <div class="shortcutList">
+        <div><span class="keycap">Ctrl/Cmd + Z</span></div><div class="shortcutDesc">Undo the last action.</div>
+        <div><span class="keycap">Ctrl/Cmd + Y</span></div><div class="shortcutDesc">Redo the last undone action.</div>
+        <div><span class="keycap">Ctrl/Cmd + Shift + Z</span></div><div class="shortcutDesc">Redo on systems that use the alternate shortcut.</div>
+        <div><span class="keycap">[</span></div><div class="shortcutDesc">Decrease eraser size.</div>
+        <div><span class="keycap">]</span></div><div class="shortcutDesc">Increase eraser size.</div>
+        <div><span class="keycap">Space</span></div><div class="shortcutDesc">Temporarily switch to Pan while held down.</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const upload = document.getElementById('upload');
+  const brushSize = document.getElementById('brushSize');
+  const brushSizeVal = document.getElementById('brushSizeVal');
+  const softBrush = document.getElementById('softBrush');
+  const tolerance = document.getElementById('tolerance');
+  const toleranceVal = document.getElementById('toleranceVal');
+  const grayMode = document.getElementById('grayMode');
+  const threshold = document.getElementById('threshold');
+  const thresholdVal = document.getElementById('thresholdVal');
+  const thresholdWrap = document.getElementById('thresholdWrap');
+  const zoomRange = document.getElementById('zoomRange');
+  const zoomVal = document.getElementById('zoomVal');
+  const modeSelect = document.getElementById('modeSelect');
+  const fitBtn = document.getElementById('fitBtn');
+  const undoBtn = document.getElementById('undoBtn');
+  const redoBtn = document.getElementById('redoBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const downloadPNG = document.getElementById('downloadPNG');
+  const downloadJPG = document.getElementById('downloadJPG');
+  const status = document.getElementById('status');
+  const emptyState = document.getElementById('emptyState');
+  const shortcutsBtn = document.getElementById('shortcutsBtn');
+  const shortcutsModal = document.getElementById('shortcutsModal');
+  const closeModalBtn = document.getElementById('closeModalBtn');
+
+  const brushSection = document.getElementById('brushSection');
+  const magicSection = document.getElementById('magicSection');
+  const panSection = document.getElementById('panSection');
+
+  const stage = document.getElementById('stage');
+  const editStack = document.getElementById('editStack');
+  const originalStack = document.getElementById('originalStack');
+  const splitStack = document.getElementById('splitStack');
+
+  const baseCanvas = document.getElementById('baseCanvas');
+  const overlayCanvas = document.getElementById('overlayCanvas');
+  const originalCanvas = document.getElementById('originalCanvas');
+  const splitCanvas = document.getElementById('splitCanvas');
+
+  const baseCtx = baseCanvas.getContext('2d');
+  const overlayCtx = overlayCanvas.getContext('2d');
+  const originalCtx = originalCanvas.getContext('2d');
+  const splitCtx = splitCanvas.getContext('2d');
+
+  let image = null;
+  let originalImageData = null;
+  let overlayOriginalData = null;
+  let history = [];
+  let redoStack = [];
+  const maxHistory = 20;
+
+  let view = 'edit';
+  let zoom = 1;
+  let panX = 0;
+  let panY = 0;
+  let isDrawing = false;
+  let isPanning = false;
+  let lastPoint = null;
+  let activePointerId = null;
+  let tempPanMode = false;
+
+  function setStatus(text) {
+    status.textContent = text;
+  }
+
+  function updateLabels() {
+    brushSizeVal.textContent = `${brushSize.value} px`;
+    toleranceVal.textContent = tolerance.value;
+    thresholdVal.textContent = threshold.value;
+    zoomVal.textContent = `${zoomRange.value}%`;
+  }
+
+  function updateToolSections() {
+    const tool = modeSelect.value;
+    brushSection.classList.toggle('active', tool === 'brush');
+    magicSection.classList.toggle('active', tool === 'magic');
+    panSection.classList.toggle('active', tool === 'pan');
+  }
+
+  function updateThresholdVisibility() {
+    thresholdWrap.style.display = grayMode.value === 'bw' ? 'block' : 'none';
+  }
+
+  updateLabels();
+  updateToolSections();
+  updateThresholdVisibility();
+
+  [brushSize, tolerance, threshold, zoomRange].forEach(el => {
+    el.addEventListener('input', updateLabels);
+  });
+
+  modeSelect.addEventListener('change', updateToolSections);
+
+  grayMode.addEventListener('change', () => {
+    updateThresholdVisibility();
+    if (!image) return;
+    rebuildOverlay(true);
+    setStatus('Updated grayscale style.');
+  });
+
+  threshold.addEventListener('input', () => {
+    if (!image || grayMode.value !== 'bw') return;
+    rebuildOverlay(true);
+  });
+
+  zoomRange.addEventListener('input', () => {
+    zoom = Number(zoomRange.value) / 100;
+    centerCurrentView();
+  });
+
+  function setView(nextView) {
+    view = nextView;
+    document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.view === nextView));
+    editStack.style.display = nextView === 'edit' ? 'block' : 'none';
+    originalStack.style.display = nextView === 'original' ? 'block' : 'none';
+    splitStack.style.display = nextView === 'split' ? 'block' : 'none';
+
+    if (nextView === 'split') {
+      fitSideBySide();
+    } else {
+      centerCurrentView();
+    }
+  }
+
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => setView(tab.dataset.view));
+  });
+
+  function getActiveStack() {
+    if (view === 'original') return originalStack;
+    if (view === 'split') return splitStack;
+    return editStack;
+  }
+
+  function getActiveSize() {
+    if (view === 'split') return { width: splitCanvas.width, height: splitCanvas.height };
+    return { width: baseCanvas.width, height: baseCanvas.height };
+  }
+
+  function applyTransform() {
+    const stack = getActiveStack();
+    stack.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+  }
+
+  function resizeCanvases(w, h) {
+    [baseCanvas, overlayCanvas, originalCanvas].forEach(c => {
+      c.width = w;
+      c.height = h;
+    });
+    splitCanvas.width = w * 2 + 16;
+    splitCanvas.height = h;
+    [editStack, originalStack].forEach(s => {
+      s.style.width = `${w}px`;
+      s.style.height = `${h}px`;
+    });
+    splitStack.style.width = `${splitCanvas.width}px`;
+    splitStack.style.height = `${splitCanvas.height}px`;
+  }
+
+  function getRenderSize(img) {
+    const maxDim = 1800;
+    let w = img.naturalWidth || img.width;
+    let h = img.naturalHeight || img.height;
+    if (Math.max(w, h) > maxDim) {
+      const s = maxDim / Math.max(w, h);
+      w = Math.round(w * s);
+      h = Math.round(h * s);
+    }
+    return { w, h };
+  }
+
+  function createGrayImageData(src, mode) {
+    const out = new ImageData(src.width, src.height);
+    const srcD = src.data;
+    const dst = out.data;
+    const thresholdValue = Number(threshold.value);
+
+    for (let i = 0; i < srcD.length; i += 4) {
+      const r = srcD[i], g = srcD[i+1], b = srcD[i+2], a = srcD[i+3];
+      let lum = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+
+      if (mode === 'contrast') {
+        lum = Math.max(0, Math.min(255, Math.round((lum - 128) * 1.55 + 128)));
+      } else if (mode === 'bw') {
+        lum = lum >= thresholdValue ? 255 : 0;
+      }
+
+      dst[i] = dst[i+1] = dst[i+2] = lum;
+      dst[i+3] = a;
+    }
+    return out;
+  }
+
+  function renderBaseAndOriginal() {
+    if (!image) return;
+    const { w, h } = getRenderSize(image);
+    resizeCanvases(w, h);
+
+    baseCtx.clearRect(0, 0, w, h);
+    baseCtx.drawImage(image, 0, 0, w, h);
+
+    originalCtx.clearRect(0, 0, w, h);
+    originalCtx.drawImage(image, 0, 0, w, h);
+
+    originalImageData = baseCtx.getImageData(0, 0, w, h);
+
+    rebuildOverlay(false);
+    renderSplit();
+    fitToWindow();
+  }
+
+  function rebuildOverlay(saveHistory = true) {
+    if (!originalImageData) return;
+    overlayOriginalData = createGrayImageData(originalImageData, grayMode.value);
+    overlayCtx.putImageData(overlayOriginalData, 0, 0);
+    if (saveHistory) saveState();
+    renderSplit();
+  }
+
+  function renderSplit() {
+    if (!originalImageData) return;
+    splitCtx.clearRect(0, 0, splitCanvas.width, splitCanvas.height);
+    splitCtx.fillStyle = '#0b1020';
+    splitCtx.fillRect(0, 0, splitCanvas.width, splitCanvas.height);
+
+    splitCtx.drawImage(originalCanvas, 0, 0);
+    splitCtx.drawImage(baseCanvas, originalCanvas.width + 16, 0);
+    splitCtx.drawImage(overlayCanvas, originalCanvas.width + 16, 0);
+
+    splitCtx.fillStyle = '#dce6ff';
+    splitCtx.font = 'bold 18px Arial';
+    splitCtx.fillText('Original', 14, 26);
+    splitCtx.fillText('Edited', originalCanvas.width + 30, 26);
+  }
+
+  function saveState() {
+    if (!overlayCanvas.width) return;
+    const img = overlayCtx.getImageData(0, 0, overlayCanvas.width, overlayCanvas.height);
+    history.push(img);
+    if (history.length > maxHistory) history.shift();
+    redoStack = [];
+  }
+
+  function restoreState(imgData) {
+    overlayCtx.putImageData(imgData, 0, 0);
+    renderSplit();
+  }
+
+  undoBtn.addEventListener('click', () => {
+    if (history.length <= 1) return;
+    redoStack.push(history.pop());
+    restoreState(history[history.length - 1]);
+    setStatus('Undid last action.');
+  });
+
+  redoBtn.addEventListener('click', () => {
+    if (!redoStack.length) return;
+    const next = redoStack.pop();
+    history.push(next);
+    restoreState(next);
+    setStatus('Redid action.');
+  });
+
+  resetBtn.addEventListener('click', () => {
+    if (!overlayOriginalData) return;
+    overlayCtx.putImageData(overlayOriginalData, 0, 0);
+    saveState();
+    renderSplit();
+    setStatus('Reset the grayscale layer.');
+  });
+
+  fitBtn.addEventListener('click', () => {
+    if (view === 'split') fitSideBySide();
+    else fitToWindow();
+  });
+
+  function fitToWindow() {
+    const bounds = stage.getBoundingClientRect();
+    const { width, height } = getActiveSize();
+    if (!width || !height || !bounds.width || !bounds.height) return;
+
+    const sx = bounds.width / width;
+    const sy = bounds.height / height;
+    zoom = Math.min(sx, sy, 1);
+    zoomRange.value = Math.round(zoom * 100);
+    centerCurrentView();
+  }
+
+  function fitSideBySide() {
+    const bounds = stage.getBoundingClientRect();
+    const width = splitCanvas.width;
+    const height = splitCanvas.height;
+    if (!width || !height || !bounds.width || !bounds.height) return;
+
+    const sx = bounds.width / width;
+    const sy = bounds.height / height;
+    zoom = Math.min(sx, sy, 1);
+    zoomRange.value = Math.round(zoom * 100);
+    centerCurrentView();
+  }
+
+  function centerCurrentView() {
+    const bounds = stage.getBoundingClientRect();
+    const { width, height } = getActiveSize();
+    if (!width || !height || !bounds.width || !bounds.height) return;
+
+    panX = Math.round((bounds.width - width * zoom) / 2);
+    panY = Math.round((bounds.height - height * zoom) / 2);
+    updateLabels();
+    applyTransform();
+  }
+
+  function stageToCanvasPoint(clientX, clientY) {
+    const stack = editStack.getBoundingClientRect();
+    const x = (clientX - stack.left) / zoom;
+    const y = (clientY - stack.top) / zoom;
+    return {
+      x: Math.max(0, Math.min(baseCanvas.width - 1, x)),
+      y: Math.max(0, Math.min(baseCanvas.height - 1, y))
+    };
+  }
+
+  function eraseAtPoint(point) {
+    const r = Number(brushSize.value);
+
+    overlayCtx.save();
+    overlayCtx.globalCompositeOperation = 'destination-out';
+
+    if (softBrush.checked) {
+      const grad = overlayCtx.createRadialGradient(point.x, point.y, 0, point.x, point.y, r);
+      grad.addColorStop(0, 'rgba(0,0,0,1)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      overlayCtx.fillStyle = grad;
+      overlayCtx.beginPath();
+      overlayCtx.arc(point.x, point.y, r, 0, Math.PI * 2);
+      overlayCtx.fill();
+    } else {
+      overlayCtx.beginPath();
+      overlayCtx.fillStyle = 'rgba(0,0,0,1)';
+      overlayCtx.arc(point.x, point.y, r, 0, Math.PI * 2);
+      overlayCtx.fill();
+    }
+
+    overlayCtx.restore();
+  }
+
+  function eraseLine(a, b) {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const dist = Math.hypot(dx, dy);
+    const step = Math.max(1, Number(brushSize.value) * 0.22);
+    const steps = Math.max(1, Math.ceil(dist / step));
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      eraseAtPoint({ x: a.x + dx * t, y: a.y + dy * t });
+    }
+  }
+
+  function magicWandAt(point) {
+    const w = overlayCanvas.width;
+    const h = overlayCanvas.height;
+    if (!w || !h) return;
+
+    const overlayData = overlayCtx.getImageData(0, 0, w, h);
+    const data = overlayData.data;
+    const visited = new Uint8Array(w * h);
+
+    const startX = Math.floor(point.x);
+    const startY = Math.floor(point.y);
+    const startIdx = (startY * w + startX) * 4;
+    const target = data[startIdx];
+    const tol = Number(tolerance.value);
+
+    const qx = new Int32Array(w * h);
+    const qy = new Int32Array(w * h);
+    let head = 0, tail = 0;
+    qx[tail] = startX;
+    qy[tail] = startY;
+    tail++;
+    visited[startY * w + startX] = 1;
+
+    while (head < tail) {
+      const x = qx[head];
+      const y = qy[head];
+      head++;
+
+      const idx = (y * w + x) * 4;
+      const val = data[idx];
+      const alpha = data[idx + 3];
+
+      if (alpha === 0 || Math.abs(val - target) > tol) continue;
+
+      data[idx + 3] = 0;
+
+      if (x > 0) {
+        const n = y * w + (x - 1);
+        if (!visited[n]) { visited[n] = 1; qx[tail] = x - 1; qy[tail] = y; tail++; }
+      }
+      if (x < w - 1) {
+        const n = y * w + (x + 1);
+        if (!visited[n]) { visited[n] = 1; qx[tail] = x + 1; qy[tail] = y; tail++; }
+      }
+      if (y > 0) {
+        const n = (y - 1) * w + x;
+        if (!visited[n]) { visited[n] = 1; qx[tail] = x; qy[tail] = y - 1; tail++; }
+      }
+      if (y < h - 1) {
+        const n = (y + 1) * w + x;
+        if (!visited[n]) { visited[n] = 1; qx[tail] = x; qy[tail] = y + 1; tail++; }
+      }
+    }
+
+    overlayCtx.putImageData(overlayData, 0, 0);
+  }
+
+  function beginPointer(e) {
+    if (!image || view !== 'edit') return;
+    activePointerId = e.pointerId;
+    overlayCanvas.setPointerCapture(e.pointerId);
+
+    const actualMode = tempPanMode ? 'pan' : modeSelect.value;
+    if (actualMode === 'pan') {
+      isPanning = true;
+      lastPoint = { x: e.clientX, y: e.clientY };
+      setStatus('Panning view...');
+      return;
+    }
+
+    const point = stageToCanvasPoint(e.clientX, e.clientY);
+
+    if (actualMode === 'magic') {
+      saveState();
+      magicWandAt(point);
+      renderSplit();
+      setStatus('Magic Wand selection erased.');
+      return;
+    }
+
+    isDrawing = true;
+    saveState();
+    eraseAtPoint(point);
+    renderSplit();
+    lastPoint = point;
+  }
+
+  function movePointer(e) {
+    if (!image || e.pointerId !== activePointerId) return;
+
+    if (isPanning) {
+      const dx = e.clientX - lastPoint.x;
+      const dy = e.clientY - lastPoint.y;
+      panX += dx;
+      panY += dy;
+      applyTransform();
+      lastPoint = { x: e.clientX, y: e.clientY };
+      return;
+    }
+
+    if (!isDrawing) return;
+    const point = stageToCanvasPoint(e.clientX, e.clientY);
+    eraseLine(lastPoint, point);
+    renderSplit();
+    lastPoint = point;
+  }
+
+  function endPointer(e) {
+    if (e.pointerId !== activePointerId) return;
+    overlayCanvas.releasePointerCapture(e.pointerId);
+    activePointerId = null;
+
+    if (isDrawing) {
+      isDrawing = false;
+      renderSplit();
+      setStatus('Brush stroke applied.');
+    }
+    if (isPanning) {
+      isPanning = false;
+      setStatus('Pan complete.');
+    }
+  }
+
+  overlayCanvas.addEventListener('pointerdown', beginPointer);
+  overlayCanvas.addEventListener('pointermove', movePointer);
+  overlayCanvas.addEventListener('pointerup', endPointer);
+  overlayCanvas.addEventListener('pointercancel', endPointer);
+
+  window.addEventListener('keydown', (e) => {
+    const key = e.key.toLowerCase();
+
+    if (key === ' ' && !tempPanMode) {
+      tempPanMode = true;
+      e.preventDefault();
+    }
+
+    if ((e.ctrlKey || e.metaKey) && key === 'z') {
+      e.preventDefault();
+      undoBtn.click();
+    }
+    if (((e.ctrlKey || e.metaKey) && key === 'y') || ((e.ctrlKey || e.metaKey) && e.shiftKey && key === 'z')) {
+      e.preventDefault();
+      redoBtn.click();
+    }
+    if (e.key === '[') {
+      brushSize.value = Math.max(5, Number(brushSize.value) - 5);
+      updateLabels();
+    }
+    if (e.key === ']') {
+      brushSize.value = Math.min(180, Number(brushSize.value) + 5);
+      updateLabels();
+    }
+  });
+
+  window.addEventListener('keyup', (e) => {
+    if (e.key === ' ') tempPanMode = false;
+  });
+
+  function exportMerged(type, quality) {
+    if (!image) return;
+    const out = document.createElement('canvas');
+    out.width = baseCanvas.width;
+    out.height = baseCanvas.height;
+    const octx = out.getContext('2d');
+    octx.drawImage(baseCanvas, 0, 0);
+    octx.drawImage(overlayCanvas, 0, 0);
+    return out.toDataURL(type, quality);
+  }
+
+  downloadPNG.addEventListener('click', () => {
+    if (!image) return;
+    const a = document.createElement('a');
+    a.download = 'reveal_color_output.png';
+    a.href = exportMerged('image/png');
+    a.click();
+  });
+
+  downloadJPG.addEventListener('click', () => {
+    if (!image) return;
+    const out = document.createElement('canvas');
+    out.width = baseCanvas.width;
+    out.height = baseCanvas.height;
+    const octx = out.getContext('2d');
+    octx.fillStyle = '#ffffff';
+    octx.fillRect(0, 0, out.width, out.height);
+    octx.drawImage(baseCanvas, 0, 0);
+    octx.drawImage(overlayCanvas, 0, 0);
+    const a = document.createElement('a');
+    a.download = 'reveal_color_output.jpg';
+    a.href = out.toDataURL('image/jpeg', 0.92);
+    a.click();
+  });
+
+  shortcutsBtn.addEventListener('click', () => shortcutsModal.classList.add('show'));
+  closeModalBtn.addEventListener('click', () => shortcutsModal.classList.remove('show'));
+  shortcutsModal.addEventListener('click', (e) => {
+    if (e.target === shortcutsModal) shortcutsModal.classList.remove('show');
+  });
+
+  upload.addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      image = img;
+      history = [];
+      redoStack = [];
+      emptyState.style.display = 'none';
+      renderBaseAndOriginal();
+      saveState();
+      setView('edit');
+      setStatus('Image loaded. Start erasing the grayscale layer to reveal the color below.');
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = () => {
+      setStatus('Could not load that image.');
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  });
+
+  window.addEventListener('resize', () => {
+    if (!image) return;
+    if (view === 'split') fitSideBySide();
+    else fitToWindow();
+  });
+
+  setView('edit');
+})();
+</script>
+</body>
+</html>

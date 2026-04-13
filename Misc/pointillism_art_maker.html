@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pointillism Art Maker</title>
+<style>
+  :root{
+    --bg:#0f1220;
+    --panel:#171b2e;
+    --panel2:#1f2540;
+    --text:#eef2ff;
+    --muted:#b8c0e0;
+    --accent:#8fb4ff;
+    --line:#313a63;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:Arial, Helvetica, sans-serif;
+    background:linear-gradient(180deg,#0d1020,#121731 55%,#0e1328);
+    color:var(--text);
+  }
+  .wrap{
+    max-width:1200px;
+    margin:0 auto;
+    padding:18px;
+  }
+  h1{
+    margin:0 0 10px;
+    font-size:clamp(1.6rem, 2.4vw, 2.4rem);
+    text-align:center;
+  }
+  .sub{
+    text-align:center;
+    color:var(--muted);
+    margin:0 0 18px;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:320px 1fr;
+    gap:18px;
+  }
+  .panel{
+    background:rgba(23,27,46,.95);
+    border:1px solid var(--line);
+    border-radius:18px;
+    box-shadow:0 18px 40px rgba(0,0,0,.28);
+  }
+  .controls{
+    padding:16px;
+    position:sticky;
+    top:14px;
+    align-self:start;
+  }
+  .control{margin-bottom:14px}
+  .row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+  }
+  label{
+    display:block;
+    margin-bottom:6px;
+    font-weight:700;
+    font-size:.95rem;
+  }
+  .hint{
+    color:var(--muted);
+    font-size:.84rem;
+    line-height:1.35;
+  }
+  input[type="range"]{width:100%}
+  input[type="color"], input[type="file"], select, button{
+    width:100%;
+    border-radius:12px;
+    border:1px solid var(--line);
+    background:var(--panel2);
+    color:var(--text);
+    padding:10px 12px;
+    font-size:0.95rem;
+  }
+  input[type="checkbox"]{transform:scale(1.15)}
+  button{
+    cursor:pointer;
+    font-weight:700;
+    transition:transform .05s ease, filter .15s ease, background .2s ease;
+  }
+  button:hover{filter:brightness(1.08)}
+  button:active{transform:translateY(1px)}
+  .btn-primary{
+    background:linear-gradient(180deg,#7ca6ff,#5f89e8);
+    color:#09101f;
+    border:none;
+  }
+  .btn-secondary{
+    background:#232a48;
+  }
+  .value{
+    color:var(--accent);
+    font-weight:700;
+    min-width:52px;
+    text-align:right;
+  }
+  .viewer{
+    padding:16px;
+  }
+  .tabs{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-bottom:12px;
+  }
+  .tab{
+    width:auto;
+    padding:10px 14px;
+  }
+  .tab.active{
+    background:linear-gradient(180deg,#7ca6ff,#5f89e8);
+    color:#09101f;
+    border:none;
+  }
+  .canvas-wrap{
+    background:#0a0d19;
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:12px;
+    min-height:420px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:auto;
+  }
+  canvas{
+    max-width:100%;
+    height:auto;
+    display:none;
+    border-radius:12px;
+    background:#fff;
+  }
+  .empty{
+    color:var(--muted);
+    text-align:center;
+    line-height:1.5;
+    padding:32px 18px;
+  }
+  .status{
+    margin-top:12px;
+    color:var(--muted);
+    min-height:22px;
+  }
+  .twocol{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+  @media (max-width: 900px){
+    .grid{grid-template-columns:1fr}
+    .controls{position:static}
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Pointillism Art Maker</h1>
+    <p class="sub">Upload an image, tweak the controls, and turn it into colorful dot art.</p>
+
+    <div class="grid">
+      <div class="panel controls">
+        <div class="control">
+          <label for="upload">Upload Image</label>
+          <input id="upload" type="file" accept="image/*" />
+        </div>
+
+        <div class="control">
+          <div class="row">
+            <label for="dotSize">Base Dot Size</label>
+            <div class="value" id="dotSizeVal">8 px</div>
+          </div>
+          <input id="dotSize" type="range" min="2" max="30" value="8" />
+          <div class="hint">Controls the average size of the dots.</div>
+        </div>
+
+        <div class="control">
+          <div class="row">
+            <label for="density">Density</label>
+            <div class="value" id="densityVal">55%</div>
+          </div>
+          <input id="density" type="range" min="5" max="100" value="55" />
+          <div class="hint">Higher density samples more points and creates more dots.</div>
+        </div>
+
+        <div class="control">
+          <div class="row">
+            <label for="sizeVariation">Dot Size Variation</label>
+            <input id="sizeVariation" type="checkbox" checked />
+          </div>
+          <div class="hint">Adds some natural randomness to dot sizes.</div>
+        </div>
+
+        <div class="control">
+          <div class="row">
+            <label for="edgeBoost">Edge/Detail Boost</label>
+            <div class="value" id="edgeBoostVal">35%</div>
+          </div>
+          <input id="edgeBoost" type="range" min="0" max="100" value="35" />
+          <div class="hint">Places extra attention on edges and higher-contrast areas.</div>
+        </div>
+
+        <div class="control">
+          <label for="bgColor">Background Color</label>
+          <input id="bgColor" type="color" value="#ffffff" />
+        </div>
+
+        <div class="twocol">
+          <button id="generate" class="btn-primary">Generate Art</button>
+          <button id="randomize" class="btn-secondary">Regenerate</button>
+        </div>
+
+        <div class="twocol" style="margin-top:10px;">
+          <button id="download" class="btn-secondary">Download PNG</button>
+          <button id="fit" class="btn-secondary">Fit to Width</button>
+        </div>
+
+        <div class="status" id="status">Upload an image to begin.</div>
+      </div>
+
+      <div class="panel viewer">
+        <div class="tabs">
+          <button class="tab active" data-view="after">Pointillism</button>
+          <button class="tab" data-view="before">Original</button>
+          <button class="tab" data-view="split">Before / After</button>
+        </div>
+
+        <div class="canvas-wrap" id="canvasWrap">
+          <div class="empty" id="emptyState">
+            No image loaded yet.<br><br>
+            Choose an image, then click <b>Generate Art</b>.
+          </div>
+          <canvas id="beforeCanvas"></canvas>
+          <canvas id="afterCanvas"></canvas>
+          <canvas id="splitCanvas"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const upload = document.getElementById('upload');
+  const dotSize = document.getElementById('dotSize');
+  const density = document.getElementById('density');
+  const sizeVariation = document.getElementById('sizeVariation');
+  const edgeBoost = document.getElementById('edgeBoost');
+  const bgColor = document.getElementById('bgColor');
+  const generateBtn = document.getElementById('generate');
+  const randomizeBtn = document.getElementById('randomize');
+  const downloadBtn = document.getElementById('download');
+  const fitBtn = document.getElementById('fit');
+  const statusEl = document.getElementById('status');
+  const emptyState = document.getElementById('emptyState');
+
+  const dotSizeVal = document.getElementById('dotSizeVal');
+  const densityVal = document.getElementById('densityVal');
+  const edgeBoostVal = document.getElementById('edgeBoostVal');
+
+  const beforeCanvas = document.getElementById('beforeCanvas');
+  const afterCanvas = document.getElementById('afterCanvas');
+  const splitCanvas = document.getElementById('splitCanvas');
+
+  const tabs = Array.from(document.querySelectorAll('.tab'));
+
+  let currentView = 'after';
+  let originalImage = null;
+  let objectUrl = null;
+  let scaleToFit = true;
+
+  function updateLabels() {
+    dotSizeVal.textContent = `${dotSize.value} px`;
+    densityVal.textContent = `${density.value}%`;
+    edgeBoostVal.textContent = `${edgeBoost.value}%`;
+  }
+  updateLabels();
+
+  [dotSize, density, edgeBoost].forEach(el => el.addEventListener('input', updateLabels));
+
+  function setStatus(text) {
+    statusEl.textContent = text;
+  }
+
+  function showCanvas(view) {
+    currentView = view;
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.view === view));
+    beforeCanvas.style.display = view === 'before' ? 'block' : 'none';
+    afterCanvas.style.display = view === 'after' ? 'block' : 'none';
+    splitCanvas.style.display = view === 'split' ? 'block' : 'none';
+    if (originalImage) emptyState.style.display = 'none';
+    applyFitMode();
+  }
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => showCanvas(tab.dataset.view));
+  });
+
+  function applyFitMode() {
+    const all = [beforeCanvas, afterCanvas, splitCanvas];
+    all.forEach(c => {
+      c.style.width = scaleToFit ? '100%' : 'auto';
+      c.style.maxWidth = scaleToFit ? '100%' : 'none';
+    });
+  }
+
+  fitBtn.addEventListener('click', () => {
+    scaleToFit = !scaleToFit;
+    fitBtn.textContent = scaleToFit ? 'Fit to Width' : 'Actual Size';
+    applyFitMode();
+  });
+
+  upload.addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(file);
+
+    const img = new Image();
+    img.onload = () => {
+      originalImage = img;
+      renderOriginal();
+      setStatus('Image loaded. Adjust the controls and click Generate Art.');
+      emptyState.style.display = 'none';
+      showCanvas(currentView);
+      generateArt();
+    };
+    img.onerror = () => setStatus('Could not load that image.');
+    img.src = objectUrl;
+  });
+
+  function getRenderSize(img) {
+    const maxDim = 1400;
+    let w = img.naturalWidth || img.width;
+    let h = img.naturalHeight || img.height;
+    if (Math.max(w, h) > maxDim) {
+      const s = maxDim / Math.max(w, h);
+      w = Math.round(w * s);
+      h = Math.round(h * s);
+    }
+    return {w, h};
+  }
+
+  function renderOriginal() {
+    if (!originalImage) return;
+    const {w, h} = getRenderSize(originalImage);
+    beforeCanvas.width = w;
+    beforeCanvas.height = h;
+    const ctx = beforeCanvas.getContext('2d');
+    ctx.clearRect(0,0,w,h);
+    ctx.drawImage(originalImage, 0, 0, w, h);
+    renderSplit();
+  }
+
+  function renderSplit() {
+    if (!beforeCanvas.width || !afterCanvas.width) return;
+    const w = Math.max(beforeCanvas.width, afterCanvas.width);
+    const h = Math.max(beforeCanvas.height, afterCanvas.height);
+    splitCanvas.width = w * 2 + 16;
+    splitCanvas.height = h;
+    const ctx = splitCanvas.getContext('2d');
+    ctx.fillStyle = '#0d111f';
+    ctx.fillRect(0, 0, splitCanvas.width, splitCanvas.height);
+    ctx.drawImage(beforeCanvas, 0, 0);
+    ctx.drawImage(afterCanvas, w + 16, 0);
+    ctx.fillStyle = '#dce6ff';
+    ctx.font = 'bold 18px Arial';
+    ctx.fillText('Original', 14, 26);
+    ctx.fillText('Pointillism', w + 30, 26);
+  }
+
+  function generateArt() {
+    if (!originalImage) {
+      setStatus('Please upload an image first.');
+      return;
+    }
+
+    setStatus('Generating pointillism...');
+    requestAnimationFrame(() => {
+      const {w, h} = getRenderSize(originalImage);
+
+      const srcCanvas = document.createElement('canvas');
+      srcCanvas.width = w;
+      srcCanvas.height = h;
+      const sctx = srcCanvas.getContext('2d', { willReadFrequently: true });
+      sctx.drawImage(originalImage, 0, 0, w, h);
+
+      const srcData = sctx.getImageData(0, 0, w, h);
+      const data = srcData.data;
+
+      afterCanvas.width = w;
+      afterCanvas.height = h;
+      const ctx = afterCanvas.getContext('2d');
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = bgColor.value;
+      ctx.fillRect(0, 0, w, h);
+
+      const baseSize = Number(dotSize.value);
+      const dens = Number(density.value) / 100;
+      const edge = Number(edgeBoost.value) / 100;
+      const vary = sizeVariation.checked;
+
+      // Estimate number of samples from area and control values
+      const spacing = Math.max(3, baseSize * (1.85 - dens * 1.35));
+      let total = Math.max(800, Math.round((w * h) / (spacing * spacing)));
+
+      // Random jittered sampling
+      for (let i = 0; i < total; i++) {
+        const x = Math.random() * w;
+        const y = Math.random() * h;
+        const xi = Math.max(1, Math.min(w - 2, x | 0));
+        const yi = Math.max(1, Math.min(h - 2, y | 0));
+
+        const idx = (yi * w + xi) * 4;
+        const r = data[idx], g = data[idx+1], b = data[idx+2], a = data[idx+3] / 255;
+
+        // Simple gradient magnitude for edge preference
+        const idxL = (yi * w + (xi - 1)) * 4;
+        const idxR = (yi * w + (xi + 1)) * 4;
+        const idxU = ((yi - 1) * w + xi) * 4;
+        const idxD = ((yi + 1) * w + xi) * 4;
+
+        const lum = (rr,gg,bb) => 0.2126*rr + 0.7152*gg + 0.0722*bb;
+        const gx = Math.abs(lum(data[idxR],data[idxR+1],data[idxR+2]) - lum(data[idxL],data[idxL+1],data[idxL+2]));
+        const gy = Math.abs(lum(data[idxD],data[idxD+1],data[idxD+2]) - lum(data[idxU],data[idxU+1],data[idxU+2]));
+        const grad = Math.min(1, (gx + gy) / 180);
+
+        const keepChance = Math.min(1, 0.25 + dens * 0.55 + grad * edge * 0.65);
+        if (Math.random() > keepChance) continue;
+
+        let radius = baseSize * (0.45 + dens * 0.55);
+        if (vary) {
+          const jitter = 0.55 + Math.random() * 0.95;
+          const detailFactor = 0.8 + grad * 0.65;
+          radius *= jitter * detailFactor;
+        } else {
+          radius *= 0.95 + grad * 0.25;
+        }
+
+        radius = Math.max(1.2, radius);
+
+        ctx.beginPath();
+        ctx.globalAlpha = Math.max(0.5, a);
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.globalAlpha = 1;
+      renderSplit();
+      showCanvas(currentView);
+      setStatus('Done. Click Regenerate for a new random version, or Download PNG.');
+    });
+  }
+
+  generateBtn.addEventListener('click', generateArt);
+  randomizeBtn.addEventListener('click', generateArt);
+
+  downloadBtn.addEventListener('click', () => {
+    if (!afterCanvas.width) {
+      setStatus('Generate the artwork first.');
+      return;
+    }
+    const link = document.createElement('a');
+    link.download = 'pointillism_art.png';
+    link.href = afterCanvas.toDataURL('image/png');
+    link.click();
+  });
+
+  showCanvas('after');
+})();
+</script>
+</body>
+</html>
