@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rabbit Hunt</title>
+  <style>
+    :root{
+      --bg:#f6f7fb;
+      --panel:#ffffff;
+      --line:#d8dfeb;
+      --text:#1e2a3a;
+      --muted:#66758a;
+      --accent:#7a5cff;
+      --accent2:#e8e2ff;
+      --picked:#eef3fb;
+      --win:#dff7e6;
+      --shadow:0 10px 30px rgba(25,42,70,0.08);
+      --board-size:min(72vmin, 760px);
+      --gap:6px;
+      --tile-font:26px;
+      --tile-radius:14px;
+      --panel-pad:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:Arial, Helvetica, sans-serif;
+      background:linear-gradient(180deg,#f9fbff 0%, #eef3fa 100%);
+      color:var(--text);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:12px;
+      overflow:hidden;
+    }
+    .wrap{
+      width:min(1080px, 100%);
+      max-height:calc(100vh - 24px);
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:22px;
+      box-shadow:var(--shadow);
+      padding:var(--panel-pad);
+      display:grid;
+      grid-template-columns:minmax(260px, 340px) minmax(0, 1fr);
+      gap:18px;
+      align-items:start;
+    }
+    .sidebar{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      min-width:0;
+    }
+    h1{
+      margin:0 0 4px;
+      font-size:clamp(26px,3vw,38px);
+      text-align:left;
+    }
+    .sub{
+      color:var(--muted);
+      margin:0;
+      line-height:1.45;
+      font-size:14px;
+    }
+    .card{
+      background:#f8faff;
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:12px;
+    }
+    .settings{
+      display:grid;
+      gap:10px;
+    }
+    .settings-row{
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:10px;
+      align-items:center;
+    }
+    .settings-row label{
+      font-weight:700;
+      font-size:14px;
+    }
+    select, button{
+      font:inherit;
+    }
+    select{
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:white;
+      padding:10px 12px;
+      font-weight:700;
+      color:var(--text);
+    }
+    .topbar{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0,1fr));
+      gap:10px;
+    }
+    .stat{
+      background:#f8faff;
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:12px 10px;
+      text-align:center;
+      min-width:0;
+    }
+    .stat .label{
+      display:block;
+      color:var(--muted);
+      font-size:11px;
+      margin-bottom:4px;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+    }
+    .stat .value{
+      font-size:clamp(18px, 2vw, 24px);
+      font-weight:700;
+      overflow-wrap:anywhere;
+    }
+    .controls{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    button{
+      border:none;
+      border-radius:999px;
+      padding:11px 16px;
+      font-size:15px;
+      font-weight:700;
+      cursor:pointer;
+    }
+    .primary{
+      background:var(--accent);
+      color:white;
+    }
+    .secondary{
+      background:var(--accent2);
+      color:#4a369d;
+    }
+    .msg{
+      padding:14px 16px;
+      border-radius:16px;
+      background:#f8faff;
+      border:1px solid var(--line);
+      color:var(--text);
+      line-height:1.45;
+      min-height:68px;
+      font-size:14px;
+    }
+    .legend{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.45;
+    }
+    .board-panel{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-width:0;
+      min-height:0;
+    }
+    .board{
+      width:var(--board-size);
+      height:var(--board-size);
+      display:grid;
+      grid-template-columns:repeat(var(--grid-size),1fr);
+      grid-template-rows:repeat(var(--grid-size),1fr);
+      gap:var(--gap);
+      margin:0 auto;
+      touch-action:manipulation;
+    }
+    .tile{
+      min-width:0;
+      min-height:0;
+      border:1px solid var(--line);
+      background:#fff;
+      border-radius:var(--tile-radius);
+      font-size:var(--tile-font);
+      font-weight:700;
+      cursor:pointer;
+      transition:transform .08s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      user-select:none;
+      padding:0;
+      box-shadow:0 2px 0 rgba(0,0,0,0.02);
+      overflow:hidden;
+      line-height:1;
+    }
+    .tile:hover{ transform:translateY(-1px); box-shadow:0 7px 14px rgba(25,42,70,0.08); }
+    .tile:active{ transform:translateY(0); }
+    .tile.picked{ background:var(--picked); }
+    .tile.win{ background:var(--win); border-color:#87cf99; }
+    .tile.locked{ cursor:default; }
+
+    @media (max-width:900px){
+      body{overflow:auto}
+      .wrap{
+        max-height:none;
+        grid-template-columns:1fr;
+      }
+      .sidebar{order:1}
+      .board-panel{order:2}
+      :root{ --board-size:min(92vw, 72vh); }
+    }
+    @media (max-width:560px){
+      :root{
+        --gap:3px;
+        --panel-pad:12px;
+      }
+      .topbar{grid-template-columns:repeat(2,minmax(0,1fr));}
+      .settings-row{grid-template-columns:1fr;}
+      button{padding:10px 14px;font-size:14px}
+      .legend,.sub,.msg{font-size:13px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="sidebar">
+      <div>
+        <h1>Rabbit Hunt</h1>
+        <p class="sub">Track down the hidden rabbit using directional clues. After every 2 guesses, it hops to an adjacent unpicked square.</p>
+      </div>
+
+      <div class="card settings">
+        <div class="settings-row">
+          <label for="boardSizeSelect">Board Size</label>
+          <select id="boardSizeSelect" aria-label="Board size"></select>
+        </div>
+      </div>
+
+      <div class="topbar">
+        <div class="stat"><span class="label">Guesses</span><span class="value" id="guesses">0</span></div>
+        <div class="stat"><span class="label">Rabbit Moves</span><span class="value" id="moves">0</span></div>
+        <div class="stat"><span class="label">Status</span><span class="value" id="status">Hiding</span></div>
+        <div class="stat"><span class="label">Best Score</span><span class="value" id="bestScore">—</span></div>
+      </div>
+
+      <div class="controls">
+        <button class="primary" id="newGameBtn">New Game</button>
+        <button class="secondary" id="revealRulesBtn">How to Play</button>
+      </div>
+
+      <div class="msg" id="message">Pick a tile to begin the hunt.</div>
+      <div class="legend">Hints can show one or two arrows. For example, ↑→ means the rabbit is above and to the right. High scores are saved separately for each board size on this device.</div>
+    </div>
+
+    <div class="board-panel">
+      <div class="board" id="board"></div>
+    </div>
+  </div>
+
+  <script>
+    const MIN_SIZE = 5;
+    const MAX_SIZE = 25;
+    const boardEl = document.getElementById('board');
+    const guessesEl = document.getElementById('guesses');
+    const movesEl = document.getElementById('moves');
+    const statusEl = document.getElementById('status');
+    const bestScoreEl = document.getElementById('bestScore');
+    const messageEl = document.getElementById('message');
+    const newGameBtn = document.getElementById('newGameBtn');
+    const revealRulesBtn = document.getElementById('revealRulesBtn');
+    const boardSizeSelect = document.getElementById('boardSizeSelect');
+
+    let size = 5;
+    let rabbit = { r: 0, c: 0 };
+    let guesses = 0;
+    let rabbitMoves = 0;
+    let gameOver = false;
+    let picked = new Set();
+    let cells = [];
+
+    function key(r, c){ return `${r},${c}`; }
+    function randInt(max){ return Math.floor(Math.random() * max); }
+    function highScoreKey(boardSize){ return `rabbit-hunt-best-${boardSize}`; }
+
+    function populateBoardSizes(){
+      for(let s = MIN_SIZE; s <= MAX_SIZE; s++){
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = `${s}×${s}`;
+        if(s === size) opt.selected = true;
+        boardSizeSelect.appendChild(opt);
+      }
+    }
+
+    function setBoardScale(){
+      document.documentElement.style.setProperty('--grid-size', size);
+
+      let gap = 6;
+      let radius = 14;
+      let font = 26;
+
+      if(size >= 10){ gap = 5; radius = 12; font = 22; }
+      if(size >= 14){ gap = 4; radius = 10; font = 18; }
+      if(size >= 18){ gap = 3; radius = 8; font = 14; }
+      if(size >= 22){ gap = 2; radius = 6; font = 11; }
+
+      const isNarrow = window.innerWidth <= 560;
+      let boardSizePx;
+      if(window.innerWidth <= 900){
+        boardSizePx = Math.min(window.innerWidth * 0.92, window.innerHeight * 0.68);
+      } else {
+        boardSizePx = Math.min(window.innerWidth * 0.58, window.innerHeight * 0.86, 760);
+      }
+      if(isNarrow){
+        boardSizePx = Math.min(window.innerWidth * 0.94, window.innerHeight * 0.58);
+      }
+      boardSizePx = Math.max(280, boardSizePx);
+
+      document.documentElement.style.setProperty('--board-size', `${Math.floor(boardSizePx)}px`);
+      document.documentElement.style.setProperty('--gap', `${gap}px`);
+      document.documentElement.style.setProperty('--tile-radius', `${radius}px`);
+      document.documentElement.style.setProperty('--tile-font', `${font}px`);
+    }
+
+    function buildBoard(){
+      setBoardScale();
+      boardEl.innerHTML = '';
+      cells = [];
+      for(let r = 0; r < size; r++){
+        for(let c = 0; c < size; c++){
+          const btn = document.createElement('button');
+          btn.className = 'tile';
+          btn.setAttribute('aria-label', `Row ${r+1}, Column ${c+1}`);
+          btn.dataset.r = r;
+          btn.dataset.c = c;
+          btn.addEventListener('click', () => handleGuess(r, c));
+          boardEl.appendChild(btn);
+          cells.push(btn);
+        }
+      }
+    }
+
+    function setMessage(text){
+      messageEl.textContent = text;
+    }
+
+    function getBestScore(){
+      const value = localStorage.getItem(highScoreKey(size));
+      return value === null ? null : Number(value);
+    }
+
+    function maybeSaveBestScore(){
+      const currentBest = getBestScore();
+      if(currentBest === null || guesses < currentBest){
+        localStorage.setItem(highScoreKey(size), String(guesses));
+        return true;
+      }
+      return false;
+    }
+
+    function updateStats(){
+      guessesEl.textContent = guesses;
+      movesEl.textContent = rabbitMoves;
+      statusEl.textContent = gameOver ? 'Caught!' : 'Hiding';
+      const best = getBestScore();
+      bestScoreEl.textContent = best === null ? '—' : best;
+    }
+
+    function getCell(r, c){
+      return cells[r * size + c];
+    }
+
+    function placeRabbit(){
+      let r, c;
+      do {
+        r = randInt(size);
+        c = randInt(size);
+      } while (picked.has(key(r, c)));
+      rabbit = { r, c };
+    }
+
+    function directionText(fromR, fromC, toR, toC){
+      const vertical = toR < fromR ? '↑' : toR > fromR ? '↓' : '';
+      const horizontal = toC < fromC ? '←' : toC > fromC ? '→' : '';
+      return vertical + horizontal || '🐇';
+    }
+
+    function adjacentOptions(r, c){
+      const opts = [];
+      for(let dr = -1; dr <= 1; dr++){
+        for(let dc = -1; dc <= 1; dc++){
+          if(dr === 0 && dc === 0) continue;
+          const nr = r + dr;
+          const nc = c + dc;
+          if(nr < 0 || nr >= size || nc < 0 || nc >= size) continue;
+          if(picked.has(key(nr, nc))) continue;
+          opts.push({ r: nr, c: nc });
+        }
+      }
+      return opts;
+    }
+
+    function moveRabbitIfNeeded(){
+      if(gameOver || guesses === 0 || guesses % 2 !== 0) return;
+      const opts = adjacentOptions(rabbit.r, rabbit.c);
+      if(opts.length === 0){
+        setMessage('The rabbit tried to move, but every adjacent square has already been picked. It stays put.');
+        return;
+      }
+      rabbit = opts[randInt(opts.length)];
+      rabbitMoves++;
+      setMessage('The rabbit hopped to an adjacent unpicked square after your second guess.');
+    }
+
+    function handleGuess(r, c){
+      if(gameOver) return;
+      const k = key(r, c);
+      const cell = getCell(r, c);
+      if(picked.has(k)){
+        setMessage('You already checked that square. Try a different one.');
+        return;
+      }
+
+      guesses++;
+      picked.add(k);
+      cell.classList.add('picked', 'locked');
+
+      if(r === rabbit.r && c === rabbit.c){
+        cell.classList.add('win');
+        cell.textContent = '🐇';
+        gameOver = true;
+        const isBest = maybeSaveBestScore();
+        updateStats();
+        setMessage(
+          isBest
+            ? `You caught the rabbit in ${guesses} guess${guesses === 1 ? '' : 'es'} — a new best score for ${size}×${size}!`
+            : `You caught the rabbit in ${guesses} guess${guesses === 1 ? '' : 'es'}!`
+        );
+        return;
+      }
+
+      cell.textContent = directionText(r, c, rabbit.r, rabbit.c);
+      updateStats();
+      moveRabbitIfNeeded();
+      updateStats();
+    }
+
+    function newGame(){
+      size = Number(boardSizeSelect.value || size);
+      guesses = 0;
+      rabbitMoves = 0;
+      gameOver = false;
+      picked = new Set();
+      buildBoard();
+      placeRabbit();
+      updateStats();
+      setMessage(`Pick a square to begin the ${size}×${size} hunt.`);
+    }
+
+    newGameBtn.addEventListener('click', newGame);
+    boardSizeSelect.addEventListener('change', newGame);
+    revealRulesBtn.addEventListener('click', () => {
+      alert(
+        'Rabbit Hunt\n\n' +
+        '• Choose any square board from 5×5 up to 25×25.\n' +
+        '• The rabbit starts hidden on one square.\n' +
+        '• Click a square to check it.\n' +
+        '• If the rabbit is not there, that square shows the direction to the rabbit.\n' +
+        '• Example: ↑→ means the rabbit is above and to the right.\n' +
+        '• After every 2 guesses, the rabbit moves to an adjacent square, including diagonals.\n' +
+        '• The rabbit can never move onto a square you already picked.\n' +
+        '• High scores are stored separately for each board size.\n' +
+        '• Catch the rabbit in as few guesses as possible!'
+      );
+    });
+
+    window.addEventListener('resize', setBoardScale);
+
+    populateBoardSizes();
+    newGame();
+  </script>
+</body>
+</html>
