@@ -107,6 +107,9 @@
     font-size:clamp(1rem,1.6vw,1.4rem);letter-spacing:-.03em;white-space:nowrap;flex:0 0 auto
   }
   .inline-stat span{font-size:.92rem;white-space:normal;min-width:0}
+
+  .loading-text{color:var(--muted);font-style:italic}
+
 </style>
 </head>
 <body>
@@ -207,6 +210,15 @@
         <div class="inline-stat"><strong id="summerOlympics">—</strong><span>Summer Olympics</span></div>
         <div class="inline-stat"><strong id="winterOlympics">—</strong><span>Winter Olympics</span></div>
       </section>
+    
+      <section class="panel card stack" id="onThisDaySection">
+        <h2>On this day</h2>
+        <div class="inline-stat"><strong id="billboardSong">—</strong><span>#1 Billboard Hot 100 song</span></div>
+        <div class="inline-stat"><strong id="tvShow">—</strong><span>Top TV show around that time</span></div>
+        <div class="inline-stat"><strong id="moonPhase">—</strong><span>Moon phase on your birthday</span></div>
+        <div class="hint" id="onThisDayHint">Some On This Day items use live online lookups when available.</div>
+      </section>
+
     </main>
   </div>
 </div>
@@ -633,6 +645,220 @@
     return `${sign}${fmt(Math.abs(percent), 1)}% (${direction})`;
   }
 
+
+  const TV_SEASON_LEADERS = [
+    {start:"1950-09-01", end:"1951-08-31", show:"Texaco Star Theater"},
+    {start:"1951-09-01", end:"1952-08-31", show:"I Love Lucy"},
+    {start:"1952-09-01", end:"1953-08-31", show:"I Love Lucy"},
+    {start:"1953-09-01", end:"1954-08-31", show:"I Love Lucy"},
+    {start:"1954-09-01", end:"1955-08-31", show:"I Love Lucy"},
+    {start:"1955-09-01", end:"1956-08-31", show:"I Love Lucy"},
+    {start:"1956-09-01", end:"1957-08-31", show:"I Love Lucy"},
+    {start:"1957-09-01", end:"1958-08-31", show:"Gunsmoke"},
+    {start:"1958-09-01", end:"1959-08-31", show:"Gunsmoke"},
+    {start:"1959-09-01", end:"1960-08-31", show:"Gunsmoke"},
+    {start:"1960-09-01", end:"1961-08-31", show:"Gunsmoke"},
+    {start:"1961-09-01", end:"1962-08-31", show:"Bonanza"},
+    {start:"1962-09-01", end:"1963-08-31", show:"The Beverly Hillbillies"},
+    {start:"1963-09-01", end:"1964-08-31", show:"The Beverly Hillbillies"},
+    {start:"1964-09-01", end:"1965-08-31", show:"Bonanza"},
+    {start:"1965-09-01", end:"1966-08-31", show:"Bonanza"},
+    {start:"1966-09-01", end:"1967-08-31", show:"Bonanza"},
+    {start:"1967-09-01", end:"1968-08-31", show:"The Andy Griffith Show"},
+    {start:"1968-09-01", end:"1969-08-31", show:"Rowan & Martin's Laugh-In"},
+    {start:"1969-09-01", end:"1970-08-31", show:"Marcus Welby, M.D."},
+    {start:"1970-09-01", end:"1971-08-31", show:"Marcus Welby, M.D."},
+    {start:"1971-09-01", end:"1972-08-31", show:"All in the Family"},
+    {start:"1972-09-01", end:"1973-08-31", show:"All in the Family"},
+    {start:"1973-09-01", end:"1974-08-31", show:"All in the Family"},
+    {start:"1974-09-01", end:"1975-08-31", show:"All in the Family"},
+    {start:"1975-09-01", end:"1976-08-31", show:"Happy Days"},
+    {start:"1976-09-01", end:"1977-08-31", show:"Laverne & Shirley"},
+    {start:"1977-09-01", end:"1978-08-31", show:"Laverne & Shirley"},
+    {start:"1978-09-01", end:"1979-08-31", show:"Laverne & Shirley"},
+    {start:"1979-09-01", end:"1980-08-31", show:"60 Minutes"},
+    {start:"1980-09-01", end:"1981-08-31", show:"Dallas"},
+    {start:"1981-09-01", end:"1982-08-31", show:"Dallas"},
+    {start:"1982-09-01", end:"1983-08-31", show:"60 Minutes"},
+    {start:"1983-09-01", end:"1984-08-31", show:"Dallas"},
+    {start:"1984-09-01", end:"1985-08-31", show:"The Cosby Show"},
+    {start:"1985-09-01", end:"1986-08-31", show:"The Cosby Show"},
+    {start:"1986-09-01", end:"1987-08-31", show:"The Cosby Show"},
+    {start:"1987-09-01", end:"1988-08-31", show:"The Cosby Show"},
+    {start:"1988-09-01", end:"1989-08-31", show:"The Cosby Show"},
+    {start:"1989-09-01", end:"1990-08-31", show:"Cheers"},
+    {start:"1990-09-01", end:"1991-08-31", show:"Cheers"},
+    {start:"1991-09-01", end:"1992-08-31", show:"60 Minutes"},
+    {start:"1992-09-01", end:"1993-08-31", show:"60 Minutes"},
+    {start:"1993-09-01", end:"1994-08-31", show:"Seinfeld"},
+    {start:"1994-09-01", end:"1995-08-31", show:"ER"},
+    {start:"1995-09-01", end:"1996-08-31", show:"ER"},
+    {start:"1996-09-01", end:"1997-08-31", show:"ER"},
+    {start:"1997-09-01", end:"1998-08-31", show:"Seinfeld"},
+    {start:"1998-09-01", end:"1999-08-31", show:"ER"},
+    {start:"1999-09-01", end:"2000-08-31", show:"Who Wants to Be a Millionaire"},
+    {start:"2000-09-01", end:"2001-08-31", show:"Survivor"},
+    {start:"2001-09-01", end:"2002-08-31", show:"Friends"},
+    {start:"2002-09-01", end:"2003-08-31", show:"CSI: Crime Scene Investigation"},
+    {start:"2003-09-01", end:"2004-08-31", show:"CSI: Crime Scene Investigation"},
+    {start:"2004-09-01", end:"2005-08-31", show:"CSI: Crime Scene Investigation"},
+    {start:"2005-09-01", end:"2006-08-31", show:"American Idol"},
+    {start:"2006-09-01", end:"2007-08-31", show:"American Idol"},
+    {start:"2007-09-01", end:"2008-08-31", show:"American Idol"},
+    {start:"2008-09-01", end:"2009-08-31", show:"American Idol"},
+    {start:"2009-09-01", end:"2010-08-31", show:"American Idol"},
+    {start:"2010-09-01", end:"2011-08-31", show:"Sunday Night Football"},
+    {start:"2011-09-01", end:"2012-08-31", show:"Sunday Night Football"},
+    {start:"2012-09-01", end:"2013-08-31", show:"Sunday Night Football"},
+    {start:"2013-09-01", end:"2014-08-31", show:"Sunday Night Football"},
+    {start:"2014-09-01", end:"2015-08-31", show:"Sunday Night Football"},
+    {start:"2015-09-01", end:"2016-08-31", show:"Sunday Night Football"},
+    {start:"2016-09-01", end:"2017-08-31", show:"Sunday Night Football"},
+    {start:"2017-09-01", end:"2018-08-31", show:"Sunday Night Football"},
+    {start:"2018-09-01", end:"2019-08-31", show:"Sunday Night Football"},
+    {start:"2019-09-01", end:"2020-08-31", show:"Sunday Night Football"},
+    {start:"2020-09-01", end:"2021-08-31", show:"Sunday Night Football"},
+    {start:"2021-09-01", end:"2022-08-31", show:"Sunday Night Football"},
+    {start:"2022-09-01", end:"2023-08-31", show:"Sunday Night Football"},
+    {start:"2023-09-01", end:"2024-08-31", show:"Sunday Night Football"},
+    {start:"2024-09-01", end:"2025-08-31", show:"Sunday Night Football"},
+    {start:"2025-09-01", end:"2026-08-31", show:"Sunday Night Football"}
+  ].map(x => ({start:new Date(x.start+"T00:00:00"), end:new Date(x.end+"T23:59:59"), show:x.show}));
+
+  function formatMonthDay(date){
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    return {mm, dd};
+  }
+
+  function formatISODate(date){
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  async function fetchJSON(url){
+    const res = await fetch(url, {cache:"force-cache"});
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  }
+
+  async function fetchText(url){
+    const res = await fetch(url, {cache:"force-cache"});
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.text();
+  }
+
+  function getMoonPhase(date){
+    const lp = 2551443;
+    const newMoon = new Date('2001-01-24T13:00:00Z').getTime();
+    const phase = ((date.getTime() - newMoon) / 1000) % lp;
+    const age = phase < 0 ? (phase + lp) / 86400 : phase / 86400;
+
+    if (age < 1.84566) return "New Moon";
+    if (age < 5.53699) return "Waxing Crescent";
+    if (age < 9.22831) return "First Quarter";
+    if (age < 12.91963) return "Waxing Gibbous";
+    if (age < 16.61096) return "Full Moon";
+    if (age < 20.30228) return "Waning Gibbous";
+    if (age < 23.99361) return "Last Quarter";
+    if (age < 27.68493) return "Waning Crescent";
+    return "New Moon";
+  }
+
+  function getTVSeasonLeader(date){
+    const found = TV_SEASON_LEADERS.find(x => date >= x.start && date <= x.end);
+    return found ? found.show : "Unavailable";
+  }
+
+  async function getBillboardTopSong(date){
+    const startDate = new Date(date.getTime());
+    if (startDate < new Date("1958-08-04T00:00:00")) return "Unavailable before 1958";
+    for(let i = 0; i < 8; i++){
+      const tryDate = new Date(startDate.getTime());
+      tryDate.setDate(tryDate.getDate() + i);
+      const url = `https://raw.githubusercontent.com/mhollingshead/billboard-hot-100/main/date/${formatISODate(tryDate)}.json`;
+      try {
+        const data = await fetchJSON(url);
+        if(data && Array.isArray(data.data) && data.data.length){
+          const top = data.data.find(x => x.this_week === 1) || data.data[0];
+          return `${top.song} — ${top.artist}`;
+        }
+      } catch(e) {}
+    }
+    return "Unavailable";
+  }
+
+  async function getBoxOfficeTopMovie(date){
+    if (date < new Date("2000-01-01T00:00:00")) return "Unavailable before 2000";
+    const iso = formatISODate(date);
+    const candidates = [
+      `https://www.boxofficemojo.com/date/${iso}/`,
+      `https://www.boxofficemojo.com/date/${iso}`
+    ];
+    for (const url of candidates){
+      try {
+        const text = await fetchText(url);
+        const m = text.match(/<title>.*?Box Office For .*?<\/title>/i);
+        const row = text.match(/<td class="a-text-left mojo-field-type-release_group"><a [^>]*>([^<]+)<\/a>/i) ||
+                    text.match(/<a[^>]*class="a-size-medium a-link-normal"[^>]*>([^<]+)<\/a>/i);
+        if (row && row[1]) return row[1].trim();
+      } catch(e) {}
+    }
+    return "Unavailable";
+  }
+
+  async function getWikipediaOnThisDay(date){
+    const {mm, dd} = formatMonthDay(date);
+    const base = `https://api.wikimedia.org/core/v1/wikipedia/en/onthisday`;
+    try{
+      const [births, events] = await Promise.all([
+        fetchJSON(`${base}/births/${mm}/${dd}`),
+        fetchJSON(`${base}/events/${mm}/${dd}`)
+      ]);
+
+      let celebText = "Unavailable";
+      if (births && Array.isArray(births.births) && births.births.length){
+        const names = births.births
+          .map(x => x?.text || x?.pages?.[0]?.normalizedtitle || x?.pages?.[0]?.titles?.normalized)
+          .filter(Boolean)
+          .slice(0, 4);
+        if(names.length) celebText = names.join(", ");
+      }
+
+      let eventText = "Unavailable";
+      if (events && Array.isArray(events.events) && events.events.length){
+        const picked = events.events.find(x => x?.text) || events.events[0];
+        if (picked?.text) eventText = picked.text.replace(/\s+/g, " ").trim();
+      }
+
+      return {celebText, eventText};
+    }catch(e){
+      return {celebText:"Unavailable", eventText:"Unavailable"};
+    }
+  }
+
+  async function updateOnThisDay(date){
+    setText("sharedBirthdays", "Loading...");
+    setText("onThisDayEvent", "Loading...");
+    setText("billboardSong", "Loading...");
+    setText("boxOfficeMovie", "Loading...");
+    setText("tvShow", getTVSeasonLeader(date));
+    setText("moonPhase", getMoonPhase(date));
+
+    const wikiPromise = getWikipediaOnThisDay(date);
+    const songPromise = getBillboardTopSong(date);
+    const boxPromise = getBoxOfficeTopMovie(date);
+
+    const [wiki, song, box] = await Promise.all([wikiPromise, songPromise, boxPromise]);
+
+    setText("sharedBirthdays", wiki.celebText);
+    setText("onThisDayEvent", wiki.eventText);
+    setText("billboardSong", song);
+    setText("boxOfficeMovie", box);
+  }
+
   function calculate(){
     const birthDate = getSelectedDate();
     if(!birthDate || Number.isNaN(birthDate.getTime())){
@@ -686,6 +912,7 @@
     setText("nflGames", fmt(Math.round(countLeagueGames(birthDate, now, "NFL")), 0));
     setText("wweChamps", fmt(countSinceDate(wweChampionFirstWins, birthDate), 0));
     setText("ufcEvents", fmt(countUFCEvents(birthDate, now), 0));
+    updateOnThisDay(birthDate);
 
     const birthYearFloat = birthDate.getFullYear() + (birthDate.getMonth() / 12);
     const nowYearFloat = now.getFullYear() + (now.getMonth() / 12);
