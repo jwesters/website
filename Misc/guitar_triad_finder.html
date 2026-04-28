@@ -100,6 +100,10 @@
     padding:10px 12px;
   }
   .check input{width:auto; margin:0}
+  .checkgroup{
+    display:grid;
+    gap:8px;
+  }
   .viewer{
     padding:16px;
   }
@@ -248,6 +252,30 @@
         </select>
       </div>
 
+
+      <div class="control">
+        <label>Number of Played Strings</label>
+        <div class="checkgroup">
+          <div class="check">
+            <input type="checkbox" id="strings3" checked />
+            <label for="strings3" style="margin:0;">3 strings</label>
+          </div>
+          <div class="check">
+            <input type="checkbox" id="strings4" />
+            <label for="strings4" style="margin:0;">4 strings</label>
+          </div>
+          <div class="check">
+            <input type="checkbox" id="strings5" />
+            <label for="strings5" style="margin:0;">5 strings</label>
+          </div>
+          <div class="check">
+            <input type="checkbox" id="strings6" />
+            <label for="strings6" style="margin:0;">6 strings</label>
+          </div>
+        </div>
+        <div class="hint">Larger shapes must still contain all three chord tones; extra strings repeat chord tones.</div>
+      </div>
+
       <div class="control">
         <label for="sortSelect">Sort Results</label>
         <select id="sortSelect">
@@ -270,7 +298,7 @@
       </div>
 
       <div class="footerNote">
-        Rules used: triads only (major, minor, diminished, augmented, sus2, sus4), exactly 3 played strings, selected inversion in the bass, maximum fret 14, and no stretches larger than 5 frets.
+        Rules used: triads only (major, minor, diminished, augmented, sus2, sus4), selected number of played strings, all three chord tones must be present, selected inversion in the bass, maximum fret 14, and no stretches larger than 5 frets.
       </div>
     </div>
 
@@ -301,17 +329,49 @@
     {name:'E', midi:40, pc:4}
   ];
 
-  const STRING_SETS = [
-    [1,2,3],[2,3,4],[3,4,5],[4,5,6],
-    [1,2,4],[1,3,4],[2,3,5],[2,4,5],[3,4,6],
-    [1,2,5],[1,3,5],[1,4,5],[2,3,6],[2,4,6],[3,5,6],
-    [1,2,6],[1,3,6],[1,4,6],[1,5,6],[2,5,6]
-  ];
+  function combinationsOfStrings(count){
+    const strings = [1,2,3,4,5,6];
+    const out = [];
+    function helper(start, combo){
+      if(combo.length === count){
+        out.push(combo.slice());
+        return;
+      }
+      for(let i=start; i<strings.length; i++){
+        combo.push(strings[i]);
+        helper(i+1, combo);
+        combo.pop();
+      }
+    }
+    helper(0, []);
+    return out;
+  }
+
+  function getSelectedStringCounts(){
+    const counts = [];
+    if(strings3.checked) counts.push(3);
+    if(strings4.checked) counts.push(4);
+    if(strings5.checked) counts.push(5);
+    if(strings6.checked) counts.push(6);
+    if(!counts.length){
+      strings3.checked = true;
+      counts.push(3);
+    }
+    return counts;
+  }
+
+  function getStringSets(){
+    return getSelectedStringCounts().flatMap(count => combinationsOfStrings(count));
+  }
 
   const rootSelect = document.getElementById('rootSelect');
   const qualitySelect = document.getElementById('qualitySelect');
   const inversionSelect = document.getElementById('inversionSelect');
   const sortSelect = document.getElementById('sortSelect');
+  const strings3 = document.getElementById('strings3');
+  const strings4 = document.getElementById('strings4');
+  const strings5 = document.getElementById('strings5');
+  const strings6 = document.getElementById('strings6');
   const easiestOnly = document.getElementById('easiestOnly');
   const findBtn = document.getElementById('findBtn');
   const exportPdfBtn = document.getElementById('exportPdfBtn');
@@ -410,7 +470,7 @@
     const out = [];
     const seenExact = new Set();
 
-    STRING_SETS.forEach(set => {
+    getStringSets().forEach(set => {
       const choices = set.map(stringNum => {
         const arr = [];
         for(let fret=0; fret<=14; fret++){
@@ -420,40 +480,50 @@
         return arr;
       });
 
-      for(const a of choices[0]){
-        for(const b of choices[1]){
-          for(const c of choices[2]){
-            const voicing = [a,b,c];
-            const pcs = [...new Set(voicing.map(v=>v.pc))];
-            if (pcs.length !== 3) continue;
-            if (!hasAllTriadTones(pcs, triadTones)) continue;
-            if (!lowestSoundingMatches(voicing, rootPc, triadTones, inversionSelect.value)) continue;
-            if (!isPlayableStretch(voicing)) continue;
+      function buildVoicings(index, current){
+        if(index === choices.length){
+          const voicing = current.slice();
+          const pcs = [...new Set(voicing.map(v=>v.pc))];
 
-            const exactKey = voicing
-              .slice().sort((x,y)=>x.string-y.string)
-              .map(v=>`${v.string}:${v.fret}`).join('|');
+          // Every shape, including 4/5/6-string shapes, must contain all three chord tones.
+          if (pcs.length !== 3) return;
+          if (!hasAllTriadTones(pcs, triadTones)) return;
+          if (!lowestSoundingMatches(voicing, rootPc, triadTones, inversionSelect.value)) return;
+          if (!isPlayableStretch(voicing)) return;
 
-            if (seenExact.has(exactKey)) continue;
-            seenExact.add(exactKey);
+          const exactKey = voicing
+            .slice().sort((x,y)=>x.string-y.string)
+            .map(v=>`${v.string}:${v.fret}`).join('|');
 
-            out.push({
-              root: rootName,
-              quality,
-              label: `${rootName}${qualitySuffix(quality)}`,
-              voicing,
-              set,
-              span: Math.max(...voicing.map(v=>v.fret)) - Math.min(...voicing.map(v=>v.fret)),
-              lowestFret: Math.min(...voicing.map(v=>v.fret)),
-              highestFret: Math.max(...voicing.map(v=>v.fret)),
-              avgFret: voicing.reduce((s,v)=>s+v.fret,0)/3,
-              difficulty: voicingDifficulty(voicing),
-              patternKey: normalizePattern(voicing),
-              bassScore: bassPriority(set)
-            });
-          }
+          if (seenExact.has(exactKey)) return;
+          seenExact.add(exactKey);
+
+          out.push({
+            root: rootName,
+            quality,
+            label: `${rootName}${qualitySuffix(quality)}`,
+            voicing,
+            set,
+            stringCount: set.length,
+            span: Math.max(...voicing.map(v=>v.fret)) - Math.min(...voicing.map(v=>v.fret)),
+            lowestFret: Math.min(...voicing.map(v=>v.fret)),
+            highestFret: Math.max(...voicing.map(v=>v.fret)),
+            avgFret: voicing.reduce((s,v)=>s+v.fret,0)/voicing.length,
+            difficulty: voicingDifficulty(voicing),
+            patternKey: normalizePattern(voicing),
+            bassScore: bassPriority(set)
+          });
+          return;
+        }
+
+        for(const note of choices[index]){
+          current.push(note);
+          buildVoicings(index + 1, current);
+          current.pop();
         }
       }
+
+      buildVoicings(0, []);
     });
 
     let filtered = out;
@@ -465,15 +535,16 @@
     const sortMode = sortSelect.value;
     filtered.sort((x,y) => {
       if (sortMode === 'low') {
-        return x.lowestFret - y.lowestFret || x.span - y.span || x.difficulty - y.difficulty;
+        return x.lowestFret - y.lowestFret || x.span - y.span || x.stringCount - y.stringCount || x.difficulty - y.difficulty;
       }
       if (sortMode === 'strings') {
         return y.bassScore - x.bassScore
           || Math.min(...y.set) - Math.min(...x.set)
+          || x.stringCount - y.stringCount
           || x.lowestFret - y.lowestFret
           || x.difficulty - y.difficulty;
       }
-      return x.difficulty - y.difficulty || x.lowestFret - y.lowestFret;
+      return x.difficulty - y.difficulty || x.lowestFret - y.lowestFret || x.stringCount - y.stringCount;
     });
 
     return filtered;
@@ -492,20 +563,25 @@
   }
 
   function renderChordChartSVG(voicing, label, dark=true){
-    const width = 120, height = 188;
     const marginL = 24, marginTop = 36;
     const stringGap = 14, fretGap = 22;
-    const strings = 6, fretsShown = 5;
+    const strings = 6;
+
+    const playedFrets = voicing.map(v=>v.fret).filter(f=>f>0);
+    const minPlayed = playedFrets.length ? Math.min(...playedFrets) : 0;
+    const maxPlayed = playedFrets.length ? Math.max(...playedFrets) : 0;
+    const baseFret = minPlayed >= 2 ? minPlayed : 1;
+
+    const span = playedFrets.length ? (maxPlayed - minPlayed) : 0;
+    const fretsShown = Math.max(5, span + 1);
+    const width = 120;
+    const height = marginTop + fretsShown * fretGap + 34;
 
     const fg = dark ? '#eef2ff' : '#111111';
     const line = dark ? '#d7def8' : '#333333';
     const muted = dark ? '#b8c0e0' : '#444444';
     const dotFill = dark ? '#8fb4ff' : '#000000';
     const dotStroke = dark ? '#09101f' : '#000000';
-
-    const playedFrets = voicing.map(v=>v.fret).filter(f=>f>0);
-    const minPlayed = playedFrets.length ? Math.min(...playedFrets) : 0;
-    const baseFret = minPlayed >= 2 ? minPlayed : 1;
 
     const positions = {};
     voicing.forEach(v => positions[v.string] = v.fret);
@@ -577,7 +653,7 @@
           <h3>${item.label}</h3>
           <span class="badge">#${idx+1}</span>
         </div>
-        <div class="mini">Strings ${item.set.join('-')} • frets ${item.voicing.map(v=>v.fret).join(' / ')} • span ${item.span}</div>
+        <div class="mini">${item.stringCount}-string shape • Strings ${item.set.join('-')} • frets ${item.voicing.map(v=>v.fret).join(' / ')} • span ${item.span}</div>
         <div class="diagramWrap">
           <div>${renderChordChartSVG(item.voicing, item.label, true)}</div>
           <div>
@@ -598,7 +674,7 @@
     renderResults(generateVoicings(rootSelect.value, qualitySelect.value));
   }
 
-  function svgToPngDataUrl(svgText, width=200, height=310) {
+  function svgToPngDataUrl(svgText, width=220, height=360) {
     return new Promise((resolve, reject) => {
       const blob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(blob);
@@ -649,8 +725,8 @@
       const colGap = 18;
       const colW = (pageW - margin*2 - colGap) / 2;
       const cardH = 220;
-      const chartW = 85;
-      const chartH = 130;
+      const chartW = 90;
+      const chartH = 145;
       const tabXOffset = 102;
       const firstPageTop = 76;
       let x = margin;
@@ -699,11 +775,11 @@
         doc.setFontSize(9);
         doc.text(`#${i+1}`, x + colW - 24, y + 18);
 
-        const info = `Strings ${item.set.join('-')} • frets ${item.voicing.map(v=>v.fret).join(' / ')} • span ${item.span}`;
+        const info = `${item.stringCount}-string shape • Strings ${item.set.join('-')} • frets ${item.voicing.map(v=>v.fret).join(' / ')} • span ${item.span}`;
         doc.text(info, x + 12, y + 34);
 
         const svg = renderChordChartSVG(item.voicing, item.label, false);
-        const jpgData = await svgToPngDataUrl(svg, 200, 310);
+        const jpgData = await svgToPngDataUrl(svg, 220, 360);
         doc.addImage(jpgData, 'JPEG', x + 8, y + 42, chartW, chartH);
 
         doc.setFont('courier', 'normal');
@@ -742,6 +818,10 @@
   inversionSelect.addEventListener('change', runSearch);
   sortSelect.addEventListener('change', runSearch);
   easiestOnly.addEventListener('change', runSearch);
+  strings3.addEventListener('change', runSearch);
+  strings4.addEventListener('change', runSearch);
+  strings5.addEventListener('change', runSearch);
+  strings6.addEventListener('change', runSearch);
 
   runSearch();
 })();
