@@ -122,11 +122,19 @@
     margin-bottom:6px;
   }
   .message{color:#384152; min-height:1.4em}
-  .buttons{
+  .buttons,.settings{
     display:grid;
     gap:10px;
     margin:12px 0;
   }
+  .settings{
+    background:#faf3e5;
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:12px;
+  }
+  .setting-row{display:grid;gap:5px}
+  label{font-size:.82rem;font-weight:800;color:#5d4630}
   button, select{
     font:inherit;
     border-radius:12px;
@@ -220,7 +228,24 @@
   </div>
   <aside class="side">
     <h1>Local Chess</h1>
-    <p class="sub">Two-player classroom chess. Click or drag pieces to move.</p>
+    <p class="sub">Two-player classroom chess or play as White against the CPU.</p>
+    <div class="settings">
+      <div class="setting-row">
+        <label for="modeSelect">Game mode</label>
+        <select id="modeSelect">
+          <option value="local">Player vs Player</option>
+          <option value="cpu">Player vs CPU</option>
+        </select>
+      </div>
+      <div class="setting-row">
+        <label for="difficultySelect">CPU difficulty</label>
+        <select id="difficultySelect">
+          <option value="easy">Easy</option>
+          <option value="medium">Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+      </div>
+    </div>
     <div class="status">
       <div id="turn" class="turn">White to move</div>
       <div id="message" class="message">Game ready.</div>
@@ -272,10 +297,10 @@
     wK:"♔",wQ:"♕",wR:"♖",wB:"♗",wN:"♘",wP:"♙",
     bK:"♚",bQ:"♛",bR:"♜",bB:"♝",bN:"♞",bP:"♟"
   };
-  const VALUES = {P:1,N:3,B:3,R:5,Q:9,K:99};
-  const SAVE_KEY = "simpleLocalChessSaveV1";
+  const VALUES = {P:100,N:320,B:330,R:500,Q:900,K:20000};
+  const SAVE_KEY = "simpleLocalChessSaveV2";
 
-  let state, selected = null, legalForSelected = [], flipped = false, pendingPromotion = null;
+  let state, selected = null, legalForSelected = [], flipped = false, pendingPromotion = null, cpuThinking = false;
 
   const boardEl = document.getElementById("board");
   const turnEl = document.getElementById("turn");
@@ -283,6 +308,8 @@
   const promoModal = document.getElementById("promotionModal");
   const promoChoices = document.getElementById("promoChoices");
   const confirmModal = document.getElementById("confirmModal");
+  const modeSelect = document.getElementById("modeSelect");
+  const difficultySelect = document.getElementById("difficultySelect");
 
   function newState(){
     return {
@@ -297,6 +324,8 @@
         ["wR","wN","wB","wQ","wK","wB","wN","wR"]
       ],
       turn:"w",
+      mode:"local",
+      difficulty:"easy",
       castling:{wK:true,wQ:true,bK:true,bQ:true},
       enPassant:null,
       halfmove:0,
@@ -315,13 +344,19 @@
   function clone(obj){return JSON.parse(JSON.stringify(obj))}
   function coord(r,c){return String.fromCharCode(97+c)+(8-r)}
   function sameSq(a,b){return a&&b&&a.r===b.r&&a.c===b.c}
+  function isCPUturn(){return state.mode==="cpu" && state.turn==="b" && !state.gameOver}
+  function randItem(arr){return arr[Math.floor(Math.random()*arr.length)]}
 
   function load(){
     try{
       const raw = localStorage.getItem(SAVE_KEY);
       if(raw){
         const parsed = JSON.parse(raw);
-        if(parsed && parsed.board && parsed.turn) return parsed;
+        if(parsed && parsed.board && parsed.turn){
+          if(!parsed.mode) parsed.mode = "local";
+          if(!parsed.difficulty) parsed.difficulty = "easy";
+          return parsed;
+        }
       }
     }catch(e){}
     return newState();
@@ -330,6 +365,9 @@
 
   function render(){
     boardEl.innerHTML = "";
+    modeSelect.value = state.mode || "local";
+    difficultySelect.value = state.difficulty || "easy";
+    difficultySelect.disabled = state.mode !== "cpu";
     const rows = flipped ? [...Array(8).keys()].reverse() : [...Array(8).keys()];
     const cols = flipped ? [...Array(8).keys()].reverse() : [...Array(8).keys()];
     const checkKing = isInCheck(state, state.turn) ? findKing(state.board, state.turn) : null;
@@ -354,9 +392,9 @@
           const piece = document.createElement("span");
           piece.className = "piece";
           piece.textContent = SYMBOLS[p];
-          piece.draggable = colorOf(p) === state.turn && !state.gameOver;
+          piece.draggable = colorOf(p) === state.turn && !state.gameOver && !isCPUturn();
           piece.addEventListener("dragstart", e=>{
-            if(colorOf(p)!==state.turn || state.gameOver){ e.preventDefault(); return; }
+            if(colorOf(p)!==state.turn || state.gameOver || isCPUturn()){ e.preventDefault(); return; }
             selected = {r,c};
             legalForSelected = legalMovesForPiece(state, r, c);
             e.dataTransfer.setData("text/plain", JSON.stringify({r,c}));
@@ -380,14 +418,14 @@
   }
 
   function updateSide(){
-    turnEl.textContent = state.gameOver ? "Game Over" : (state.turn==="w" ? "White to move" : "Black to move");
+    turnEl.textContent = state.gameOver ? "Game Over" : (state.turn==="w" ? "White to move" : (state.mode==="cpu" ? "CPU thinking..." : "Black to move"));
     msgEl.textContent = state.lastMessage || "";
     document.getElementById("whiteCaptured").textContent = state.capturedByWhite.map(p=>SYMBOLS[p]).join(" ");
     document.getElementById("blackCaptured").textContent = state.capturedByBlack.map(p=>SYMBOLS[p]).join(" ");
   }
 
   function handleClick(r,c){
-    if(state.gameOver) return;
+    if(state.gameOver || isCPUturn()) return;
     const p = state.board[r][c];
     if(selected){
       const move = legalForSelected.find(m=>m.to.r===r&&m.to.c===c);
@@ -406,7 +444,7 @@
   }
 
   function attemptMove(from,to){
-    if(!from) return;
+    if(!from || state.gameOver || isCPUturn()) return;
     const moves = legalMovesForPiece(state, from.r, from.c);
     const move = moves.find(m=>m.to.r===to.r&&m.to.c===to.c);
     if(move) doMove(move);
@@ -522,12 +560,12 @@
   }
 
   function doMove(move){
-    if(move.promotion){
+    if(move.promotion && state.turn === "w"){
       pendingPromotion = move;
       showPromotion(colorOf(move.piece));
       return;
     }
-    state = applyMove(state, move, null, false);
+    state = applyMove(state, move, move.promotion ? "Q" : null, false);
     afterMove();
   }
 
@@ -612,19 +650,98 @@
     }else if(checked){
       state.lastMessage = (color==="w" ? "White" : "Black") + " is in check.";
     }else{
-      state.lastMessage = "Move played.";
+      state.lastMessage = state.mode==="cpu" && state.turn==="b" ? "CPU is thinking..." : "Move played.";
     }
     save();
     render();
+    maybeCPUMove();
   }
+
+
+  function evaluateBoard(st){
+    let score = 0;
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+      const p = st.board[r][c];
+      if(!p) continue;
+      const sign = colorOf(p)==="b" ? 1 : -1;
+      let val = VALUES[typeOf(p)];
+      if(typeOf(p)==="P") val += colorOf(p)==="b" ? r*8 : (7-r)*8;
+      if(typeOf(p)==="N" || typeOf(p)==="B") val += (3.5 - Math.abs(3.5-r) + 3.5 - Math.abs(3.5-c))*6;
+      score += sign * val;
+    }
+    if(isInCheck(st,"w")) score += 35;
+    if(isInCheck(st,"b")) score -= 35;
+    return score;
+  }
+
+  function scoreMove(st, move, depth){
+    const next = applyMove(clone(st), move, move.promotion ? "Q" : null, true);
+    let score = evaluateBoard(next);
+    if(move.capture) score += VALUES[typeOf(move.capture)] || 0;
+    if(move.enPassantCapture) score += VALUES.P;
+    if(move.promotion) score += VALUES.Q - VALUES.P;
+    const replies = allLegalMoves(next, next.turn);
+    if(replies.length===0){
+      if(isInCheck(next,next.turn)) score += next.turn==="w" ? 999999 : -999999;
+      else score -= 20;
+    }
+    if(depth > 1 && replies.length){
+      const replyScores = replies.map(rm=>evaluateBoard(applyMove(clone(next), rm, rm.promotion ? "Q" : null, true)));
+      score = next.turn==="w" ? Math.min(...replyScores) : Math.max(...replyScores);
+    }
+    return score + Math.random()*8;
+  }
+
+  function chooseCPUMove(){
+    const moves = allLegalMoves(state, "b");
+    if(!moves.length) return null;
+    const diff = state.difficulty || "easy";
+    if(diff==="easy"){
+      const captures = moves.filter(m=>m.capture || m.enPassantCapture);
+      if(captures.length && Math.random()<0.55) return randItem(captures);
+      return randItem(moves);
+    }
+    const depth = diff==="hard" ? 2 : 1;
+    const scored = moves.map(m=>({m, s:scoreMove(state,m,depth)})).sort((a,b)=>b.s-a.s);
+    if(diff==="medium") return (Math.random()<0.72 ? scored[0] : randItem(scored.slice(0, Math.min(5, scored.length)))).m;
+    return (Math.random()<0.9 ? scored[0] : randItem(scored.slice(0, Math.min(3, scored.length)))).m;
+  }
+
+  function maybeCPUMove(){
+    if(!isCPUturn() || cpuThinking) return;
+    cpuThinking = true;
+    setTimeout(()=>{
+      const move = chooseCPUMove();
+      cpuThinking = false;
+      if(move){
+        state = applyMove(state, move, move.promotion ? "Q" : null, false);
+        afterMove();
+      }
+    }, 450);
+  }
+
+  modeSelect.onchange = ()=>{
+    state.mode = modeSelect.value;
+    selected = null; legalForSelected = [];
+    if(state.mode==="cpu" && state.turn==="b" && !state.gameOver) state.lastMessage = "CPU is thinking...";
+    save(); render(); maybeCPUMove();
+  };
+  difficultySelect.onchange = ()=>{
+    state.difficulty = difficultySelect.value;
+    save(); render();
+  };
 
   document.getElementById("newGame").onclick = ()=>{ confirmModal.style.display="flex"; };
   document.getElementById("confirmNo").onclick = ()=>{ confirmModal.style.display="none"; };
   document.getElementById("confirmYes").onclick = ()=>{
     confirmModal.style.display="none";
+    const mode = modeSelect.value;
+    const difficulty = difficultySelect.value;
     state = newState();
+    state.mode = mode;
+    state.difficulty = difficulty;
     selected = null; legalForSelected = [];
-    save(); render();
+    save(); render(); maybeCPUMove();
   };
   document.getElementById("flipBoard").onclick = ()=>{ flipped = !flipped; render(); };
   document.getElementById("clearSave").onclick = ()=>{
@@ -635,6 +752,7 @@
 
   state = load();
   render();
+  maybeCPUMove();
 })();
 </script>
 </body>
