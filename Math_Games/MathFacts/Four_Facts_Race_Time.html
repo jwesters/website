@@ -105,6 +105,46 @@
     button.primaryStart:hover{background:#f2f2f2;}
     .hidden{display:none !important;}
     .rules{color:var(--muted);font-size:14px;line-height:1.45;margin-top:8px;}
+    .toggleCard{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:14px;
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:12px 14px;
+      background:rgba(255,255,255,0.05);
+      flex-wrap:wrap;
+    }
+    .toggleText{display:grid;gap:3px;}
+    .toggleTitle{font-weight:950;}
+    .toggleHint{color:var(--muted);font-size:13px;line-height:1.35;}
+    .switch{position:relative;display:inline-flex;align-items:center;gap:10px;cursor:pointer;user-select:none;}
+    .switch input{position:absolute;opacity:0;pointer-events:none;}
+    .slider{
+      width:58px;
+      height:32px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,0.28);
+      position:relative;
+      transition:background .15s ease,border-color .15s ease;
+      flex:0 0 auto;
+    }
+    .slider::after{
+      content:"";
+      position:absolute;
+      width:24px;
+      height:24px;
+      left:3px;
+      top:3px;
+      border-radius:50%;
+      background:#fff;
+      transition:transform .15s ease;
+    }
+    .switch input:checked + .slider{background:rgba(59,227,123,0.35);border-color:rgba(59,227,123,0.7);}
+    .switch input:checked + .slider::after{transform:translateX(26px);}
+    .switchLabel{font-weight:900;font-size:14px;color:var(--text);}
     .menuCard{
       display:grid;
       gap:16px;
@@ -294,6 +334,18 @@
               </div>
             </div>
 
+            <div class="toggleCard">
+              <div class="toggleText">
+                <div class="toggleTitle">Wrong-answer behaviour</div>
+                <div class="toggleHint">Turn this on to move to the next question after one wrong answer. Turn it off to make students keep trying until correct.</div>
+              </div>
+              <label class="switch" for="autoAdvanceToggle">
+                <input id="autoAdvanceToggle" type="checkbox" checked />
+                <span class="slider" aria-hidden="true"></span>
+                <span class="switchLabel">Auto advance when wrong</span>
+              </label>
+            </div>
+
             <div class="footerBtns">
               <button id="startBtn" type="button" class="primaryStart" style="min-width:240px;">Start</button>
             </div>
@@ -320,7 +372,7 @@
               </div>
               <div class="progressCard">
                 <strong id="currentSectionScore">Correct so far: 0 / 10</strong>
-                <span>Wrong answers do not move ahead.</span>
+                <span>A wrong answer counts as a mistake and moves ahead.</span>
               </div>
             </div>
 
@@ -357,7 +409,7 @@
               <button id="menuBtn" type="button" class="secondary">Back to menu</button>
             </div>
 
-            <div style="margin-top:10px; font-weight:900; font-size:16px;">Incorrect answers</div>
+            <div style="margin-top:10px; font-weight:900; font-size:16px;">Mistakes to review</div>
             <div class="wrongList" id="wrongList"></div>
           </div>
         </section>
@@ -372,6 +424,7 @@
   const resultScreen = document.getElementById("resultScreen");
 
   const startBtn = document.getElementById("startBtn");
+  const autoAdvanceToggle = document.getElementById("autoAdvanceToggle");
   const submitBtn = document.getElementById("submitBtn");
   const backBtn = document.getElementById("backBtn");
   const restartBtn = document.getElementById("restartBtn");
@@ -411,6 +464,7 @@
   let current = null;
   let runLog = [];
   let sectionStats = {};
+  let autoAdvanceOnWrong = true;
 
   const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
   const show = (el) => el.classList.remove("hidden");
@@ -582,7 +636,7 @@
     const sorted = Array.from(buckets.entries()).sort((a,b) => b[1] - a[1]);
     const [topLabel, topCount] = sorted[0] || [];
     if(topLabel && topCount >= 2){
-      return `Likely trend: ${topLabel} (${topCount} of ${wrongs.length} incorrect questions).`;
+      return `Likely trend: ${topLabel} (${topCount} of ${wrongs.length} questions with mistakes).`;
     }
     if(sorted.length){
       return `Most common missed area: ${sorted[0][0]}.`;
@@ -607,7 +661,7 @@
         <div class="summaryStats">
           Time: <strong>${formatTimeMs(stats.elapsedMs)}</strong><br>
           Correct: <strong>${stats.correct}</strong><br>
-          Incorrect: <strong>${wrongs.length}</strong>
+          Mistakes: <strong>${wrongs.length}</strong>
         </div>
         <div class="trend">${trendText}</div>
       </div>
@@ -618,7 +672,7 @@
     const wrongs = runLog.filter(q => !q.endedAsCorrect || q.attempts.some(a => a !== q.correctAnswer));
     wrongListEl.innerHTML = "";
     if(!wrongs.length){
-      wrongListEl.innerHTML = `<div class="wrongItem"><div class="wrongQ">Perfect round 🎉</div><div class="wrongMeta">No incorrect answers were recorded.</div></div>`;
+      wrongListEl.innerHTML = `<div class="wrongItem"><div class="wrongQ">Perfect round 🎉</div><div class="wrongMeta">No mistakes were recorded.</div></div>`;
       return;
     }
 
@@ -627,7 +681,7 @@
       item.className = "wrongItem";
       const sectionName = MODE_INFO[q.mode].name;
       const attempts = q.attempts.length ? q.attempts.join(", ") : "—";
-      const result = q.endedAsCorrect ? "Eventually correct" : "Not correct";
+      const result = q.endedAsCorrect ? "Correct" : "Mistake";
       item.innerHTML = `
         <div class="wrongQ">${escapeHtml(sectionName)} — ${escapeHtml(q.text.replace("= ?", "").trim())}</div>
         <div class="wrongMeta">
@@ -689,9 +743,18 @@
       return;
     }
 
+    current.endedAsCorrect = false;
     if(!sectionStats[current.mode].wrongQuestions.includes(current)){
       sectionStats[current.mode].wrongQuestions.push(current);
     }
+
+    if(autoAdvanceOnWrong){
+      setMessage(`Mistake — the correct answer was ${current.correctAnswer}.`, "bad");
+      questionInSection += 1;
+      setTimeout(loadNextQuestion, 650);
+      return;
+    }
+
     setMessage("Try again.", "bad");
     answerInput.select();
     answerInput.focus({preventScroll:true});
@@ -706,6 +769,7 @@
   }
 
   function startRace(){
+    autoAdvanceOnWrong = !!autoAdvanceToggle.checked;
     resetRace();
     hide(menuScreen);
     hide(resultScreen);
