@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Chord Ear Training</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  :root{--bg:#0e1020;--panel:#171a33;--panel2:#101338;--text:#eef1ff;--muted:#b8bfe6;--accent:#7aa2ff;--good:#6bffb1;--bad:#ff6b6b;--chip:#1f2348;--border:rgba(255,255,255,.12)}
+  *{box-sizing:border-box} body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:linear-gradient(180deg,#0e1020,#0b0d1a);color:var(--text)}
+  .card{width:min(920px,94vw);background:var(--panel);border-radius:18px;padding:20px 22px 24px;box-shadow:0 20px 40px rgba(0,0,0,.4)}
+  h1{margin:0 0 8px;font-size:1.45rem}.sub{color:var(--muted);margin-bottom:14px;line-height:1.35rem}.panel{background:var(--panel2);border-radius:14px;padding:14px;margin:12px 0;border:1px solid rgba(255,255,255,.06)}
+  .status{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;color:var(--muted)}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center}
+  button{border:0;border-radius:12px;padding:12px 16px;font-size:1rem;cursor:pointer;background:#22265a;color:var(--text)}button.primary{background:var(--accent);color:#0b0d1a;font-weight:800}button.ghost{background:var(--chip)}button:disabled{opacity:.55;cursor:not-allowed}.hidden{display:none!important}
+  .form{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:10px}@media(max-width:820px){.form{grid-template-columns:1fr}.card{padding:16px}.answers{grid-template-columns:1fr 1fr!important}}@media(max-width:520px){.answers{grid-template-columns:1fr!important}.row button{flex:1 1 100%}}
+  .field{background:rgba(255,255,255,.04);border-radius:14px;padding:12px;border:1px solid rgba(255,255,255,.06)}.field .title{font-weight:800;margin-bottom:8px}select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--border);background:#0f1230;color:var(--text);font-size:1rem;outline:none}
+  .hint{margin-top:8px;color:var(--muted);font-size:.9rem;line-height:1.25rem}.pill{display:inline-block;padding:3px 10px;border-radius:999px;background:rgba(122,162,255,.15);border:1px solid rgba(122,162,255,.25);font-size:.85rem;font-weight:800}
+  .toggle{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid rgba(255,255,255,.07)}.toggle:first-of-type{border-top:0}.switch{position:relative;width:54px;height:30px;flex:0 0 54px}.switch input{display:none}.slider{position:absolute;inset:0;background:#34385f;border-radius:999px;cursor:pointer}.slider:before{content:"";position:absolute;width:24px;height:24px;left:3px;top:3px;background:white;border-radius:50%;transition:.18s}input:checked+.slider{background:var(--accent)}input:checked+.slider:before{transform:translateX(24px)}
+  .answers{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.answers button{font-weight:800;min-height:54px}.feedback{min-height:1.9em;text-align:center;font-weight:800;margin-top:10px}.good{color:var(--good)}.bad{color:var(--bad)}.footer{display:flex;gap:10px;justify-content:center;margin-top:10px;flex-wrap:wrap}.smallnote{text-align:center;color:var(--muted);font-size:.88rem;margin-top:8px}
+  .chordGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}@media(max-width:820px){.chordGrid{grid-template-columns:1fr 1fr}}@media(max-width:520px){.chordGrid{grid-template-columns:1fr}}
+  .checkchip{display:flex;align-items:center;gap:9px;padding:10px 11px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;cursor:pointer;user-select:none;font-weight:750}.checkchip input{width:18px;height:18px;accent-color:#7aa2ff}.formula{opacity:.78;font-weight:650;font-size:.86rem;margin-left:auto}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Chord Ear Training</h1>
+  <div class="sub">Hear a chord and choose the chord type. Pick which chord qualities are included, then start training.</div>
+
+  <div class="panel" id="setupPanel">
+    <div class="status"><div><span class="pill">Setup</span></div><div class="hint" style="margin:0">Choose the root style and chord types.</div></div>
+    <div class="form">
+      <div class="field"><div class="title">Root note</div><select id="startNote"></select><div class="hint">Used when fixed root is on.</div></div>
+      <div class="field"><div class="title">Question count</div><select id="qCount"><option value="5">5</option><option value="10" selected>10</option><option value="20">20</option><option value="30">30</option></select><div class="hint">Score appears at the end.</div></div>
+      <div class="field"><div class="title">Play style</div><select id="defaultPlay"><option value="blocked" selected>Play chord</option><option value="broken">Play notes one at a time</option><option value="both">Broken, then chord</option></select><div class="hint">Students can replay either way during the quiz.</div></div>
+    </div>
+
+    <div class="panel" style="margin-bottom:0">
+      <div class="toggle"><div><b>Fixed root note</b><div class="hint">On: every question uses the selected root. Off: the root changes each question.</div></div><label class="switch"><input type="checkbox" id="fixedStart" checked><span class="slider"></span></label></div>
+      <div class="toggle"><div><b>Show chord formulas</b><div class="hint">On: answer buttons show formulas like 1–♭3–5. Off: answer buttons only show names.</div></div><label class="switch"><input type="checkbox" id="showFormulas"><span class="slider"></span></label></div>
+    </div>
+
+    <div class="panel" style="margin-bottom:0">
+      <div class="status"><div><span class="pill">Chord types</span></div><div class="hint" style="margin:0">Choose at least two chord types to compare.</div></div>
+      <div class="chordGrid" id="chordChoices"></div>
+      <div class="row" style="margin-top:10px"><button class="ghost" id="selectAllChords" type="button">Select all</button><button class="ghost" id="clearChords" type="button">Clear</button></div>
+    </div>
+
+    <div class="row" style="margin-top:12px"><button class="primary" id="startBtn">Start training</button></div>
+    <div class="feedback" id="setupFeedback"></div>
+  </div>
+
+  <div class="panel hidden" id="quizPanel">
+    <div class="status"><div>Question <b id="qNum">1</b> / <span id="qTotal">10</span></div><div>Score: <b id="score">0</b></div></div>
+    <div class="row" style="margin-top:10px"><button class="ghost" id="playChord">▶ Play Chord</button><button class="ghost" id="playBroken">▶ Play Broken</button><button class="ghost" id="playRoot">▶ Root Note</button><button class="ghost" id="stopBtn">■ Stop</button></div>
+    <div class="answers" id="answers"></div>
+    <div class="feedback" id="feedback"></div>
+    <div class="smallnote" id="modeNote"></div>
+  </div>
+
+  <div class="footer"><button class="ghost hidden" id="nextBtn">Next</button><button class="ghost hidden" id="restartBtn">Back to setup</button></div>
+</div>
+
+<script>
+const AudioCtx=window.AudioContext||window.webkitAudioContext;let ctx=null,active=[],reverb=null,playingSeq=false;
+function getCtx(){if(!ctx)ctx=new AudioCtx();if(ctx.state!=="running")ctx.resume();return ctx}
+function stopNow(){if(!ctx)return;const now=ctx.currentTime;for(const n of active){try{if(n.gain){n.gain.cancelScheduledValues(now);n.gain.setTargetAtTime(0.00001,now,0.01)}if(n.stop)n.stop(now+0.05)}catch(e){}}active=[];playingSeq=false}
+function createReverb(){const c=getCtx(),rate=c.sampleRate,len=Math.floor(rate*1.35),impulse=c.createBuffer(2,len,rate);for(let ch=0;ch<2;ch++){const d=impulse.getChannelData(ch);for(let i=0;i<len;i++){const t=i/len;d[i]=(Math.random()*2-1)*Math.pow(1-t,3.1)*.5}}const conv=c.createConvolver();conv.buffer=impulse;return conv}
+function ensureReverb(){if(!reverb)reverb=createReverb();return reverb}
+function tone(freq,duration=.95,when=null,vol=.72){const c=getCtx();const now=when??c.currentTime,end=now+duration;const master=c.createGain();master.gain.setValueAtTime(.00001,now);master.gain.exponentialRampToValueAtTime(vol,now+.014);master.gain.exponentialRampToValueAtTime(vol*.22,now+.18);master.gain.exponentialRampToValueAtTime(.0008,end);const o1=c.createOscillator(),o2=c.createOscillator(),o3=c.createOscillator();o1.type="sawtooth";o2.type="sawtooth";o3.type="triangle";o1.frequency.setValueAtTime(freq,now);o2.frequency.setValueAtTime(freq*.997,now);o3.frequency.setValueAtTime(freq*2,now);o1.detune.value=-2;o2.detune.value=2;const filt=c.createBiquadFilter();filt.type="lowpass";filt.Q.value=.9;filt.frequency.setValueAtTime(Math.min(7600,freq*14),now);filt.frequency.exponentialRampToValueAtTime(Math.min(2100,freq*5.2),now+.2);const dry=c.createGain();dry.gain.value=.78;const wet=c.createGain();wet.gain.value=.14;o1.connect(filt);o2.connect(filt);o3.connect(filt);filt.connect(master);master.connect(dry);dry.connect(c.destination);master.connect(ensureReverb());ensureReverb().connect(wet);wet.connect(c.destination);o1.start(now);o2.start(now);o3.start(now);o1.stop(end);o2.stop(end);o3.stop(end);active.push(o1,o2,o3,master,dry,wet,filt)}
+const NAMES=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];function midiToFreq(m){return 440*Math.pow(2,(m-69)/12)}function midiToName(m){return NAMES[m%12]+(Math.floor(m/12)-1)}
+const roots=[];for(let m=48;m<=72;m++)roots.push({midi:m,name:midiToName(m),f:midiToFreq(m)});
+const chords=[
+  {id:"maj",name:"Major",formula:"1–3–5",steps:[0,4,7]},
+  {id:"min",name:"Minor",formula:"1–♭3–5",steps:[0,3,7]},
+  {id:"dim",name:"Diminished",formula:"1–♭3–♭5",steps:[0,3,6]},
+  {id:"aug",name:"Augmented",formula:"1–3–♯5",steps:[0,4,8]},
+  {id:"sus2",name:"Sus2",formula:"1–2–5",steps:[0,2,7]},
+  {id:"sus4",name:"Sus4",formula:"1–4–5",steps:[0,5,7]},
+  {id:"maj7",name:"Major 7",formula:"1–3–5–7",steps:[0,4,7,11]},
+  {id:"dom7",name:"Dominant 7",formula:"1–3–5–♭7",steps:[0,4,7,10]},
+  {id:"min7",name:"Minor 7",formula:"1–♭3–5–♭7",steps:[0,3,7,10]}
+];
+const $=id=>document.getElementById(id);const setupPanel=$("setupPanel"),quizPanel=$("quizPanel"),startSel=$("startNote"),qCountSel=$("qCount"),defaultPlay=$("defaultPlay"),fixedStart=$("fixedStart"),showFormulas=$("showFormulas"),startBtn=$("startBtn"),answers=$("answers"),feedback=$("feedback"),modeNote=$("modeNote"),nextBtn=$("nextBtn"),restartBtn=$("restartBtn"),chordChoices=$("chordChoices"),setupFeedback=$("setupFeedback");
+for(const n of roots){const o=document.createElement("option");o.value=n.midi;o.textContent=n.name;startSel.appendChild(o)}startSel.value="60";
+function labelFor(c){return showFormulas.checked?c.name+"  ·  "+c.formula:c.name}
+function buildChordChoices(){chordChoices.innerHTML="";for(const c of chords){const label=document.createElement("label");label.className="checkchip";label.innerHTML='<input type="checkbox" class="chordToggle" value="'+c.id+'" checked> <span>'+c.name+'</span><span class="formula">'+c.formula+'</span>';chordChoices.appendChild(label)}}
+function getSelectedChords(){const ids=Array.from(document.querySelectorAll(".chordToggle:checked")).map(cb=>cb.value);return chords.filter(c=>ids.includes(c.id))}
+function validateChordSelection(showMsg=true){const count=getSelectedChords().length;if(count<2){if(showMsg)setupFeedback.innerHTML='<span class="bad">Choose at least two chord types before starting.</span>';return false}if(showMsg)setupFeedback.textContent="";return true}
+function refreshChoiceLabels(){const rows=chordChoices.querySelectorAll(".checkchip");chords.forEach((c,i)=>{const span=rows[i]?.querySelector("span:not(.formula)");const formula=rows[i]?.querySelector(".formula");if(span)span.textContent=c.name;if(formula)formula.style.display=showFormulas.checked?"inline":"none"})}
+let total=10,q=1,score=0,root=null,currentChord=null,answered=false,activeChords=[],chordMidis=[];
+function randomFrom(arr){return arr[Math.floor(Math.random()*arr.length)]}
+function buildAnswerButtons(){answers.innerHTML="";activeChords=getSelectedChords();for(const c of activeChords){const b=document.createElement("button");b.className="primary";b.textContent=labelFor(c);b.onclick=()=>checkAnswer(c.id);answers.appendChild(b)}}
+function pickQuestion(){const rootMidi=fixedStart.checked?parseInt(startSel.value,10):randomFrom(roots).midi;currentChord=randomFrom(activeChords);root={midi:rootMidi,name:midiToName(rootMidi),f:midiToFreq(rootMidi)};chordMidis=currentChord.steps.map(s=>rootMidi+s)}
+function playChord(){if(!root)return;stopNow();const c=getCtx(),now=c.currentTime;const vol=chordMidis.length>3?.43:.52;chordMidis.forEach(m=>tone(midiToFreq(m),1.25,now,vol))}
+async function playBroken(){if(playingSeq||!root)return;playingSeq=true;stopNow();playingSeq=true;const c=getCtx();let t=c.currentTime;for(const m of chordMidis){tone(midiToFreq(m),.72,t,.6);t+=.42}await new Promise(r=>setTimeout(r,Math.ceil((chordMidis.length*.42+.65)*1000)));playingSeq=false}
+async function playDefault(){const v=defaultPlay.value;if(v==="broken")playBroken();else if(v==="both"){await playBroken();await new Promise(r=>setTimeout(r,250));playChord()}else playChord()}
+function setQuizVisible(){setupPanel.classList.add("hidden");quizPanel.classList.remove("hidden");nextBtn.classList.add("hidden");restartBtn.classList.add("hidden")}
+function setSetupVisible(){stopNow();setupPanel.classList.remove("hidden");quizPanel.classList.add("hidden");nextBtn.classList.add("hidden");restartBtn.classList.add("hidden");feedback.textContent="";setupFeedback.textContent=""}
+function newQuestion(){answered=false;feedback.textContent="";nextBtn.classList.add("hidden");buildAnswerButtons();Array.from(answers.children).forEach(b=>b.disabled=false);pickQuestion();$("qNum").textContent=q;$("qTotal").textContent=total;$("score").textContent=score;modeNote.textContent=(fixedStart.checked?"Fixed root: ":"Changing root: ")+root.name+(showFormulas.checked?" • Formulas shown":" • Names only");playDefault()}
+function checkAnswer(id){if(answered)return;answered=true;const correct=id===currentChord.id;if(correct){score++;feedback.innerHTML='<span class="good">Correct!</span> It was '+currentChord.name+'.'}else{const chosen=chords.find(c=>c.id===id);feedback.innerHTML='<span class="bad">Incorrect.</span> You chose '+chosen.name+'. It was '+currentChord.name+'.'}feedback.innerHTML+=' <span style="color:var(--muted)">('+root.name+' '+currentChord.formula+')</span>';$("score").textContent=score;Array.from(answers.children).forEach(b=>b.disabled=true);if(q<total)nextBtn.classList.remove("hidden");else{feedback.innerHTML+='<br><br><b>Final score: '+score+' / '+total+'</b>';restartBtn.classList.remove("hidden")}}
+$("playChord").onclick=()=>playChord();$("playBroken").onclick=()=>playBroken();$("playRoot").onclick=()=>{if(root){stopNow();tone(root.f,.9,null,.72)}};$("stopBtn").onclick=()=>stopNow();nextBtn.onclick=()=>{q++;stopNow();newQuestion()};restartBtn.onclick=()=>setSetupVisible();
+$("selectAllChords").onclick=()=>{document.querySelectorAll(".chordToggle").forEach(cb=>cb.checked=true);validateChordSelection(false);setupFeedback.textContent=""};$("clearChords").onclick=()=>{document.querySelectorAll(".chordToggle").forEach(cb=>cb.checked=false);validateChordSelection(true)};showFormulas.addEventListener("change",()=>{refreshChoiceLabels();if(!quizPanel.classList.contains("hidden"))buildAnswerButtons()});chordChoices.addEventListener("change",()=>validateChordSelection(true));
+buildChordChoices();refreshChoiceLabels();startBtn.onclick=()=>{if(!validateChordSelection(true))return;total=parseInt(qCountSel.value,10);q=1;score=0;buildAnswerButtons();setQuizVisible();newQuestion()};setSetupVisible();
+</script>
+</body>
+</html>
