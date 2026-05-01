@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ear Training Suite</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{
+  --bg:#0e1020; --panel:#171a33; --panel2:#101338; --text:#eef1ff; --muted:#b8bfe6;
+  --accent:#7aa2ff; --good:#6bffb1; --bad:#ff6b6b; --chip:#222650; --border:rgba(255,255,255,.12);
+}
+*{box-sizing:border-box}
+body{
+  margin:0; min-height:100vh; background:linear-gradient(180deg,#0e1020,#080a16);
+  color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+}
+.wrap{width:min(980px,94vw); margin:0 auto; padding:22px 0 34px}
+.card{
+  background:var(--panel); border:1px solid rgba(255,255,255,.08); border-radius:22px;
+  box-shadow:0 22px 50px rgba(0,0,0,.42); overflow:hidden;
+}
+header{padding:22px 24px 16px; border-bottom:1px solid rgba(255,255,255,.08)}
+h1{font-size:1.55rem; margin:0 0 6px}
+.sub{color:var(--muted); line-height:1.45}
+.main{display:grid; grid-template-columns:320px 1fr; gap:0}
+.sidebar{padding:18px; border-right:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.12)}
+.stage{padding:18px}
+@media(max-width:830px){.main{grid-template-columns:1fr}.sidebar{border-right:0;border-bottom:1px solid rgba(255,255,255,.08)}}
+.panel{
+  background:var(--panel2); border:1px solid rgba(255,255,255,.07); border-radius:16px; padding:14px; margin-bottom:12px;
+}
+label{display:block; color:var(--muted); font-weight:700; font-size:.9rem; margin-bottom:7px}
+select,input[type=number]{
+  width:100%; padding:11px 12px; border-radius:12px; border:1px solid var(--border);
+  background:#0d1030; color:var(--text); font-size:1rem;
+}
+button{
+  border:0; border-radius:13px; padding:12px 14px; font-size:1rem; cursor:pointer;
+  background:var(--chip); color:var(--text); font-weight:750;
+}
+button.primary{background:var(--accent); color:#071024}
+button.goodbtn{background:rgba(107,255,177,.18); border:1px solid rgba(107,255,177,.25)}
+button:disabled{opacity:.55; cursor:not-allowed}
+.row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+.row button{flex:1}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+@media(max-width:600px){.grid2,.grid3{grid-template-columns:1fr}}
+.choicegrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:10px; margin-top:12px}
+.choicegrid button{min-height:48px}
+.modeTitle{font-size:1.25rem; font-weight:900; margin-bottom:4px}
+.hint{color:var(--muted); line-height:1.4; font-size:.95rem}
+.status{
+  display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:12px 0;
+}
+.stat{background:rgba(255,255,255,.045); border:1px solid rgba(255,255,255,.06); border-radius:14px; padding:10px}
+.stat b{display:block; font-size:1.15rem}
+.feedback{min-height:2.6em; font-weight:850; text-align:center; margin:12px 0; line-height:1.35}
+.good{color:var(--good)} .bad{color:var(--bad)}
+.hidden{display:none!important}
+.checks{display:grid; gap:8px; max-height:260px; overflow:auto; padding-right:4px}
+.checkitem{
+  display:flex; gap:9px; align-items:center; padding:9px 10px; border-radius:12px;
+  background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.06); color:var(--text);
+}
+.checkitem input{width:18px;height:18px}
+.pill{display:inline-block;padding:4px 10px;border-radius:999px;background:rgba(122,162,255,.14);border:1px solid rgba(122,162,255,.22);font-size:.85rem;font-weight:850}
+.manualBox{
+  display:grid; grid-template-columns:1fr auto; gap:10px; margin-top:12px; align-items:end;
+}
+.piano{display:flex; gap:4px; justify-content:center; flex-wrap:wrap; margin-top:12px}
+.key{min-width:44px; padding:12px 8px; background:#eef1ff; color:#071024; border-radius:0 0 10px 10px; font-weight:900}
+.key.black{background:#161a35;color:white; transform:translateY(-5px)}
+.small{font-size:.85rem;color:var(--muted)}
+.noteSeq{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.noteSlot{min-width:50px;border:1px dashed rgba(255,255,255,.25);border-radius:12px;padding:10px;background:rgba(255,255,255,.04);font-weight:900;cursor:pointer}
+.noteSlot.selected{border-color:var(--accent); background:rgba(122,162,255,.20)}
+.melodyControls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <header>
+      <h1>Ear Training Suite</h1>
+      <div class="sub">Choose an activity, listen, answer, and build your ear one short round at a time.</div>
+    </header>
+
+    <div class="main">
+      <aside class="sidebar">
+        <div class="panel">
+          <label for="mode">Activity</label>
+          <select id="mode">
+            <option value="" selected>Pick an activity...</option>
+            <option value="difficulty">Difficulty Progression</option>
+            <option value="different">Play Again, But Different</option>
+            <option value="noteinchord">Is the Note in the Chord?</option>
+            <option value="progression">Chord Progression Trainer</option>
+            <option value="scale">Scale Recognition</option>
+            <option value="melody">Melody Dictation</option>
+          </select>
+        </div>
+
+        <div class="panel">
+          <div class="grid2">
+            <div>
+              <label for="questions">Questions</label>
+              <select id="questions">
+                <option>5</option><option selected>10</option><option>15</option><option>20</option>
+              </select>
+            </div>
+            <div>
+              <label for="rootMode">Starting pitch</label>
+              <select id="rootMode">
+                <option value="changing">Changes</option>
+                <option value="fixed">Fixed C4</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" id="optionPanel">
+          <label id="optionLabel">Choices included</label>
+          <div class="checks" id="checks"></div>
+          <div class="small" id="checkNote" style="margin-top:8px"></div>
+        </div>
+      </aside>
+
+      <section class="stage">
+        <div class="panel">
+          <div class="modeTitle" id="modeTitle">Difficulty Progression</div>
+          <div class="hint" id="modeDesc"></div>
+
+          <div class="status">
+            <div class="stat"><span class="small">Question</span><b id="qStat">0 / 10</b></div>
+            <div class="stat"><span class="small">Score</span><b id="scoreStat">0</b></div>
+            <div class="stat"><span class="small">Streak</span><b id="streakStat">0</b></div>
+          </div>
+
+          <div class="row">
+            <button id="playBtn" class="primary">▶ Play</button>
+            <button id="againBtn">↻ Play Again</button>
+            <button id="variantBtn">↺ Different Version</button>
+            <button id="stopBtn">■ Stop</button>
+          </div>
+
+          <div id="melodyDisplay" class="noteSeq hidden"></div>
+          <div id="melodyControls" class="melodyControls hidden">
+            <button id="clearMelodyBtn">Clear Melody</button>
+            <button class="primary" id="submitMelodyBtn">Submit Melody</button>
+          </div>
+          <div class="feedback" id="feedback">Pick an activity from the menu to begin.</div>
+
+          <div class="row" id="roundControls" style="margin:12px 0">
+            <button class="primary hidden" id="startBtn">Start Round</button>
+            <button class="hidden" id="resetBtn">Reset</button>
+          </div>
+
+          <div id="multipleArea" class="choicegrid"></div>
+
+          <div id="manualArea" class="manualBox hidden">
+            <div>
+              <label id="manualLabel" for="manualSelect">Your answer</label>
+              <select id="manualSelect"></select>
+            </div>
+            <button class="primary" id="submitManual">Submit</button>
+          </div>
+
+          <div id="pianoArea" class="piano hidden"></div>
+
+          <div class="row" style="margin-top:14px">
+            <button id="nextBtn" class="goodbtn hidden">Next Question</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+const ctx = new AudioCtx();
+let active = [];
+let reverb = null;
+
+const NOTE_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const WHITE = new Set(["C","D","E","F","G","A","B"]);
+function midiToFreq(m){ return 440 * Math.pow(2,(m-69)/12); }
+function midiToName(m){ return NOTE_NAMES[m%12] + (Math.floor(m/12)-1); }
+function rootMidi(){ return rootMode.value === "fixed" ? 60 : 48 + Math.floor(Math.random()*19); }
+
+function stopNow(){
+  const now = ctx.currentTime;
+  active.forEach(n=>{
+    try{
+      if(n.gain){ n.gain.cancelScheduledValues(now); n.gain.setTargetAtTime(0.0001, now, .015); }
+      if(n.stop) n.stop(now+.06);
+    }catch(e){}
+  });
+  active = [];
+}
+function createReverb(){
+  const rate = ctx.sampleRate, seconds=1.35, len=Math.floor(rate*seconds);
+  const impulse = ctx.createBuffer(2,len,rate);
+  for(let c=0;c<2;c++){
+    const d=impulse.getChannelData(c);
+    for(let i=0;i<len;i++){
+      const t=i/len, decay=Math.pow(1-t,3.2);
+      d[i]=(Math.random()*2-1)*decay*.45;
+    }
+  }
+  const conv=ctx.createConvolver(); conv.buffer=impulse; return conv;
+}
+function ensureReverb(){ if(!reverb) reverb=createReverb(); return reverb; }
+
+function piano(freq, start=ctx.currentTime, dur=.95, vol=.46){
+  if(ctx.state !== "running") ctx.resume();
+  const end=start+dur;
+  const master=ctx.createGain();
+  master.gain.setValueAtTime(.0001,start);
+  master.gain.exponentialRampToValueAtTime(vol,start+.014);
+  master.gain.exponentialRampToValueAtTime(vol*.24,start+.13);
+  master.gain.exponentialRampToValueAtTime(.0003,end);
+
+  const filt=ctx.createBiquadFilter();
+  filt.type="lowpass"; filt.Q.value=.85;
+  filt.frequency.setValueAtTime(Math.min(9000,freq*18),start);
+  filt.frequency.exponentialRampToValueAtTime(Math.min(2400,freq*6),start+.18);
+
+  const dry=ctx.createGain(); dry.gain.value=.88;
+  const wet=ctx.createGain(); wet.gain.value=.16;
+  const conv=ensureReverb();
+
+  const parts=[
+    {type:"sawtooth", mult:1, det:-3, gain:.55},
+    {type:"sawtooth", mult:.997, det:2, gain:.38},
+    {type:"triangle", mult:2, det:0, gain:.18}
+  ];
+  parts.forEach(p=>{
+    const o=ctx.createOscillator(), g=ctx.createGain();
+    o.type=p.type; o.frequency.setValueAtTime(freq*p.mult,start); o.detune.value=p.det;
+    g.gain.value=p.gain;
+    o.connect(g); g.connect(filt); o.start(start); o.stop(end+.02);
+    active.push(o);
+  });
+
+  const noiseBuf=ctx.createBuffer(1, Math.floor(ctx.sampleRate*.035), ctx.sampleRate);
+  const nd=noiseBuf.getChannelData(0);
+  for(let i=0;i<nd.length;i++) nd[i]=(Math.random()*2-1)*(1-i/nd.length);
+  const noise=ctx.createBufferSource(); noise.buffer=noiseBuf;
+  const hp=ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=1700;
+  const ng=ctx.createGain();
+  ng.gain.setValueAtTime(.0001,start);
+  ng.gain.exponentialRampToValueAtTime(.12,start+.004);
+  ng.gain.exponentialRampToValueAtTime(.0001,start+.035);
+  noise.connect(hp); hp.connect(ng); ng.connect(master); noise.start(start); noise.stop(start+.04);
+  active.push(noise, master);
+
+  filt.connect(master);
+  master.connect(dry); dry.connect(ctx.destination);
+  master.connect(conv); conv.connect(wet); wet.connect(ctx.destination);
+}
+function playChord(midis, blocked=true){
+  stopNow();
+  const now=ctx.currentTime+.03;
+  if(blocked){
+    const v=Math.max(.22, .52/Math.sqrt(midis.length));
+    midis.forEach(m=>piano(midiToFreq(m), now, 1.15, v));
+  }else{
+    midis.forEach((m,i)=>piano(midiToFreq(m), now+i*.36, .9, .42));
+  }
+}
+async function playSequence(items){
+  stopNow();
+  const now=ctx.currentTime+.03;
+  let t=now;
+  items.forEach(item=>{
+    if(Array.isArray(item)){
+      const v=Math.max(.22,.52/Math.sqrt(item.length));
+      item.forEach(m=>piano(midiToFreq(m), t, .85, v));
+    }else{
+      piano(midiToFreq(item), t, .72, .46);
+    }
+    t+=.82;
+  });
+}
+
+const MODES = {
+ difficulty:{title:"Difficulty Progression", desc:"Identify chord quality. Early levels use easier choices; later levels add more similar sounds."},
+ different:{title:"Play Again, But Different", desc:"Identify the chord, then replay it in another octave or inversion so you recognize the quality, not just one exact sound."},
+ noteinchord:{title:"Is the Note in the Chord?", desc:"Hear a chord, then a single note. Decide whether the note belongs to that chord."},
+ progression:{title:"Chord Progression Trainer", desc:"Hear a short progression and identify the Roman-numeral pattern."},
+ scale:{title:"Scale Recognition", desc:"Hear a scale and identify what type it is."},
+ melody:{title:"Melody Dictation", desc:"Hear a short melody. Multiple choice asks for the pattern; manual mode lets you click notes on a small keyboard."}
+};
+const CHORDS = [
+ {id:"major", name:"Major", beginner:"Happy chord", ints:[0,4,7]},
+ {id:"minor", name:"Minor", beginner:"Sad chord", ints:[0,3,7]},
+ {id:"dim", name:"Diminished", beginner:"Tense small chord", ints:[0,3,6]},
+ {id:"aug", name:"Augmented", beginner:"Dreamy wide chord", ints:[0,4,8]},
+ {id:"sus2", name:"Sus2", beginner:"Open 2 chord", ints:[0,2,7]},
+ {id:"sus4", name:"Sus4", beginner:"Open 4 chord", ints:[0,5,7]},
+ {id:"maj7", name:"Major 7", beginner:"Smooth major 7", ints:[0,4,7,11]},
+ {id:"min7", name:"Minor 7", beginner:"Smooth minor 7", ints:[0,3,7,10]},
+ {id:"dom7", name:"Dominant 7", beginner:"Bluesy 7 chord", ints:[0,4,7,10]}
+];
+const SCALES = [
+ {id:"major", name:"Major", ints:[0,2,4,5,7,9,11,12]},
+ {id:"naturalMinor", name:"Natural Minor", ints:[0,2,3,5,7,8,10,12]},
+ {id:"majorPent", name:"Major Pentatonic", ints:[0,2,4,7,9,12]},
+ {id:"minorPent", name:"Minor Pentatonic", ints:[0,3,5,7,10,12]},
+ {id:"blues", name:"Blues", ints:[0,3,5,6,7,10,12]},
+ {id:"chromatic", name:"Chromatic", ints:[0,1,2,3,4,5,6,7,8,9,10,11,12]}
+];
+const PROGS = [
+ {id:"I-IV-V-I", name:"I – IV – V – I", degrees:[0,5,7,0]},
+ {id:"I-V-vi-IV", name:"I – V – vi – IV", degrees:[0,7,9,5], qualities:["major","major","minor","major"]},
+ {id:"ii-V-I", name:"ii – V – I", degrees:[2,7,0], qualities:["minor","major","major"]},
+ {id:"I-vi-IV-V", name:"I – vi – IV – V", degrees:[0,9,5,7], qualities:["major","minor","major","major"]},
+ {id:"i-VI-III-VII", name:"i – VI – III – VII", degrees:[0,8,3,10], qualities:["minor","major","major","major"]}
+];
+
+const el=id=>document.getElementById(id);
+const mode=el("mode"), questions=el("questions"), rootMode=el("rootMode");
+const checks=el("checks"), checkNote=el("checkNote"), optionLabel=el("optionLabel"), modeTitle=el("modeTitle"), modeDesc=el("modeDesc");
+const qStat=el("qStat"), scoreStat=el("scoreStat"), streakStat=el("streakStat"), feedback=el("feedback");
+const multipleArea=el("multipleArea"), manualArea=el("manualArea"), manualSelect=el("manualSelect"), manualLabel=el("manualLabel");
+const pianoArea=el("pianoArea"), melodyDisplay=el("melodyDisplay"), melodyControls=el("melodyControls");
+
+let state={q:0,total:10,score:0,streak:0,current:null,locked:false,selectedMelody:[],editIndex:0};
+
+function labelFor(obj){ return obj.name; }
+function selectedOptions(){
+  if(!mode.value) return [];
+  return [...checks.querySelectorAll("input:checked")].map(x=>x.value);
+}
+function setChecks(){
+  checks.innerHTML="";
+  const m=mode.value;
+  let arr=CHORDS, defaults=["major","minor"];
+  optionLabel.textContent="Choices included";
+  checkNote.textContent="Choose at least two.";
+  if(m==="scale"){ arr=SCALES; defaults=["major","naturalMinor","majorPent"]; }
+  if(m==="progression"){ arr=PROGS; defaults=["I-IV-V-I","I-V-vi-IV","ii-V-I"]; }
+  if(m==="noteinchord"){ arr=[{id:"in",name:"In the chord"},{id:"out",name:"Not in the chord"}]; defaults=["in","out"]; checkNote.textContent="Both are used for this activity."; }
+  if(m==="melody"){
+    arr=[
+      {id:"up",name:"Rising melody"}, {id:"down",name:"Falling melody"},
+      {id:"arch",name:"Up then down"}, {id:"valley",name:"Down then up"},
+      {id:"repeat",name:"Repeated notes"}
+    ];
+    defaults=["up","down","arch","valley"];
+    checkNote.textContent="Multiple choice uses these patterns. Manual mode uses the keyboard.";
+  }
+  arr.forEach(o=>{
+    const lab=document.createElement("label");
+    lab.className="checkitem";
+    const cb=document.createElement("input"); cb.type="checkbox"; cb.value=o.id; cb.checked=defaults.includes(o.id);
+    lab.appendChild(cb); lab.appendChild(document.createTextNode(o.name));
+    checks.appendChild(lab);
+  });
+}
+function updateModeUI(){
+  stopNow();
+
+  if(!mode.value){
+    modeTitle.textContent = "Pick an activity";
+    modeDesc.textContent = "Choose an activity from the menu on the left. Once you choose one, its settings and controls will load here.";
+    checks.innerHTML = "";
+    checkNote.textContent = "";
+    state={q:0,total:parseInt(questions.value,10),score:0,streak:0,current:null,locked:false,selectedMelody:[],editIndex:0};
+    qStat.textContent="0 / "+state.total;
+    scoreStat.textContent="0";
+    streakStat.textContent="0";
+    multipleArea.innerHTML="";
+    manualArea.classList.add("hidden");
+    pianoArea.classList.add("hidden");
+    melodyDisplay.classList.add("hidden"); melodyControls.classList.add("hidden");
+    el("nextBtn").classList.add("hidden");
+    el("startBtn").classList.add("hidden");
+    el("resetBtn").classList.add("hidden");
+    feedback.textContent = "Pick an activity from the menu to begin.";
+    return;
+  }
+
+  const m=MODES[mode.value];
+  modeTitle.textContent=m.title;
+  modeDesc.textContent=m.desc;
+  setChecks();
+
+  state={q:0,total:parseInt(questions.value,10),score:0,streak:0,current:null,locked:false,selectedMelody:[],editIndex:0};
+  qStat.textContent="0 / "+state.total;
+  scoreStat.textContent="0";
+  streakStat.textContent="0";
+  multipleArea.innerHTML="";
+  manualArea.classList.add("hidden");
+  pianoArea.classList.add("hidden");
+  melodyDisplay.classList.add("hidden"); melodyControls.classList.add("hidden");
+  el("nextBtn").classList.add("hidden");
+  el("startBtn").classList.remove("hidden");
+  el("resetBtn").classList.remove("hidden");
+
+  if(mode.value==="melody"){
+    showMelodyKeyboard(4);
+    feedback.textContent = "Melody Dictation uses the keyboard below. Click Start Round when ready.";
+  }else{
+    feedback.textContent = "This activity is ready. Click Start Round when ready.";
+  }
+}
+mode.onchange=updateModeUI;
+function chordFrom(root, chordId, inv=0){
+  const c=CHORDS.find(x=>x.id===chordId) || CHORDS[0];
+  let notes=c.ints.map(i=>root+i);
+  for(let k=0;k<inv;k++) notes.push(notes.shift()+12);
+  return notes;
+}
+function scaleFrom(root, sid){ return (SCALES.find(s=>s.id===sid)||SCALES[0]).ints.map(i=>root+i); }
+function progressionFrom(root, p){
+  const prog=PROGS.find(x=>x.id===p)||PROGS[0];
+  return prog.degrees.map((d,i)=>{
+    const q=(prog.qualities && prog.qualities[i]) || "major";
+    return chordFrom(root+d, q, 0);
+  });
+}
+function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function makeQuestion(){
+  const m=mode.value, opts=selectedOptions();
+  if(opts.length<2){ feedback.innerHTML='<span class="bad">Please choose at least two choices first.</span>'; return false; }
+  const root=rootMidi();
+  state.selectedMelody=[];
+  melodyDisplay.classList.add("hidden"); melodyControls.classList.add("hidden");
+  pianoArea.classList.add("hidden");
+  el("variantBtn").disabled = !(m==="different");
+  if(m==="difficulty" || m==="different"){
+    let available=opts;
+    if(m==="difficulty"){
+      if(state.q<4) available=opts.filter(x=>["major","minor"].includes(x));
+      if(available.length<2) available=opts;
+    }
+    const ans=rand(available);
+    const inv=m==="different" ? Math.floor(Math.random()*3) : 0;
+    state.current={answer:ans, answerText:(CHORDS.find(c=>c.id===ans)||{}).name, play:()=>playChord(chordFrom(root,ans,inv),true),
+      variant:()=>playChord(chordFrom(root+12,ans,Math.floor(Math.random()*3)), Math.random()<.5)};
+  }else if(m==="noteinchord"){
+    const chord=rand(CHORDS.slice(0,6));
+    const notes=chordFrom(root,chord.id,0);
+    const inIt=Math.random()<.5;
+    const test=inIt ? rand(notes) : root + rand([1,2,5,6,8,9,10,11,12]);
+    state.current={answer:inIt?"in":"out", answerText:inIt?"In the chord":"Not in the chord",
+      play:async()=>{ await playSequence([notes,test]); }, chordName:chord.name+" chord, then "+midiToName(test)};
+  }else if(m==="progression"){
+    const ans=rand(opts);
+    state.current={answer:ans, answerText:(PROGS.find(p=>p.id===ans)||{}).name, play:()=>playSequence(progressionFrom(root,ans))};
+  }else if(m==="scale"){
+    const ans=rand(opts);
+    state.current={answer:ans, answerText:(SCALES.find(s=>s.id===ans)||{}).name, play:()=>playSequence(scaleFrom(root,ans))};
+  }else if(m==="melody"){
+    const ans=rand(opts);
+    let pattern=[0,2,4,5];
+    if(ans==="down") pattern=[5,4,2,0];
+    if(ans==="arch") pattern=[0,2,5,4];
+    if(ans==="valley") pattern=[5,4,0,2];
+    if(ans==="repeat") pattern=[0,0,2,2];
+    const notes=pattern.map(i=>root+i);
+    state.current={answer:ans, answerText:({up:"Rising melody",down:"Falling melody",arch:"Up then down",valley:"Down then up",repeat:"Repeated notes"})[ans], notes, play:()=>playSequence(notes)};
+    state.selectedMelody=[];
+    state.editIndex=0;
+  }
+  buildAnswers();
+  return true;
+}
+function buildAnswers(){
+  multipleArea.innerHTML="";
+  manualSelect.innerHTML="";
+  manualArea.classList.add("hidden");
+  pianoArea.classList.add("hidden");
+  melodyDisplay.classList.add("hidden"); melodyControls.classList.add("hidden");
+
+  if(mode.value==="melody"){
+    multipleArea.classList.add("hidden");
+    showMelodyKeyboard(state.current && state.current.notes ? state.current.notes.length : 4);
+    return;
+  }
+
+  multipleArea.classList.remove("hidden");
+
+  let source = mode.value==="scale" ? SCALES :
+    mode.value==="progression" ? PROGS :
+    mode.value==="noteinchord" ? [{id:"in",name:"In the chord"},{id:"out",name:"Not in the chord"}] :
+    CHORDS;
+
+  source.filter(o=>selectedOptions().includes(o.id)).forEach(o=>{
+    const b=document.createElement("button");
+    b.textContent=o.name;
+    b.onclick=()=>submit(o.id);
+    multipleArea.appendChild(b);
+  });
+}
+
+function showMelodyKeyboard(count=4){
+  manualArea.classList.add("hidden");
+  multipleArea.classList.add("hidden");
+  pianoArea.classList.remove("hidden");
+  melodyDisplay.classList.remove("hidden");
+  melodyControls.classList.remove("hidden");
+  buildPiano(count);
+  renderMelodySlots(count);
+}
+
+function buildPiano(count=4){
+  pianoArea.innerHTML="";
+  const start=60, end=72;
+  for(let m=start;m<=end;m++){
+    const b=document.createElement("button");
+    const name=midiToName(m).replace(/[0-9]/g,"");
+    b.textContent=name;
+    b.className="key "+(WHITE.has(name)?"":"black");
+    b.onclick=()=>{
+      piano(midiToFreq(m), ctx.currentTime+.01, .45, .38);
+
+      // Before a melody round starts, the keyboard previews notes only.
+      if(mode.value!=="melody" || !state.current || !state.current.notes || state.locked) return;
+
+      const total = state.current.notes.length;
+      let index = Number.isInteger(state.editIndex) ? state.editIndex : state.selectedMelody.length;
+      if(index < 0 || index >= total) index = Math.min(state.selectedMelody.length, total - 1);
+
+      state.selectedMelody[index] = m;
+
+      // After entering/changing a note, move to the next empty slot if possible.
+      const nextEmpty = state.selectedMelody.findIndex((x, i)=>!x && i < total);
+      if(nextEmpty !== -1){
+        state.editIndex = nextEmpty;
+      }else{
+        state.editIndex = Math.min(index + 1, total - 1);
+      }
+
+      renderMelodySlots(total);
+      feedback.textContent = "Click a slot to change it, or submit when ready.";
+    };
+    pianoArea.appendChild(b);
+  }
+}
+
+function renderMelodySlots(forcedCount){
+  melodyDisplay.innerHTML="";
+  const count = forcedCount || ((state.current && state.current.notes) ? state.current.notes.length : 4);
+  for(let i=0;i<count;i++){
+    const d=document.createElement("div");
+    d.className="noteSlot" + (i===state.editIndex && state.current && !state.locked ? " selected" : "");
+    d.textContent=state.selectedMelody[i] ? midiToName(state.selectedMelody[i]).replace(/[0-9]/g,"") : "—";
+    d.onclick=()=>{
+      if(state.locked) return;
+      state.editIndex=i;
+      renderMelodySlots(count);
+      feedback.textContent = "Now choose a replacement note from the keyboard.";
+    };
+    melodyDisplay.appendChild(d);
+  }
+}
+
+function submitManualMelody(){
+  if(!state.current || !state.current.notes || state.locked) return;
+
+  const total = state.current.notes.length;
+  if(state.selectedMelody.length < total || state.selectedMelody.slice(0,total).some(x=>!x)){
+    feedback.innerHTML = '<span class="bad">Fill every melody slot before submitting.</span>';
+    return;
+  }
+
+  const answer = state.current.notes.map(n=>NOTE_NAMES[n%12]).join("-");
+  const user = state.selectedMelody.slice(0,total).map(n=>NOTE_NAMES[n%12]).join("-");
+  const ok = answer===user;
+  finish(ok, "Correct melody: "+answer);
+}
+
+function submit(id){
+  if(state.locked) return;
+  finish(id===state.current.answer, "Answer: "+state.current.answerText);
+}
+function finish(ok, detail){
+  state.locked=true;
+  if(ok){ state.score++; state.streak++; feedback.innerHTML='<span class="good">Correct!</span> '+detail; }
+  else{ state.streak=0; feedback.innerHTML='<span class="bad">Not quite.</span> '+detail; }
+  scoreStat.textContent=state.score; streakStat.textContent=state.streak;
+  [...multipleArea.querySelectorAll("button")].forEach(b=>b.disabled=true);
+  el("nextBtn").classList.remove("hidden");
+  if(state.q>=state.total) el("nextBtn").textContent="Finish Round";
+}
+function nextQuestion(){
+  if(state.q>=state.total){
+    feedback.innerHTML='<span class="good">Round complete!</span> Final score: '+state.score+' / '+state.total;
+    el("nextBtn").classList.add("hidden");
+    return;
+  }
+  state.q++; state.locked=false; state.selectedMelody=[];
+  qStat.textContent=state.q+" / "+state.total;
+  el("nextBtn").classList.add("hidden"); el("nextBtn").textContent="Next Question";
+  if(makeQuestion()){
+    feedback.textContent="Listen, then answer.";
+    state.current.play();
+  }
+}
+function startRound(){
+  if(!mode.value){
+    feedback.textContent = "Pick an activity from the menu first.";
+    return;
+  }
+  const opts=selectedOptions();
+  if(opts.length<2){ feedback.innerHTML='<span class="bad">Please choose at least two choices first.</span>'; return; }
+  state.q=0; state.score=0; state.streak=0; state.total=parseInt(questions.value,10); state.locked=false;
+  scoreStat.textContent="0"; streakStat.textContent="0"; qStat.textContent="0 / "+state.total;
+  nextQuestion();
+}
+el("startBtn").onclick=startRound;
+el("resetBtn").onclick=()=>{
+  stopNow();
+  if(!mode.value){ updateModeUI(); return; }
+  state={q:0,total:parseInt(questions.value,10),score:0,streak:0,current:null,locked:false,selectedMelody:[],editIndex:0};
+  qStat.textContent="0 / "+state.total;
+  scoreStat.textContent="0";
+  streakStat.textContent="0";
+  feedback.textContent="Choose settings, then start a round.";
+  multipleArea.innerHTML="";
+  manualArea.classList.add("hidden");
+  pianoArea.classList.add("hidden");
+  melodyDisplay.classList.add("hidden"); melodyControls.classList.add("hidden");
+  el("nextBtn").classList.add("hidden");
+  if(mode.value==="melody"){
+    showMelodyKeyboard(4);
+    feedback.textContent="Melody Dictation uses the keyboard below. Click Start Round when ready.";
+  }
+};
+el("playBtn").onclick=()=>{ if(state.current) state.current.play(); };
+el("againBtn").onclick=()=>{ if(state.current) state.current.play(); };
+el("variantBtn").onclick=()=>{ if(state.current && state.current.variant) state.current.variant(); };
+el("stopBtn").onclick=stopNow;
+el("nextBtn").onclick=nextQuestion;
+el("submitManual").onclick=()=>submit(manualSelect.value);
+el("submitMelodyBtn").onclick=submitManualMelody;
+el("clearMelodyBtn").onclick=()=>{
+  if(mode.value!=="melody" || state.locked) return;
+  state.selectedMelody=[];
+  state.editIndex=0;
+  renderMelodySlots(state.current && state.current.notes ? state.current.notes.length : 4);
+  feedback.textContent="Melody cleared. Enter the notes again.";
+};
+
+updateModeUI();
+</script>
+</body>
+</html>

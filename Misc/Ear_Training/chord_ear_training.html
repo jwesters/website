@@ -50,7 +50,7 @@
 
   <div class="panel hidden" id="quizPanel">
     <div class="status"><div>Question <b id="qNum">1</b> / <span id="qTotal">10</span></div><div>Score: <b id="score">0</b></div></div>
-    <div class="row" style="margin-top:10px"><button class="ghost" id="playChord">▶ Play Chord</button><button class="ghost" id="playBroken">▶ Play Broken</button><button class="ghost" id="playRoot">▶ Root Note</button><button class="ghost" id="stopBtn">■ Stop</button></div>
+    <div class="row" style="margin-top:10px"><button class="ghost" id="playChord">▶ Play Chord</button><button class="ghost" id="playBroken">▶ Play Broken</button><button class="ghost" id="playRoot">▶ Root Note</button><button class="ghost" id="stopBtn">■ Stop</button><button class="ghost" id="backSetupBtn">Back to Setup</button></div>
     <div class="answers" id="answers"></div>
     <div class="feedback" id="feedback"></div>
     <div class="smallnote" id="modeNote"></div>
@@ -95,11 +95,24 @@ async function playBroken(){if(playingSeq||!root)return;playingSeq=true;stopNow(
 async function playDefault(){const v=defaultPlay.value;if(v==="broken")playBroken();else if(v==="both"){await playBroken();await new Promise(r=>setTimeout(r,250));playChord()}else playChord()}
 function setQuizVisible(){setupPanel.classList.add("hidden");quizPanel.classList.remove("hidden");nextBtn.classList.add("hidden");restartBtn.classList.add("hidden")}
 function setSetupVisible(){stopNow();setupPanel.classList.remove("hidden");quizPanel.classList.add("hidden");nextBtn.classList.add("hidden");restartBtn.classList.add("hidden");feedback.textContent="";setupFeedback.textContent=""}
+function restartRound(){
+  stopNow();
+  if(!validateChordSelection(true)) return;
+  total=parseInt(qCountSel.value,10);
+  q=1;
+  score=0;
+  answered=false;
+  buildAnswerButtons();
+  setQuizVisible();
+  newQuestion();
+}
 function newQuestion(){answered=false;feedback.textContent="";nextBtn.classList.add("hidden");buildAnswerButtons();Array.from(answers.children).forEach(b=>b.disabled=false);pickQuestion();$("qNum").textContent=q;$("qTotal").textContent=total;$("score").textContent=score;modeNote.textContent=(fixedStart.checked?"Fixed root: ":"Changing root: ")+root.name+(showFormulas.checked?" • Formulas shown":" • Names only");playDefault()}
 function checkAnswer(id){if(answered)return;answered=true;const correct=id===currentChord.id;if(correct){score++;feedback.innerHTML='<span class="good">Correct!</span> It was '+currentChord.name+'.'}else{const chosen=chords.find(c=>c.id===id);feedback.innerHTML='<span class="bad">Incorrect.</span> You chose '+chosen.name+'. It was '+currentChord.name+'.'}feedback.innerHTML+=' <span style="color:var(--muted)">('+root.name+' '+currentChord.formula+')</span>';$("score").textContent=score;Array.from(answers.children).forEach(b=>b.disabled=true);if(q<total)nextBtn.classList.remove("hidden");else{feedback.innerHTML+='<br><br><b>Final score: '+score+' / '+total+'</b>';restartBtn.classList.remove("hidden")}}
 $("playChord").onclick=()=>playChord();$("playBroken").onclick=()=>playBroken();$("playRoot").onclick=()=>{if(root){stopNow();tone(root.f,.9,null,.72)}};$("stopBtn").onclick=()=>stopNow();nextBtn.onclick=()=>{q++;stopNow();newQuestion()};restartBtn.onclick=()=>setSetupVisible();
 $("selectAllChords").onclick=()=>{document.querySelectorAll(".chordToggle").forEach(cb=>cb.checked=true);validateChordSelection(false);setupFeedback.textContent=""};$("clearChords").onclick=()=>{document.querySelectorAll(".chordToggle").forEach(cb=>cb.checked=false);validateChordSelection(true)};showFormulas.addEventListener("change",()=>{refreshChoiceLabels();if(!quizPanel.classList.contains("hidden"))buildAnswerButtons()});chordChoices.addEventListener("change",()=>validateChordSelection(true));
-buildChordChoices();refreshChoiceLabels();startBtn.onclick=()=>{if(!validateChordSelection(true))return;total=parseInt(qCountSel.value,10);q=1;score=0;buildAnswerButtons();setQuizVisible();newQuestion()};setSetupVisible();
+buildChordChoices();refreshChoiceLabels();startBtn.onclick=restartRound;
+$("backSetupBtn").onclick=setSetupVisible;
+setSetupVisible();
 </script>
 </body>
 </html>

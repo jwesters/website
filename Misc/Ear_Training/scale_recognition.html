@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Scale Recognition</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{
+  --bg:#0e1020; --panel:#171a33; --panel2:#101338; --text:#eef1ff; --muted:#b8bfe6;
+  --accent:#7aa2ff; --good:#6bffb1; --bad:#ff6b6b; --chip:#222650; --border:rgba(255,255,255,.12);
+}
+*{box-sizing:border-box}
+body{
+  margin:0; min-height:100vh; background:linear-gradient(180deg,#0e1020,#080a16);
+  color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+}
+.wrap{width:min(920px,94vw); margin:0 auto; padding:24px 0 36px}
+.card{
+  background:var(--panel); border:1px solid rgba(255,255,255,.08); border-radius:22px;
+  box-shadow:0 22px 50px rgba(0,0,0,.42); overflow:hidden;
+}
+header{padding:22px 24px 16px; border-bottom:1px solid rgba(255,255,255,.08)}
+h1{font-size:1.55rem; margin:0 0 6px}
+.sub{color:var(--muted); line-height:1.45}
+main{padding:18px}
+.panel{
+  background:var(--panel2); border:1px solid rgba(255,255,255,.07); border-radius:16px; padding:14px; margin-bottom:12px;
+}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+label{display:block; color:var(--muted); font-weight:750; font-size:.9rem; margin-bottom:7px}
+select,input{
+  width:100%; padding:11px 12px; border-radius:12px; border:1px solid var(--border);
+  background:#0d1030; color:var(--text); font-size:1rem;
+}
+button{
+  border:0; border-radius:13px; padding:12px 14px; font-size:1rem; cursor:pointer;
+  background:var(--chip); color:var(--text); font-weight:750;
+}
+button.primary{background:var(--accent); color:#071024}
+button:disabled{opacity:.55; cursor:not-allowed}
+.row{display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:center}
+.choicegrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:10px; margin-top:12px}
+.status{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}
+.stat{background:rgba(255,255,255,.045); border:1px solid rgba(255,255,255,.06); border-radius:14px; padding:10px;text-align:center}
+.stat b{display:block; font-size:1.15rem}
+.feedback{min-height:2.6em; font-weight:850; text-align:center; margin:12px 0; line-height:1.35}
+.good{color:var(--good)} .bad{color:var(--bad)}
+.hidden{display:none!important}
+.noteSeq{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.noteSlot{min-width:50px;border:1px dashed rgba(255,255,255,.25);border-radius:12px;padding:10px;background:rgba(255,255,255,.04);font-weight:900;cursor:pointer;text-align:center}
+.noteSlot.selected{border-color:var(--accent); background:rgba(122,162,255,.20)}
+.piano{display:flex; gap:4px; justify-content:center; flex-wrap:wrap; margin-top:12px}
+.key{min-width:44px; padding:12px 8px; background:#eef1ff; color:#071024; border-radius:0 0 10px 10px; font-weight:900}
+.key.black{background:#161a35;color:white; transform:translateY(-5px)}
+.small{font-size:.85rem;color:var(--muted)}
+.checks{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px}
+.checkitem{display:flex;gap:8px;align-items:center;padding:9px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06)}
+.checkitem input{width:18px;height:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <header>
+      <h1>Scale Recognition</h1>
+      <div class="sub">Hear a scale and identify the scale type.</div>
+    </header>
+    <main>
+<div class="panel controls">
+  <div><label>Questions</label><select id="total"><option>5</option><option selected>10</option><option>20</option></select></div>
+  <div><label>Included scales</label><div class="checks" id="checks"></div></div>
+</div>
+<div class="panel">
+  <div class="status"><div class="stat"><span class="small">Question</span><b id="q">0 / 10</b></div><div class="stat"><span class="small">Score</span><b id="score">0</b></div><div class="stat"><span class="small">Streak</span><b id="streak">0</b></div></div>
+  <div class="row"><button class="primary" id="start">Start Round</button><button id="play">▶ Play</button><button id="stop">■ Stop</button></div>
+  <div class="feedback" id="feedback">Choose at least two scales, then start.</div>
+  <div class="choicegrid" id="choices"></div>
+  <div class="row"><button id="next" class="hidden">Next Question</button></div>
+</div>
+</main>
+  </div>
+</div>
+<script>
+
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+const ctx = new AudioCtx();
+let active = [];
+let reverb = null;
+const NOTE_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const WHITE = new Set(["C","D","E","F","G","A","B"]);
+function midiToFreq(m){ return 440 * Math.pow(2,(m-69)/12); }
+function midiToName(m){ return NOTE_NAMES[m%12] + (Math.floor(m/12)-1); }
+function noteOnly(m){ return NOTE_NAMES[m%12]; }
+function rootMidi(){ return 48 + Math.floor(Math.random()*19); }
+function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function stopNow(){
+  const now = ctx.currentTime;
+  active.forEach(n=>{
+    try{
+      if(n.gain){ n.gain.cancelScheduledValues(now); n.gain.setTargetAtTime(0.0001, now, .015); }
+      if(n.stop) n.stop(now+.06);
+    }catch(e){}
+  });
+  active = [];
+}
+function createReverb(){
+  const rate=ctx.sampleRate, seconds=1.35, len=Math.floor(rate*seconds);
+  const impulse=ctx.createBuffer(2,len,rate);
+  for(let c=0;c<2;c++){
+    const d=impulse.getChannelData(c);
+    for(let i=0;i<len;i++){
+      const t=i/len, decay=Math.pow(1-t,3.2);
+      d[i]=(Math.random()*2-1)*decay*.45;
+    }
+  }
+  const conv=ctx.createConvolver(); conv.buffer=impulse; return conv;
+}
+function ensureReverb(){ if(!reverb) reverb=createReverb(); return reverb; }
+function piano(freq, start=ctx.currentTime, dur=.95, vol=.46){
+  if(ctx.state !== "running") ctx.resume();
+  const end=start+dur;
+  const master=ctx.createGain();
+  master.gain.setValueAtTime(.0001,start);
+  master.gain.exponentialRampToValueAtTime(vol,start+.014);
+  master.gain.exponentialRampToValueAtTime(vol*.24,start+.13);
+  master.gain.exponentialRampToValueAtTime(.0003,end);
+  const filt=ctx.createBiquadFilter();
+  filt.type="lowpass"; filt.Q.value=.85;
+  filt.frequency.setValueAtTime(Math.min(9000,freq*18),start);
+  filt.frequency.exponentialRampToValueAtTime(Math.min(2400,freq*6),start+.18);
+  const dry=ctx.createGain(); dry.gain.value=.88;
+  const wet=ctx.createGain(); wet.gain.value=.16;
+  const conv=ensureReverb();
+  const parts=[
+    {type:"sawtooth", mult:1, det:-3, gain:.55},
+    {type:"sawtooth", mult:.997, det:2, gain:.38},
+    {type:"triangle", mult:2, det:0, gain:.18}
+  ];
+  parts.forEach(p=>{
+    const o=ctx.createOscillator(), g=ctx.createGain();
+    o.type=p.type; o.frequency.setValueAtTime(freq*p.mult,start); o.detune.value=p.det;
+    g.gain.value=p.gain;
+    o.connect(g); g.connect(filt); o.start(start); o.stop(end+.02);
+    active.push(o);
+  });
+  const noiseBuf=ctx.createBuffer(1, Math.floor(ctx.sampleRate*.035), ctx.sampleRate);
+  const nd=noiseBuf.getChannelData(0);
+  for(let i=0;i<nd.length;i++) nd[i]=(Math.random()*2-1)*(1-i/nd.length);
+  const noise=ctx.createBufferSource(); noise.buffer=noiseBuf;
+  const hp=ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=1700;
+  const ng=ctx.createGain();
+  ng.gain.setValueAtTime(.0001,start);
+  ng.gain.exponentialRampToValueAtTime(.12,start+.004);
+  ng.gain.exponentialRampToValueAtTime(.0001,start+.035);
+  noise.connect(hp); hp.connect(ng); ng.connect(master); noise.start(start); noise.stop(start+.04);
+  active.push(noise, master);
+  filt.connect(master);
+  master.connect(dry); dry.connect(ctx.destination);
+  master.connect(conv); conv.connect(wet); wet.connect(ctx.destination);
+}
+function playChord(midis, blocked=true){
+  stopNow();
+  const now=ctx.currentTime+.03;
+  if(blocked){
+    const v=Math.max(.22, .52/Math.sqrt(midis.length));
+    midis.forEach(m=>piano(midiToFreq(m), now, 1.15, v));
+  }else{
+    midis.forEach((m,i)=>piano(midiToFreq(m), now+i*.34, .85, .42));
+  }
+}
+function playSequence(items){
+  stopNow();
+  const now=ctx.currentTime+.03;
+  let t=now;
+  items.forEach(item=>{
+    if(Array.isArray(item)){
+      const v=Math.max(.22,.52/Math.sqrt(item.length));
+      item.forEach(m=>piano(midiToFreq(m), t, .85, v));
+    }else{
+      piano(midiToFreq(item), t, .72, .46);
+    }
+    t+=.82;
+  });
+}
+const CHORDS = [
+ {id:"major", name:"Major", ints:[0,4,7]},
+ {id:"minor", name:"Minor", ints:[0,3,7]},
+ {id:"dim", name:"Diminished", ints:[0,3,6]},
+ {id:"aug", name:"Augmented", ints:[0,4,8]},
+ {id:"sus2", name:"Sus2", ints:[0,2,7]},
+ {id:"sus4", name:"Sus4", ints:[0,5,7]},
+ {id:"maj7", name:"Major 7", ints:[0,4,7,11]},
+ {id:"min7", name:"Minor 7", ints:[0,3,7,10]},
+ {id:"dom7", name:"Dominant 7", ints:[0,4,7,10]}
+];
+function chordFrom(root, chordId, inv=0){
+  const c=CHORDS.find(x=>x.id===chordId) || CHORDS[0];
+  let notes=c.ints.map(i=>root+i);
+  for(let k=0;k<inv;k++) notes.push(notes.shift()+12);
+  return notes;
+}
+
+
+const SCALES=[
+ {id:"major", name:"Major", ints:[0,2,4,5,7,9,11,12]},
+ {id:"naturalMinor", name:"Natural Minor", ints:[0,2,3,5,7,8,10,12]},
+ {id:"harmonicMinor", name:"Harmonic Minor", ints:[0,2,3,5,7,8,11,12]},
+ {id:"melodicMinor", name:"Melodic Minor", ints:[0,2,3,5,7,9,11,12]},
+ {id:"majorPent", name:"Major Pentatonic", ints:[0,2,4,7,9,12]},
+ {id:"minorPent", name:"Minor Pentatonic", ints:[0,3,5,7,10,12]},
+ {id:"blues", name:"Blues", ints:[0,3,5,6,7,10,12]},
+ {id:"chromatic", name:"Chromatic", ints:[0,1,2,3,4,5,6,7,8,9,10,11,12]},
+ {id:"wholeTone", name:"Whole Tone", ints:[0,2,4,6,8,10,12]},
+ {id:"diminishedHW", name:"Diminished (Half-Whole)", ints:[0,1,3,4,6,7,9,10,12]},
+ {id:"diminishedWH", name:"Diminished (Whole-Half)", ints:[0,2,3,5,6,8,9,11,12]},
+ {id:"hungarianMinor", name:"Hungarian Minor", ints:[0,2,3,6,7,8,11,12]},
+ {id:"doubleHarmonic", name:"Double Harmonic", ints:[0,1,4,5,7,8,11,12]},
+ {id:"japaneseIn", name:"Japanese (In)", ints:[0,1,5,7,8,12]}
+];
+function scaleFrom(root,s){return s.ints.map(i=>root+i);}
+const checks=document.getElementById("checks"), choices=document.getElementById("choices");
+SCALES.forEach((s,i)=>{let lab=document.createElement("label");lab.className="checkitem";let cb=document.createElement("input");cb.type="checkbox";cb.value=s.id;cb.checked=i<3;lab.appendChild(cb);lab.appendChild(document.createTextNode(s.name));checks.appendChild(lab);});
+function selected(){
+  return [...checks.querySelectorAll("input:checked")].map(cb=>SCALES.find(s=>s.id===cb.value));
+}
+
+function renderAnswerChoices(){
+  choices.innerHTML = "";
+  const opts = selected();
+  opts.forEach(s=>{
+    let b=document.createElement("button");
+    b.textContent=s.name;
+    b.onclick=()=>submit(s.id);
+    choices.appendChild(b);
+  });
+}
+
+checks.addEventListener("change", renderAnswerChoices);
+renderAnswerChoices();
+let state={q:0,total:10,score:0,streak:0,current:null,locked:false};
+function newQ(){
+  renderAnswerChoices();
+  const opts=selected(); if(opts.length<2){document.getElementById("feedback").innerHTML='<span class="bad">Choose at least two scales.</span>';return;}
+  state.q++; state.locked=false; document.getElementById("q").textContent=state.q+" / "+state.total; document.getElementById("next").classList.add("hidden");
+  const s=rand(opts), root=rootMidi();
+  state.current={answer:s.id,label:s.name,seq:scaleFrom(root,s)};
+  document.getElementById("feedback").textContent="Listen to the scale.";
+  playSequence(state.current.seq);
+}
+function submit(v){
+  if(state.locked||!state.current)return; state.locked=true;
+  const ok=v===state.current.answer;
+  if(ok){state.score++;state.streak++;document.getElementById("feedback").innerHTML='<span class="good">Correct!</span> '+state.current.label;}
+  else{state.streak=0;document.getElementById("feedback").innerHTML='<span class="bad">Not quite.</span> Answer: '+state.current.label;}
+  document.getElementById("score").textContent=state.score; document.getElementById("streak").textContent=state.streak;
+  if(state.q<state.total) document.getElementById("next").classList.remove("hidden"); else document.getElementById("feedback").innerHTML+="<br>Round complete: "+state.score+" / "+state.total;
+}
+document.getElementById("start").onclick=()=>{state={q:0,total:parseInt(document.getElementById("total").value),score:0,streak:0,current:null,locked:false};document.getElementById("score").textContent=0;document.getElementById("streak").textContent=0;newQ();};
+document.getElementById("play").onclick=()=>{if(state.current) playSequence(state.current.seq);};
+document.getElementById("stop").onclick=stopNow;
+document.getElementById("next").onclick=newQ;
+
+</script>
+</body>
+</html>
