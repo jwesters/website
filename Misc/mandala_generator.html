@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mandala Generator</title>
+<style>
+  :root{
+    --bg:#f5f1ea;
+    --panel:#ffffff;
+    --ink:#171717;
+    --muted:#666;
+    --line:#111;
+    --accent:#3f3f46;
+    --border:#ddd6cc;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    background:linear-gradient(180deg,#f8f5ef,#eee7dc);
+    color:var(--ink);
+    min-height:100vh;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:18px;}
+  header{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:20px;
+    padding:18px 20px;
+    box-shadow:0 8px 28px rgba(0,0,0,.07);
+    margin-bottom:14px;
+  }
+  h1{margin:0 0 4px;font-size:clamp(1.6rem,4vw,2.4rem);letter-spacing:-.04em;}
+  .sub{margin:0;color:var(--muted);font-size:.98rem;}
+  main{display:grid;grid-template-columns:310px 1fr;gap:14px;align-items:start;}
+  .panel,.stage{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:20px;
+    box-shadow:0 8px 28px rgba(0,0,0,.07);
+  }
+  .panel{padding:14px;position:sticky;top:12px;}
+  .stage{padding:16px;min-height:520px;display:flex;flex-direction:column;gap:12px;}
+  label{display:block;font-weight:700;font-size:.86rem;margin:12px 0 6px;}
+  select,input[type="range"],input[type="text"]{
+    width:100%;border:1px solid #cfc7bb;border-radius:12px;background:#fff;padding:10px;font:inherit;
+  }
+  input[type="range"]{padding:0;accent-color:#333;}
+  .row{display:grid;grid-template-columns:1fr 56px;gap:8px;align-items:center;}
+  .val{text-align:center;background:#f3efe8;border:1px solid var(--border);border-radius:12px;padding:9px 5px;color:#333;font-weight:800;}
+  .buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;}
+  button{
+    border:0;border-radius:14px;padding:11px 12px;font-weight:800;cursor:pointer;background:#222;color:#fff;
+    box-shadow:0 3px 0 rgba(0,0,0,.22);
+  }
+  button.secondary{background:#ece6dc;color:#222;border:1px solid #d3cabd;box-shadow:none;}
+  button.full{grid-column:1/-1;}
+  button:hover{filter:brightness(.96);}
+  .hint{font-size:.78rem;color:var(--muted);line-height:1.35;margin-top:10px;}
+  .canvasBox{
+    width:100%;max-width:760px;margin:0 auto;background:#fff;border:1px solid #d9d9d9;border-radius:16px;padding:10px;
+    aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;
+  }
+  svg{width:100%;height:100%;display:block;background:#fff;border-radius:10px;}
+  .mini{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;color:#555;font-size:.85rem;}
+  .pill{border:1px solid #ddd;border-radius:999px;padding:6px 10px;background:#fafafa;}
+  details{margin-top:12px;background:#faf7f2;border:1px solid var(--border);border-radius:14px;padding:10px;}
+  summary{cursor:pointer;font-weight:800;}
+  .checkline{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.9rem;}
+  @media(max-width:820px){main{grid-template-columns:1fr}.panel{position:static}.stage{min-height:auto}.canvasBox{max-width:100%;}.buttons{grid-template-columns:1fr}}
+  @page{size:letter;margin:0;}
+  @media print{
+    html,body{width:100%;height:100%;margin:0;background:#fff;}
+    .wrap{padding:0;margin:0;max-width:none;}
+    header,.panel,.mini{display:none!important;}
+    main{display:block;}
+    .stage{box-shadow:none;border:0;padding:0;margin:0;min-height:0;display:block;}
+    .canvasBox{border:0;padding:0;margin:0 auto;max-width:none;width:100vw;height:100vh;aspect-ratio:auto;display:flex;align-items:center;justify-content:center;}
+    svg{width:min(96vw,96vh);height:min(96vw,96vh);margin:auto;border-radius:0;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Mandala Generator</h1>
+    <p class="sub">Create black-and-white colouring-page mandalas with layered petals, borders, dots, arcs, and geometric rings.</p>
+  </header>
+
+  <main>
+    <section class="panel">
+      <label for="style">Mandala style</label>
+      <select id="style">
+        <option value="classic">Classic Lotus</option>
+        <option value="floral">Floral Colouring Page</option>
+        <option value="geometric">Geometric Rings</option>
+        <option value="mixed">Mixed Surprise</option>
+      </select>
+
+      <label for="difficulty">Detail level</label>
+      <select id="difficulty">
+        <option value="simple">Simple</option>
+        <option value="medium" selected>Medium</option>
+        <option value="detailed">Detailed</option>
+        <option value="intricate">Very Detailed</option>
+      </select>
+
+      <label for="symmetry">Symmetry sections</label>
+      <div class="row"><input type="range" id="symmetry" min="6" max="18" step="2" value="12"><div class="val" id="symVal">12</div></div>
+
+      <label for="rings">Number of rings</label>
+      <div class="row"><input type="range" id="rings" min="5" max="14" step="1" value="9"><div class="val" id="ringsVal">9</div></div>
+
+      <label for="lineWidth">Line thickness</label>
+      <div class="row"><input type="range" id="lineWidth" min="1" max="5" step="0.5" value="2"><div class="val" id="lineVal">2</div></div>
+
+      <label for="seed">Seed</label>
+      <input id="seed" type="text" placeholder="Leave blank for random" />
+
+      <div class="checkline"><input id="nameDate" type="checkbox" checked><span>Add Name / Date lines when saving PDF</span></div>
+
+      <div class="buttons">
+        <button id="generate" class="full">Generate New Mandala</button>
+        <button id="png" class="secondary">Save PNG</button>
+        <button id="print" class="secondary">Print</button>
+        <button id="pdf" class="secondary full">Export PDF</button>
+      </div>
+
+    </section>
+
+    <section class="stage">
+      <div class="canvasBox" id="canvasBox">
+        <svg id="mandala" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg" aria-label="Generated mandala"></svg>
+      </div>
+      <div class="mini">
+        <span class="pill" id="metaStyle">Classic Lotus</span>
+        <span class="pill" id="metaSeed">Seed: —</span>
+        <span class="pill">Black-and-white printable</span>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+  const svg = document.getElementById('mandala');
+  const styleEl = document.getElementById('style');
+  const diffEl = document.getElementById('difficulty');
+  const symEl = document.getElementById('symmetry');
+  const ringsEl = document.getElementById('rings');
+  const lineEl = document.getElementById('lineWidth');
+  const seedEl = document.getElementById('seed');
+  const symVal = document.getElementById('symVal');
+  const ringsVal = document.getElementById('ringsVal');
+  const lineVal = document.getElementById('lineVal');
+  const metaStyle = document.getElementById('metaStyle');
+  const metaSeed = document.getElementById('metaSeed');
+  const nameDate = document.getElementById('nameDate');
+
+  function hashString(str){
+    let h = 2166136261 >>> 0;
+    for(let i=0;i<str.length;i++){h ^= str.charCodeAt(i); h = Math.imul(h, 16777619);}
+    return h >>> 0;
+  }
+  function mulberry32(a){
+    return function(){
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+  }
+  let rnd = mulberry32(1234);
+  const NS = 'http://www.w3.org/2000/svg';
+  function el(name, attrs={}){
+    const node = document.createElementNS(NS, name);
+    for(const [k,v] of Object.entries(attrs)) node.setAttribute(k,v);
+    return node;
+  }
+  function add(node){ svg.appendChild(node); return node; }
+  function group(rot=0){ const g=el('g',{transform:`rotate(${rot} 500 500)`}); add(g); return g; }
+  function polar(r,aDeg){ const a=(aDeg-90)*Math.PI/180; return [500+r*Math.cos(a), 500+r*Math.sin(a)]; }
+  function pathD(points, close=true){ return points.map((p,i)=>(i?'L':'M')+p[0].toFixed(2)+' '+p[1].toFixed(2)).join(' ') + (close?' Z':''); }
+  function attrs(base={}){ return Object.assign({fill:'none',stroke:'#111','stroke-width':current.line,'stroke-linecap':'round','stroke-linejoin':'round'},base); }
+  let current = {line:2};
+
+  function circle(r, extra={}){ add(el('circle', attrs(Object.assign({cx:500,cy:500,r:r}, extra)))); }
+  function dottedRing(r, count, dotR){
+    for(let i=0;i<count;i++){ const [x,y]=polar(r,i*360/count); add(el('circle',{cx:x,cy:y,r:dotR,fill:'none',stroke:'#111','stroke-width':current.line})); }
+  }
+  function smallFilledDots(r, count, dotR){
+    for(let i=0;i<count;i++){ const [x,y]=polar(r,i*360/count); add(el('circle',{cx:x,cy:y,r:dotR,fill:'#111'})); }
+  }
+  function petalRing(inner, outer, count, widthFactor=0.72, pointy=false){
+    const step=360/count;
+    for(let i=0;i<count;i++){
+      const mid=i*step;
+      const spread=step*widthFactor;
+      const p0=polar(inner, mid);
+      const p1=polar((inner+outer)*0.58, mid-spread/2);
+      const p2=polar(outer, mid);
+      const p3=polar((inner+outer)*0.58, mid+spread/2);
+      const d = `M ${p0[0].toFixed(2)} ${p0[1].toFixed(2)} C ${p1[0].toFixed(2)} ${p1[1].toFixed(2)}, ${p1[0].toFixed(2)} ${p1[1].toFixed(2)}, ${p2[0].toFixed(2)} ${p2[1].toFixed(2)} C ${p3[0].toFixed(2)} ${p3[1].toFixed(2)}, ${p3[0].toFixed(2)} ${p3[1].toFixed(2)}, ${p0[0].toFixed(2)} ${p0[1].toFixed(2)} Z`;
+      add(el('path', attrs({d:d})));
+      if(pointy){
+        const q1=polar((inner+outer)/2, mid-spread*.22), q2=polar(outer-12, mid), q3=polar((inner+outer)/2, mid+spread*.22);
+        add(el('path', attrs({d:`M ${q1[0].toFixed(2)} ${q1[1].toFixed(2)} Q ${q2[0].toFixed(2)} ${q2[1].toFixed(2)} ${q3[0].toFixed(2)} ${q3[1].toFixed(2)}`})));
+      }
+    }
+  }
+  function teardropRing(inner, outer, count, widthFactor=0.45){
+    const step=360/count;
+    for(let i=0;i<count;i++){
+      const mid=i*step, spread=step*widthFactor;
+      const baseL=polar(inner,mid-spread), baseR=polar(inner,mid+spread), tip=polar(outer,mid), c1=polar((inner+outer)*.54,mid-spread*.8), c2=polar((inner+outer)*.54,mid+spread*.8);
+      add(el('path', attrs({d:`M ${baseL[0].toFixed(2)} ${baseL[1].toFixed(2)} C ${c1[0].toFixed(2)} ${c1[1].toFixed(2)}, ${tip[0].toFixed(2)} ${tip[1].toFixed(2)}, ${tip[0].toFixed(2)} ${tip[1].toFixed(2)} C ${tip[0].toFixed(2)} ${tip[1].toFixed(2)}, ${c2[0].toFixed(2)} ${c2[1].toFixed(2)}, ${baseR[0].toFixed(2)} ${baseR[1].toFixed(2)} Q ${polar(inner-10,mid)[0].toFixed(2)} ${polar(inner-10,mid)[1].toFixed(2)} ${baseL[0].toFixed(2)} ${baseL[1].toFixed(2)} Z`})));
+    }
+  }
+  function scallopRing(r, amp, count){
+    let d='';
+    const steps=count*8;
+    for(let i=0;i<=steps;i++){
+      const a=i*360/steps;
+      const rr=r + Math.sin(i/steps*Math.PI*2*count)*amp;
+      const p=polar(rr,a);
+      d += (i?' L ':'M ') + p[0].toFixed(2)+' '+p[1].toFixed(2);
+    }
+    add(el('path', attrs({d:d+' Z'})));
+  }
+  function arcRing(r, count, span=.62){
+    const step=360/count;
+    for(let i=0;i<count;i++){
+      const a1=i*step-step*span/2, a2=i*step+step*span/2;
+      const p1=polar(r,a1), p2=polar(r,a2);
+      const large = Math.abs(a2-a1)>180?1:0;
+      add(el('path', attrs({d:`M ${p1[0].toFixed(2)} ${p1[1].toFixed(2)} A ${r} ${r} 0 ${large} 1 ${p2[0].toFixed(2)} ${p2[1].toFixed(2)}`})));
+    }
+  }
+  function diamondRing(inner, outer, count){
+    const step=360/count;
+    for(let i=0;i<count;i++){
+      const mid=i*step;
+      const pts=[polar((inner+outer)/2,mid-step*.32),polar(outer,mid),polar((inner+outer)/2,mid+step*.32),polar(inner,mid)];
+      add(el('path', attrs({d:pathD(pts)})));
+    }
+  }
+  function triangleRing(inner, outer, count){
+    const step=360/count;
+    for(let i=0;i<count;i++){
+      const mid=i*step;
+      const pts=[polar(inner,mid-step*.38),polar(outer,mid),polar(inner,mid+step*.38)];
+      add(el('path', attrs({d:pathD(pts)})));
+    }
+  }
+  function leafVeins(inner, outer, count){
+    const step=360/count;
+    for(let i=0;i<count;i++){
+      const mid=i*step;
+      const a=polar(inner,mid), b=polar(outer,mid);
+      add(el('line', attrs({x1:a[0],y1:a[1],x2:b[0],y2:b[1]})));
+      for(const frac of [.38,.58,.76]){
+        const c=polar(inner+(outer-inner)*frac,mid);
+        const l=polar(inner+(outer-inner)*(frac+.08),mid-step*.16);
+        const r=polar(inner+(outer-inner)*(frac+.08),mid+step*.16);
+        add(el('line', attrs({x1:c[0],y1:c[1],x2:l[0],y2:l[1],'stroke-width':Math.max(0.7,current.line*.7)})));
+        add(el('line', attrs({x1:c[0],y1:c[1],x2:r[0],y2:r[1],'stroke-width':Math.max(0.7,current.line*.7)})));
+      }
+    }
+  }
+
+  function build(){
+    svg.innerHTML='';
+    current.line=parseFloat(lineEl.value);
+    const chosenSeed = seedEl.value.trim() || String(Math.floor(Math.random()*99999999));
+    if(!seedEl.value.trim()) seedEl.value=chosenSeed;
+    rnd = mulberry32(hashString(chosenSeed + styleEl.value + diffEl.value + symEl.value));
+    const sym = parseInt(symEl.value,10);
+    const rings = parseInt(ringsEl.value,10);
+    const style = styleEl.value;
+    const difficulty = diffEl.value;
+    const maxR = 455;
+    const startR = 34;
+    const gap = (maxR-startR)/rings;
+
+    add(el('rect',{x:0,y:0,width:1000,height:1000,fill:'#fff'}));
+    circle(18,{fill:'none'});
+    circle(34);
+    smallFilledDots(50,sym,2.8);
+
+    let r=startR;
+    const density = {simple:0.58,medium:0.78,detailed:1,intricate:1.25}[difficulty];
+    for(let k=0;k<rings;k++){
+      const inner = r + 8;
+      const outer = Math.min(maxR-8, r + gap*(0.75 + rnd()*0.25));
+      const ringTypePool = style==='classic' ? ['petal','tear','scallop','arc','petal','diamond'] :
+                           style==='floral' ? ['petal','tear','leaf','scallop','petal','dots'] :
+                           style==='geometric' ? ['diamond','triangle','arc','scallop','dots','circle'] :
+                           ['petal','tear','leaf','diamond','triangle','scallop','arc','dots'];
+      const type = ringTypePool[Math.floor(rnd()*ringTypePool.length)];
+      const count = sym * (rnd()>.72 && difficulty!=='simple' ? 2 : 1);
+      circle(inner-4,{ 'stroke-width': Math.max(.7,current.line*.55) });
+      if(type==='petal') petalRing(inner, outer, count, 0.62+rnd()*0.22, difficulty!=='simple' && rnd()>.35);
+      if(type==='tear') teardropRing(inner, outer, count, 0.34+rnd()*0.20);
+      if(type==='leaf') { petalRing(inner, outer, count, 0.55, false); leafVeins(inner+4, outer-7, count); }
+      if(type==='diamond') diamondRing(inner, outer, count);
+      if(type==='triangle') triangleRing(inner, outer, count);
+      if(type==='scallop') scallopRing((inner+outer)/2, Math.max(4,(outer-inner)*.18), count);
+      if(type==='arc') { arcRing((inner+outer)/2, count, .58+rnd()*.22); arcRing(outer-4, count, .32+rnd()*.18); }
+      if(type==='dots') { dottedRing((inner+outer)/2, count, Math.max(4,(outer-inner)*.12)); circle(outer); }
+      if(type==='circle') { circle((inner+outer)/2); diamondRing(inner, outer, count); }
+
+      if(density>.7 && k%2===0) dottedRing(outer+Math.min(8,gap*.12), sym*2, Math.max(2.2,current.line*1.5));
+      if(density>0.95 && k%3===1) arcRing(inner+Math.max(8,gap*.18), sym*2, .28);
+      if(density>1.1 && k>1) triangleRing(inner+4, inner+Math.max(18,gap*.32), sym*2);
+      r += gap;
+    }
+
+    circle(463,{ 'stroke-width': current.line*1.2 });
+    scallopRing(438, 10, sym*2);
+    dottedRing(410, sym*2, 5);
+
+    metaStyle.textContent = styleEl.options[styleEl.selectedIndex].text;
+    metaSeed.textContent = 'Seed: ' + chosenSeed;
+  }
+
+  function serializeSvg(){
+    const clone = svg.cloneNode(true);
+    clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+    return new XMLSerializer().serializeToString(clone);
+  }
+  function savePng(){
+    const data = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(serializeSvg());
+    const img = new Image();
+    img.onload = function(){
+      const canvas=document.createElement('canvas'); canvas.width=1400; canvas.height=1400;
+      const ctx=canvas.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0,1400,1400);
+      const a=document.createElement('a'); a.download='mandala.png'; a.href=canvas.toDataURL('image/png'); a.click();
+    };
+    img.src=data;
+  }
+  function savePdf(){
+    const includeLines = nameDate.checked;
+    const svgData = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(serializeSvg());
+    const img = new Image();
+    img.onload = function(){
+      const scale = 2;
+      const pageW = 612, pageH = 792; // US Letter in PDF points
+      const canvas = document.createElement('canvas');
+      canvas.width = 1600; canvas.height = 1600;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      const jpgDataUrl = canvas.toDataURL('image/jpeg', 0.96);
+      const jpgBinary = atob(jpgDataUrl.split(',')[1]);
+
+      const margin = 36;
+      const nameY = pageH - 54;
+      const imgSize = includeLines ? 540 : 560;
+      const imgX = (pageW - imgSize) / 2;
+      const imgY = includeLines ? 78 : 116;
+
+      const content = includeLines
+        ? `q\nBT /F1 12 Tf 36 ${nameY} Td (Name:) Tj ET\n36 ${nameY-6} m 285 ${nameY-6} l S\nBT /F1 12 Tf 327 ${nameY} Td (Date:) Tj ET\n327 ${nameY-6} m 576 ${nameY-6} l S\n${imgSize} 0 0 ${imgSize} ${imgX} ${imgY} cm\n/Im1 Do\nQ\n`
+        : `q\n${imgSize} 0 0 ${imgSize} ${imgX} ${imgY} cm\n/Im1 Do\nQ\n`;
+
+      function pdfEscape(str){ return str.replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)'); }
+      function obj(n, body){ return `${n} 0 obj\n${body}\nendobj\n`; }
+      const parts = [];
+      parts.push('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+      const offsets = [0];
+      function addPart(txt){ offsets.push(parts.join('').length); parts.push(txt); }
+      addPart(obj(1, '<< /Type /Catalog /Pages 2 0 R >>'));
+      addPart(obj(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>'));
+      addPart(obj(3, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 6 0 R >> /XObject << /Im1 5 0 R >> >> /Contents 4 0 R >>'));
+      addPart(`4 0 obj\n<< /Length ${content.length} >>\nstream\n${content}endstream\nendobj\n`);
+      offsets.push(parts.join('').length);
+      parts.push(`5 0 obj\n<< /Type /XObject /Subtype /Image /Width ${canvas.width} /Height ${canvas.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpgBinary.length} >>\nstream\n`);
+      parts.push(jpgBinary);
+      parts.push('\nendstream\nendobj\n');
+      addPart(obj(6, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'));
+      const xrefStart = parts.join('').length;
+      let xref = `xref\n0 7\n0000000000 65535 f \n`;
+      for(let i=1;i<=6;i++) xref += String(offsets[i]).padStart(10,'0') + ' 00000 n \n';
+      const trailer = `trailer\n<< /Size 7 /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+      const pdfBinary = parts.join('') + xref + trailer;
+      const bytes = new Uint8Array(pdfBinary.length);
+      for(let i=0;i<pdfBinary.length;i++) bytes[i] = pdfBinary.charCodeAt(i) & 255;
+      const blob = new Blob([bytes], {type:'application/pdf'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'mandala.pdf';
+      a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+    };
+    img.src = svgData;
+  }
+  function randomizeSeed(){ seedEl.value=''; build(); }
+
+  [symEl,ringsEl,lineEl].forEach(inp=>inp.addEventListener('input',()=>{symVal.textContent=symEl.value;ringsVal.textContent=ringsEl.value;lineVal.textContent=lineEl.value;}));
+  document.getElementById('generate').addEventListener('click', randomizeSeed);
+  document.getElementById('png').addEventListener('click', savePng);
+  document.getElementById('print').addEventListener('click', ()=>window.print());
+  document.getElementById('pdf').addEventListener('click', savePdf);
+  [styleEl,diffEl,symEl,ringsEl,lineEl].forEach(inp=>inp.addEventListener('change', build));
+  seedEl.addEventListener('change', build);
+
+  symVal.textContent=symEl.value; ringsVal.textContent=ringsEl.value; lineVal.textContent=lineEl.value;
+  build();
+})();
+</script>
+</body>
+</html>
