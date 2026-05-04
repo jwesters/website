@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Checkers</title>
+  <style>
+    :root{
+      --bg:#f5f1e8;
+      --panel:#fffaf0;
+      --ink:#2e271f;
+      --muted:#786f63;
+      --line:#d8cab4;
+      --dark:#7a5434;
+      --light:#efdcbc;
+      --accent:#3f6f5e;
+      --accent2:#b75b4c;
+      --red:#c84f45;
+      --black:#2b2b2b;
+      --gold:#f3c65a;
+      --shadow:0 12px 30px rgba(47,34,20,.18);
+      --radius:22px;
+    }
+    *{box-sizing:border-box;}
+    html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);background:radial-gradient(circle at top left,#fff7e8 0,#f5f1e8 42%,#eadfcc 100%);}
+    button,select{font:inherit;}
+    .app{min-height:100vh;padding:18px;display:flex;align-items:center;justify-content:center;}
+    .shell{width:min(1180px,100%);display:grid;grid-template-columns:minmax(320px,1fr) 330px;gap:18px;align-items:start;}
+    .card{background:rgba(255,250,240,.96);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);}
+    .game-card{padding:18px;}
+    .side-card{padding:18px;position:sticky;top:16px;}
+    h1{margin:0;font-size:clamp(1.7rem,4vw,2.6rem);letter-spacing:-.04em;line-height:1;}
+    h2{margin:0 0 10px;font-size:1.2rem;}
+    p{line-height:1.45;color:var(--muted);}
+    .topbar{display:flex;gap:14px;align-items:center;justify-content:space-between;margin-bottom:14px;}
+    .subtitle{margin:5px 0 0;color:var(--muted);font-size:.98rem;}
+    .status-pill{padding:10px 12px;border-radius:999px;background:#efe5d6;border:1px solid var(--line);font-weight:800;white-space:nowrap;}
+    .board-wrap{display:flex;justify-content:center;align-items:center;padding:12px;background:#d9c7aa;border-radius:22px;border:1px solid #c9b28f;}
+    .board{width:min(76vh,720px,100%);aspect-ratio:1/1;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);border:8px solid #5a3c27;border-radius:14px;overflow:hidden;box-shadow:inset 0 0 0 2px rgba(255,255,255,.25),0 12px 28px rgba(45,31,20,.22);touch-action:manipulation;}
+    .sq{position:relative;display:flex;align-items:center;justify-content:center;user-select:none;}
+    .sq.light{background:var(--light);}
+    .sq.dark{background:var(--dark);}
+    .sq.coord::after{content:attr(data-label);position:absolute;bottom:4px;right:5px;font-size:.63rem;color:rgba(255,255,255,.45);font-weight:700;}
+    .sq.selected{outline:4px solid var(--gold);outline-offset:-4px;}
+    .sq.move::before{content:"";width:28%;height:28%;border-radius:50%;background:rgba(243,198,90,.88);box-shadow:0 0 0 5px rgba(243,198,90,.25);}
+    .sq.capture::before{content:"";position:absolute;inset:9%;border-radius:18px;border:5px solid rgba(243,198,90,.95);box-shadow:0 0 0 5px rgba(243,198,90,.2);}
+    .piece{width:74%;height:74%;border-radius:50%;display:grid;place-items:center;position:relative;box-shadow:inset 0 8px 10px rgba(255,255,255,.18), inset 0 -9px 14px rgba(0,0,0,.22), 0 8px 10px rgba(0,0,0,.25);border:3px solid rgba(255,255,255,.35);transition:transform .12s ease;}
+    .piece.red{background:linear-gradient(145deg,#e46b60,#a93630);}
+    .piece.black{background:linear-gradient(145deg,#505050,#151515);}
+    .piece.king::after{content:"♛";font-size:clamp(1.1rem,4vw,2.25rem);line-height:1;color:rgba(255,230,140,.95);text-shadow:0 2px 3px rgba(0,0,0,.35);transform:translateY(-1px);}
+    .piece:hover{transform:scale(1.04);}
+    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0;}
+    .stat{padding:12px;border:1px solid var(--line);border-radius:16px;background:#fff6e5;}
+    .stat b{display:block;font-size:1.25rem;}
+    .stat span{font-size:.82rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
+    .buttons{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;}
+    .btn{border:0;border-radius:14px;padding:11px 14px;font-weight:800;cursor:pointer;background:var(--accent);color:white;box-shadow:0 4px 0 rgba(0,0,0,.18);}
+    .btn.secondary{background:#80684d;}
+    .btn.warn{background:var(--accent2);}
+    .btn:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.18);}
+    .btn:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+    .setup{position:fixed;inset:0;background:rgba(41,31,22,.55);display:grid;place-items:center;padding:18px;z-index:10;}
+    .setup.hidden{display:none;}
+    .modal{width:min(560px,100%);background:var(--panel);border:1px solid var(--line);border-radius:28px;box-shadow:0 24px 70px rgba(0,0,0,.35);padding:24px;}
+    .choice-grid{display:grid;gap:12px;margin:16px 0;}
+    label.choice{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;border:1px solid var(--line);border-radius:16px;background:#fff8eb;font-weight:800;}
+    select{border:1px solid var(--line);border-radius:12px;background:white;padding:9px 10px;color:var(--ink);font-weight:700;min-width:160px;}
+    .message{margin-top:12px;padding:12px;border-radius:16px;background:#efe5d6;color:var(--ink);font-weight:700;min-height:48px;}
+    .legend{margin-top:10px;}
+    .compact-rules{font-size:.86rem;font-weight:800;color:#5c5042;line-height:1.35;}
+    .compact-rules span{color:var(--line);padding:0 4px;}
+    .moves-list{max-height:160px;overflow:auto;border:1px solid var(--line);border-radius:16px;background:#fff8eb;padding:8px;margin-top:10px;font-size:.92rem;}
+    .moves-list div{padding:6px 4px;border-bottom:1px dashed #e2d2bc;}
+    .moves-list div:last-child{border-bottom:0;}
+    .thinking{animation:pulse 1s infinite alternate;}
+    @keyframes pulse{from{opacity:.65}to{opacity:1}}
+    @media(max-width:900px){.app{padding:10px}.shell{grid-template-columns:1fr}.side-card{position:static}.topbar{align-items:flex-start;flex-direction:column}.status-pill{white-space:normal}.board{width:min(96vw,76vh)}.game-card,.side-card{padding:12px}.info-grid{grid-template-columns:repeat(4,1fr)}.stat{padding:9px}.stat b{font-size:1.05rem}.stat span{font-size:.68rem}.modal{padding:18px}}
+    @media(max-width:520px){.info-grid{grid-template-columns:1fr 1fr}.buttons .btn{flex:1 1 auto}.sq.coord::after{display:none}.board{border-width:5px}.piece{width:78%;height:78%;}.side-card p{font-size:.92rem}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <main class="shell">
+      <section class="card game-card">
+        <div class="topbar">
+          <div>
+            <h1>Checkers</h1>
+            <div class="subtitle">Play a friend or challenge the computer.</div>
+          </div>
+          <div id="turnPill" class="status-pill">Choose settings</div>
+        </div>
+        <div class="board-wrap"><div id="board" class="board" aria-label="Checkers board"></div></div>
+      </section>
+
+      <aside class="card side-card">
+        <div class="info-grid">
+          <div class="stat"><span>Red</span><b id="redCount">12</b></div>
+          <div class="stat"><span>Black</span><b id="blackCount">12</b></div>
+          <div class="stat"><span>Mode</span><b id="modeLabel">—</b></div>
+          <div class="stat"><span>Moves</span><b id="moveCount">0</b></div>
+        </div>
+        <div id="message" class="message">Pick your game settings to begin.</div>
+        <div class="buttons">
+          <button class="btn" id="newGameBtn">New Game</button>
+          <button class="btn secondary" id="hintBtn">Show Moves</button>
+        </div>
+        <div class="legend compact-rules">
+          Black moves first <span>•</span> Jumps are required <span>•</span> Multi-jumps included <span>•</span> Kings move both ways
+        </div>
+        <h2 style="margin-top:18px">Move History</h2>
+        <div id="history" class="moves-list"><div>No moves yet.</div></div>
+      </aside>
+    </main>
+  </div>
+
+  <div id="setup" class="setup">
+    <div class="modal">
+      <h1>Start Checkers</h1>
+      <p>Choose whether to play another person or the computer. In computer mode, pick your colour and difficulty.</p>
+      <div class="choice-grid">
+        <label class="choice">Game Mode
+          <select id="modeSelect">
+            <option value="human">Two Players</option>
+            <option value="cpu">Player vs Computer</option>
+          </select>
+        </label>
+        <label class="choice" id="colorChoice">Your Colour
+          <select id="colorSelect">
+            <option value="black">Black — move first</option>
+            <option value="red">Red — move second</option>
+          </select>
+        </label>
+        <label class="choice" id="difficultyChoice">Computer Difficulty
+          <select id="difficultySelect">
+            <option value="easy">Easy</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </label>
+      </div>
+      <div class="buttons"><button id="startBtn" class="btn">Start Game</button></div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const boardEl = document.getElementById('board');
+  const setupEl = document.getElementById('setup');
+  const modeSelect = document.getElementById('modeSelect');
+  const colorSelect = document.getElementById('colorSelect');
+  const difficultySelect = document.getElementById('difficultySelect');
+  const colorChoice = document.getElementById('colorChoice');
+  const difficultyChoice = document.getElementById('difficultyChoice');
+  const startBtn = document.getElementById('startBtn');
+  const newGameBtn = document.getElementById('newGameBtn');
+  const hintBtn = document.getElementById('hintBtn');
+  const messageEl = document.getElementById('message');
+  const turnPill = document.getElementById('turnPill');
+  const redCountEl = document.getElementById('redCount');
+  const blackCountEl = document.getElementById('blackCount');
+  const modeLabel = document.getElementById('modeLabel');
+  const moveCountEl = document.getElementById('moveCount');
+  const historyEl = document.getElementById('history');
+
+  const EMPTY = null;
+  const DIRS = {
+    red: [[-1,-1],[-1,1]],
+    black: [[1,-1],[1,1]],
+    king: [[-1,-1],[-1,1],[1,-1],[1,1]]
+  };
+
+  let board, turn, selected, legalForSelected, forcedFrom, gameOver;
+  let mode = 'human', humanColor = 'black', cpuColor = 'red', difficulty = 'medium';
+  let history = [], snapshots = [], showHints = false, busy = false;
+
+  function initialBoard(){
+    const b = Array.from({length:8},()=>Array(8).fill(EMPTY));
+    for(let r=0;r<3;r++) for(let c=0;c<8;c++) if((r+c)%2===1) b[r][c] = {color:'black', king:false};
+    for(let r=5;r<8;r++) for(let c=0;c<8;c++) if((r+c)%2===1) b[r][c] = {color:'red', king:false};
+    return b;
+  }
+  function cloneBoard(b){return b.map(row=>row.map(p=>p?{...p}:null));}
+  function inBounds(r,c){return r>=0&&r<8&&c>=0&&c<8;}
+  function opponent(color){return color==='red'?'black':'red';}
+  function pieceDirs(piece){return piece.king ? DIRS.king : DIRS[piece.color];}
+  function squareName(r,c){return String.fromCharCode(65+c)+(8-r);}
+
+  function getPieceMoves(b,r,c,capturesOnly=false){
+    const p = b[r][c];
+    if(!p) return [];
+    const moves = [];
+    for(const [dr,dc] of pieceDirs(p)){
+      const nr=r+dr,nc=c+dc,jr=r+2*dr,jc=c+2*dc;
+      if(inBounds(jr,jc) && b[nr][nc] && b[nr][nc].color!==p.color && !b[jr][jc]){
+        moves.push({from:[r,c],to:[jr,jc],capture:[nr,nc]});
+      }
+      if(!capturesOnly && inBounds(nr,nc) && !b[nr][nc]){
+        moves.push({from:[r,c],to:[nr,nc],capture:null});
+      }
+    }
+    return moves;
+  }
+
+  function getAllMoves(b,color){
+    const caps=[]; const quiet=[];
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++) if(b[r][c]?.color===color){
+      const pm=getPieceMoves(b,r,c,false);
+      for(const m of pm) (m.capture?caps:quiet).push(m);
+    }
+    return caps.length ? caps : quiet;
+  }
+  function getCapturesFrom(b,r,c){return getPieceMoves(b,r,c,true).filter(m=>m.capture);}
+
+  function newGame(){
+    mode = modeSelect.value;
+    humanColor = colorSelect.value;
+    cpuColor = opponent(humanColor);
+    difficulty = difficultySelect.value;
+    board = initialBoard();
+    turn = 'black';
+    selected = null; legalForSelected=[]; forcedFrom=null; gameOver=false; history=[]; snapshots=[]; showHints=false; busy=false;
+    setupEl.classList.add('hidden');
+    updateUI();
+    setMessage(mode==='cpu' ? `You are ${humanColor}. ${turn==='black'?'Black':'Red'} moves first.` : 'Two-player game started. Black moves first.');
+    maybeCpuMove();
+  }
+
+  function updateSetupVisibility(){
+    const cpu = modeSelect.value==='cpu';
+    colorChoice.style.display = cpu ? 'flex' : 'none';
+    difficultyChoice.style.display = cpu ? 'flex' : 'none';
+  }
+
+  function updateUI(){
+    renderBoard();
+    const redCount = countPieces('red'); const blackCount = countPieces('black');
+    redCountEl.textContent = redCount; blackCountEl.textContent = blackCount;
+    modeLabel.textContent = mode==='cpu' ? difficulty[0].toUpperCase()+difficulty.slice(1) : '2P';
+    moveCountEl.textContent = history.length;
+    turnPill.textContent = gameOver ? 'Game Over' : `${turn[0].toUpperCase()+turn.slice(1)}'s turn`;
+    turnPill.classList.toggle('thinking', busy);
+    renderHistory();
+  }
+
+  function renderBoard(){
+    boardEl.innerHTML='';
+    const allMoves = showHints ? getAllMoves(board,turn) : [];
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+      const sq=document.createElement('div');
+      sq.className='sq '+(((r+c)%2===0)?'light':'dark');
+      if((r+c)%2===1) sq.classList.add('coord');
+      sq.dataset.label=squareName(r,c);
+      if(selected && selected[0]===r && selected[1]===c) sq.classList.add('selected');
+      const isLegal = legalForSelected.find(m=>m.to[0]===r&&m.to[1]===c);
+      if(isLegal) sq.classList.add(isLegal.capture?'capture':'move');
+      else if(showHints && allMoves.some(m=>m.to[0]===r&&m.to[1]===c)) sq.classList.add(allMoves.find(m=>m.to[0]===r&&m.to[1]===c)?.capture?'capture':'move');
+      sq.addEventListener('click',()=>onSquareClick(r,c));
+      const p=board[r][c];
+      if(p){
+        const piece=document.createElement('div');
+        piece.className=`piece ${p.color}${p.king?' king':''}`;
+        sq.appendChild(piece);
+      }
+      boardEl.appendChild(sq);
+    }
+  }
+
+  function countPieces(color){let n=0; for(const row of board) for(const p of row) if(p?.color===color)n++; return n;}
+  function isHumanTurn(){return mode==='human' || turn===humanColor;}
+
+  function onSquareClick(r,c){
+    if(gameOver || busy || !isHumanTurn()) return;
+    const p = board[r][c];
+    if(selected){
+      const move = legalForSelected.find(m=>m.to[0]===r && m.to[1]===c);
+      if(move){ makeMove(move,true); return; }
+    }
+    if(p && p.color===turn){ selectPiece(r,c); }
+    else if(selected) { selected=null; legalForSelected=[]; updateUI(); }
+  }
+
+  function selectPiece(r,c){
+    if(forcedFrom && (forcedFrom[0]!==r || forcedFrom[1]!==c)){
+      setMessage('You must finish the multi-jump with the selected piece.');
+      return;
+    }
+    const all = getAllMoves(board,turn);
+    const hasCaptures = all.some(m=>m.capture);
+    legalForSelected = getPieceMoves(board,r,c,!(!hasCaptures)).filter(m => hasCaptures ? m.capture : true);
+    if(!legalForSelected.length){ setMessage(hasCaptures?'A jump is required with another piece.':'That piece has no legal moves.'); return; }
+    selected=[r,c];
+    setMessage(hasCaptures?'Jump available — captures are required.':'Choose where to move.');
+    updateUI();
+  }
+
+  function makeMove(move,saveSnapshot){
+    if(saveSnapshot) snapshots.push({board:cloneBoard(board),turn,history:[...history],forcedFrom:forcedFrom?[...forcedFrom]:null});
+    const [fr,fc]=move.from, [tr,tc]=move.to;
+    const piece=board[fr][fc];
+    board[fr][fc]=null;
+    board[tr][tc]=piece;
+    let crowned=false;
+    if(!piece.king && ((piece.color==='red'&&tr===0)||(piece.color==='black'&&tr===7))){ piece.king=true; crowned=true; }
+    if(move.capture){ const [cr,cc]=move.capture; board[cr][cc]=null; }
+    const text = `${piece.color[0].toUpperCase()+piece.color.slice(1)}: ${squareName(fr,fc)} ${move.capture?'x':'→'} ${squareName(tr,tc)}${crowned?' K':''}`;
+    history.push(text);
+
+    selected=null; legalForSelected=[];
+    if(move.capture){
+      const nextCaps = getCapturesFrom(board,tr,tc);
+      if(nextCaps.length){
+        forcedFrom=[tr,tc];
+        selected=[tr,tc];
+        legalForSelected=nextCaps;
+        setMessage('Multi-jump available. Keep jumping with the same piece.');
+        updateUI();
+        if(mode==='cpu' && turn===cpuColor) setTimeout(cpuContinueJump, 350);
+        return;
+      }
+    }
+    forcedFrom=null;
+    turn=opponent(turn);
+    checkGameEnd();
+    updateUI();
+    maybeCpuMove();
+  }
+
+  function checkGameEnd(){
+    const red = countPieces('red'), black=countPieces('black');
+    if(red===0 || black===0){ endGame(red===0?'Black':'Red'); return; }
+    const moves = getAllMoves(board,turn);
+    if(moves.length===0){ endGame(opponent(turn)); }
+  }
+  function endGame(winner){
+    gameOver=true; busy=false; forcedFrom=null; selected=null; legalForSelected=[];
+    setMessage(`${winner} wins! Click New Game to play again.`);
+  }
+  function setMessage(txt){messageEl.textContent=txt;}
+
+  function maybeCpuMove(){
+    if(gameOver || mode!=='cpu' || turn!==cpuColor) return;
+    busy=true; selected=null; legalForSelected=[]; updateUI();
+    setMessage('Computer is thinking...');
+    setTimeout(()=>{
+      const move = chooseCpuMove(board,cpuColor,difficulty);
+      if(move) makeMove(move,true); else { endGame(humanColor); updateUI(); }
+      busy=false; updateUI();
+    }, difficulty==='hard'?420:300);
+  }
+
+  function cpuContinueJump(){
+    if(gameOver || mode!=='cpu' || turn!==cpuColor || !forcedFrom) return;
+    busy=true; updateUI();
+    setTimeout(()=>{
+      const caps=getCapturesFrom(board,forcedFrom[0],forcedFrom[1]);
+      const move = caps.sort((a,b)=>scoreMove(board,b,cpuColor)-scoreMove(board,a,cpuColor))[0];
+      if(move) makeMove(move,false);
+      busy=false; updateUI();
+    },300);
+  }
+
+  function applyMoveToBoard(b,move){
+    const nb=cloneBoard(b);
+    const [fr,fc]=move.from,[tr,tc]=move.to;
+    const p=nb[fr][fc]; nb[fr][fc]=null; nb[tr][tc]=p;
+    if(move.capture){ const [cr,cc]=move.capture; nb[cr][cc]=null; }
+    if(!p.king && ((p.color==='red'&&tr===0)||(p.color==='black'&&tr===7))) p.king=true;
+    return nb;
+  }
+
+  function evaluate(b,color){
+    let val=0;
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+      const p=b[r][c]; if(!p) continue;
+      let v=p.king?5:3;
+      if(!p.king) v += p.color==='red' ? (7-r)*0.12 : r*0.12;
+      if(c>0&&c<7) v+=0.08;
+      val += p.color===color ? v : -v;
+    }
+    val += getAllMoves(b,color).length*0.06;
+    val -= getAllMoves(b,opponent(color)).length*0.05;
+    return val;
+  }
+
+  function scoreMove(b,move,color){
+    const nb=applyMoveToBoard(b,move);
+    let s=evaluate(nb,color);
+    if(move.capture) s+=1.5;
+    const p=nb[move.to[0]][move.to[1]];
+    if(p?.king) s+=0.3;
+    return s + Math.random()*0.08;
+  }
+
+  function chooseCpuMove(b,color,level){
+    const moves=getAllMoves(b,color);
+    if(!moves.length) return null;
+    if(level==='easy'){
+      const caps=moves.filter(m=>m.capture);
+      const pool=caps.length && Math.random()<0.7 ? caps : moves;
+      return pool[Math.floor(Math.random()*pool.length)];
+    }
+    if(level==='medium'){
+      return moves.sort((m1,m2)=>scoreMove(b,m2,color)-scoreMove(b,m1,color))[0];
+    }
+    let best=null,bestVal=-Infinity;
+    const depth=5;
+    for(const m of moves){
+      const val=minimax(applyMoveToBoard(b,m),opponent(color),color,depth-1,-Infinity,Infinity);
+      const total=val+(m.capture?0.4:0);
+      if(total>bestVal){bestVal=total;best=m;}
+    }
+    return best || moves[0];
+  }
+
+  function minimax(b,current,maxColor,depth,alpha,beta){
+    const moves=getAllMoves(b,current);
+    if(depth===0 || moves.length===0 || countOn(b,'red')===0 || countOn(b,'black')===0) return evaluate(b,maxColor);
+    if(current===maxColor){
+      let best=-Infinity;
+      for(const m of moves){best=Math.max(best,minimax(applyMoveToBoard(b,m),opponent(current),maxColor,depth-1,alpha,beta)); alpha=Math.max(alpha,best); if(beta<=alpha) break;}
+      return best;
+    } else {
+      let best=Infinity;
+      for(const m of moves){best=Math.min(best,minimax(applyMoveToBoard(b,m),opponent(current),maxColor,depth-1,alpha,beta)); beta=Math.min(beta,best); if(beta<=alpha) break;}
+      return best;
+    }
+  }
+  function countOn(b,color){let n=0; for(const row of b) for(const p of row) if(p?.color===color)n++; return n;}
+
+  function undo(){
+    if(!snapshots.length || busy) return;
+    let snap=snapshots.pop();
+    if(mode==='cpu' && snap.turn===cpuColor && snapshots.length) snap=snapshots.pop();
+    board=cloneBoard(snap.board); turn=snap.turn; history=[...snap.history]; forcedFrom=snap.forcedFrom?[...snap.forcedFrom]:null; selected=null; legalForSelected=[]; gameOver=false;
+    setMessage('Move undone.'); updateUI(); maybeCpuMove();
+  }
+
+  function renderHistory(){
+    if(!history.length){historyEl.innerHTML='<div>No moves yet.</div>';return;}
+    historyEl.innerHTML=history.slice().reverse().map((h,i)=>`<div>${history.length-i}. ${h}</div>`).join('');
+  }
+
+  startBtn.addEventListener('click',newGame);
+  newGameBtn.addEventListener('click',()=>{setupEl.classList.remove('hidden'); updateSetupVisibility();});
+  modeSelect.addEventListener('change',updateSetupVisibility);
+  hintBtn.addEventListener('click',()=>{showHints=!showHints; hintBtn.textContent=showHints?'Hide Moves':'Show Moves'; updateUI();});
+
+  updateSetupVisibility();
+  board = initialBoard(); turn='black'; selected=null; legalForSelected=[]; forcedFrom=null; gameOver=false;
+  updateUI();
+})();
+</script>
+</body>
+</html>
