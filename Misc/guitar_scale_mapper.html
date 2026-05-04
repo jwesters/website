@@ -261,6 +261,68 @@
     return {string:stringNum, fret, midi:s.midi+fret, pc:(s.pc+fret)%12, openName:s.name};
   }
   function scalePcs(rootPc, scale){ return scale.intervals.map(i => (rootPc+i)%12); }
+
+  const LETTERS = ['C','D','E','F','G','A','B'];
+  const NATURAL_PC = {C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+  const ROOT_SPELLING = {
+    'C':{letter:'C', accidental:''}, 'C#':{letter:'C', accidental:'#'}, 'D':{letter:'D', accidental:''},
+    'Eb':{letter:'E', accidental:'b'}, 'E':{letter:'E', accidental:''}, 'F':{letter:'F', accidental:''},
+    'F#':{letter:'F', accidental:'#'}, 'G':{letter:'G', accidental:''}, 'Ab':{letter:'A', accidental:'b'},
+    'A':{letter:'A', accidental:''}, 'Bb':{letter:'B', accidental:'b'}, 'B':{letter:'B', accidental:''}
+  };
+  const SCALE_STEPS = {
+    major:[0,1,2,3,4,5,6],
+    natmin:[0,1,2,3,4,5,6],
+    majpent:[0,1,2,4,5],
+    minpent:[0,2,3,4,6],
+    blues:[0,2,3,3,4,6],
+    harmmin:[0,1,2,3,4,5,6],
+    melmin:[0,1,2,3,4,5,6],
+    wholetone:[0,1,2,3,4,5],
+    dimwh:[0,1,2,3,4,5,5,6],
+    dimhw:[0,1,1,2,3,4,5,6],
+    chromatic:[0,1,1,2,2,3,3,4,5,5,6,6],
+    hungmin:[0,1,2,3,4,5,6],
+    byz:[0,1,2,3,4,5,6],
+    insen:[0,1,3,4,6],
+    hirajoshi:[0,1,2,4,5],
+    arabian:[0,1,2,3,3,5,6],
+    neapmin:[0,1,2,3,4,5,6],
+    persian:[0,1,2,3,3,5,6],
+    ionian:[0,1,2,3,4,5,6],
+    dorian:[0,1,2,3,4,5,6],
+    phrygian:[0,1,2,3,4,5,6],
+    lydian:[0,1,2,3,4,5,6],
+    mixolydian:[0,1,2,3,4,5,6],
+    aeolian:[0,1,2,3,4,5,6],
+    locrian:[0,1,2,3,4,5,6],
+    phrygdom:[0,1,2,3,4,5,6]
+  };
+
+  function accidentalForDiff(diff){
+    if(diff === 0) return '';
+    if(diff === 1) return '#';
+    if(diff === 2) return '##';
+    if(diff === 11) return 'b';
+    if(diff === 10) return 'bb';
+    return '';
+  }
+
+  function buildScaleSpellings(rootName, scale){
+    const root = ROOT_SPELLING[rootName] || ROOT_SPELLING.C;
+    const rootIndex = LETTERS.indexOf(root.letter);
+    const steps = SCALE_STEPS[scale.id] || scale.intervals.map((_,i)=>i%7);
+    const spellings = {};
+    scale.intervals.forEach((interval, i) => {
+      const targetPc = (NOTE_TO_PC[rootName] + interval) % 12;
+      const letter = LETTERS[(rootIndex + steps[i]) % LETTERS.length];
+      const natural = NATURAL_PC[letter];
+      const diff = (targetPc - natural + 12) % 12;
+      const name = letter + accidentalForDiff(diff);
+      spellings[targetPc] = name || pcName(targetPc);
+    });
+    return spellings;
+  }
   function degreeForPc(pc, rootPc, scale){
     const idx = scale.intervals.findIndex(i => (rootPc+i)%12 === pc);
     return idx >= 0 ? scale.degrees[idx] : '';
@@ -290,6 +352,7 @@
     const rootPc = NOTE_TO_PC[rootSelect.value];
     const scale = selectedScale();
     const pcs = scalePcs(rootPc, scale);
+    const spellings = buildScaleSpellings(rootSelect.value, scale);
     const range = positionRange();
     const notes = [];
     const strings = activeStrings();
@@ -297,11 +360,11 @@
       for(let f=range.min; f<=range.max; f++){
         const n = noteAt(s,f);
         if(pcs.includes(n.pc)){
-          notes.push({...n, isRoot:n.pc===rootPc, name:pcName(n.pc), degree:degreeForPc(n.pc, rootPc, scale)});
+          notes.push({...n, isRoot:n.pc===rootPc, name:spellings[n.pc] || pcName(n.pc), degree:degreeForPc(n.pc, rootPc, scale)});
         }
       }
     }
-    return {rootPc, scale, pcs, range, notes};
+    return {rootPc, scale, pcs, range, notes, spellings};
   }
 
   function dedupePath(path){
@@ -367,8 +430,14 @@
     const range = map.range;
     const strings = activeStrings();
     const stringCount = strings.length;
-    const fretsShown = range.max - range.min + 1;
-    const marginL = 54, marginT = 58, marginR = 24, marginB = 34;
+
+    const hasOpen = range.min === 0;
+    const displayMin = hasOpen ? 1 : range.min;
+    const displayMax = range.max;
+    const fretsShown = Math.max(1, displayMax - displayMin + 1);
+
+    const marginL = 72, marginT = 58, marginR = 24, marginB = 34;
+    const openX = 34;
     const fretGap = 68, stringGap = stringCount >= 8 ? 28 : (stringCount === 7 ? 31 : 34);
     const width = marginL + fretsShown*fretGap + marginR;
     const height = marginT + (stringCount-1)*stringGap + marginB;
@@ -381,24 +450,35 @@
     const rootStroke = dark ? '#1f2540' : '#111111';
     const showDeg = labelModeSelect.value === 'degrees';
     const yForString = (s) => marginT + (s-1)*stringGap;
-    const xForFret = (f) => marginL + (f-range.min)*fretGap + fretGap/2;
+    const xForFret = (f) => {
+      if(f === 0) return openX;
+      return marginL + (f-displayMin)*fretGap + fretGap/2;
+    };
 
     let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" aria-label="${currentLabel()} fretboard map">`;
     svg += `<rect x="0" y="0" width="${width}" height="${height}" fill="${bg}"/>`;
     svg += `<text x="${width/2}" y="18" fill="${fg}" font-size="14" text-anchor="middle" font-weight="700">${currentLabel()}</text>`;
     svg += `<text x="${width/2}" y="37" fill="${muted}" font-size="11.5" text-anchor="middle">${selectedTuning().name}: ${tuningDisplay()}</text>`;
 
+    if(hasOpen){
+      svg += `<text x="${openX}" y="${height-10}" fill="${muted}" font-size="12" text-anchor="middle">open</text>`;
+    }
+
     for(let s=1; s<=stringCount; s++){
       const y = yForString(s);
       svg += `<line x1="${marginL}" y1="${y}" x2="${marginL + fretsShown*fretGap}" y2="${y}" stroke="${line}" stroke-width="${s===1 || s===stringCount ? 2.2 : 1.4}"/>`;
       svg += `<text x="${marginL-16}" y="${y+4}" fill="${muted}" font-size="13" text-anchor="middle">${strings[s-1].name}</text>`;
     }
-    for(let f=0; f<=fretsShown; f++){
-      const x = marginL + f*fretGap;
-      const actualFret = range.min + f;
-      svg += `<line x1="${x}" y1="${marginT}" x2="${x}" y2="${marginT + (stringCount-1)*stringGap}" stroke="${line}" stroke-width="${range.min===0 && f===0 ? 5 : 1}"/>`;
-      if(f < fretsShown){
-        svg += `<text x="${x + fretGap/2}" y="${height-10}" fill="${muted}" font-size="12" text-anchor="middle">${actualFret}</text>`;
+
+    // Nut
+    svg += `<line x1="${marginL}" y1="${marginT}" x2="${marginL}" y2="${marginT + (stringCount-1)*stringGap}" stroke="${line}" stroke-width="${hasOpen ? 5 : 1}"/>`;
+
+    // Frets after the nut
+    for(let f=displayMin; f<=displayMax+1; f++){
+      const x = marginL + (f-displayMin+1)*fretGap;
+      svg += `<line x1="${x}" y1="${marginT}" x2="${x}" y2="${marginT + (stringCount-1)*stringGap}" stroke="${line}" stroke-width="1"/>`;
+      if(f <= displayMax){
+        svg += `<text x="${marginL + (f-displayMin)*fretGap + fretGap/2}" y="${height-10}" fill="${muted}" font-size="12" text-anchor="middle">${f}</text>`;
       }
     }
 
@@ -448,7 +528,7 @@
   }
 
   function renderInfo(map, pattern){
-    const scaleNotes = map.scale.intervals.map(i => pcName((map.rootPc+i)%12)).join(' - ');
+    const scaleNotes = map.scale.intervals.map(i => map.spellings[(map.rootPc+i)%12] || pcName((map.rootPc+i)%12)).join(' - ');
     return `
       <div class="pillRow">
         <span class="pill">position: ${map.range.label}</span>
@@ -533,7 +613,7 @@
       doc.text('Guitar Scale Mapper', margin, 42);
       doc.setFont('helvetica','normal'); doc.setFontSize(11);
       doc.text(`${currentLabel()} • ${map.range.label} • ${pattern.name}`, margin, 62);
-      const scaleNotes = map.scale.intervals.map(i => pcName((map.rootPc+i)%12)).join(' - ');
+      const scaleNotes = map.scale.intervals.map(i => map.spellings[(map.rootPc+i)%12] || pcName((map.rootPc+i)%12)).join(' - ');
       doc.text(`Scale notes: ${scaleNotes}`, margin, 80);
 
       const svg = renderFretboardSVG(map, false);
