@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Moon Phases Tutorial & Quiz</title>
+  <style>
+    :root {
+      --bg: #eef4ff;
+      --panel: #ffffff;
+      --ink: #172033;
+      --muted: #5b667a;
+      --line: #d8e2f2;
+      --accent: #315fdc;
+      --accent-dark: #244bb1;
+      --accent-soft: #e8eeff;
+      --good: #207d4a;
+      --bad: #b73434;
+      --warn: #946100;
+      --moon-light: #fff6c6;
+      --moon-dark: #273044;
+      --shadow: 0 16px 44px rgba(32, 49, 83, 0.16);
+      --radius: 22px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { min-height: 100%; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 10%, rgba(49, 95, 220, 0.12), transparent 32%),
+        radial-gradient(circle at 88% 4%, rgba(255, 246, 198, 0.55), transparent 26%),
+        linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+    }
+
+    button, input, select { font: inherit; }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 18px;
+      background: var(--accent);
+      color: white;
+      font-weight: 750;
+      cursor: pointer;
+      box-shadow: 0 9px 20px rgba(49, 95, 220, 0.22);
+      transition: transform 0.08s ease, background 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    button:hover { background: var(--accent-dark); }
+    button:active { transform: translateY(1px); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+
+    .ghost {
+      background: #fff;
+      color: var(--accent);
+      border: 1px solid var(--line);
+      box-shadow: none;
+    }
+
+    .ghost:hover { background: var(--accent-soft); color: var(--accent-dark); }
+
+    .danger {
+      background: #fff;
+      color: var(--bad);
+      border: 1px solid #ffd1d1;
+      box-shadow: none;
+    }
+
+    .danger:hover { background: #fff0f0; color: #8f2525; }
+
+    .app {
+      width: min(1120px, calc(100vw - 28px));
+      margin: 20px auto 32px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logoMoon {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      flex: 0 0 auto;
+      background: linear-gradient(90deg, var(--moon-dark) 0 50%, var(--moon-light) 50% 100%);
+      border: 3px solid #fff;
+      box-shadow: 0 7px 18px rgba(31, 41, 55, 0.18);
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    h1 {
+      margin-bottom: 3px;
+      font-size: clamp(1.55rem, 2.6vw, 2.35rem);
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
+
+    .subtitle { color: var(--muted); margin: 0; font-weight: 600; }
+
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    .card {
+      background: rgba(255,255,255,0.96);
+      border: 1px solid rgba(216, 226, 242, 0.92);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: clamp(18px, 3vw, 30px);
+    }
+
+    .homeGrid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .hero {
+      display: grid;
+      gap: 18px;
+    }
+
+    .hero h2 {
+      font-size: clamp(2rem, 4vw, 4rem);
+      line-height: 0.96;
+      letter-spacing: -0.055em;
+      margin-bottom: 6px;
+    }
+
+    .hero p { font-size: 1.08rem; line-height: 1.55; color: var(--muted); max-width: 70ch; }
+
+    .buttonRow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .pillList {
+      display: grid;
+      gap: 10px;
+      margin: 18px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .pillList li, .miniStat, .noteBox {
+      background: #f7faff;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px 14px;
+      color: var(--muted);
+      font-weight: 650;
+    }
+
+    .miniStat strong { color: var(--ink); }
+
+    .moonCycle {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .phaseTile {
+      text-align: center;
+      padding: 12px 8px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: linear-gradient(180deg, #fff, #f8fbff);
+      min-height: 144px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .phaseTile .phaseName {
+      font-weight: 800;
+      font-size: 0.92rem;
+      line-height: 1.08;
+    }
+
+    .phaseTile .phaseHint {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .tutorialLayout {
+      display: grid;
+      grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.25fr);
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .visualPanel {
+      min-height: 420px;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at center, rgba(49, 95, 220, 0.10), transparent 46%),
+        linear-gradient(180deg, #f7faff 0%, #eef4ff 100%);
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      padding: 16px;
+      overflow: hidden;
+    }
+
+    .slideContent {
+      display: flex;
+      flex-direction: column;
+      min-height: 420px;
+    }
+
+    .slideKicker {
+      color: var(--accent);
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 0.8rem;
+      margin-bottom: 8px;
+    }
+
+    .slideContent h2 {
+      font-size: clamp(1.8rem, 3vw, 3rem);
+      line-height: 1.02;
+      letter-spacing: -0.05em;
+      margin-bottom: 14px;
+    }
+
+    .slideText {
+      color: var(--muted);
+      font-size: 1.08rem;
+      line-height: 1.6;
+    }
+
+    .keyIdea {
+      margin-top: auto;
+      background: #fff9dc;
+      color: #5d4800;
+      border: 1px solid #f0df92;
+      border-radius: 18px;
+      padding: 14px 16px;
+      font-weight: 750;
+      line-height: 1.4;
+    }
+
+    .progressWrap {
+      height: 12px;
+      background: #e5ecf8;
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 18px 0 14px;
+      border: 1px solid #d7e1ef;
+    }
+
+    .progressBar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #315fdc, #6f90f0);
+      border-radius: 999px;
+      transition: width 0.2s ease;
+    }
+
+    .smallText { font-size: 0.92rem; color: var(--muted); font-weight: 650; }
+
+    .quizTop {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .quizQuestion h2 {
+      font-size: clamp(1.55rem, 3vw, 2.55rem);
+      line-height: 1.08;
+      letter-spacing: -0.04em;
+      margin-bottom: 12px;
+    }
+
+    .questionGrid {
+      display: grid;
+      grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .questionVisual {
+      display: grid;
+      place-items: center;
+      min-height: 320px;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background:
+        radial-gradient(circle at center, rgba(255, 246, 198, 0.58), transparent 32%),
+        linear-gradient(180deg, #101827 0%, #253249 100%);
+      color: white;
+      padding: 16px;
+      overflow: hidden;
+    }
+
+    .answers {
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+
+    .answerBtn {
+      width: 100%;
+      text-align: left;
+      background: #fff;
+      color: var(--ink);
+      border: 2px solid var(--line);
+      border-radius: 18px;
+      box-shadow: none;
+      padding: 14px 16px;
+    }
+
+    .answerBtn:hover { background: #f7faff; border-color: #b9c9ec; }
+    .answerBtn.selected {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent-dark);
+      box-shadow: 0 8px 18px rgba(49, 95, 220, 0.13);
+    }
+
+    .orderArea { display: grid; gap: 14px; }
+
+    .slots {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .slot {
+      min-height: 88px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      border: 2px dashed #b9c9ec;
+      border-radius: 16px;
+      background: #f7faff;
+      color: var(--muted);
+      padding: 8px;
+      font-weight: 800;
+      font-size: 0.92rem;
+    }
+
+    .slot.filled {
+      border-style: solid;
+      color: var(--accent-dark);
+      background: var(--accent-soft);
+    }
+
+    .chipGrid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .phaseChip {
+      background: white;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      box-shadow: none;
+      border-radius: 16px;
+      padding: 10px 12px;
+      font-size: 0.92rem;
+    }
+
+    .phaseChip.used { opacity: 0.45; text-decoration: line-through; }
+
+    .resultHero {
+      display: grid;
+      grid-template-columns: minmax(0, 0.8fr) minmax(260px, 1fr);
+      gap: 20px;
+      align-items: center;
+    }
+
+    .scoreCircle {
+      width: min(280px, 70vw);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      margin: 0 auto;
+      background: conic-gradient(var(--accent) var(--scoreAngle), #e6edf8 0deg);
+      box-shadow: inset 0 0 0 18px white, var(--shadow);
+      position: relative;
+    }
+
+    .scoreCircle::after {
+      content: "";
+      position: absolute;
+      inset: 32px;
+      background: white;
+      border-radius: 50%;
+      z-index: 0;
+    }
+
+    .scoreText {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+    }
+
+    .scoreText strong {
+      display: block;
+      font-size: clamp(2.3rem, 6vw, 4.4rem);
+      line-height: 0.95;
+      letter-spacing: -0.06em;
+    }
+
+    .reviewList { display: grid; gap: 12px; margin-top: 18px; }
+
+    .reviewItem {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #fff;
+      padding: 14px 16px;
+    }
+
+    .reviewItem.correct { border-color: #b8e4ca; background: #f4fff8; }
+    .reviewItem.incorrect { border-color: #ffd0d0; background: #fff7f7; }
+
+    .reviewHeader {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-weight: 850;
+      margin-bottom: 8px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 0.78rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .badge.good { background: #e3f8eb; color: var(--good); }
+    .badge.bad { background: #ffe7e7; color: var(--bad); }
+    .badge.neutral { background: var(--accent-soft); color: var(--accent-dark); }
+
+    .phaseGuideWrap { display: grid; gap: 18px; }
+
+    .cycleBig {
+      width: min(620px, 100%);
+      margin: 0 auto;
+    }
+
+    .orbitSvg text { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-weight: 800; fill: #26324a; }
+
+    .simpleTable {
+      display: grid;
+      gap: 8px;
+    }
+
+    .tableRow {
+      display: grid;
+      grid-template-columns: 58px 1fr 1.2fr;
+      gap: 10px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      padding: 10px;
+    }
+
+    .tableRow strong { display: block; }
+    .tableRow span { color: var(--muted); font-weight: 650; }
+
+    .confetti {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 20;
+    }
+
+    .confetti i {
+      position: absolute;
+      width: 10px;
+      height: 16px;
+      border-radius: 3px;
+      top: -20px;
+      background: var(--accent);
+      animation: drop 1.8s linear forwards;
+    }
+
+    @keyframes drop {
+      to { transform: translateY(calc(100vh + 40px)) rotate(620deg); opacity: 0.2; }
+    }
+
+    @media (max-width: 850px) {
+      .homeGrid, .tutorialLayout, .questionGrid, .resultHero { grid-template-columns: 1fr; }
+      .visualPanel, .slideContent { min-height: auto; }
+      .moonCycle { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .slots { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .topbar { align-items: flex-start; }
+      .topbar .buttonRow { justify-content: flex-end; }
+    }
+
+    @media (max-width: 560px) {
+      .app { width: min(100vw - 16px, 1120px); margin-top: 8px; }
+      .card { padding: 16px; border-radius: 18px; }
+      .topbar { flex-direction: column; }
+      .topbar .buttonRow { width: 100%; }
+      .topbar button { flex: 1 1 auto; }
+      .brand { align-items: flex-start; }
+      .logoMoon { width: 44px; height: 44px; }
+      button { padding: 11px 14px; }
+      .questionVisual { min-height: 230px; }
+      .moonCycle { grid-template-columns: 1fr 1fr; gap: 8px; }
+      .phaseTile { min-height: 126px; }
+      .tableRow { grid-template-columns: 48px 1fr; }
+      .tableRow span { grid-column: 2; }
+    }
+
+    @media print {
+      body { background: white; }
+      .topbar, .buttonRow, .progressWrap, .smallText, .quizTop { display: none !important; }
+      .app { width: 100%; margin: 0; }
+      .card { box-shadow: none; border: 0; padding: 0; }
+      .screen:not(.active) { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logoMoon" aria-hidden="true"></div>
+        <div>
+          <h1>Moon Phase Mission</h1>
+          <p class="subtitle">Tutorial + quiz for Grade 5 astronomical phenomena</p>
+        </div>
+      </div>
+      <div class="buttonRow">
+        <button class="ghost" id="homeBtn" type="button">Home</button>
+        <button class="ghost" id="guideBtn" type="button">Phase Guide</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="screen active" id="homeScreen">
+        <div class="homeGrid">
+          <div class="card hero">
+            <div>
+              <h2>Learn the Moon’s changing shape.</h2>
+              <p>Students move through a slide-style tutorial, study the eight main moon phases, then complete a randomized 8-question mixed quiz with phase images, order questions, waxing/waning practice, and review questions.</p>
+            </div>
+            <div class="buttonRow">
+              <button id="startTutorialBtn" type="button">Start Tutorial</button>
+              <button class="ghost" id="skipQuizBtn" type="button">Skip to Quiz</button>
+            </div>
+            <div class="miniStat" id="bestScoreBox">Best score: <strong>Not attempted yet</strong></div>
+            <ul class="pillList" aria-label="App features">
+              <li>✓ Works offline in one HTML file</li>
+              <li>✓ Uses drawn moon phase visuals — no image files needed</li>
+              <li>✓ End-only score screen with missed-question review</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <h2>Eight main phases</h2>
+            <div class="moonCycle" id="homePhaseCycle"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" id="tutorialScreen">
+        <div class="card">
+          <div class="progressWrap" aria-hidden="true"><div class="progressBar" id="tutorialProgress"></div></div>
+          <div class="tutorialLayout">
+            <div class="visualPanel" id="tutorialVisual"></div>
+            <div class="slideContent">
+              <div class="slideKicker" id="slideKicker">Slide 1</div>
+              <h2 id="slideTitle"></h2>
+              <div class="slideText" id="slideText"></div>
+              <div class="keyIdea" id="slideKeyIdea"></div>
+            </div>
+          </div>
+          <div class="buttonRow" style="margin-top:18px; justify-content:space-between;">
+            <button class="ghost" id="prevSlideBtn" type="button">Back</button>
+            <span class="smallText" id="slideCounter"></span>
+            <button id="nextSlideBtn" type="button">Next</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" id="guideScreen">
+        <div class="card phaseGuideWrap">
+          <div>
+            <h2>Moon Phase Guide</h2>
+            <p class="slideText">In common Northern Hemisphere classroom diagrams, waxing phases are lit on the right and waning phases are lit on the left.</p>
+          </div>
+          <div class="cycleBig" id="orbitGuide"></div>
+          <div class="simpleTable" id="phaseTable"></div>
+          <div class="buttonRow">
+            <button id="guideToQuizBtn" type="button">Start Quiz</button>
+            <button class="ghost" id="guideToTutorialBtn" type="button">Review Tutorial</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" id="quizScreen">
+        <div class="card">
+          <div class="quizTop">
+            <div>
+              <span class="badge neutral" id="questionTypeBadge">Question</span>
+              <h2 id="quizTitle" style="margin:10px 0 0;"></h2>
+            </div>
+            <div class="smallText" id="quizCounter"></div>
+          </div>
+          <div class="progressWrap" aria-hidden="true"><div class="progressBar" id="quizProgress"></div></div>
+          <div class="quizQuestion" id="quizQuestionArea"></div>
+          <div class="buttonRow" style="margin-top:18px; justify-content:space-between;">
+            <button class="ghost" id="prevQuestionBtn" type="button">Back</button>
+            <button id="nextQuestionBtn" type="button">Next</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" id="resultsScreen">
+        <div class="card">
+          <div class="resultHero">
+            <div class="scoreCircle" id="scoreCircle" style="--scoreAngle: 0deg;">
+              <div class="scoreText">
+                <strong id="scorePercent">0%</strong>
+                <span id="scoreFraction">0 / 0</span>
+              </div>
+            </div>
+            <div>
+              <span class="badge neutral">Quiz Complete</span>
+              <h2 id="resultTitle" style="font-size:clamp(2rem,4vw,3.4rem); line-height:1; letter-spacing:-0.055em; margin:12px 0;"></h2>
+              <p class="slideText" id="resultMessage"></p>
+              <div class="buttonRow">
+                <button id="retakeBtn" type="button">Retake Quiz</button>
+                <button class="ghost" id="resultsTutorialBtn" type="button">Review Tutorial</button>
+                <button class="ghost" id="printResultsBtn" type="button">Print Results</button>
+                <button class="danger" id="resetBestBtn" type="button">Reset Best</button>
+              </div>
+            </div>
+          </div>
+          <h2 style="margin-top:26px;">Question Review</h2>
+          <div class="reviewList" id="reviewList"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="confetti" id="confetti" aria-hidden="true"></div>
+
+  <script>
+    const phases = [
+      { key: 'new', name: 'New Moon', short: 'New', side: 'mostly dark', kind: 'Neither', note: 'The side lit by the Sun faces away from Earth, so the Moon looks dark from here.' },
+      { key: 'waxing-crescent', name: 'Waxing Crescent', short: 'Waxing Crescent', side: 'right crescent lit', kind: 'Waxing', note: 'A small lit part appears on the right. Waxing means the lit part is growing.' },
+      { key: 'first-quarter', name: 'First Quarter', short: 'First Quarter', side: 'right half lit', kind: 'Waxing', note: 'The right half appears lit. It is called a quarter because the Moon is one quarter of the way through its cycle.' },
+      { key: 'waxing-gibbous', name: 'Waxing Gibbous', short: 'Waxing Gibbous', side: 'mostly lit on right', kind: 'Waxing', note: 'More than half is lit, and the lit part is still growing toward a Full Moon.' },
+      { key: 'full', name: 'Full Moon', short: 'Full', side: 'fully lit', kind: 'Full', note: 'The side facing Earth is fully lit by sunlight, so the Moon looks round and bright.' },
+      { key: 'waning-gibbous', name: 'Waning Gibbous', short: 'Waning Gibbous', side: 'mostly lit on left', kind: 'Waning', note: 'More than half is lit, but the lit part is shrinking after the Full Moon.' },
+      { key: 'third-quarter', name: 'Third Quarter', short: 'Third Quarter', side: 'left half lit', kind: 'Waning', note: 'The left half appears lit. This phase is also called Last Quarter.' },
+      { key: 'waning-crescent', name: 'Waning Crescent', short: 'Waning Crescent', side: 'left crescent lit', kind: 'Waning', note: 'A small lit part remains on the left before the cycle returns to New Moon.' }
+    ];
+
+    const phaseNames = phases.map(p => p.name);
+    const phaseByName = Object.fromEntries(phases.map(p => [p.name, p]));
+    const phaseByKey = Object.fromEntries(phases.map(p => [p.key, p]));
+    const bestKey = 'moonPhaseMissionBestV2EightQuestions';
+
+    const tutorialSlides = [
+      {
+        title: 'What are Moon phases?',
+        visual: 'cycle',
+        text: 'Moon phases are the different shapes the Moon appears to have in the sky. The Moon itself is not changing shape. We are seeing different amounts of the Moon’s sunlit half from Earth.',
+        keyIdea: 'Key idea: the Moon reflects sunlight. It does not make its own light.'
+      },
+      {
+        title: 'Half of the Moon is always lit by the Sun.',
+        visual: 'half',
+        text: 'Just like Earth, the Moon has a day side and a night side. From Earth, we see more or less of the lit side as the Moon travels around us.',
+        keyIdea: 'Key idea: phases are caused by the Moon’s position compared with Earth and the Sun.'
+      },
+      {
+        title: 'The full cycle repeats about once a month.',
+        visual: 'orbit',
+        text: 'The Moon moves through a predictable cycle. It takes about 29.5 days to go from one New Moon to the next New Moon.',
+        keyIdea: 'Key idea: Moon phases are a repeating astronomical cycle.'
+      },
+      {
+        title: 'Waxing means growing.',
+        visual: 'waxing',
+        text: 'After a New Moon, the lit part gets bigger each night. In common classroom diagrams for the Northern Hemisphere, waxing phases are lit on the right side.',
+        keyIdea: 'Remember: waxing = the bright part is getting wider.'
+      },
+      {
+        title: 'Waning means shrinking.',
+        visual: 'waning',
+        text: 'After a Full Moon, the lit part gets smaller each night. In common classroom diagrams for the Northern Hemisphere, waning phases are lit on the left side.',
+        keyIdea: 'Remember: waning = the bright part is getting thinner.'
+      },
+      {
+        title: 'Meet the eight main phases.',
+        visual: 'cycle',
+        text: 'The main phases are: New Moon, Waxing Crescent, First Quarter, Waxing Gibbous, Full Moon, Waning Gibbous, Third Quarter, and Waning Crescent.',
+        keyIdea: 'Key idea: the order matters because the pattern repeats.'
+      },
+      {
+        title: 'New Moon → Full Moon',
+        visual: 'newToFull',
+        text: 'The Moon appears to grow from dark to fully lit: New Moon, Waxing Crescent, First Quarter, Waxing Gibbous, Full Moon.',
+        keyIdea: 'This half of the cycle is waxing.'
+      },
+      {
+        title: 'Full Moon → New Moon',
+        visual: 'fullToNew',
+        text: 'After the Full Moon, the lit part appears to shrink: Waning Gibbous, Third Quarter, Waning Crescent, then back to New Moon.',
+        keyIdea: 'This half of the cycle is waning.'
+      },
+      {
+        title: 'Quarter moons are half lit.',
+        visual: 'quarters',
+        text: 'First Quarter and Third Quarter can be tricky names. They look half lit from Earth, but the names tell us where the Moon is in its cycle.',
+        keyIdea: 'First Quarter: right half lit. Third Quarter: left half lit.'
+      },
+      {
+        title: 'Ready for the quiz?',
+        visual: 'quizReady',
+        text: 'You will identify Moon phases from pictures, choose waxing or waning, put phases in order, and answer review questions about why phases happen.',
+        keyIdea: 'Use the pattern: New → Waxing → Full → Waning → New.'
+      }
+    ];
+
+    const quizQuestions = [
+      { type: 'identify', phase: 'waxing-crescent', prompt: 'Which Moon phase is shown?', options: ['Waxing Crescent', 'Waning Crescent', 'New Moon', 'First Quarter'], explanation: 'Waxing Crescent has a small lit crescent on the right.' },
+      { type: 'identify', phase: 'first-quarter', prompt: 'Which Moon phase is shown?', options: ['First Quarter', 'Third Quarter', 'Full Moon', 'Waxing Gibbous'], explanation: 'First Quarter appears half lit on the right side.' },
+      { type: 'identify', phase: 'waning-gibbous', prompt: 'Which Moon phase is shown?', options: ['Waning Gibbous', 'Waxing Gibbous', 'Waning Crescent', 'Full Moon'], explanation: 'Waning Gibbous is mostly lit, with the bright part on the left.' },
+      { type: 'identify', phase: 'full', prompt: 'Which Moon phase is shown?', options: ['Full Moon', 'New Moon', 'Waxing Gibbous', 'Third Quarter'], explanation: 'A Full Moon appears completely lit from Earth.' },
+      { type: 'identify', phase: 'third-quarter', prompt: 'Which Moon phase is shown?', options: ['Third Quarter', 'First Quarter', 'Waning Crescent', 'Waxing Crescent'], explanation: 'Third Quarter appears half lit on the left side.' },
+      { type: 'waxingWaning', phase: 'waxing-gibbous', prompt: 'Is this phase waxing or waning?', options: ['Waxing', 'Waning', 'New Moon', 'Full Moon'], explanation: 'Waxing Gibbous is before Full Moon, so the lit part is growing.' },
+      { type: 'waxingWaning', phase: 'waning-crescent', prompt: 'Is this phase waxing or waning?', options: ['Waxing', 'Waning', 'New Moon', 'Full Moon'], explanation: 'Waning Crescent happens after Full Moon, so the lit part is shrinking.' },
+      { type: 'waxingWaning', phase: 'new', prompt: 'How should this phase be classified?', options: ['Waxing', 'Waning', 'New Moon', 'Full Moon'], explanation: 'A New Moon is the dark starting point of the cycle, so it is not called waxing or waning.' },
+      { type: 'waxingWaning', phase: 'full', prompt: 'How should this phase be classified?', options: ['Waxing', 'Waning', 'New Moon', 'Full Moon'], explanation: 'A Full Moon is the fully lit middle point of the cycle.' },
+      { type: 'order', prompt: 'Put all eight phases in order, starting with New Moon.', options: ['Full Moon', 'Waxing Gibbous', 'Waning Crescent', 'Third Quarter', 'New Moon', 'First Quarter', 'Waning Gibbous', 'Waxing Crescent'], correct: phaseNames, explanation: 'The full order is New Moon, Waxing Crescent, First Quarter, Waxing Gibbous, Full Moon, Waning Gibbous, Third Quarter, Waning Crescent.' },
+      { type: 'order', prompt: 'Put these phases in order from New Moon to Full Moon.', options: ['First Quarter', 'New Moon', 'Full Moon', 'Waxing Crescent', 'Waxing Gibbous'], correct: ['New Moon', 'Waxing Crescent', 'First Quarter', 'Waxing Gibbous', 'Full Moon'], explanation: 'From New Moon to Full Moon, the lit part grows through the waxing phases.' },
+      { type: 'review', prompt: 'What causes the Moon to appear to change shape?', options: ['We see different amounts of the Moon’s sunlit half from Earth.', 'Earth’s shadow covers the Moon every night.', 'The Moon makes more or less light each night.', 'Clouds hide different parts of the Moon.'], correct: 'We see different amounts of the Moon’s sunlit half from Earth.', explanation: 'The Moon reflects sunlight, and we see different parts of its lit half as it orbits Earth.' },
+      { type: 'review', prompt: 'About how long is one full cycle from New Moon to New Moon?', options: ['About 1 day', 'About 7 days', 'About 29.5 days', 'About 365 days'], correct: 'About 29.5 days', explanation: 'The Moon phase cycle is about 29.5 days, which is close to one month.' },
+      { type: 'review', prompt: 'In common Northern Hemisphere diagrams, which side is lit during waxing phases?', options: ['Right side', 'Left side', 'Top side', 'No side is ever lit'], correct: 'Right side', explanation: 'Waxing phases are usually shown with the right side lit.' },
+      { type: 'review', prompt: 'Which phase comes right after Full Moon?', options: ['Waning Gibbous', 'Waxing Gibbous', 'New Moon', 'First Quarter'], correct: 'Waning Gibbous', explanation: 'After Full Moon, the lit part begins to shrink, so the next phase is Waning Gibbous.' },
+      { type: 'review', prompt: 'What does waxing mean?', options: ['The lit part is growing.', 'The lit part is shrinking.', 'The Moon has disappeared forever.', 'The Moon is making its own light.'], correct: 'The lit part is growing.', explanation: 'Waxing means the bright part we can see is getting bigger.' },
+      { type: 'review', prompt: 'What does waning mean?', options: ['The lit part is shrinking.', 'The lit part is growing.', 'The Moon is closer to the Sun.', 'The Moon has no gravity.'], correct: 'The lit part is shrinking.', explanation: 'Waning means the bright part we can see is getting smaller.' },
+      { type: 'review', prompt: 'Which two phases appear half lit from Earth?', options: ['First Quarter and Third Quarter', 'New Moon and Full Moon', 'Waxing Crescent and Waning Crescent', 'Waxing Gibbous and Waning Gibbous'], correct: 'First Quarter and Third Quarter', explanation: 'First Quarter and Third Quarter both appear half lit.' }
+    ];
+
+    let currentSlide = 0;
+    let currentQuestion = 0;
+    let activeQuizQuestions = [];
+    let answers = [];
+    let orderDrafts = {};
+
+    const $ = (id) => document.getElementById(id);
+
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      $(id).classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      updateBestScoreBox();
+    }
+
+    function moonSvg(phaseKey, size = 120, labeled = false) {
+      const phase = phaseByKey[phaseKey];
+      const light = '#fff6c6';
+      const dark = '#273044';
+      const stroke = labeled ? '#cbd5e1' : '#f8fafc';
+      let inner = '';
+
+      if (phaseKey === 'new') {
+        inner = '';
+      } else if (phaseKey === 'full') {
+        inner = `<circle cx="50" cy="50" r="45" fill="${light}" />`;
+      } else if (phaseKey === 'first-quarter') {
+        inner = `<rect x="50" y="5" width="45" height="90" fill="${light}" clip-path="url(#clip-${phaseKey}-${size})" />`;
+      } else if (phaseKey === 'third-quarter') {
+        inner = `<rect x="5" y="5" width="45" height="90" fill="${light}" clip-path="url(#clip-${phaseKey}-${size})" />`;
+      } else if (phaseKey === 'waxing-crescent') {
+        inner = `<circle cx="50" cy="50" r="45" fill="${light}" /><ellipse cx="39" cy="50" rx="43" ry="45" fill="${dark}" />`;
+      } else if (phaseKey === 'waning-crescent') {
+        inner = `<circle cx="50" cy="50" r="45" fill="${light}" /><ellipse cx="61" cy="50" rx="43" ry="45" fill="${dark}" />`;
+      } else if (phaseKey === 'waxing-gibbous') {
+        inner = `<circle cx="50" cy="50" r="45" fill="${light}" /><ellipse cx="18" cy="50" rx="28" ry="45" fill="${dark}" />`;
+      } else if (phaseKey === 'waning-gibbous') {
+        inner = `<circle cx="50" cy="50" r="45" fill="${light}" /><ellipse cx="82" cy="50" rx="28" ry="45" fill="${dark}" />`;
+      }
+
+      const craterLayer = phaseKey !== 'new' ? `
+        <g opacity="0.28" clip-path="url(#clip-${phaseKey}-${size})">
+          <circle cx="64" cy="32" r="4" fill="#d7ca94" />
+          <circle cx="72" cy="61" r="5" fill="#d7ca94" />
+          <circle cx="46" cy="72" r="3.5" fill="#d7ca94" />
+          <circle cx="56" cy="48" r="2.5" fill="#d7ca94" />
+        </g>` : '';
+
+      return `
+        <svg width="${size}" height="${size}" viewBox="0 0 100 100" role="img" aria-label="${phase ? phase.name : 'Moon phase'}" xmlns="http://www.w3.org/2000/svg">
+          <defs><clipPath id="clip-${phaseKey}-${size}"><circle cx="50" cy="50" r="45" /></clipPath></defs>
+          <circle cx="50" cy="50" r="45" fill="${dark}" stroke="${stroke}" stroke-width="2.5" />
+          <g clip-path="url(#clip-${phaseKey}-${size})">${inner}</g>
+          ${craterLayer}
+          <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.56)" stroke-width="1.4" />
+        </svg>`;
+    }
+
+    function renderPhaseCycle(targetId) {
+      const target = $(targetId);
+      target.innerHTML = phases.map(p => `
+        <div class="phaseTile">
+          ${moonSvg(p.key, 78, true)}
+          <div class="phaseName">${p.name}</div>
+          <div class="phaseHint">${p.kind}</div>
+        </div>
+      `).join('');
+    }
+
+    function orbitSvg() {
+      const positions = [
+        [250, 45], [395, 105], [455, 250], [395, 395],
+        [250, 455], [105, 395], [45, 250], [105, 105]
+      ];
+      const phaseSize = 58;
+      return `
+        <svg class="orbitSvg" viewBox="0 0 500 500" width="100%" aria-label="Moon phase cycle diagram" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="250" cy="250" r="155" fill="none" stroke="#cbd8ee" stroke-width="5" stroke-dasharray="10 10" />
+          <circle cx="250" cy="250" r="45" fill="#7ec0ee" stroke="#315fdc" stroke-width="3" />
+          <text x="250" y="256" text-anchor="middle" font-size="18">Earth</text>
+          <text x="250" y="22" text-anchor="middle" font-size="16">Start here</text>
+          ${phases.map((p, i) => {
+            const [x, y] = positions[i];
+            return `
+              <g transform="translate(${x - phaseSize/2}, ${y - phaseSize/2})">${moonSvg(p.key, phaseSize, true)}</g>
+              <text x="${x}" y="${y + 48}" text-anchor="middle" font-size="12">${p.short}</text>`;
+          }).join('')}
+          <path d="M 318 60 Q 386 83 428 147" fill="none" stroke="#315fdc" stroke-width="4" marker-end="url(#arrow)" />
+          <defs>
+            <marker id="arrow" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L9,3 z" fill="#315fdc" />
+            </marker>
+          </defs>
+        </svg>`;
+    }
+
+    function visualForSlide(kind) {
+      if (kind === 'cycle') return `<div class="moonCycle" style="width:100%;">${phases.map(p => `<div class="phaseTile">${moonSvg(p.key, 72, true)}<div class="phaseName">${p.short}</div></div>`).join('')}</div>`;
+      if (kind === 'orbit') return orbitSvg();
+      if (kind === 'half') return `<div style="text-align:center;">${moonSvg('first-quarter', 230, true)}<p style="color:#5b667a;font-weight:800;max-width:420px;">Half of the Moon is lit by the Sun, but Earth sees different amounts of that lit half.</p></div>`;
+      if (kind === 'waxing') return `<div class="moonCycle" style="grid-template-columns:repeat(4,1fr);width:100%;">${phases.slice(1,5).map(p => `<div class="phaseTile">${moonSvg(p.key, 82, true)}<div class="phaseName">${p.short}</div><div class="phaseHint">growing</div></div>`).join('')}</div>`;
+      if (kind === 'waning') return `<div class="moonCycle" style="grid-template-columns:repeat(4,1fr);width:100%;">${phases.slice(5).concat(phases[0]).map(p => `<div class="phaseTile">${moonSvg(p.key, 82, true)}<div class="phaseName">${p.short}</div><div class="phaseHint">shrinking</div></div>`).join('')}</div>`;
+      if (kind === 'newToFull') return `<div class="moonCycle" style="grid-template-columns:repeat(5,1fr);width:100%;">${phases.slice(0,5).map(p => `<div class="phaseTile">${moonSvg(p.key, 78, true)}<div class="phaseName">${p.short}</div></div>`).join('')}</div>`;
+      if (kind === 'fullToNew') return `<div class="moonCycle" style="grid-template-columns:repeat(4,1fr);width:100%;">${phases.slice(4).map(p => `<div class="phaseTile">${moonSvg(p.key, 78, true)}<div class="phaseName">${p.short}</div></div>`).join('')}</div>`;
+      if (kind === 'quarters') return `<div class="moonCycle" style="grid-template-columns:repeat(2,1fr);width:min(430px,100%);">${['first-quarter','third-quarter'].map(k => `<div class="phaseTile">${moonSvg(k, 120, true)}<div class="phaseName">${phaseByKey[k].name}</div><div class="phaseHint">half lit</div></div>`).join('')}</div>`;
+      return `<div style="text-align:center;">${moonSvg('full', 210, true)}<p style="font-size:1.3rem;font-weight:900;color:#315fdc;">Quiz time!</p></div>`;
+    }
+
+    function renderTutorial() {
+      const slide = tutorialSlides[currentSlide];
+      $('slideKicker').textContent = `Slide ${currentSlide + 1}`;
+      $('slideTitle').textContent = slide.title;
+      $('slideText').textContent = slide.text;
+      $('slideKeyIdea').textContent = slide.keyIdea;
+      $('tutorialVisual').innerHTML = visualForSlide(slide.visual);
+      $('slideCounter').textContent = `${currentSlide + 1} of ${tutorialSlides.length}`;
+      $('tutorialProgress').style.width = `${((currentSlide + 1) / tutorialSlides.length) * 100}%`;
+      $('prevSlideBtn').disabled = currentSlide === 0;
+      $('nextSlideBtn').textContent = currentSlide === tutorialSlides.length - 1 ? 'Start Quiz' : 'Next';
+    }
+
+    function renderGuide() {
+      $('orbitGuide').innerHTML = orbitSvg();
+      $('phaseTable').innerHTML = phases.map((p, i) => `
+        <div class="tableRow">
+          ${moonSvg(p.key, 48, true)}
+          <div><strong>${i + 1}. ${p.name}</strong><span>${p.side} · ${p.kind}</span></div>
+          <span>${p.note}</span>
+        </div>
+      `).join('');
+    }
+
+    function startTutorial() {
+      currentSlide = 0;
+      renderTutorial();
+      showScreen('tutorialScreen');
+    }
+
+    function shuffleCopy(items) {
+      const copy = items.slice();
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function pickRandomQuizQuestions() {
+      const byType = (type) => quizQuestions.filter(q => q.type === type);
+      const chosen = [
+        ...shuffleCopy(byType('identify')).slice(0, 2),
+        ...shuffleCopy(byType('waxingWaning')).slice(0, 2),
+        ...shuffleCopy(byType('order')).slice(0, 1),
+        ...shuffleCopy(byType('review')).slice(0, 3)
+      ];
+      return shuffleCopy(chosen).slice(0, 8);
+    }
+
+    function startQuiz() {
+      currentQuestion = 0;
+      activeQuizQuestions = pickRandomQuizQuestions();
+      answers = new Array(activeQuizQuestions.length).fill(null);
+      orderDrafts = {};
+      renderQuestion();
+      showScreen('quizScreen');
+    }
+
+    function correctAnswerFor(q) {
+      if (q.type === 'identify') return phaseByKey[q.phase].name;
+      if (q.type === 'waxingWaning') {
+        const k = phaseByKey[q.phase].kind;
+        if (k === 'Neither') return 'New Moon';
+        if (k === 'Full') return 'Full Moon';
+        return k;
+      }
+      if (q.type === 'order') return q.correct;
+      return q.correct;
+    }
+
+    function questionTypeLabel(type) {
+      return {
+        identify: 'Identify the Phase',
+        waxingWaning: 'Waxing or Waning',
+        order: 'Put in Order',
+        review: 'Review Question'
+      }[type] || 'Question';
+    }
+
+    function renderQuestion() {
+      const q = activeQuizQuestions[currentQuestion];
+      $('questionTypeBadge').textContent = questionTypeLabel(q.type);
+      $('quizTitle').textContent = q.prompt;
+      $('quizCounter').textContent = `Question ${currentQuestion + 1} of ${activeQuizQuestions.length}`;
+      $('quizProgress').style.width = `${((currentQuestion + 1) / activeQuizQuestions.length) * 100}%`;
+      $('prevQuestionBtn').disabled = currentQuestion === 0;
+      $('nextQuestionBtn').textContent = currentQuestion === activeQuizQuestions.length - 1 ? 'Submit Quiz' : 'Next';
+
+      if (q.type === 'order') {
+        renderOrderQuestion(q);
+      } else {
+        renderChoiceQuestion(q);
+      }
+      updateNextButton();
+    }
+
+    function renderChoiceQuestion(q) {
+      const selected = answers[currentQuestion];
+      const visual = q.phase ? `<div>${moonSvg(q.phase, 190, false)}</div>` : `<div style="text-align:center;">${moonSvg('waxing-gibbous', 100, false)}${moonSvg('full', 100, false)}${moonSvg('waning-gibbous', 100, false)}<p style="font-weight:850;margin:8px 0 0;">Think about the pattern.</p></div>`;
+      $('quizQuestionArea').innerHTML = `
+        <div class="questionGrid">
+          <div class="questionVisual">${visual}</div>
+          <div class="answers">
+            ${q.options.map(opt => `<button type="button" class="answerBtn ${selected === opt ? 'selected' : ''}" data-answer="${escapeHtml(opt)}">${opt}</button>`).join('')}
+          </div>
+        </div>
+      `;
+      document.querySelectorAll('.answerBtn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          answers[currentQuestion] = btn.dataset.answer;
+          renderQuestion();
+        });
+      });
+    }
+
+    function renderOrderQuestion(q) {
+      const draft = orderDrafts[currentQuestion] || [];
+      answers[currentQuestion] = draft.length ? draft.slice() : answers[currentQuestion];
+      const slots = Array.from({ length: q.correct.length }, (_, i) => draft[i] || '');
+      $('quizQuestionArea').innerHTML = `
+        <div class="orderArea">
+          <div class="noteBox">Click the phase buttons to fill the order. Use “Clear Order” if you want to try again before submitting.</div>
+          <div class="slots">
+            ${slots.map((value, i) => `<div class="slot ${value ? 'filled' : ''}">${value || (i + 1)}</div>`).join('')}
+          </div>
+          <div class="chipGrid">
+            ${q.options.map(opt => `<button type="button" class="phaseChip ${draft.includes(opt) ? 'used' : ''}" data-phase="${escapeHtml(opt)}" ${draft.includes(opt) ? 'disabled' : ''}>${opt}</button>`).join('')}
+          </div>
+          <div class="buttonRow"><button type="button" class="ghost" id="clearOrderBtn">Clear Order</button></div>
+        </div>
+      `;
+      document.querySelectorAll('.phaseChip').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const current = orderDrafts[currentQuestion] || [];
+          if (current.length < q.correct.length && !current.includes(btn.dataset.phase)) {
+            current.push(btn.dataset.phase);
+            orderDrafts[currentQuestion] = current;
+            answers[currentQuestion] = current.slice();
+            renderQuestion();
+          }
+        });
+      });
+      $('clearOrderBtn').addEventListener('click', () => {
+        orderDrafts[currentQuestion] = [];
+        answers[currentQuestion] = [];
+        renderQuestion();
+      });
+    }
+
+    function updateNextButton() {
+      const q = activeQuizQuestions[currentQuestion];
+      const a = answers[currentQuestion];
+      let ready = false;
+      if (q.type === 'order') ready = Array.isArray(a) && a.length === q.correct.length;
+      else ready = typeof a === 'string' && a.length > 0;
+      $('nextQuestionBtn').disabled = !ready;
+    }
+
+    function isCorrect(q, answer) {
+      const correct = correctAnswerFor(q);
+      if (Array.isArray(correct)) {
+        return Array.isArray(answer) && answer.length === correct.length && answer.every((v, i) => v === correct[i]);
+      }
+      return answer === correct;
+    }
+
+    function formatAnswer(answer) {
+      if (Array.isArray(answer)) return answer.join(' → ');
+      return answer || 'No answer';
+    }
+
+    function finishQuiz() {
+      const results = activeQuizQuestions.map((q, i) => ({ q, answer: answers[i], correct: isCorrect(q, answers[i]), correctAnswer: correctAnswerFor(q) }));
+      const score = results.filter(r => r.correct).length;
+      const total = activeQuizQuestions.length;
+      const pct = Math.round((score / total) * 100);
+      const oldBest = getBestScore();
+      if (!oldBest || pct > oldBest.pct || (pct === oldBest.pct && score > oldBest.score)) {
+        localStorage.setItem(bestKey, JSON.stringify({ pct, score, total, date: new Date().toLocaleDateString() }));
+      }
+
+      $('scorePercent').textContent = `${pct}%`;
+      $('scoreFraction').textContent = `${score} / ${total}`;
+      $('scoreCircle').style.setProperty('--scoreAngle', `${pct * 3.6}deg`);
+      $('resultTitle').textContent = pct >= 90 ? 'Excellent moon work!' : pct >= 75 ? 'Strong work!' : pct >= 60 ? 'Good start!' : 'Keep practising!';
+      $('resultMessage').textContent = pct >= 80
+        ? 'You showed a strong understanding of the moon phase cycle. Review any missed items below to make it even stronger.'
+        : 'Review the missed items below, then try the tutorial or quiz again. The main pattern to remember is New → Waxing → Full → Waning → New.';
+
+      $('reviewList').innerHTML = results.map((r, i) => `
+        <div class="reviewItem ${r.correct ? 'correct' : 'incorrect'}">
+          <div class="reviewHeader">
+            <span>${i + 1}. ${r.q.prompt}</span>
+            <span class="badge ${r.correct ? 'good' : 'bad'}">${r.correct ? 'Correct' : 'Review'}</span>
+          </div>
+          <p><strong>Your answer:</strong> ${escapeHtml(formatAnswer(r.answer))}</p>
+          <p><strong>Correct answer:</strong> ${escapeHtml(formatAnswer(r.correctAnswer))}</p>
+          <p style="color:var(--muted); margin-bottom:0;"><strong>Why:</strong> ${escapeHtml(r.q.explanation)}</p>
+        </div>
+      `).join('');
+
+      showScreen('resultsScreen');
+      if (pct >= 80) makeConfetti();
+    }
+
+    function getBestScore() {
+      try { return JSON.parse(localStorage.getItem(bestKey)); } catch (e) { return null; }
+    }
+
+    function updateBestScoreBox() {
+      const best = getBestScore();
+      if (!best) $('bestScoreBox').innerHTML = 'Best score: <strong>Not attempted yet</strong>';
+      else $('bestScoreBox').innerHTML = `Best score: <strong>${best.pct}%</strong> (${best.score}/${best.total}) on ${best.date}`;
+    }
+
+    function makeConfetti() {
+      const confetti = $('confetti');
+      confetti.innerHTML = '';
+      for (let i = 0; i < 48; i++) {
+        const piece = document.createElement('i');
+        piece.style.left = `${Math.random() * 100}%`;
+        piece.style.animationDelay = `${Math.random() * 0.35}s`;
+        piece.style.background = ['#315fdc', '#fff6c6', '#207d4a', '#8c66ff'][i % 4];
+        confetti.appendChild(piece);
+      }
+      setTimeout(() => confetti.innerHTML = '', 2200);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    $('startTutorialBtn').addEventListener('click', startTutorial);
+    $('skipQuizBtn').addEventListener('click', startQuiz);
+    $('homeBtn').addEventListener('click', () => showScreen('homeScreen'));
+    $('guideBtn').addEventListener('click', () => { renderGuide(); showScreen('guideScreen'); });
+    $('guideToQuizBtn').addEventListener('click', startQuiz);
+    $('guideToTutorialBtn').addEventListener('click', startTutorial);
+    $('prevSlideBtn').addEventListener('click', () => { if (currentSlide > 0) { currentSlide--; renderTutorial(); } });
+    $('nextSlideBtn').addEventListener('click', () => {
+      if (currentSlide === tutorialSlides.length - 1) startQuiz();
+      else { currentSlide++; renderTutorial(); }
+    });
+    $('prevQuestionBtn').addEventListener('click', () => { if (currentQuestion > 0) { currentQuestion--; renderQuestion(); } });
+    $('nextQuestionBtn').addEventListener('click', () => {
+      if (currentQuestion === activeQuizQuestions.length - 1) finishQuiz();
+      else { currentQuestion++; renderQuestion(); }
+    });
+    $('retakeBtn').addEventListener('click', startQuiz);
+    $('resultsTutorialBtn').addEventListener('click', startTutorial);
+    $('printResultsBtn').addEventListener('click', () => window.print());
+    $('resetBestBtn').addEventListener('click', () => {
+      if (confirm('Reset the saved best score on this device?')) {
+        localStorage.removeItem(bestKey);
+        updateBestScoreBox();
+        alert('Best score reset.');
+      }
+    });
+
+    renderPhaseCycle('homePhaseCycle');
+    renderGuide();
+    updateBestScoreBox();
+  </script>
+</body>
+</html>
