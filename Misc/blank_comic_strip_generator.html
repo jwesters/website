@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blank Comic Strip Generator</title>
+  <style>
+    :root {
+      --ink: #111;
+      --paper: #fff;
+      --line: #111;
+      --muted: #666;
+      --panel-gap: 0.14in;
+      --page-pad: 0.3in;
+      --control-bg: #f4f4f4;
+      --selected: #000;
+      --page-width: 8.5in;
+      --page-height: 11in;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--ink);
+      background: #ececec;
+      min-height: 100%;
+    }
+
+    body.print-portrait {
+      --page-width: 8.5in;
+      --page-height: 11in;
+    }
+    body.print-landscape {
+      --page-width: 11in;
+      --page-height: 8.5in;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      background: #fff;
+      border-bottom: 2px solid #111;
+      padding: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-end;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .titleblock {
+      min-width: 220px;
+      padding-right: 6px;
+    }
+
+    .titleblock h1 {
+      font-size: 1.35rem;
+      margin: 0 0 4px;
+      line-height: 1.2;
+    }
+
+    .titleblock p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.93rem;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+      flex: 1;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 120px;
+    }
+
+    .control-group.compact {
+      min-width: 82px;
+      max-width: 82px;
+    }
+
+    label {
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    select, input[type="number"], button {
+      font: inherit;
+    }
+
+    select, input[type="number"] {
+      height: 38px;
+      border: 2px solid var(--line);
+      background: #fff;
+      padding: 6px 8px;
+      min-width: 0;
+    }
+
+    button {
+      border: 2px solid var(--line);
+      background: #fff;
+      color: #111;
+      height: 38px;
+      padding: 0 12px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    button:hover,
+    button:focus-visible,
+    .tool-btn.active {
+      background: #111;
+      color: #fff;
+      outline: none;
+    }
+
+    .tool-row {
+      background: #fff;
+      border-bottom: 2px solid #111;
+      padding: 12px 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .tool-row .section-label {
+      font-size: 0.86rem;
+      font-weight: 700;
+      margin-right: 4px;
+    }
+
+    .spacer {
+      flex: 1;
+      min-width: 10px;
+    }
+
+    .status-text {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-left: auto;
+      text-align: right;
+    }
+
+    .workspace {
+      flex: 1;
+      overflow: hidden;
+      padding: 14px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 0;
+    }
+
+    .page-shell {
+      width: calc(var(--page-width) * var(--screen-scale, 1));
+      height: calc(var(--page-height) * var(--screen-scale, 1));
+      max-width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex: 0 0 auto;
+    }
+
+    .comic-page {
+      width: var(--page-width);
+      height: var(--page-height);
+      background: var(--paper);
+      border: 2px solid #111;
+      box-shadow: 0 3px 18px rgba(0,0,0,0.12);
+      padding: var(--page-pad);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transform: scale(var(--screen-scale, 1));
+      transform-origin: center center;
+    }
+
+    .comic-page.strip .canvas-wrap {
+      height: 42%;
+      margin-top: auto;
+      margin-bottom: auto;
+    }
+
+    .comic-page.full .canvas-wrap {
+      height: 100%;
+    }
+
+    .canvas-wrap {
+      border: 0;
+      display: flex;
+      align-items: stretch;
+      justify-content: stretch;
+      min-height: 0;
+    }
+
+    .comic-canvas {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      gap: var(--panel-gap);
+      background: #fff;
+    }
+
+    .panel {
+      position: relative;
+      background: #fff;
+      border: 3px solid #111;
+      overflow: hidden;
+      min-width: 0;
+      min-height: 0;
+      cursor: crosshair;
+    }
+
+    .panel::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06);
+    }
+
+    .bubble {
+      position: absolute;
+      min-width: 86px;
+      min-height: 62px;
+      width: 34%;
+      height: 26%;
+      background: transparent;
+      border: 0;
+      overflow: visible;
+      z-index: 3;
+      touch-action: none;
+    }
+
+    .bubble.selected {
+      z-index: 8;
+    }
+
+    .bubble-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      pointer-events: none;
+    }
+
+    .bubble-svg .bubble-fill {
+      fill: #fff;
+      stroke: #111;
+      stroke-width: 4;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .bubble-text {
+      position: absolute;
+      inset: 16% 12% 13% 12%;
+      outline: none;
+      cursor: text;
+      font-size: clamp(10px, 1.9vw, 15px);
+      line-height: 1.14;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 2px;
+      z-index: 2;
+    }
+
+    .bubble.caption .bubble-text {
+      inset: 18px 12px 10px 12px;
+    }
+
+    .bubble.scream .bubble-text,
+    .bubble.exclaim .bubble-text {
+      inset: 22% 18% 18% 18%;
+      font-weight: 700;
+    }
+
+    .bubble .drag-handle,
+    .bubble .delete-btn,
+    .bubble .resize-handle {
+      position: absolute;
+      border: 2px solid #111;
+      background: #fff;
+      color: #111;
+      text-align: center;
+      padding: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.12s ease;
+      z-index: 20;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.14);
+    }
+
+    .bubble:hover .drag-handle,
+    .bubble:hover .delete-btn,
+    .bubble:hover .resize-handle,
+    .bubble.selected .drag-handle,
+    .bubble.selected .delete-btn,
+    .bubble.selected .resize-handle {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .bubble .drag-handle,
+    .bubble .delete-btn {
+      top: -12px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      line-height: 18px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .bubble .drag-handle {
+      left: -12px;
+      cursor: move;
+      user-select: none;
+    }
+
+    .bubble .delete-btn {
+      right: -12px;
+      cursor: pointer;
+    }
+
+    .bubble .resize-handle {
+      right: -8px;
+      bottom: -8px;
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      cursor: nwse-resize;
+      font-size: 0;
+    }
+
+    .bubble .resize-handle::before {
+      content: '';
+      position: absolute;
+      right: 3px;
+      bottom: 3px;
+      width: 8px;
+      height: 8px;
+      border-right: 2px solid #111;
+      border-bottom: 2px solid #111;
+    }
+
+    .hint-box {
+      margin-left: auto;
+      font-size: 0.87rem;
+      color: var(--muted);
+      max-width: 420px;
+      text-align: right;
+      line-height: 1.2;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .footer-bar {
+      padding: 10px 14px 14px;
+      color: var(--muted);
+      font-size: 0.84rem;
+      background: #fff;
+      border-top: 1px solid #d8d8d8;
+    }
+
+    @media (max-width: 900px) {
+      .topbar {
+        position: static;
+      }
+      .controls,
+      .tool-row {
+        align-items: stretch;
+      }
+      .control-group,
+      .control-group.compact {
+        min-width: 130px;
+        max-width: none;
+      }
+      .workspace {
+        padding: 10px;
+        overflow: auto;
+        align-items: flex-start;
+      }
+      .page-shell {
+        width: var(--page-width);
+        height: var(--page-height);
+      }
+      .comic-page {
+        transform: none;
+      }
+      .hint-box,
+      .status-text {
+        width: 100%;
+        margin-left: 0;
+        text-align: left;
+      }
+    }
+
+    @page {
+      size: letter portrait;
+      margin: 0.3in;
+    }
+
+    @media print {
+      html, body {
+        background: #fff;
+      }
+
+      .topbar,
+      .tool-row,
+      .footer-bar {
+        display: none !important;
+      }
+
+      .workspace {
+        padding: 0;
+        overflow: visible;
+      }
+
+      .page-shell {
+        width: auto;
+        height: auto;
+        max-width: none;
+      }
+
+      .comic-page {
+        box-shadow: none;
+        border: 2px solid #111;
+        margin: 0;
+        width: 100%;
+        height: auto;
+        min-height: 0;
+        transform: none;
+      }
+
+      .comic-page.full,
+      .comic-page.strip {
+        height: auto;
+      }
+
+      .comic-page.full .canvas-wrap,
+      .comic-page.strip .canvas-wrap {
+        height: auto;
+        min-height: 0;
+        margin: 0;
+      }
+
+      .comic-canvas {
+        min-height: 6.5in;
+      }
+
+      .comic-page.strip .comic-canvas {
+        min-height: 2.75in;
+      }
+
+      .bubble .drag-handle,
+      .bubble .delete-btn,
+      .bubble .resize-handle {
+        display: none !important;
+      }
+
+      .bubble {
+        overflow: visible;
+      }
+    }
+  </style>
+</head>
+<body class="print-portrait">
+  <div class="app">
+    <div class="topbar">
+      <div class="titleblock">
+        <h1>Blank Comic Strip Generator</h1>
+        <p>Create printable comic pages with blank panels and editable bubbles.</p>
+      </div>
+
+      <div class="controls">
+        <div class="control-group">
+          <label for="canvasMode">Canvas Format</label>
+          <select id="canvasMode">
+            <option value="full">Full Page</option>
+            <option value="strip">Horizontal Strip</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label for="orientation">Paper Orientation</label>
+          <select id="orientation">
+            <option value="portrait">Letter Portrait</option>
+            <option value="landscape">Letter Landscape</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label for="template">Layout Template</label>
+          <select id="template"></select>
+        </div>
+
+        <div id="customRowsWrap" class="control-group compact hidden">
+          <label for="customRows">Rows</label>
+          <input id="customRows" type="number" min="1" max="8" value="2" />
+        </div>
+
+        <div id="customColsWrap" class="control-group compact hidden">
+          <label for="customCols">Cols</label>
+          <input id="customCols" type="number" min="1" max="8" value="2" />
+        </div>
+
+        <div class="control-group">
+          <label>&nbsp;</label>
+          <button id="rebuildBtn" type="button">Build Layout</button>
+        </div>
+
+        <div class="control-group">
+          <label>&nbsp;</label>
+          <button id="clearBtn" type="button">Clear Page</button>
+        </div>
+
+        <div class="status-text" id="statusText">Ready</div>
+      </div>
+    </div>
+
+    <div class="tool-row">
+      <span class="section-label">Add Bubble:</span>
+      <button class="tool-btn active" data-tool="speech" type="button">Speech</button>
+      <button class="tool-btn" data-tool="thought" type="button">Thought</button>
+      <button class="tool-btn" data-tool="scream" type="button">Scream</button>
+      <button class="tool-btn" data-tool="exclaim" type="button">Exclamation</button>
+      <button class="tool-btn" data-tool="caption" type="button">Caption</button>
+
+      <span class="spacer"></span>
+
+      <button id="saveBtn" type="button">Save Draft</button>
+      <button id="loadBtn" type="button">Load Draft</button>
+      <button id="printBtn" type="button">Export PDF</button>
+
+      <div class="hint-box">
+        Click inside a panel to place the selected bubble. Use the small move handle to drag. Use the × button or Delete key to remove a selected bubble.
+      </div>
+    </div>
+
+    <main class="workspace">
+      <div class="page-shell">
+        <section id="comicPage" class="comic-page full" aria-label="Comic page">
+          <div class="canvas-wrap">
+            <div id="comicCanvas" class="comic-canvas" aria-label="Comic panels"></div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <div class="footer-bar">
+      Saves are stored locally in this browser only. Use Export PDF for a clean printable file.
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const STORAGE_KEY = 'blank_comic_strip_generator_draft_v1';
+      const AUTOSAVE_DELAY = 500;
+
+      const layouts = {
+        single: {
+          label: '1 Panel',
+          cols: 1, rows: 1,
+          panels: [{ c: 1, r: 1 }]
+        },
+        twoSide: {
+          label: '2 Panels — Side by Side',
+          cols: 2, rows: 1,
+          panels: [{ c: 1, r: 1 }, { c: 2, r: 1 }]
+        },
+        twoStack: {
+          label: '2 Panels — Stacked',
+          cols: 1, rows: 2,
+          panels: [{ c: 1, r: 1 }, { c: 1, r: 2 }]
+        },
+        threeRow: {
+          label: '3 Panels — Row',
+          cols: 3, rows: 1,
+          panels: [{ c: 1, r: 1 }, { c: 2, r: 1 }, { c: 3, r: 1 }]
+        },
+        threeStack: {
+          label: '3 Panels — Stacked',
+          cols: 1, rows: 3,
+          panels: [{ c: 1, r: 1 }, { c: 1, r: 2 }, { c: 1, r: 3 }]
+        },
+        fourGrid: {
+          label: '4 Panels — 2 × 2',
+          cols: 2, rows: 2,
+          panels: [{ c: 1, r: 1 }, { c: 2, r: 1 }, { c: 1, r: 2 }, { c: 2, r: 2 }]
+        },
+        fourRow: {
+          label: '4 Panels — Row',
+          cols: 4, rows: 1,
+          panels: [{ c: 1, r: 1 }, { c: 2, r: 1 }, { c: 3, r: 1 }, { c: 4, r: 1 }]
+        },
+        sixGridWide: {
+          label: '6 Panels — 3 × 2',
+          cols: 3, rows: 2,
+          panels: [
+            { c: 1, r: 1 }, { c: 2, r: 1 }, { c: 3, r: 1 },
+            { c: 1, r: 2 }, { c: 2, r: 2 }, { c: 3, r: 2 }
+          ]
+        },
+        sixGridTall: {
+          label: '6 Panels — 2 × 3',
+          cols: 2, rows: 3,
+          panels: [
+            { c: 1, r: 1 }, { c: 2, r: 1 },
+            { c: 1, r: 2 }, { c: 2, r: 2 },
+            { c: 1, r: 3 }, { c: 2, r: 3 }
+          ]
+        },
+        eightWide: {
+          label: '8 Panels — 4 × 2',
+          cols: 4, rows: 2,
+          panels: [
+            { c: 1, r: 1 }, { c: 2, r: 1 }, { c: 3, r: 1 }, { c: 4, r: 1 },
+            { c: 1, r: 2 }, { c: 2, r: 2 }, { c: 3, r: 2 }, { c: 4, r: 2 }
+          ]
+        },
+        eightTall: {
+          label: '8 Panels — 2 × 4',
+          cols: 2, rows: 4,
+          panels: [
+            { c: 1, r: 1 }, { c: 2, r: 1 },
+            { c: 1, r: 2 }, { c: 2, r: 2 },
+            { c: 1, r: 3 }, { c: 2, r: 3 },
+            { c: 1, r: 4 }, { c: 2, r: 4 }
+          ]
+        },
+        heroTopTwo: {
+          label: 'Large Top + 2 Bottom',
+          cols: 2, rows: 2,
+          panels: [
+            { c: 1, r: 1, cs: 2, rs: 1 },
+            { c: 1, r: 2 },
+            { c: 2, r: 2 }
+          ]
+        },
+        largeLeftTwoRight: {
+          label: 'Large Left + 2 Right',
+          cols: 2, rows: 2,
+          panels: [
+            { c: 1, r: 1, cs: 1, rs: 2 },
+            { c: 2, r: 1 },
+            { c: 2, r: 2 }
+          ]
+        },
+        twoTopWideBottom: {
+          label: '2 Top + Wide Bottom',
+          cols: 2, rows: 2,
+          panels: [
+            { c: 1, r: 1 },
+            { c: 2, r: 1 },
+            { c: 1, r: 2, cs: 2, rs: 1 }
+          ]
+        },
+        custom: {
+          label: 'Custom Grid',
+          custom: true
+        }
+      };
+
+      const els = {
+        body: document.body,
+        comicPage: document.getElementById('comicPage'),
+        comicCanvas: document.getElementById('comicCanvas'),
+        pageShell: document.querySelector('.page-shell'),
+        workspace: document.querySelector('.workspace'),
+        canvasMode: document.getElementById('canvasMode'),
+        orientation: document.getElementById('orientation'),
+        template: document.getElementById('template'),
+        customRows: document.getElementById('customRows'),
+        customCols: document.getElementById('customCols'),
+        customRowsWrap: document.getElementById('customRowsWrap'),
+        customColsWrap: document.getElementById('customColsWrap'),
+        rebuildBtn: document.getElementById('rebuildBtn'),
+        clearBtn: document.getElementById('clearBtn'),
+        saveBtn: document.getElementById('saveBtn'),
+        loadBtn: document.getElementById('loadBtn'),
+        printBtn: document.getElementById('printBtn'),
+        statusText: document.getElementById('statusText'),
+        toolButtons: [...document.querySelectorAll('.tool-btn')]
+      };
+
+      let currentTool = 'speech';
+      let selectedBubble = null;
+      let autosaveTimer = null;
+      let dragState = null;
+      let resizeState = null;
+
+      function setStatus(message) {
+        els.statusText.textContent = message;
+      }
+
+      function populateTemplates() {
+        const order = [
+          'single', 'twoSide', 'twoStack', 'threeRow', 'threeStack', 'fourGrid', 'fourRow',
+          'sixGridWide', 'sixGridTall', 'eightWide', 'eightTall',
+          'heroTopTwo', 'largeLeftTwoRight', 'twoTopWideBottom', 'custom'
+        ];
+        els.template.innerHTML = order.map(key => `<option value="${key}">${layouts[key].label}</option>`).join('');
+        els.template.value = 'fourGrid';
+      }
+
+      function updateOrientation() {
+        const value = els.orientation.value;
+        els.body.classList.toggle('print-portrait', value === 'portrait');
+        els.body.classList.toggle('print-landscape', value === 'landscape');
+        ensurePagePrintStyle(value);
+        fitPageToScreen();
+      }
+
+      function ensurePagePrintStyle(orientation) {
+        let style = document.getElementById('dynamicPrintStyle');
+        if (!style) {
+          style = document.createElement('style');
+          style.id = 'dynamicPrintStyle';
+          document.head.appendChild(style);
+        }
+        style.textContent = `@page { size: letter ${orientation}; margin: 0.3in; }`;
+      }
+
+      function updateCustomVisibility() {
+        const isCustom = els.template.value === 'custom';
+        els.customRowsWrap.classList.toggle('hidden', !isCustom);
+        els.customColsWrap.classList.toggle('hidden', !isCustom);
+      }
+
+      function fitPageToScreen() {
+        // Desktop: scale the printable page to fit the visible workspace.
+        // Mobile/tablet: keep normal size and allow scrolling.
+        if (window.matchMedia('(max-width: 900px)').matches) {
+          document.documentElement.style.setProperty('--screen-scale', '1');
+          return;
+        }
+
+        const workspaceRect = els.workspace.getBoundingClientRect();
+        const rawWidth = els.comicPage.offsetWidth || 816;
+        const rawHeight = els.comicPage.offsetHeight || 1056;
+
+        const availableWidth = Math.max(320, workspaceRect.width - 10);
+        const availableHeight = Math.max(320, workspaceRect.height - 10);
+
+        const scale = Math.min(1, availableWidth / rawWidth, availableHeight / rawHeight);
+        document.documentElement.style.setProperty('--screen-scale', scale.toFixed(3));
+      }
+
+      function getLayoutConfig() {
+        const key = els.template.value;
+        if (key === 'custom') {
+          const rows = Math.max(1, Math.min(8, parseInt(els.customRows.value || '1', 10)));
+          const cols = Math.max(1, Math.min(8, parseInt(els.customCols.value || '1', 10)));
+          const panels = [];
+          for (let r = 1; r <= rows; r++) {
+            for (let c = 1; c <= cols; c++) {
+              panels.push({ c, r });
+            }
+          }
+          return { key, cols, rows, panels, custom: true };
+        }
+        return { key, ...layouts[key] };
+      }
+
+      function buildLayout(preservedState = null) {
+        const config = getLayoutConfig();
+        clearSelection();
+        els.comicPage.classList.toggle('full', els.canvasMode.value === 'full');
+        els.comicPage.classList.toggle('strip', els.canvasMode.value === 'strip');
+        els.comicCanvas.innerHTML = '';
+        els.comicCanvas.style.gridTemplateColumns = `repeat(${config.cols}, 1fr)`;
+        els.comicCanvas.style.gridTemplateRows = `repeat(${config.rows}, 1fr)`;
+
+        config.panels.forEach((panelConfig, index) => {
+          const panel = document.createElement('div');
+          panel.className = 'panel';
+          panel.dataset.index = String(index);
+          panel.style.gridColumn = `${panelConfig.c} / span ${panelConfig.cs || 1}`;
+          panel.style.gridRow = `${panelConfig.r} / span ${panelConfig.rs || 1}`;
+          panel.addEventListener('click', onPanelClick);
+          panel.addEventListener('pointerdown', () => clearSelection());
+          els.comicCanvas.appendChild(panel);
+        });
+
+        if (preservedState && Array.isArray(preservedState.bubbles)) {
+          restoreBubbles(preservedState.bubbles);
+        }
+
+        fitPageToScreen();
+        queueAutosave();
+        setStatus('Layout built');
+      }
+
+      function onPanelClick(event) {
+        const panel = event.currentTarget;
+        if (event.target.closest('.bubble')) return;
+        const rect = panel.getBoundingClientRect();
+        const x = ((event.clientX - rect.left) / rect.width) * 100;
+        const y = ((event.clientY - rect.top) / rect.height) * 100;
+        addBubble(panel, currentTool, x, y, 'Type here');
+      }
+
+      function getBubbleSvg(type) {
+        const svgs = {
+          speech: `
+            <svg class="bubble-svg" viewBox="0 0 220 140" preserveAspectRatio="none" aria-hidden="true">
+              <path class="bubble-fill" d="M30 68 C30 28 68 12 116 12 C167 12 202 32 202 67 C202 104 166 124 113 124 C93 124 76 121 61 115 L32 136 L42 106 C34 96 30 83 30 68 Z"/>
+            </svg>
+          `,
+          thought: `
+            <svg class="bubble-svg" viewBox="0 0 220 150" preserveAspectRatio="none" aria-hidden="true">
+              <path class="bubble-fill" d="M52 113 C27 110 15 93 19 76 C2 60 15 36 42 39 C49 15 83 10 100 28 C121 7 160 15 164 42 C193 42 211 62 201 85 C211 107 188 126 158 119 C139 139 101 137 88 119 C75 124 62 122 52 113 Z"/>
+              <circle class="bubble-fill" cx="53" cy="132" r="10"/>
+              <circle class="bubble-fill" cx="34" cy="145" r="6"/>
+            </svg>
+          `,
+          scream: `
+            <svg class="bubble-svg" viewBox="0 0 220 150" preserveAspectRatio="none" aria-hidden="true">
+              <polygon class="bubble-fill" points="109,6 126,27 151,12 156,40 190,31 176,58 213,72 177,86 193,118 157,109 148,143 124,119 106,146 88,119 60,139 57,108 24,117 41,88 8,72 42,57 28,25 61,39 68,10 91,29"/>
+            </svg>
+          `,
+          exclaim: `
+            <svg class="bubble-svg" viewBox="0 0 220 150" preserveAspectRatio="none" aria-hidden="true">
+              <polygon class="bubble-fill" points="110,6 126,29 151,13 154,41 188,31 174,58 212,72 174,86 191,119 156,108 147,143 124,120 110,146 96,120 73,143 64,108 29,119 46,86 8,72 46,58 32,31 66,41 69,13 94,29"/>
+            </svg>
+          `,
+          caption: `
+            <svg class="bubble-svg" viewBox="0 0 220 140" preserveAspectRatio="none" aria-hidden="true">
+              <rect class="bubble-fill" x="8" y="12" width="204" height="112" rx="4" ry="4"/>
+            </svg>
+          `
+        };
+        return svgs[type] || svgs.speech;
+      }
+
+      function makeBubbleElement(type, data = {}) {
+        const bubble = document.createElement('div');
+        bubble.className = `bubble ${type}`;
+        bubble.dataset.type = type;
+        bubble.style.left = `${clamp(data.left ?? 8, 0, 88)}%`;
+        bubble.style.top = `${clamp(data.top ?? 8, 0, 88)}%`;
+        bubble.style.width = `${clamp(data.width ?? 34, 10, 95)}%`;
+        bubble.style.height = `${clamp(data.height ?? 26, 10, 95)}%`;
+
+        bubble.insertAdjacentHTML('beforeend', getBubbleSvg(type));
+
+        const dragHandle = document.createElement('button');
+        dragHandle.type = 'button';
+        dragHandle.className = 'drag-handle';
+        dragHandle.textContent = '↕';
+        dragHandle.title = 'Move bubble';
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.textContent = '×';
+        deleteBtn.title = 'Delete bubble';
+
+        const resizeHandle = document.createElement('button');
+        resizeHandle.type = 'button';
+        resizeHandle.className = 'resize-handle';
+        resizeHandle.title = 'Resize bubble';
+
+        const text = document.createElement('div');
+        text.className = 'bubble-text';
+        text.contentEditable = 'true';
+        text.spellcheck = true;
+        text.innerText = data.text || 'Type here';
+
+        dragHandle.addEventListener('pointerdown', startDrag);
+        resizeHandle.addEventListener('pointerdown', startResize);
+        deleteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          bubble.remove();
+          clearSelection();
+          queueAutosave();
+          setStatus('Bubble deleted');
+        });
+        bubble.addEventListener('pointerdown', (e) => {
+          e.stopPropagation();
+          selectBubble(bubble);
+        });
+        text.addEventListener('focus', () => selectBubble(bubble));
+        text.addEventListener('input', () => queueAutosave());
+        text.addEventListener('click', (e) => e.stopPropagation());
+        bubble.addEventListener('mouseup', () => queueAutosave());
+        bubble.addEventListener('touchend', () => queueAutosave());
+
+        bubble.appendChild(dragHandle);
+        bubble.appendChild(deleteBtn);
+        bubble.appendChild(resizeHandle);
+        bubble.appendChild(text);
+        return bubble;
+      }
+
+      function addBubble(panel, type, left, top, text) {
+        const bubble = makeBubbleElement(type, {
+          left: clamp(left - 12, 1, 80),
+          top: clamp(top - 8, 1, 82),
+          width: 34,
+          height: 26,
+          text
+        });
+        panel.appendChild(bubble);
+        selectBubble(bubble);
+        const editor = bubble.querySelector('.bubble-text');
+        editor.focus();
+        document.execCommand && document.execCommand('selectAll', false, null);
+        queueAutosave();
+        setStatus(`${labelForTool(type)} bubble added`);
+      }
+
+      function restoreBubbles(bubbles) {
+        bubbles.forEach((item) => {
+          const panel = els.comicCanvas.querySelector(`.panel[data-index="${item.panelIndex}"]`);
+          if (!panel) return;
+          const bubble = makeBubbleElement(item.type, item);
+          panel.appendChild(bubble);
+        });
+      }
+
+      function collectBubbles() {
+        const bubbles = [];
+        const panels = [...els.comicCanvas.querySelectorAll('.panel')];
+        panels.forEach((panel) => {
+          const panelRect = panel.getBoundingClientRect();
+          const bubbleEls = [...panel.querySelectorAll('.bubble')];
+          bubbleEls.forEach((bubble) => {
+            const bubbleRect = bubble.getBoundingClientRect();
+            bubbles.push({
+              panelIndex: Number(panel.dataset.index),
+              type: bubble.dataset.type,
+              left: ((bubbleRect.left - panelRect.left) / panelRect.width) * 100,
+              top: ((bubbleRect.top - panelRect.top) / panelRect.height) * 100,
+              width: (bubbleRect.width / panelRect.width) * 100,
+              height: (bubbleRect.height / panelRect.height) * 100,
+              text: bubble.querySelector('.bubble-text').innerText
+            });
+          });
+        });
+        return bubbles;
+      }
+
+
+      function exportComicPdf() {
+        try {
+          const state = getAppState();
+          const config = getLayoutConfig();
+          const isLandscape = state.orientation === 'landscape';
+          const pageW = isLandscape ? 792 : 612;
+          const pageH = isLandscape ? 612 : 792;
+          const pad = 21.6;
+          const gap = 10;
+          const canvasW = pageW - pad * 2;
+          const fullCanvasH = pageH - pad * 2;
+          const canvasH = state.canvasMode === 'strip' ? fullCanvasH * 0.42 : fullCanvasH;
+          const canvasTop = state.canvasMode === 'strip' ? pad + (fullCanvasH - canvasH) / 2 : pad;
+          const canvasLeft = pad;
+
+          const panels = computePdfPanels(config, canvasLeft, canvasTop, canvasW, canvasH, gap);
+          const byPanel = new Map();
+          state.bubbles.forEach(b => {
+            if (!byPanel.has(b.panelIndex)) byPanel.set(b.panelIndex, []);
+            byPanel.get(b.panelIndex).push(b);
+          });
+
+          const cmd = [];
+          cmd.push('1 1 1 rg 0 0 0 RG 1 w');
+          panels.forEach((panel, index) => {
+            drawRectTop(cmd, pageH, panel.x, panel.y, panel.w, panel.h, 2.2, false);
+            const bubbles = byPanel.get(index) || [];
+            bubbles.forEach(bubble => {
+              const bx = panel.x + (bubble.left / 100) * panel.w;
+              const by = panel.y + (bubble.top / 100) * panel.h;
+              const bw = (bubble.width / 100) * panel.w;
+              const bh = (bubble.height / 100) * panel.h;
+              drawPdfBubble(cmd, pageH, bubble.type, bx, by, bw, bh);
+              drawPdfBubbleText(cmd, pageH, bubble.type, bubble.text || '', bx, by, bw, bh);
+            });
+          });
+
+          const pdf = makeSimplePdf(cmd.join('\n'), pageW, pageH);
+          const blob = new Blob([pdf], { type: 'application/pdf' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          const safeLayout = (layouts[state.template]?.label || state.template || 'comic').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+          a.href = url;
+          a.download = `comic-strip-${safeLayout || 'layout'}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          setStatus('PDF exported');
+        } catch (err) {
+          console.error(err);
+          setStatus('PDF export failed');
+          alert('Sorry — the PDF export failed. Try saving your draft, reloading the page, and exporting again.');
+        }
+      }
+
+      function computePdfPanels(config, canvasLeft, canvasTop, canvasW, canvasH, gap) {
+        const cellW = (canvasW - gap * (config.cols - 1)) / config.cols;
+        const cellH = (canvasH - gap * (config.rows - 1)) / config.rows;
+        return config.panels.map(panel => {
+          const cs = panel.cs || 1;
+          const rs = panel.rs || 1;
+          return {
+            x: canvasLeft + (panel.c - 1) * (cellW + gap),
+            y: canvasTop + (panel.r - 1) * (cellH + gap),
+            w: cellW * cs + gap * (cs - 1),
+            h: cellH * rs + gap * (rs - 1)
+          };
+        });
+      }
+
+      function pdfNum(value) {
+        return Number(value).toFixed(2).replace(/\.?0+$/, '');
+      }
+
+      function topY(pageH, yTop, h = 0) {
+        return pageH - yTop - h;
+      }
+
+      function drawRectTop(cmd, pageH, x, yTop, w, h, lineWidth = 1.5, fill = true) {
+        const y = topY(pageH, yTop, h);
+        cmd.push(`${pdfNum(lineWidth)} w`);
+        cmd.push(`${pdfNum(x)} ${pdfNum(y)} ${pdfNum(w)} ${pdfNum(h)} re ${fill ? 'B' : 'S'}`);
+      }
+
+      function drawEllipseTop(cmd, pageH, x, yTop, w, h, lineWidth = 1.5) {
+        const k = 0.5522847498;
+        const cx = x + w / 2;
+        const cy = topY(pageH, yTop, h) + h / 2;
+        const rx = w / 2;
+        const ry = h / 2;
+        cmd.push(`${pdfNum(lineWidth)} w`);
+        cmd.push([
+          `${pdfNum(cx + rx)} ${pdfNum(cy)} m`,
+          `${pdfNum(cx + rx)} ${pdfNum(cy + k * ry)} ${pdfNum(cx + k * rx)} ${pdfNum(cy + ry)} ${pdfNum(cx)} ${pdfNum(cy + ry)} c`,
+          `${pdfNum(cx - k * rx)} ${pdfNum(cy + ry)} ${pdfNum(cx - rx)} ${pdfNum(cy + k * ry)} ${pdfNum(cx - rx)} ${pdfNum(cy)} c`,
+          `${pdfNum(cx - rx)} ${pdfNum(cy - k * ry)} ${pdfNum(cx - k * rx)} ${pdfNum(cy - ry)} ${pdfNum(cx)} ${pdfNum(cy - ry)} c`,
+          `${pdfNum(cx + k * rx)} ${pdfNum(cy - ry)} ${pdfNum(cx + rx)} ${pdfNum(cy - k * ry)} ${pdfNum(cx + rx)} ${pdfNum(cy)} c`,
+          'B'
+        ].join(' '));
+      }
+
+      function drawPolygonTop(cmd, pageH, points, lineWidth = 1.5) {
+        if (!points.length) return;
+        cmd.push(`${pdfNum(lineWidth)} w`);
+        const converted = points.map(p => [p[0], pageH - p[1]]);
+        let path = `${pdfNum(converted[0][0])} ${pdfNum(converted[0][1])} m`;
+        for (let i = 1; i < converted.length; i++) {
+          path += ` ${pdfNum(converted[i][0])} ${pdfNum(converted[i][1])} l`;
+        }
+        path += ' h B';
+        cmd.push(path);
+      }
+
+      function drawPdfBubble(cmd, pageH, type, x, y, w, h) {
+        cmd.push('1 1 1 rg 0 0 0 RG');
+        if (type === 'caption') {
+          drawRectTop(cmd, pageH, x, y, w, h, 1.4, true);
+          return;
+        }
+
+        if (type === 'thought') {
+          drawEllipseTop(cmd, pageH, x, y, w, h * 0.83, 1.4);
+          const dot1 = Math.min(w, h) * 0.13;
+          const dot2 = Math.min(w, h) * 0.08;
+          drawEllipseTop(cmd, pageH, x + w * 0.18, y + h * 0.78, dot1, dot1, 1.2);
+          drawEllipseTop(cmd, pageH, x + w * 0.10, y + h * 0.93, dot2, dot2, 1.1);
+          return;
+        }
+
+        if (type === 'scream' || type === 'exclaim') {
+          const pts = [
+            [x + w*0.50, y + h*0.02], [x + w*0.58, y + h*0.20], [x + w*0.72, y + h*0.08],
+            [x + w*0.75, y + h*0.28], [x + w*0.91, y + h*0.21], [x + w*0.82, y + h*0.40],
+            [x + w*0.98, y + h*0.50], [x + w*0.82, y + h*0.60], [x + w*0.91, y + h*0.80],
+            [x + w*0.73, y + h*0.74], [x + w*0.68, y + h*0.96], [x + w*0.55, y + h*0.80],
+            [x + w*0.47, y + h*0.98], [x + w*0.38, y + h*0.80], [x + w*0.20, y + h*0.92],
+            [x + w*0.23, y + h*0.72], [x + w*0.04, y + h*0.78], [x + w*0.16, y + h*0.58],
+            [x + w*0.02, y + h*0.48], [x + w*0.18, y + h*0.39], [x + w*0.08, y + h*0.17],
+            [x + w*0.27, y + h*0.28], [x + w*0.31, y + h*0.08], [x + w*0.43, y + h*0.22]
+          ];
+          drawPolygonTop(cmd, pageH, pts, 1.4);
+          return;
+        }
+
+        // Speech bubble: oval + a clean little tail.
+        drawEllipseTop(cmd, pageH, x, y, w, h * 0.84, 1.4);
+        const tail = [
+          [x + w*0.25, y + h*0.72],
+          [x + w*0.08, y + h*0.98],
+          [x + w*0.36, y + h*0.78]
+        ];
+        drawPolygonTop(cmd, pageH, tail, 1.2);
+      }
+
+      function drawPdfBubbleText(cmd, pageH, type, text, x, y, w, h) {
+        const raw = String(text || '').replace(/\s+/g, ' ').trim();
+        if (!raw) return;
+
+        let insetX = w * 0.15;
+        let insetY = h * 0.20;
+        if (type === 'caption') {
+          insetX = 10;
+          insetY = 10;
+        } else if (type === 'scream' || type === 'exclaim') {
+          insetX = w * 0.22;
+          insetY = h * 0.25;
+        }
+
+        const boxX = x + insetX;
+        const boxY = y + insetY;
+        const boxW = Math.max(12, w - insetX * 2);
+        const boxH = Math.max(12, h - insetY * 2);
+        const fontSize = Math.max(7, Math.min(12, boxW / 8, boxH / 2.5));
+        const lines = wrapPdfText(raw, boxW, fontSize, Math.max(1, Math.floor(boxH / (fontSize * 1.18))));
+        const lineH = fontSize * 1.18;
+        const totalH = lines.length * lineH;
+        let currentTop = boxY + Math.max(0, (boxH - totalH) / 2) + fontSize;
+
+        lines.forEach(line => {
+          const lineWidth = estimatePdfTextWidth(line, fontSize);
+          const tx = boxX + Math.max(0, (boxW - lineWidth) / 2);
+          const ty = pageH - currentTop;
+          const font = (type === 'scream' || type === 'exclaim') ? '/F2' : '/F1';
+          cmd.push(`BT ${font} ${pdfNum(fontSize)} Tf ${pdfNum(tx)} ${pdfNum(ty)} Td (${escapePdfText(line)}) Tj ET`);
+          currentTop += lineH;
+        });
+      }
+
+      function wrapPdfText(text, maxWidth, fontSize, maxLines) {
+        const words = text.split(/\s+/).filter(Boolean);
+        const lines = [];
+        let line = '';
+        words.forEach(word => {
+          const test = line ? `${line} ${word}` : word;
+          if (estimatePdfTextWidth(test, fontSize) <= maxWidth || !line) {
+            line = test;
+          } else {
+            lines.push(line);
+            line = word;
+          }
+        });
+        if (line) lines.push(line);
+
+        const trimmed = lines.slice(0, maxLines);
+        if (lines.length > maxLines && trimmed.length) {
+          let last = trimmed[trimmed.length - 1];
+          while (last.length > 1 && estimatePdfTextWidth(`${last}...`, fontSize) > maxWidth) {
+            last = last.slice(0, -1);
+          }
+          trimmed[trimmed.length - 1] = `${last}...`;
+        }
+        return trimmed;
+      }
+
+      function estimatePdfTextWidth(text, fontSize) {
+        return text.length * fontSize * 0.52;
+      }
+
+      function escapePdfText(text) {
+        return String(text)
+          .normalize('NFKD')
+          .replace(/[^\x20-\x7E]/g, '?')
+          .replace(/\\/g, '\\\\')
+          .replace(/\(/g, '\\(')
+          .replace(/\)/g, '\\)');
+      }
+
+      function makeSimplePdf(contentStream, pageW, pageH) {
+        const encoder = new TextEncoder();
+        const objects = [];
+        objects.push('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+        objects.push('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n');
+        objects.push(`3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pdfNum(pageW)} ${pdfNum(pageH)}] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>\nendobj\n`);
+        objects.push('4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n');
+        objects.push('5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj\n');
+        objects.push(`6 0 obj\n<< /Length ${encoder.encode(contentStream).length} >>\nstream\n${contentStream}\nendstream\nendobj\n`);
+
+        let pdf = '%PDF-1.4\n';
+        const offsets = [0];
+        objects.forEach(obj => {
+          offsets.push(encoder.encode(pdf).length);
+          pdf += obj;
+        });
+
+        const xrefOffset = encoder.encode(pdf).length;
+        pdf += `xref\n0 ${objects.length + 1}\n`;
+        pdf += '0000000000 65535 f \n';
+        for (let i = 1; i <= objects.length; i++) {
+          pdf += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`;
+        }
+        pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+        return pdf;
+      }
+
+      function getAppState() {
+        return {
+          version: 1,
+          canvasMode: els.canvasMode.value,
+          orientation: els.orientation.value,
+          template: els.template.value,
+          customRows: parseInt(els.customRows.value || '2', 10),
+          customCols: parseInt(els.customCols.value || '2', 10),
+          tool: currentTool,
+          bubbles: collectBubbles()
+        };
+      }
+
+      function applyState(state) {
+        if (!state) return false;
+        els.canvasMode.value = state.canvasMode || 'full';
+        els.orientation.value = state.orientation || 'portrait';
+        updateOrientation();
+        els.template.value = state.template && layouts[state.template] ? state.template : 'fourGrid';
+        els.customRows.value = Math.max(1, Math.min(8, state.customRows || 2));
+        els.customCols.value = Math.max(1, Math.min(8, state.customCols || 2));
+        updateCustomVisibility();
+        setTool(state.tool || 'speech');
+        buildLayout({ bubbles: state.bubbles || [] });
+        setStatus('Draft loaded');
+        return true;
+      }
+
+      function saveDraft() {
+        const state = getAppState();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        setStatus('Draft saved');
+      }
+
+      function loadDraft() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          setStatus('No saved draft found');
+          return;
+        }
+        try {
+          const state = JSON.parse(raw);
+          applyState(state);
+        } catch (err) {
+          console.error(err);
+          setStatus('Saved draft could not be loaded');
+        }
+      }
+
+      function queueAutosave() {
+        window.clearTimeout(autosaveTimer);
+        autosaveTimer = window.setTimeout(() => {
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(getAppState()));
+          } catch (err) {
+            console.error(err);
+          }
+        }, AUTOSAVE_DELAY);
+      }
+
+      function clearPage() {
+        if (!confirm('Clear all bubbles from this page?')) return;
+        buildLayout();
+        setStatus('Page cleared');
+      }
+
+      function selectBubble(bubble) {
+        if (selectedBubble === bubble) return;
+        if (selectedBubble) selectedBubble.classList.remove('selected');
+        selectedBubble = bubble;
+        if (selectedBubble) selectedBubble.classList.add('selected');
+      }
+
+      function clearSelection() {
+        if (selectedBubble) selectedBubble.classList.remove('selected');
+        selectedBubble = null;
+      }
+
+      function setTool(tool) {
+        currentTool = tool;
+        els.toolButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.tool === tool));
+        setStatus(`${labelForTool(tool)} bubble tool selected`);
+      }
+
+      function labelForTool(tool) {
+        const map = {
+          speech: 'Speech',
+          thought: 'Thought',
+          scream: 'Scream',
+          exclaim: 'Exclamation',
+          caption: 'Caption'
+        };
+        return map[tool] || tool;
+      }
+
+      function startDrag(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        const handle = event.currentTarget;
+        const bubble = handle.closest('.bubble');
+        const panel = bubble.parentElement;
+        const panelRect = panel.getBoundingClientRect();
+        const bubbleRect = bubble.getBoundingClientRect();
+        selectBubble(bubble);
+        dragState = {
+          bubble,
+          panel,
+          panelRect,
+          startX: event.clientX,
+          startY: event.clientY,
+          startLeftPx: bubbleRect.left - panelRect.left,
+          startTopPx: bubbleRect.top - panelRect.top,
+          pointerId: event.pointerId
+        };
+        handle.setPointerCapture && handle.setPointerCapture(event.pointerId);
+      }
+
+      function startResize(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        const handle = event.currentTarget;
+        const bubble = handle.closest('.bubble');
+        const panel = bubble.parentElement;
+        const panelRect = panel.getBoundingClientRect();
+        const bubbleRect = bubble.getBoundingClientRect();
+        selectBubble(bubble);
+        resizeState = {
+          bubble,
+          panelRect,
+          startX: event.clientX,
+          startY: event.clientY,
+          startWidthPx: bubbleRect.width,
+          startHeightPx: bubbleRect.height,
+          leftPx: bubbleRect.left - panelRect.left,
+          topPx: bubbleRect.top - panelRect.top,
+          pointerId: event.pointerId
+        };
+        handle.setPointerCapture && handle.setPointerCapture(event.pointerId);
+      }
+
+      function onPointerMove(event) {
+        if (dragState) {
+          const { bubble, panelRect, startX, startY, startLeftPx, startTopPx } = dragState;
+          const dx = event.clientX - startX;
+          const dy = event.clientY - startY;
+          const widthPx = bubble.getBoundingClientRect().width;
+          const heightPx = bubble.getBoundingClientRect().height;
+          const nextLeft = clamp(startLeftPx + dx, 0, panelRect.width - widthPx);
+          const nextTop = clamp(startTopPx + dy, 0, panelRect.height - heightPx);
+          bubble.style.left = `${(nextLeft / panelRect.width) * 100}%`;
+          bubble.style.top = `${(nextTop / panelRect.height) * 100}%`;
+          return;
+        }
+
+        if (resizeState) {
+          const { bubble, panelRect, startX, startY, startWidthPx, startHeightPx, leftPx, topPx } = resizeState;
+          const dx = event.clientX - startX;
+          const dy = event.clientY - startY;
+          const maxWidth = panelRect.width - leftPx;
+          const maxHeight = panelRect.height - topPx;
+          const nextWidth = clamp(startWidthPx + dx, 86, maxWidth);
+          const nextHeight = clamp(startHeightPx + dy, 62, maxHeight);
+          bubble.style.width = `${(nextWidth / panelRect.width) * 100}%`;
+          bubble.style.height = `${(nextHeight / panelRect.height) * 100}%`;
+        }
+      }
+
+      function onPointerUp() {
+        if (!dragState && !resizeState) return;
+        dragState = null;
+        resizeState = null;
+        queueAutosave();
+      }
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function initEvents() {
+        els.template.addEventListener('change', () => {
+          updateCustomVisibility();
+          buildLayout({ bubbles: collectBubbles() });
+        });
+        els.canvasMode.addEventListener('change', () => buildLayout({ bubbles: collectBubbles() }));
+        els.orientation.addEventListener('change', () => {
+          updateOrientation();
+          queueAutosave();
+        });
+        els.rebuildBtn.addEventListener('click', () => buildLayout());
+        els.clearBtn.addEventListener('click', clearPage);
+        els.saveBtn.addEventListener('click', saveDraft);
+        els.loadBtn.addEventListener('click', loadDraft);
+        els.printBtn.addEventListener('click', exportComicPdf);
+        els.customRows.addEventListener('change', () => {
+          els.customRows.value = clamp(parseInt(els.customRows.value || '1', 10), 1, 8);
+          if (els.template.value === 'custom') buildLayout({ bubbles: collectBubbles() });
+        });
+        els.customCols.addEventListener('change', () => {
+          els.customCols.value = clamp(parseInt(els.customCols.value || '1', 10), 1, 8);
+          if (els.template.value === 'custom') buildLayout({ bubbles: collectBubbles() });
+        });
+
+        els.toolButtons.forEach(btn => {
+          btn.addEventListener('click', () => setTool(btn.dataset.tool));
+        });
+
+        document.addEventListener('pointermove', onPointerMove);
+        document.addEventListener('pointerup', onPointerUp);
+        document.addEventListener('click', (e) => {
+          if (!e.target.closest('.bubble')) clearSelection();
+        });
+        document.addEventListener('keydown', (e) => {
+          if ((e.key === 'Delete' || e.key === 'Backspace') && selectedBubble) {
+            const active = document.activeElement;
+            if (active && active.closest && active.closest('.bubble-text')) return;
+            selectedBubble.remove();
+            clearSelection();
+            queueAutosave();
+            setStatus('Bubble deleted');
+          }
+        });
+        window.addEventListener('resize', fitPageToScreen);
+      }
+
+      function init() {
+        populateTemplates();
+        updateCustomVisibility();
+        updateOrientation();
+        initEvents();
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          try {
+            const state = JSON.parse(raw);
+            applyState(state);
+            return;
+          } catch (err) {
+            console.error(err);
+          }
+        }
+        buildLayout();
+        setStatus('Ready');
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
