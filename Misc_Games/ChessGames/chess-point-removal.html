@@ -1,0 +1,1051 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chess: Point Removal</title>
+  <style>
+    :root{
+      --bg:#f7f1e7;
+      --paper:#fffaf2;
+      --ink:#29231d;
+      --muted:#74685c;
+      --line:#dfcfba;
+      --accent:#4f6f52;
+      --accent2:#925f3c;
+      --danger:#aa453c;
+      --gold:#e4b75f;
+      --shadow:0 18px 46px rgba(54,40,24,.14);
+      --radius:22px;
+    }
+    *{box-sizing:border-box}
+    html,body{min-height:100%;margin:0}
+    body{
+      font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color:var(--ink);
+      background:
+        radial-gradient(circle at 18% 8%, rgba(228,183,95,.25), transparent 34%),
+        radial-gradient(circle at 80% 20%, rgba(79,111,82,.18), transparent 33%),
+        linear-gradient(135deg,#f5ead9 0%,#fbf6ed 48%,#efe1cd 100%);
+    }
+    button,input,select{font:inherit}
+    .page{width:min(1180px,96vw);margin:0 auto;padding:18px 0 28px}
+    .topbar{
+      display:flex;align-items:center;justify-content:space-between;gap:16px;
+      background:rgba(255,250,242,.9);border:1px solid rgba(223,207,186,.95);
+      border-radius:24px;box-shadow:var(--shadow);padding:14px 16px;margin-bottom:16px;
+    }
+    .brand{display:flex;align-items:center;gap:13px;min-width:0}
+    .logo{
+      width:54px;height:54px;border-radius:18px;display:grid;place-items:center;
+      background:linear-gradient(145deg,#4f6f52,#314934);color:white;font-size:2rem;box-shadow:0 10px 24px rgba(49,73,52,.22);
+      flex:0 0 auto;
+    }
+    h1{margin:0;font-size:clamp(1.45rem,3.1vw,2.45rem);line-height:1.02;letter-spacing:-.04em}
+    .subtitle{margin:.25rem 0 0;color:var(--muted);font-weight:750;font-size:.98rem}
+    .pillbar{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .pill{background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 11px;color:#5e5147;font-weight:900;font-size:.82rem;white-space:nowrap}
+    .appgrid{display:grid;grid-template-columns:minmax(290px,350px) 1fr;gap:16px;align-items:start}
+    .panel{background:rgba(255,250,242,.94);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+    .stack{display:grid;gap:12px}
+    .panel h2,.panel h3{margin:0;line-height:1.05;letter-spacing:-.025em}
+    .panel h2{font-size:1.28rem}.panel h3{font-size:1rem;margin-top:4px}
+    label{font-size:.78rem;font-weight:950;text-transform:uppercase;letter-spacing:.06em;color:#665a50}
+    input,select{
+      width:100%;border:1px solid var(--line);border-radius:14px;padding:11px 12px;background:#fff;color:var(--ink);
+      outline:none;font-weight:750;
+    }
+    input:focus,select:focus{border-color:#8aa17d;box-shadow:0 0 0 4px rgba(79,111,82,.13)}
+    .fieldgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .controls{display:flex;gap:10px;flex-wrap:wrap}
+    button{
+      border:0;border-radius:15px;padding:11px 13px;background:var(--accent);color:#fff;font-weight:950;cursor:pointer;
+      box-shadow:0 9px 20px rgba(49,73,52,.2);transition:transform .08s ease, filter .12s ease;
+    }
+    button:hover{filter:brightness(1.04)}button:active{transform:translateY(1px)}
+    button.secondary{background:#fff;color:#3d332a;border:1px solid var(--line);box-shadow:none}
+    button.danger{background:var(--danger)}
+    button:disabled{opacity:.55;cursor:not-allowed;filter:grayscale(.1)}
+    .notice{background:#fff5df;border:1px solid #ebd2a4;border-radius:18px;padding:11px 12px;color:#5c4b31;font-weight:770;line-height:1.35}
+    .statrow{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+    .stat{background:#fff;border:1px solid var(--line);border-radius:17px;padding:10px;text-align:center;min-width:0}
+    .stat b{display:block;font-size:1.05rem;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .stat span{display:block;color:var(--muted);font-weight:900;font-size:.73rem;text-transform:uppercase;letter-spacing:.04em;margin-top:5px}
+    .statusBox{border-radius:18px;padding:12px;border:1px solid #d8c7af;background:#fff;line-height:1.35;font-weight:850;min-height:48px}
+    .statusBox.check{border-color:#e0b45d;background:#fff6df}.statusBox.over{border-color:#d9948d;background:#fff1ef}
+    .legend{display:flex;gap:7px;flex-wrap:wrap}.legend span{background:#fff;border:1px solid var(--line);border-radius:999px;padding:7px 9px;font-size:.78rem;font-weight:900;color:#5d5045}
+    .hint{margin:0;color:var(--muted);line-height:1.43;font-weight:650;font-size:.9rem}
+    .moveLog{max-height:250px;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:17px;padding:9px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.8rem;line-height:1.35}
+    .moveLog div{padding:5px 3px;border-bottom:1px solid #f0e6d9}.moveLog div:last-child{border-bottom:0}.moveLog .empty{color:var(--muted);font-family:inherit}
+    .boardPanel{display:grid;place-items:center;gap:12px;min-height:0}
+    .boardShell{
+      --cols:8;
+      --rows:8;
+      --label-col:34px;
+      --label-row:28px;
+      --board-gap:7px;
+      --sq:64px;
+      --piece-size:46px;
+      --board-w:512px;
+      --board-h:512px;
+      --shell-w:553px;
+      width:var(--shell-w);
+      max-width:100%;
+      display:grid;
+      grid-template-columns:var(--label-col) var(--board-w);
+      grid-template-rows:var(--board-h) var(--label-row);
+      gap:var(--board-gap);
+      justify-content:center;
+    }
+    .rankLabels{grid-column:1;grid-row:1;display:grid;grid-template-rows:repeat(8,1fr);align-items:center;text-align:center;color:var(--muted);font-weight:950}
+    .fileLabels{grid-column:2;grid-row:2;display:grid;grid-template-columns:repeat(8,1fr);text-align:center;color:var(--muted);font-weight:950;text-transform:uppercase;align-items:center}
+    .chessboard{grid-column:2;grid-row:1;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);width:var(--board-w);height:var(--board-h);border:6px solid #4b3a2e;border-radius:18px;overflow:hidden;background:#4b3a2e;box-shadow:0 19px 44px rgba(47,31,17,.28);touch-action:manipulation}
+    .sq{position:relative;display:grid;place-items:center;border:0;border-radius:0;box-shadow:none;padding:0;cursor:pointer;user-select:none;font-size:var(--piece-size);line-height:1;background:transparent;color:inherit;min-width:0;min-height:0}
+    .sq.light{background:#f0d9b5}.sq.dark{background:#b58863}.sq:hover{filter:brightness(1.04)}
+    .sq.blocked{cursor:not-allowed;background:repeating-linear-gradient(45deg,#615143 0 10px,#4b3a2e 10px 20px)!important;color:#fff;box-shadow:inset 0 0 0 4px rgba(255,250,242,.28)}
+    .sq.blocked::before{content:"";position:absolute;inset:18%;border-radius:12px;background:rgba(255,250,242,.82);clip-path:polygon(16% 0,50% 34%,84% 0,100% 16%,66% 50%,100% 84%,84% 100%,50% 66%,16% 100%,0 84%,34% 50%,0 16%)}
+    .sq.blocked:hover{filter:none}
+
+    .sq.removable{outline:5px solid rgba(79,111,82,.72);outline-offset:-5px}
+    .sq.removable::before{content:"−";position:absolute;top:5px;right:6px;z-index:2;display:grid;place-items:center;width:22px;height:22px;border-radius:999px;background:rgba(79,111,82,.95);color:#fff;font-weight:1000;font-size:1rem;line-height:1;box-shadow:0 4px 10px rgba(0,0,0,.18)}
+    .sq.tooExpensive{filter:saturate(.55) brightness(.92);cursor:not-allowed;outline:5px solid rgba(116,104,92,.38);outline-offset:-5px}
+    .sq.tooExpensive::before{content:"×";position:absolute;top:5px;right:6px;z-index:2;display:grid;place-items:center;width:22px;height:22px;border-radius:999px;background:rgba(116,104,92,.92);color:#fff;font-weight:1000;font-size:1rem;line-height:1;box-shadow:0 4px 10px rgba(0,0,0,.18);pointer-events:none}
+    .phaseTag{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:7px 10px;font-size:.78rem;font-weight:950;color:#5d5045}
+    .phaseTag b{color:var(--accent2)}
+    .sq.selected{outline:6px solid rgba(50,78,54,.86);outline-offset:-6px;z-index:2}
+    .sq.last::after{content:"";position:absolute;inset:0;background:rgba(228,183,95,.24);pointer-events:none}
+    .sq.checkSq::after{content:"";position:absolute;inset:0;background:radial-gradient(circle, rgba(170,69,60,.55), rgba(170,69,60,.12) 62%, transparent);pointer-events:none}
+    .sq.move .moveDot{position:absolute;width:22%;aspect-ratio:1;border-radius:50%;background:rgba(49,73,52,.55);box-shadow:0 0 0 4px rgba(255,255,255,.18);pointer-events:none}
+    .sq.capture .moveRing{position:absolute;inset:9%;border:6px solid rgba(170,69,60,.75);border-radius:50%;box-shadow:inset 0 0 0 3px rgba(255,255,255,.12);pointer-events:none}
+    .sq.castle .castleIcon{position:absolute;font-size:1.1rem;font-weight:1000;color:#2f4a34;background:rgba(255,250,242,.78);border-radius:999px;padding:1px 8px;bottom:7px;right:7px;pointer-events:none}
+    .piece{position:relative;z-index:1;pointer-events:none}.piece.white{color:#fff;text-shadow:0 2px 0 #777,0 0 9px rgba(0,0,0,.5)}.piece.black{color:#1e1b17;text-shadow:0 1px 0 #fff,0 0 5px rgba(255,255,255,.6)}
+    .coord{display:none}
+    .topNote{width:min(100%,760px);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:#5b4e43;font-weight:850}.topNote b{color:var(--ink)}
+    .modalBackdrop{position:fixed;inset:0;background:rgba(42,30,19,.46);display:none;align-items:center;justify-content:center;padding:18px;z-index:30}.modalBackdrop.show{display:flex}.modal{width:min(440px,94vw);background:#fffaf2;border:1px solid var(--line);border-radius:26px;box-shadow:0 28px 70px rgba(0,0,0,.25);padding:22px;text-align:center}.modal h2{margin:0 0 8px;font-size:2rem;letter-spacing:-.04em}.modal p{margin:0 0 16px;color:var(--muted);font-weight:750;line-height:1.4}.modal .controls{justify-content:center}
+    @media(max-width:900px){.appgrid{grid-template-columns:1fr}.boardPanel{min-height:auto}.panel.setup{order:2}.panel.boardPanel{order:1}.topbar{align-items:flex-start}.pillbar{justify-content:flex-start}}
+    @media(max-width:560px){.page{width:100%;padding:8px}.topbar{border-radius:18px}.logo{width:46px;height:46px;border-radius:15px}.panel{padding:12px;border-radius:18px}.fieldgrid{grid-template-columns:1fr}.boardShell{--label-col:24px;--label-row:22px;--board-gap:5px}.chessboard{border-width:3px;border-radius:12px}.statrow{grid-template-columns:repeat(3,1fr);gap:6px}.stat{padding:8px 5px}.stat b{font-size:.9rem}.pill{font-size:.72rem;padding:7px 8px}}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">♟️</div>
+        <div>
+          <h1>Chess: Point Removal</h1>
+          <p class="subtitle">Normal chess, but before the first move each side spends points to remove opponent pieces.</p>
+        </div>
+      </div>
+      <div class="pillbar" aria-label="Game features">
+        <span class="pill">Standard board</span>
+        <span class="pill">1–15 removal points</span>
+        <span class="pill">CPU mode</span>
+      </div>
+    </header>
+
+    <section class="appgrid">
+      <aside class="panel setup stack">
+        <h2>Setup</h2>
+        <div class="notice">Choose a removal budget from 1–15 points. Before the game starts, each side can click opponent pieces to remove them. Kings cannot be removed. Press Submit Removes when finished.</div>
+
+        <div class="fieldgrid">
+          <div class="stack">
+            <label for="removalPointsSelect">Removal points</label>
+            <select id="removalPointsSelect">
+              <option value="1">1 point</option>
+              <option value="2">2 points</option>
+              <option value="3">3 points</option>
+              <option value="4">4 points</option>
+              <option value="5">5 points</option>
+              <option value="6">6 points</option>
+              <option value="7">7 points</option>
+              <option value="8">8 points</option>
+              <option value="9">9 points</option>
+              <option value="10" selected>10 points</option>
+              <option value="11">11 points</option>
+              <option value="12">12 points</option>
+              <option value="13">13 points</option>
+              <option value="14">14 points</option>
+              <option value="15">15 points</option>
+            </select>
+          </div>
+          <div class="stack">
+            <label for="modeSelect">Game mode</label>
+            <select id="modeSelect">
+              <option value="pvp">Two players</option>
+              <option value="cpu">Play CPU</option>
+            </select>
+          </div>
+          <div class="stack cpuOnly">
+            <label for="playerColorSelect">Your colour</label>
+            <select id="playerColorSelect">
+              <option value="white">White</option>
+              <option value="black">Black</option>
+            </select>
+          </div>
+          <div class="stack cpuOnly">
+            <label for="cpuLevelSelect">CPU difficulty</label>
+            <select id="cpuLevelSelect">
+              <option value="easy">Easy</option>
+              <option value="normal" selected>Normal</option>
+              <option value="hard">Hard</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button id="newGameBtn">New Game</button>
+          <button class="secondary" id="doneRemovingBtn">Submit Removes</button>
+          <button class="secondary" id="undoRemoveBtn">Undo Remove</button>
+        </div>
+
+        <div class="statrow">
+          <div class="stat"><b id="turnText">Setup</b><span>Phase</span></div>
+          <div class="stat"><b id="pointsText">10</b><span>Points left</span></div>
+          <div class="stat"><b id="movesText">0</b><span>Moves</span></div>
+        </div>
+
+        <div id="status" class="statusBox">Ready.</div>
+        <div class="legend"><span>Pawn 1</span><span>Knight/Bishop 3</span><span>Rook 5</span><span>Queen 9</span><span>King safe</span></div>
+        <p class="hint">Click opponent pieces during the removal phase. Use Undo Remove if someone removes the wrong piece. Spend any amount up to your budget, then press Submit Removes. After both sides submit, normal chess begins with castling, en passant, promotion, check, and checkmate.</p>
+
+        <h3>Log</h3>
+        <div id="moveLog" class="moveLog" aria-live="polite"></div>
+      </aside>
+
+      <section class="panel boardPanel">
+        <div class="topNote"><span id="boardNote"><b>White</b> to move.</span><span id="checkNote">No check.</span></div>
+        <div class="boardShell" aria-label="Chess board area">
+          <div class="rankLabels" id="rankLabels"></div>
+          <div class="chessboard" id="board" role="grid" aria-label="Chess board"></div>
+          <div class="fileLabels" id="fileLabels"></div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <div id="endModal" class="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="endTitle">
+    <div class="modal">
+      <h2 id="endTitle">Game Over</h2>
+      <p id="endMessage">White wins.</p>
+      <div class="controls">
+        <button id="modalNewGameBtn">New Game</button>
+        <button class="secondary" id="closeModalBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const FILES = ['a','b','c','d','e','f','g','h'];
+  const ROWS = 8;
+  const COLS = 8;
+  const PIECES = {
+    white: { k:'♔', q:'♕', r:'♖', b:'♗', n:'♘', p:'♙' },
+    black: { k:'♚', q:'♛', r:'♜', b:'♝', n:'♞', p:'♟' }
+  };
+  const PIECE_NAMES = {p:'pawn',r:'rook',n:'knight',b:'bishop',q:'queen',k:'king'};
+  const PIECE_VALUES = {p:100,n:320,b:330,r:500,q:900,k:20000};
+  const REMOVAL_VALUES = {p:1,n:3,b:3,r:5,q:9,k:Infinity};
+
+  const els = {
+    board: document.getElementById('board'),
+    fileLabels: document.getElementById('fileLabels'),
+    rankLabels: document.getElementById('rankLabels'),
+    removalPoints: document.getElementById('removalPointsSelect'),
+    mode: document.getElementById('modeSelect'),
+    playerColor: document.getElementById('playerColorSelect'),
+    cpuLevel: document.getElementById('cpuLevelSelect'),
+    newGame: document.getElementById('newGameBtn'),
+    doneRemoving: document.getElementById('doneRemovingBtn'),
+    undoRemove: document.getElementById('undoRemoveBtn'),
+    turnText: document.getElementById('turnText'),
+    pointsText: document.getElementById('pointsText'),
+    movesText: document.getElementById('movesText'),
+    status: document.getElementById('status'),
+    boardNote: document.getElementById('boardNote'),
+    checkNote: document.getElementById('checkNote'),
+    moveLog: document.getElementById('moveLog'),
+    endModal: document.getElementById('endModal'),
+    endTitle: document.getElementById('endTitle'),
+    endMessage: document.getElementById('endMessage'),
+    modalNewGame: document.getElementById('modalNewGameBtn'),
+    closeModal: document.getElementById('closeModalBtn'),
+    cpuOnly: Array.from(document.querySelectorAll('.cpuOnly'))
+  };
+
+  let board = [];
+  let blocked = new Set();
+  let turn = 'white';
+  let selected = null;
+  let legalForSelected = [];
+  let moveLog = [];
+  let enPassant = null;
+  let gameOver = false;
+  let resultText = '';
+  let lastMove = null;
+  let cpuThinking = false;
+  let removalPhase = true;
+  let removalBudget = 10;
+  let removalTurn = 'white';
+  let removalRemaining = {white:10, black:10};
+  let removalLog = [];
+  let removalUndoStack = [];
+  let pendingRemovalAdvanceTimer = null;
+
+  function cap(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+  function other(color){ return color === 'white' ? 'black' : 'white'; }
+  function coord(r,c){ return `${FILES[c].toUpperCase()}${8-r}`; }
+  function pieceName(p){ return PIECE_NAMES[p.type]; }
+  function inBounds(r,c){ return r >= 0 && r < ROWS && c >= 0 && c < COLS; }
+  function keyOf(r,c){ return `${r},${c}`; }
+  function isBlocked(r,c){ return blocked.has(keyOf(r,c)); }
+  function cloneBoard(src){ return src.map(row => row.map(p => p ? {...p} : null)); }
+
+  function baseBoard(){
+    const row0 = ['r','n','b','q','k','b','n','r'];
+    const grid = Array.from({length:8}, () => Array(8).fill(null));
+    for(let c=0;c<8;c++){
+      grid[0][c] = {color:'black', type:row0[c], moved:false};
+      grid[1][c] = {color:'black', type:'p', moved:false};
+      grid[6][c] = {color:'white', type:'p', moved:false};
+      grid[7][c] = {color:'white', type:row0[c], moved:false};
+    }
+    return grid;
+  }
+
+  function chooseBlockedSquares(count){
+    return new Set();
+  }
+
+  function startGame(){
+    board = baseBoard();
+    blocked = new Set();
+    removalBudget = Number(els.removalPoints.value);
+    removalRemaining = {white:removalBudget, black:removalBudget};
+    removalTurn = els.mode.value === 'cpu' ? els.playerColor.value : 'white';
+    removalPhase = true;
+    removalLog = [];
+    removalUndoStack = [];
+    if(pendingRemovalAdvanceTimer){
+      clearTimeout(pendingRemovalAdvanceTimer);
+      pendingRemovalAdvanceTimer = null;
+    }
+    turn = 'white';
+    selected = null;
+    legalForSelected = [];
+    moveLog = [];
+    enPassant = null;
+    gameOver = false;
+    resultText = '';
+    lastMove = null;
+    cpuThinking = false;
+    els.endModal.classList.remove('show');
+    renderLabels();
+    render();
+    setStatus(`${cap(removalTurn)} removes pieces first. Click opponent pieces or press Submit Removes.`);
+  }
+
+  function renderLabels(){
+    els.rankLabels.innerHTML = '';
+    for(let r=8;r>=1;r--){
+      const d = document.createElement('div');
+      d.textContent = r;
+      els.rankLabels.appendChild(d);
+    }
+    els.rankLabels.style.gridTemplateRows = `repeat(${ROWS}, 1fr)`;
+    els.fileLabels.innerHTML = '';
+    FILES.forEach(f => {
+      const d = document.createElement('div');
+      d.textContent = f;
+      els.fileLabels.appendChild(d);
+    });
+    els.fileLabels.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
+    els.board.style.gridTemplateRows = `repeat(${ROWS}, 1fr)`;
+    els.board.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
+    resizeBoardToWindow();
+    window.requestAnimationFrame(resizeBoardToWindow);
+  }
+
+  function resizeBoardToWindow(){
+    const shell = document.querySelector('.boardShell');
+    const panel = document.querySelector('.boardPanel');
+    if(!shell || !panel) return;
+    const styles = getComputedStyle(shell);
+    const labelCol = parseFloat(styles.getPropertyValue('--label-col')) || 34;
+    const labelRow = parseFloat(styles.getPropertyValue('--label-row')) || 28;
+    const gap = parseFloat(styles.getPropertyValue('--board-gap')) || 7;
+    const panelWidth = panel.clientWidth || window.innerWidth;
+    const rect = shell.getBoundingClientRect();
+    const mobile = window.matchMedia('(max-width:560px)').matches;
+    const tablet = window.matchMedia('(max-width:900px)').matches;
+    const maxSq = mobile ? 48 : (tablet ? 60 : 66);
+    const minSq = mobile ? 24 : 30;
+    const sideBuffer = mobile ? 4 : 18;
+    const bottomBuffer = mobile ? 10 : 18;
+    const availableW = Math.max(120, panelWidth - labelCol - gap - sideBuffer);
+    const availableH = Math.max(120, window.innerHeight - rect.top - labelRow - gap - bottomBuffer);
+    let sq = Math.floor(Math.min(availableW / COLS, availableH / ROWS, maxSq));
+    if(!Number.isFinite(sq)) sq = maxSq;
+    sq = Math.max(minSq, sq);
+    const boardW = sq * COLS;
+    const boardH = sq * ROWS;
+    const shellW = labelCol + gap + boardW;
+    shell.style.setProperty('--sq', `${sq}px`);
+    shell.style.setProperty('--piece-size', `${Math.max(18, Math.min(64, Math.floor(sq * 0.72)))}px`);
+    shell.style.setProperty('--board-w', `${boardW}px`);
+    shell.style.setProperty('--board-h', `${boardH}px`);
+    shell.style.setProperty('--shell-w', `${shellW}px`);
+  }
+
+  function render(){
+    updateCpuControls();
+    els.board.innerHTML = '';
+    const moveMap = removalPhase ? new Map() : new Map(legalForSelected.map(m => [`${m.tr},${m.tc}`, m]));
+    const checkKing = (!removalPhase && isInCheck(board, turn)) ? findKing(board, turn) : null;
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const sq = document.createElement('button');
+        sq.type = 'button';
+        sq.className = `sq ${((r+c)%2===0)?'light':'dark'}`;
+        sq.setAttribute('role','gridcell');
+        sq.setAttribute('aria-label', coord(r,c));
+        const key = `${r},${c}`;
+        if(isBlocked(r,c)){
+          sq.classList.add('blocked');
+          sq.setAttribute('aria-label', `${coord(r,c)} blocked`);
+          sq.title = `${coord(r,c)} is blocked`;
+        }
+        const piece = board[r][c];
+        if(removalPhase && piece && piece.color === other(removalTurn) && piece.type !== 'k'){
+          const cost = REMOVAL_VALUES[piece.type];
+          sq.classList.add(cost <= removalRemaining[removalTurn] ? 'removable' : 'tooExpensive');
+          sq.title = `${cap(piece.color)} ${pieceName(piece)}: ${cost} point${cost === 1 ? '' : 's'}`;
+        }
+        if(!removalPhase && selected && selected.r === r && selected.c === c) sq.classList.add('selected');
+        if(!removalPhase && lastMove && ((lastMove.sr === r && lastMove.sc === c) || (lastMove.tr === r && lastMove.tc === c))) sq.classList.add('last');
+        if(checkKing && checkKing.r === r && checkKing.c === c) sq.classList.add('checkSq');
+        const move = moveMap.get(key);
+        if(move){
+          const target = board[r][c];
+          sq.classList.add(target || move.special === 'enPassant' ? 'capture' : 'move');
+          if(move.special === 'castle') sq.classList.add('castle');
+        }
+        if(piece){
+          const p = document.createElement('span');
+          p.className = `piece ${piece.color}`;
+          p.textContent = PIECES[piece.color][piece.type];
+          sq.appendChild(p);
+        }
+        if(move && !board[r][c] && move.special !== 'castle'){
+          const dot = document.createElement('span');
+          dot.className = 'moveDot';
+          sq.appendChild(dot);
+        }
+        if(move && (board[r][c] || move.special === 'enPassant')){
+          const ring = document.createElement('span');
+          ring.className = 'moveRing';
+          sq.appendChild(ring);
+        }
+        if(move && move.special === 'castle'){
+          const castle = document.createElement('span');
+          castle.className = 'castleIcon';
+          castle.textContent = '⇆';
+          sq.appendChild(castle);
+        }
+        const label = document.createElement('span');
+        label.className = 'coord';
+        label.textContent = coord(r,c).toLowerCase();
+        sq.appendChild(label);
+        sq.addEventListener('click', () => onSquare(r,c));
+        els.board.appendChild(sq);
+      }
+    }
+
+    if(removalPhase){
+      els.turnText.textContent = `${cap(removalTurn)} remove`;
+      els.pointsText.textContent = String(removalRemaining[removalTurn]);
+      els.doneRemoving.disabled = false;
+      els.undoRemove.disabled = !removalUndoStack.length;
+      els.boardNote.innerHTML = `<b>${cap(removalTurn)}</b> removal phase.`;
+      els.checkNote.textContent = `${removalRemaining[removalTurn]} point${removalRemaining[removalTurn] === 1 ? '' : 's'} left.`;
+    }else{
+      els.turnText.textContent = gameOver ? 'Over' : `${cap(turn)}${isCpuTurn() ? ' CPU' : ''}`;
+      els.pointsText.textContent = '—';
+      els.doneRemoving.disabled = true;
+      els.undoRemove.disabled = true;
+      els.boardNote.innerHTML = gameOver ? `<b>Game over.</b>` : `<b>${cap(turn)}</b> to move${isCpuTurn() ? ' · CPU' : ''}.`;
+      const checked = !gameOver && isInCheck(board, turn);
+      els.checkNote.textContent = gameOver ? resultText : (checked ? `${cap(turn)} is in check.` : 'No check.');
+    }
+    els.movesText.textContent = String(moveLog.length);
+    const combined = [...removalLog, ...moveLog];
+    els.moveLog.innerHTML = combined.length ? combined.map((m,i) => `<div>${combined.length - i}. ${m}</div>`).join('') : '<div class="empty">No moves yet.</div>';
+  }
+
+  function setStatus(text, kind=''){
+    els.status.className = `statusBox ${kind}`.trim();
+    els.status.textContent = text;
+  }
+
+  function updateCpuControls(){
+    const cpu = els.mode.value === 'cpu';
+    els.cpuOnly.forEach(el => el.style.display = cpu ? '' : 'none');
+  }
+
+  function onSquare(r,c){
+    if(gameOver || cpuThinking) return;
+    if(removalPhase){
+      onRemovalClick(r,c);
+      return;
+    }
+    if(isCpuTurn()) return;
+    const piece = board[r][c];
+    const clickedMove = legalForSelected.find(m => m.tr === r && m.tc === c);
+    if(selected && clickedMove){
+      makeMove(clickedMove, false);
+      return;
+    }
+    if(piece && piece.color === turn && !isBlocked(r,c)){
+      selectSquare(r,c);
+      return;
+    }
+    selected = null;
+    legalForSelected = [];
+    render();
+    setStatus(isBlocked(r,c) ? `${coord(r,c)} is blocked.` : `${cap(turn)} to move.`);
+  }
+
+  function onRemovalClick(r,c){
+    const piece = board[r][c];
+    if(!piece){
+      setStatus(`Choose one of ${cap(other(removalTurn))}'s pieces to remove, or press Submit Removes.`);
+      return;
+    }
+    if(piece.color === removalTurn){
+      setStatus(`${cap(removalTurn)} cannot remove their own piece.`);
+      return;
+    }
+    if(piece.type === 'k'){
+      setStatus(`Kings cannot be removed.`);
+      return;
+    }
+    const cost = REMOVAL_VALUES[piece.type];
+    if(cost > removalRemaining[removalTurn]){
+      setStatus(`${cap(piece.color)} ${pieceName(piece)} costs ${cost}, but ${cap(removalTurn)} has only ${removalRemaining[removalTurn]} point${removalRemaining[removalTurn] === 1 ? '' : 's'} left.`);
+      return;
+    }
+    const logText = `${cap(removalTurn)} removed ${cap(piece.color)} ${pieceName(piece)} on ${coord(r,c)} for ${cost} point${cost === 1 ? '' : 's'}.`;
+    removalUndoStack.push({r, c, piece:{...piece}, remover:removalTurn, cost, logText});
+    board[r][c] = null;
+    removalRemaining[removalTurn] -= cost;
+    removalLog.unshift(logText);
+    render();
+    if(removalRemaining[removalTurn] <= 0){
+      setStatus(`${cap(removalTurn)} has used all removal points. Press Submit Removes to continue, or use Undo Remove if that was a mistake.`);
+    }else{
+      setStatus(`${cap(removalTurn)} has ${removalRemaining[removalTurn]} point${removalRemaining[removalTurn] === 1 ? '' : 's'} left. Remove another piece, undo, or press Submit Removes.`);
+    }
+  }
+
+  function undoLastRemoval(){
+    if(!removalPhase || cpuThinking) return;
+    const last = removalUndoStack.pop();
+    if(!last){
+      setStatus('No removed pieces to undo.');
+      return;
+    }
+    if(pendingRemovalAdvanceTimer){
+      clearTimeout(pendingRemovalAdvanceTimer);
+      pendingRemovalAdvanceTimer = null;
+    }
+    if(board[last.r][last.c]){
+      removalUndoStack.push(last);
+      setStatus(`Cannot undo because ${coord(last.r,last.c)} is no longer empty.`);
+      render();
+      return;
+    }
+    board[last.r][last.c] = {...last.piece};
+    removalRemaining[last.remover] += last.cost;
+    removalTurn = last.remover;
+    selected = null;
+    legalForSelected = [];
+    const i = removalLog.indexOf(last.logText);
+    if(i >= 0) removalLog.splice(i, 1);
+    render();
+    setStatus(`${cap(last.remover)} undid the removal on ${coord(last.r,last.c)}. ${removalRemaining[last.remover]} point${removalRemaining[last.remover] === 1 ? '' : 's'} left.`);
+  }
+
+  function advanceRemovalPhase(){
+    if(!removalPhase) return;
+    if(els.mode.value === 'cpu'){
+      const cpuColor = other(els.playerColor.value);
+      cpuRemovePieces(cpuColor, removalBudget);
+      beginPlay();
+      return;
+    }
+    if(removalTurn === 'white'){
+      removalTurn = 'black';
+      selected = null;
+      legalForSelected = [];
+      render();
+      setStatus(`Black removal phase. Click White pieces to remove, or press Submit Removes.`);
+    }else{
+      beginPlay();
+    }
+  }
+
+  function beginPlay(){
+    if(pendingRemovalAdvanceTimer){
+      clearTimeout(pendingRemovalAdvanceTimer);
+      pendingRemovalAdvanceTimer = null;
+    }
+    removalPhase = false;
+    selected = null;
+    legalForSelected = [];
+    enPassant = null;
+    lastMove = null;
+    turn = 'white';
+    evaluateGameEnd();
+    render();
+    if(gameOver){
+      setStatus(resultText, 'over');
+      showEndModal();
+    }else if(isInCheck(board, turn)){
+      setStatus(`Removal finished. ${cap(turn)} is in check.`, 'check');
+    }else{
+      setStatus(`Removal finished. White to move.${isCpuTurn() ? ' CPU is thinking...' : ''}`);
+    }
+    maybeCpuMove();
+  }
+
+  function cpuRemovePieces(cpuColor, budget){
+    let remaining = budget;
+    const removed = [];
+    while(remaining > 0){
+      const candidates = [];
+      for(let r=0;r<ROWS;r++){
+        for(let c=0;c<COLS;c++){
+          const p = board[r][c];
+          if(p && p.color === other(cpuColor) && p.type !== 'k'){
+            const cost = REMOVAL_VALUES[p.type];
+            if(cost <= remaining) candidates.push({r,c,p,cost,score:scoreRemovalTarget(p,r,c,cpuColor)});
+          }
+        }
+      }
+      if(!candidates.length) break;
+      let choice;
+      const level = els.cpuLevel.value;
+      if(level === 'easy'){
+        choice = candidates[Math.floor(Math.random() * candidates.length)];
+      }else{
+        candidates.sort((a,b) => b.score - a.score);
+        if(level === 'normal'){
+          const pool = candidates.slice(0, Math.min(4, candidates.length));
+          choice = pool[Math.floor(Math.random() * pool.length)];
+        }else{
+          choice = candidates[0];
+        }
+      }
+      board[choice.r][choice.c] = null;
+      remaining -= choice.cost;
+      removed.push(`${cap(choice.p.color)} ${pieceName(choice.p)} on ${coord(choice.r,choice.c)} (${choice.cost})`);
+    }
+    removalRemaining[cpuColor] = remaining;
+    if(removed.length){
+      removalLog.unshift(`${cap(cpuColor)} CPU removed ${removed.join(', ')}.`);
+    }else{
+      removalLog.unshift(`${cap(cpuColor)} CPU removed no pieces.`);
+    }
+  }
+
+  function scoreRemovalTarget(piece, r, c, cpuColor){
+    const level = els.cpuLevel.value;
+    let score = REMOVAL_VALUES[piece.type] * 100;
+    if(piece.type === 'q') score += 80;
+    if(piece.type === 'r') score += 34;
+    if(piece.type === 'n' || piece.type === 'b') score += 18;
+    const centerBonus = (3.5 - Math.abs(3.5 - c)) + (3.5 - Math.abs(3.5 - r));
+    score += centerBonus * (level === 'hard' ? 9 : 4);
+    if(piece.type === 'p'){
+      if((piece.color === 'white' && r <= 3) || (piece.color === 'black' && r >= 4)) score += 12;
+      if(c === 3 || c === 4) score += 10;
+    }
+    return score + Math.random() * (level === 'hard' ? 5 : 40);
+  }
+
+  function selectSquare(r,c){
+    selected = {r,c};
+    legalForSelected = getLegalMovesForSquare(board, r, c, enPassant);
+    const piece = board[r][c];
+    render();
+    if(legalForSelected.length){
+      setStatus(`${cap(turn)} selected ${pieceName(piece)} on ${coord(r,c)}. Choose a highlighted square.`);
+    }else{
+      setStatus(`${cap(turn)} selected ${pieceName(piece)} on ${coord(r,c)}, but it has no legal moves.`);
+    }
+  }
+
+  function getPseudoMoves(brd, r, c, epObj, includeCastling=true){
+    const piece = brd[r][c];
+    if(!piece || isBlocked(r,c)) return [];
+    const moves = [];
+    const addStep = (tr,tc,special=null,extra={}) => {
+      if(!inBounds(tr,tc) || isBlocked(tr,tc)) return false;
+      const target = brd[tr][tc];
+      if(!target){ moves.push({sr:r,sc:c,tr,tc,special,...extra}); return true; }
+      if(target.color !== piece.color && target.type !== 'k') moves.push({sr:r,sc:c,tr,tc,special,...extra});
+      return false;
+    };
+    const slide = dirs => {
+      dirs.forEach(([dr,dc]) => {
+        let tr = r + dr, tc = c + dc;
+        while(inBounds(tr,tc)){
+          if(isBlocked(tr,tc)) break;
+          if(!addStep(tr,tc)) break;
+          tr += dr; tc += dc;
+        }
+      });
+    };
+
+    if(piece.type === 'p'){
+      const dir = piece.color === 'white' ? -1 : 1;
+      const startRow = piece.color === 'white' ? 6 : 1;
+      if(inBounds(r+dir,c) && !isBlocked(r+dir,c) && !brd[r+dir][c]){
+        moves.push({sr:r,sc:c,tr:r+dir,tc:c, promotion:(r+dir===0 || r+dir===7)});
+        if(r === startRow && inBounds(r+dir*2,c) && !isBlocked(r+dir*2,c) && !brd[r+dir*2][c]){
+          moves.push({sr:r,sc:c,tr:r+dir*2,tc:c, doublePawn:true});
+        }
+      }
+      for(const dc of [-1,1]){
+        const tr = r + dir, tc = c + dc;
+        if(inBounds(tr,tc) && !isBlocked(tr,tc)){
+          const target = brd[tr][tc];
+          if(target && target.color !== piece.color && target.type !== 'k'){
+            moves.push({sr:r,sc:c,tr,tc, promotion:(tr===0 || tr===7)});
+          }
+          if(epObj && epObj.allowedColor === piece.color && epObj.targetR === tr && epObj.targetC === tc){
+            const victim = brd[epObj.captureR]?.[epObj.captureC];
+            if(victim && victim.color !== piece.color && victim.type === 'p'){
+              moves.push({sr:r,sc:c,tr,tc,special:'enPassant',captureR:epObj.captureR,captureC:epObj.captureC});
+            }
+          }
+        }
+      }
+    } else if(piece.type === 'n'){
+      [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]].forEach(([dr,dc]) => addStep(r+dr,c+dc));
+    } else if(piece.type === 'b'){
+      slide([[-1,-1],[-1,1],[1,-1],[1,1]]);
+    } else if(piece.type === 'r'){
+      slide([[-1,0],[1,0],[0,-1],[0,1]]);
+    } else if(piece.type === 'q'){
+      slide([[-1,-1],[-1,1],[1,-1],[1,1],[-1,0],[1,0],[0,-1],[0,1]]);
+    } else if(piece.type === 'k'){
+      [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]].forEach(([dr,dc]) => addStep(r+dr,c+dc));
+      if(includeCastling) moves.push(...getCastlingMoves(brd, piece.color, r, c));
+    }
+    return moves;
+  }
+
+  function getCastlingMoves(brd, color, r, kingCol){
+    const king = brd[r][kingCol];
+    if(!king || king.type !== 'k' || king.moved || isBlocked(r,kingCol)) return [];
+    if(isInCheck(brd, color)) return [];
+    const moves = [];
+    const enemy = other(color);
+    for(const side of [-1,1]){
+      const rookCol = side === -1 ? 0 : COLS - 1;
+      const rook = brd[r][rookCol];
+      if(!rook || rook.color !== color || rook.type !== 'r' || rook.moved || isBlocked(r,rookCol)) continue;
+      if(side === -1 && rookCol >= kingCol) continue;
+      if(side === 1 && rookCol <= kingCol) continue;
+      const kingDest = kingCol + side * 2;
+      const rookDest = kingCol + side;
+      if(!inBounds(r, kingDest) || !inBounds(r, rookDest)) continue;
+      if(isBlocked(r, kingDest) || isBlocked(r, rookDest)) continue;
+      if(kingDest === rookCol || rookDest === rookCol) continue;
+      let clear = true;
+      const start = Math.min(kingCol, rookCol) + 1;
+      const end = Math.max(kingCol, rookCol) - 1;
+      for(let c=start;c<=end;c++){
+        if(brd[r][c] || isBlocked(r,c)){ clear = false; break; }
+      }
+      if(!clear) continue;
+      if(isSquareAttacked(brd, r, kingCol + side, enemy)) continue;
+      if(isSquareAttacked(brd, r, kingDest, enemy)) continue;
+      moves.push({sr:r,sc:kingCol,tr:r,tc:kingDest,special:'castle',side: side === 1 ? 'kingside':'queenside',rookFromC:rookCol,rookToC:rookDest});
+    }
+    return moves;
+  }
+
+  function getLegalMovesForSquare(brd, r, c, epObj){
+    const piece = brd[r]?.[c];
+    if(!piece || isBlocked(r,c)) return [];
+    return getPseudoMoves(brd, r, c, epObj, true).filter(move => {
+      const next = applyMoveToBoard(brd, move);
+      return !isInCheck(next, piece.color);
+    });
+  }
+
+  function allLegalMovesFor(brd, color, epObj){
+    const moves = [];
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const p = brd[r][c];
+        if(p && p.color === color && !isBlocked(r,c)) moves.push(...getLegalMovesForSquare(brd, r, c, epObj));
+      }
+    }
+    return moves;
+  }
+
+  function applyMoveToBoard(brd, move){
+    const next = cloneBoard(brd);
+    const piece = next[move.sr][move.sc];
+    if(!piece || isBlocked(move.tr, move.tc)) return next;
+    next[move.sr][move.sc] = null;
+    if(move.special === 'enPassant'){
+      next[move.captureR][move.captureC] = null;
+    }
+    if(move.special === 'castle'){
+      const rook = next[move.tr][move.rookFromC];
+      next[move.tr][move.rookFromC] = null;
+      piece.moved = true;
+      next[move.tr][move.tc] = piece;
+      if(rook){
+        rook.moved = true;
+        next[move.tr][move.rookToC] = rook;
+      }
+    }else{
+      piece.moved = true;
+      if(piece.type === 'p' && (move.tr === 0 || move.tr === 7)) piece.type = 'q';
+      next[move.tr][move.tc] = piece;
+    }
+    return next;
+  }
+
+  function computeNextEnPassant(move, pieceBefore){
+    if(pieceBefore.type === 'p' && Math.abs(move.tr - move.sr) === 2){
+      const targetR = (move.sr + move.tr) / 2;
+      if(isBlocked(targetR, move.sc)) return null;
+      return {
+        targetR,
+        targetC: move.sc,
+        captureR: move.tr,
+        captureC: move.tc,
+        allowedColor: other(pieceBefore.color)
+      };
+    }
+    return null;
+  }
+
+  function makeMove(move, byCpu=false){
+    if(gameOver) return;
+    const pieceBefore = {...board[move.sr][move.sc]};
+    const targetBefore = move.special === 'enPassant' ? board[move.captureR][move.captureC] : board[move.tr][move.tc];
+    const logLine = formatMove(move, pieceBefore, targetBefore, byCpu);
+    board = applyMoveToBoard(board, move);
+    enPassant = computeNextEnPassant(move, pieceBefore);
+    moveLog.unshift(logLine);
+    lastMove = {sr:move.sr, sc:move.sc, tr:move.tr, tc:move.tc};
+    selected = null;
+    legalForSelected = [];
+    turn = other(turn);
+    evaluateGameEnd();
+    render();
+    if(gameOver){
+      setStatus(resultText, 'over');
+      showEndModal();
+    }else if(isInCheck(board, turn)){
+      setStatus(`${cap(turn)} is in check.`, 'check');
+    }else{
+      setStatus(`${cap(turn)} to move.${isCpuTurn() ? ' CPU is thinking...' : ''}`);
+    }
+    maybeCpuMove();
+  }
+
+  function formatMove(move, pieceBefore, targetBefore, byCpu){
+    const who = `${cap(pieceBefore.color)}${byCpu ? ' CPU' : ''}`;
+    if(move.special === 'castle') return `${who} castles ${move.side}.`;
+    const from = coord(move.sr, move.sc);
+    const to = coord(move.tr, move.tc);
+    const capture = targetBefore ? ` captures ${pieceName(targetBefore)}` : '';
+    const ep = move.special === 'enPassant' ? ' en passant' : '';
+    const promo = pieceBefore.type === 'p' && (move.tr === 0 || move.tr === 7) ? ' and promotes to queen' : '';
+    return `${who} ${pieceName(pieceBefore)} ${from} → ${to}${capture}${ep}${promo}.`;
+  }
+
+  function evaluateGameEnd(){
+    const moves = allLegalMovesFor(board, turn, enPassant);
+    if(moves.length > 0){ gameOver = false; resultText = ''; return; }
+    if(isInCheck(board, turn)){
+      gameOver = true;
+      resultText = `${cap(other(turn))} wins by checkmate.`;
+    }else{
+      gameOver = true;
+      resultText = `Draw by stalemate.`;
+    }
+  }
+
+  function findKing(brd, color){
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+      const p = brd[r][c];
+      if(p && p.color === color && p.type === 'k') return {r,c};
+    }
+    return null;
+  }
+
+  function isInCheck(brd, color){
+    const king = findKing(brd, color);
+    if(!king) return true;
+    return isSquareAttacked(brd, king.r, king.c, other(color));
+  }
+
+  function isSquareAttacked(brd, r, c, byColor){
+    const pawnDir = byColor === 'white' ? -1 : 1;
+    const pawnRow = r - pawnDir;
+    for(const dc of [-1,1]){
+      const pc = c - dc;
+      if(inBounds(pawnRow, pc)){
+        const p = brd[pawnRow][pc];
+        if(p && p.color === byColor && p.type === 'p') return true;
+      }
+    }
+    for(const [dr,dc] of [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]){
+      const rr = r + dr, cc = c + dc;
+      if(inBounds(rr,cc)){
+        const p = brd[rr][cc];
+        if(p && p.color === byColor && p.type === 'n') return true;
+      }
+    }
+    for(const [dr,dc] of [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]){
+      const rr = r + dr, cc = c + dc;
+      if(inBounds(rr,cc)){
+        const p = brd[rr][cc];
+        if(p && p.color === byColor && p.type === 'k') return true;
+      }
+    }
+    const rookDirs = [[-1,0],[1,0],[0,-1],[0,1]];
+    const bishopDirs = [[-1,-1],[-1,1],[1,-1],[1,1]];
+    for(const [dr,dc] of rookDirs){
+      let rr = r + dr, cc = c + dc;
+      while(inBounds(rr,cc)){
+        if(isBlocked(rr,cc)) break;
+        const p = brd[rr][cc];
+        if(p){
+          if(p.color === byColor && (p.type === 'r' || p.type === 'q')) return true;
+          break;
+        }
+        rr += dr; cc += dc;
+      }
+    }
+    for(const [dr,dc] of bishopDirs){
+      let rr = r + dr, cc = c + dc;
+      while(inBounds(rr,cc)){
+        if(isBlocked(rr,cc)) break;
+        const p = brd[rr][cc];
+        if(p){
+          if(p.color === byColor && (p.type === 'b' || p.type === 'q')) return true;
+          break;
+        }
+        rr += dr; cc += dc;
+      }
+    }
+    return false;
+  }
+
+  function isCpuTurn(){
+    return !removalPhase && els.mode.value === 'cpu' && !gameOver && turn !== els.playerColor.value;
+  }
+
+  function maybeCpuMove(){
+    if(!isCpuTurn() || cpuThinking) return;
+    cpuThinking = true;
+    setStatus(`${cap(turn)} CPU is thinking...`);
+    render();
+    window.setTimeout(() => {
+      cpuThinking = false;
+      if(!isCpuTurn() || gameOver) return;
+      const moves = allLegalMovesFor(board, turn, enPassant);
+      if(!moves.length) return;
+      const chosen = chooseCpuMove(moves);
+      makeMove(chosen, true);
+    }, 420);
+  }
+
+  function chooseCpuMove(moves){
+    const level = els.cpuLevel.value;
+    if(level === 'easy') return moves[Math.floor(Math.random() * moves.length)];
+    const scored = moves.map(m => ({move:m, score:scoreMove(m, level) + Math.random() * (level === 'hard' ? 12 : 90)}));
+    scored.sort((a,b) => b.score - a.score);
+    if(level === 'normal'){
+      const pool = scored.slice(0, Math.min(4, scored.length));
+      return pool[Math.floor(Math.random() * pool.length)].move;
+    }
+    return scored[0].move;
+  }
+
+  function scoreMove(move, level){
+    const mover = board[move.sr][move.sc];
+    if(!mover) return -99999;
+    const captured = move.special === 'enPassant' ? board[move.captureR]?.[move.captureC] : board[move.tr][move.tc];
+    let score = 0;
+    if(captured) score += PIECE_VALUES[captured.type] + (captured.type === 'q' ? 80 : 0);
+    if(move.special === 'castle') score += 45;
+    if(mover.type === 'p' && (move.tr === 0 || move.tr === 7)) score += 760;
+    const next = applyMoveToBoard(board, move);
+    const nextEp = computeNextEnPassant(move, mover);
+    const enemy = other(mover.color);
+    const enemyMoves = allLegalMovesFor(next, enemy, nextEp);
+    if(isInCheck(next, enemy)) score += 70;
+    if(enemyMoves.length === 0 && isInCheck(next, enemy)) score += 100000;
+    if(level === 'hard'){
+      score += evaluateMaterial(next, mover.color) * 0.08;
+      let bestEnemyCapture = 0;
+      for(const em of enemyMoves){
+        const victim = em.special === 'enPassant' ? next[em.captureR]?.[em.captureC] : next[em.tr][em.tc];
+        if(victim) bestEnemyCapture = Math.max(bestEnemyCapture, PIECE_VALUES[victim.type]);
+      }
+      score -= bestEnemyCapture * 0.68;
+      const ownMobility = allLegalMovesFor(next, mover.color, null).length;
+      score += ownMobility * 2;
+    }
+    return score;
+  }
+
+  function evaluateMaterial(brd, color){
+    let score = 0;
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+      const p = brd[r][c];
+      if(!p || p.type === 'k') continue;
+      score += (p.color === color ? 1 : -1) * PIECE_VALUES[p.type];
+    }
+    return score;
+  }
+
+  function showEndModal(){
+    els.endTitle.textContent = resultText.includes('Draw') ? 'Draw' : 'Checkmate!';
+    els.endMessage.textContent = resultText;
+    els.endModal.classList.add('show');
+  }
+
+  function wireEvents(){
+    els.newGame.addEventListener('click', () => startGame());
+    els.doneRemoving.addEventListener('click', () => advanceRemovalPhase());
+    els.undoRemove.addEventListener('click', () => undoLastRemoval());
+    els.removalPoints.addEventListener('change', () => startGame());
+    els.mode.addEventListener('change', () => { updateCpuControls(); startGame(); });
+    els.playerColor.addEventListener('change', () => startGame());
+    els.cpuLevel.addEventListener('change', () => render());
+    els.modalNewGame.addEventListener('click', () => startGame());
+    els.closeModal.addEventListener('click', () => els.endModal.classList.remove('show'));
+    els.endModal.addEventListener('click', e => { if(e.target === els.endModal) els.endModal.classList.remove('show'); });
+    window.addEventListener('resize', () => { resizeBoardToWindow(); window.requestAnimationFrame(resizeBoardToWindow); });
+  }
+
+  wireEvents();
+  updateCpuControls();
+  startGame();
+})();
+</script>
+</body>
+</html>
