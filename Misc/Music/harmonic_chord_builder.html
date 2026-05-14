@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Guitar Harmonic Chord Builder</title>
+<style>
+  :root{
+    --bg:#f5f3ee;
+    --panel:#ffffff;
+    --panelAlt:#fffaf0;
+    --ink:#202124;
+    --muted:#66635f;
+    --line:#d5c7ae;
+    --lineDark:#9a8d78;
+    --fretted:#29496b;
+    --harm:#8a3c75;
+    --open:#5f7d52;
+    --bad:#a14b42;
+    --shadow:0 12px 32px rgba(59,45,20,.12);
+    --radius:18px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
+  body{min-height:100vh;}
+  .wrap{width:min(1200px,calc(100% - 24px));margin:0 auto;padding:18px 0 34px;}
+  header{background:linear-gradient(135deg,#fffaf0,#f1e1c4);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:var(--radius);padding:20px;margin-bottom:16px;}
+  h1{margin:0 0 8px;font-size:clamp(1.8rem,4vw,3rem);letter-spacing:-.04em;line-height:1;}
+  header p{margin:0;color:var(--muted);font-size:1.03rem;max-width:920px;line-height:1.45;}
+  .grid{display:grid;grid-template-columns:380px 1fr;gap:16px;align-items:start;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;}
+  .card h2,.card h3{margin:0 0 10px;line-height:1.15;letter-spacing:-.025em;}
+  .card h2{font-size:1.28rem}.card h3{font-size:1.05rem}
+  .controls{display:grid;gap:12px;position:sticky;top:10px;}
+  label{display:block;font-size:.85rem;color:#4c4a46;font-weight:750;margin:0 0 5px;}
+  select,input[type="number"],input[type="text"]{width:100%;border:1px solid #cdbf9e;background:#fffdf8;border-radius:12px;padding:10px 11px;font:inherit;color:var(--ink);}
+  button{border:0;background:var(--ink);color:white;border-radius:14px;padding:12px 14px;font-weight:850;font-size:1rem;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.16);}
+  button.secondary{background:#fff8e8;color:var(--ink);border:1px solid var(--line);box-shadow:none;}
+  button.export{background:#5f7d52;}
+  button:hover{filter:brightness(.98);transform:translateY(-1px)}
+  button:active{transform:translateY(0)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .check{display:flex;gap:8px;align-items:flex-start;background:#fff9ea;border:1px solid var(--line);border-radius:14px;padding:10px;font-size:.92rem;line-height:1.25;}
+  .check input{margin-top:2px;}
+  .tuningPreview{background:#fff9ea;border:1px solid var(--line);border-radius:14px;padding:10px;font-size:.88rem;color:var(--muted);line-height:1.35;}
+  .tuningPreview strong{color:var(--ink)}
+  .stringPills{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;}
+  .stringPills span{display:inline-flex;align-items:center;justify-content:center;min-width:34px;padding:4px 7px;border-radius:999px;background:#fffef8;border:1px solid #e6d7b9;color:#2f2b25;font-weight:850;font-size:.8rem;}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+  .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;background:#fff9ed;padding:6px 9px;font-size:.86rem;font-weight:750;}
+  .dotMini{width:14px;height:14px;background:var(--fretted);border-radius:50%;display:inline-block;}
+  .diamondMini{width:14px;height:14px;background:var(--harm);transform:rotate(45deg);display:inline-block;border-radius:3px;}
+  .ringMini{width:14px;height:14px;border:2px solid var(--open);border-radius:50%;display:inline-block;}
+  .resultsHead{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px;}
+  .resultsHead h2{margin:0;}
+  .count{font-weight:850;color:var(--muted);white-space:nowrap;}
+  .results{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;}
+  .voicing{padding:0;overflow:hidden;background:#fffefb;}
+  .voicingTop{padding:14px 14px 10px;background:linear-gradient(135deg,#fff7e4,#f6ead2);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:flex-start;}
+  .voicingTitle{font-size:1.13rem;font-weight:950;letter-spacing:-.02em;}
+  .meta{font-size:.82rem;color:var(--muted);font-weight:750;text-align:right;line-height:1.35;}
+  .voicingBody{padding:14px;display:grid;gap:14px;}
+  .diagramBox{background:#fcf7ea;border:1px solid #e5d7bd;border-radius:16px;padding:10px;display:flex;justify-content:center;overflow:auto;}
+  svg.chordSvg{width:100%;max-width:390px;height:auto;display:block;}
+  .tabWrap{background:#141414;color:#f4f4f4;border-radius:16px;padding:10px 12px;border:1px solid #303030;}
+  .tabLabel{font-size:.73rem;letter-spacing:.12em;text-transform:uppercase;color:#bdbdbd;font-weight:900;margin-bottom:6px;}
+  .tab{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;line-height:1.42;font-size:.94rem;white-space:pre;overflow:auto;margin:0;}
+  .notes{display:flex;flex-wrap:wrap;gap:6px;}
+  .noteChip{border:1px solid var(--line);background:#fff9ec;border-radius:999px;padding:5px 8px;font-size:.82rem;font-weight:800;}
+  .noteChip.harm{border-color:#d3a4c9;background:#fff2fb;color:#642a55}.noteChip.fretted{border-color:#9db2c7;background:#eff6ff;color:#1f3b57}.noteChip.open{border-color:#bccdab;background:#f4ffed;color:#3e5731}
+  .empty{padding:24px;border:2px dashed #cebfa4;border-radius:18px;background:#fff9eb;color:var(--muted);text-align:center;font-weight:750;line-height:1.45;}
+  details{border:1px solid var(--line);border-radius:16px;background:var(--panelAlt);padding:0;overflow:hidden;}
+  summary{cursor:pointer;font-weight:900;padding:12px 14px;background:#f5e8cc;}
+  details .inside{padding:12px 14px;color:#45423e;line-height:1.45;}
+  .inside ol,.inside ul{margin:8px 0 0 20px;padding:0}.inside li{margin:5px 0;}
+  .smallHelp{font-size:.86rem;color:var(--muted);line-height:1.35;margin-top:6px;}
+  @media (max-width:900px){
+    .grid{grid-template-columns:1fr;}
+    .controls{position:static;}
+    .wrap{width:min(100% - 16px,1200px);padding-top:8px;}
+    header{padding:16px;}
+    .results{grid-template-columns:1fr;}
+  }
+  @media (max-width:520px){
+    .row{grid-template-columns:1fr;}
+    .card{padding:12px;}
+    .voicingTop{display:block;}
+    .meta{text-align:left;margin-top:5px;}
+    .tab{font-size:.83rem;}
+  }
+  @media print{
+    body{background:white}.wrap{width:100%;padding:0}.card,header{box-shadow:none}.controls,header,.tutorial{display:none!important}.results{grid-template-columns:1fr 1fr}.voicing{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Guitar Harmonic Chord Builder</h1>
+    <p>Create chord shapes that combine natural harmonics with fretted or open notes. Every result includes at least one harmonic and stays within a 5-fret stretch.</p>
+  </header>
+
+  <div class="grid">
+    <aside class="card controls">
+      <div>
+        <h2>Build a chord</h2>
+        <div class="smallHelp">Choose a tuning, then pick a chord type. Harmonics show as diamonds on the chart and as angle brackets in tab, like <strong>&lt;12&gt;</strong>.</div>
+      </div>
+
+      <div>
+        <label for="tuning">Instrument / tuning</label>
+        <select id="tuning"></select>
+        <div class="tuningPreview" id="tuningPreview"></div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="root">Root</label>
+          <select id="root"></select>
+        </div>
+        <div>
+          <label for="quality">Chord type</label>
+          <select id="quality"></select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="maxFret">Highest fret to search</label>
+          <select id="maxFret">
+            <option value="12" selected>12</option>
+            <option value="15">15</option>
+            <option value="19">19</option>
+          </select>
+        </div>
+        <div>
+          <label for="maxNotes">Most notes in chord</label>
+          <select id="maxNotes"></select>
+        </div>
+      </div>
+
+      <label class="check"><input type="checkbox" id="needFretted" checked> <span>Require at least one fretted note, not just harmonics and open strings.</span></label>
+      <label class="check"><input type="checkbox" id="includeOpen" checked> <span>Allow open strings when they help complete the chord.</span></label>
+      <button id="findBtn">Find harmonic chords</button>
+      <button id="randomBtn" class="secondary">Try a random chord</button>
+      <button id="pdfBtn" class="export">Export shown chords to PDF</button>
+
+      <div class="legend">
+        <span class="pill"><span class="dotMini"></span> fretted</span>
+        <span class="pill"><span class="diamondMini"></span> harmonic</span>
+        <span class="pill"><span class="ringMini"></span> open</span>
+      </div>
+
+    </aside>
+
+    <main>
+      <section class="card">
+        <div class="resultsHead">
+          <h2 id="resultsTitle">Harmonic chords</h2>
+          <span class="count" id="count">0 shown</span>
+        </div>
+        <div id="results" class="results"></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+(() => {
+  const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  const FLAT_EQUIV = {'C#':'Db','D#':'Eb','F#':'Gb','G#':'Ab','A#':'Bb'};
+  const PC = {C:0,'B#':0,'C#':1,Db:1,D:2,'D#':3,Eb:3,E:4,Fb:4,'E#':5,F:5,'F#':6,Gb:6,G:7,'G#':8,Ab:8,A:9,'A#':10,Bb:10,B:11,Cb:11};
+
+  const TUNINGS = [
+    {group:'6-string guitar', id:'gtr-standard', name:'Standard', labels:['E','A','D','G','B','e'], notes:['E','A','D','G','B','E']},
+    {group:'6-string guitar', id:'gtr-half-down', name:'Half step down', labels:['E♭','A♭','D♭','G♭','B♭','e♭'], notes:['Eb','Ab','Db','Gb','Bb','Eb']},
+    {group:'6-string guitar', id:'gtr-full-down', name:'Full step down', labels:['D','G','C','F','A','d'], notes:['D','G','C','F','A','D']},
+    {group:'6-string guitar', id:'gtr-drop-d', name:'Drop D', labels:['D','A','D','G','B','e'], notes:['D','A','D','G','B','E']},
+    {group:'6-string guitar', id:'gtr-double-drop-d', name:'Double Drop D', labels:['D','A','D','G','B','d'], notes:['D','A','D','G','B','D']},
+    {group:'6-string guitar', id:'gtr-dadgad', name:'DADGAD', labels:['D','A','D','G','A','d'], notes:['D','A','D','G','A','D']},
+    {group:'6-string guitar', id:'gtr-open-d', name:'Open D', labels:['D','A','D','F#','A','d'], notes:['D','A','D','F#','A','D']},
+    {group:'6-string guitar', id:'gtr-open-e', name:'Open E', labels:['E','B','E','G#','B','e'], notes:['E','B','E','G#','B','E']},
+    {group:'6-string guitar', id:'gtr-open-g', name:'Open G', labels:['D','G','D','G','B','d'], notes:['D','G','D','G','B','D']},
+    {group:'6-string guitar', id:'gtr-open-c', name:'Open C', labels:['C','G','C','G','C','e'], notes:['C','G','C','G','C','E']},
+    {group:'7-string guitar', id:'gtr7-standard', name:'7-string standard', labels:['B','E','A','D','G','B','e'], notes:['B','E','A','D','G','B','E']},
+    {group:'7-string guitar', id:'gtr7-drop-a', name:'7-string Drop A', labels:['A','E','A','D','G','B','e'], notes:['A','E','A','D','G','B','E']},
+    {group:'8-string guitar', id:'gtr8-standard', name:'8-string standard', labels:['F#','B','E','A','D','G','B','e'], notes:['F#','B','E','A','D','G','B','E']},
+    {group:'8-string guitar', id:'gtr8-drop-e', name:'8-string Drop E', labels:['E','B','E','A','D','G','B','e'], notes:['E','B','E','A','D','G','B','E']},
+    {group:'bass', id:'bass4-standard', name:'4-string bass standard', labels:['E','A','D','G'], notes:['E','A','D','G']},
+    {group:'bass', id:'bass4-drop-d', name:'4-string bass Drop D', labels:['D','A','D','G'], notes:['D','A','D','G']},
+    {group:'bass', id:'bass4-half-down', name:'4-string bass half step down', labels:['E♭','A♭','D♭','G♭'], notes:['Eb','Ab','Db','Gb']},
+    {group:'bass', id:'bass5-low-b', name:'5-string bass low B', labels:['B','E','A','D','G'], notes:['B','E','A','D','G']},
+    {group:'bass', id:'bass5-high-c', name:'5-string bass high C', labels:['E','A','D','G','C'], notes:['E','A','D','G','C']},
+    {group:'bass', id:'bass5-drop-a', name:'5-string bass Drop A', labels:['A','E','A','D','G'], notes:['A','E','A','D','G']},
+    {group:'bass', id:'bass6-standard', name:'6-string bass standard', labels:['B','E','A','D','G','C'], notes:['B','E','A','D','G','C']}
+  ];
+
+  const HARMONICS = [
+    {fret:12, partial:2, add:0, hint:'same note'},
+    {fret:7, partial:3, add:7, hint:'+ perfect 5th'},
+    {fret:5, partial:4, add:0, hint:'same note'},
+    {fret:4, partial:5, add:4, hint:'major 3rd, slightly flat'},
+    {fret:9, partial:5, add:4, hint:'major 3rd, slightly flat'},
+    {fret:16, partial:5, add:4, hint:'major 3rd, slightly flat'},
+    {fret:19, partial:3, add:7, hint:'+ perfect 5th'}
+  ];
+
+  const CHORDS = {
+    power5:{label:'5 / power chord', suffix:'5', intervals:[0,7]},
+    maj:{label:'Major', suffix:' major', intervals:[0,4,7]},
+    min:{label:'Minor', suffix:'m', intervals:[0,3,7]},
+    dim:{label:'Diminished', suffix:'dim', intervals:[0,3,6]},
+    aug:{label:'Augmented', suffix:'aug', intervals:[0,4,8]},
+    sus2:{label:'sus2', suffix:'sus2', intervals:[0,2,7]},
+    sus4:{label:'sus4', suffix:'sus4', intervals:[0,5,7]},
+    add9:{label:'add9', suffix:'add9', intervals:[0,4,7,14]},
+    madd9:{label:'minor add9', suffix:'madd9', intervals:[0,3,7,14]},
+    six:{label:'6', suffix:'6', intervals:[0,4,7,9]},
+    min6:{label:'minor 6', suffix:'m6', intervals:[0,3,7,9]},
+    dom7:{label:'7', suffix:'7', intervals:[0,4,7,10]},
+    maj7:{label:'maj7', suffix:'maj7', intervals:[0,4,7,11]},
+    min7:{label:'m7', suffix:'m7', intervals:[0,3,7,10]},
+    minMaj7:{label:'mMaj7', suffix:'mMaj7', intervals:[0,3,7,11]},
+    m7b5:{label:'m7♭5 / half-diminished', suffix:'m7♭5', intervals:[0,3,6,10]},
+    dim7:{label:'dim7', suffix:'dim7', intervals:[0,3,6,9]},
+    sevenSus4:{label:'7sus4', suffix:'7sus4', intervals:[0,5,7,10]}
+  };
+
+  const tuningSel = document.getElementById('tuning');
+  const tuningPreview = document.getElementById('tuningPreview');
+  const rootSel = document.getElementById('root');
+  const qualitySel = document.getElementById('quality');
+  const maxFretSel = document.getElementById('maxFret');
+  const maxNotesSel = document.getElementById('maxNotes');
+  const needFretted = document.getElementById('needFretted');
+  const includeOpen = document.getElementById('includeOpen');
+  const results = document.getElementById('results');
+  const count = document.getElementById('count');
+  const title = document.getElementById('resultsTitle');
+
+  let currentStrings = [];
+
+  function normalizePc(pc){ return ((pc % 12)+12)%12; }
+  function pcName(pc){ return NOTES[normalizePc(pc)]; }
+  function noteLabel(pc){
+    const n = pcName(pc);
+    return FLAT_EQUIV[n] ? `${n}/${FLAT_EQUIV[n]}` : n;
+  }
+  function chordName(rootPc, key){
+    const root = pcName(rootPc);
+    const suffix = CHORDS[key].suffix;
+    return suffix === ' major' ? `${root} major` : `${root}${suffix}`;
+  }
+  function selectedTuning(){
+    return TUNINGS.find(t => t.id === tuningSel.value) || TUNINGS[0];
+  }
+  function makeStrings(tuning){
+    const total = tuning.notes.length;
+    return tuning.notes.map((n,i)=>({
+      num: total - i,
+      label: tuning.labels[i],
+      tab: tuning.labels[i],
+      pc: PC[n]
+    }));
+  }
+
+  function initTuningOptions(){
+    const groups = [];
+    TUNINGS.forEach(t => { if(!groups.includes(t.group)) groups.push(t.group); });
+    tuningSel.innerHTML = groups.map(group => {
+      const opts = TUNINGS.filter(t => t.group === group).map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+      return `<optgroup label="${group}">${opts}</optgroup>`;
+    }).join('');
+    tuningSel.value = 'gtr-standard';
+  }
+
+  function initRootOptions(){
+    rootSel.innerHTML = NOTES.map((n,i)=>`<option value="${i}">${n}${FLAT_EQUIV[n] ? ' / ' + FLAT_EQUIV[n] : ''}</option>`).join('');
+    rootSel.value = 0;
+  }
+
+  function initChordOptions(){
+    const groups = [
+      ['Basic', ['power5','maj','min','dim','aug','sus2','sus4']],
+      ['Added notes', ['add9','madd9','six','min6']],
+      ['7th chords', ['dom7','maj7','min7','minMaj7','m7b5','dim7','sevenSus4']]
+    ];
+    qualitySel.innerHTML = groups.map(([label, keys]) => {
+      const opts = keys.map(k => `<option value="${k}">${CHORDS[k].label}</option>`).join('');
+      return `<optgroup label="${label}">${opts}</optgroup>`;
+    }).join('');
+    qualitySel.value = 'maj';
+  }
+
+  function updateTuning(){
+    const tuning = selectedTuning();
+    currentStrings = makeStrings(tuning);
+    tuningPreview.innerHTML = `<strong>${tuning.name}</strong><br>Low to high:<div class="stringPills">${tuning.labels.map(s => `<span>${s}</span>`).join('')}</div>`;
+    updateMaxNotesOptions();
+  }
+
+  function updateMaxNotesOptions(){
+    const previous = Number(maxNotesSel.value) || 4;
+    const max = currentStrings.length || 6;
+    let html = '';
+    for(let n=2; n<=max; n++) html += `<option value="${n}">${n}</option>`;
+    maxNotesSel.innerHTML = html;
+    maxNotesSel.value = String(Math.min(Math.max(previous,2), max));
+  }
+
+  function chordPcs(rootPc, key){
+    const raw = CHORDS[key].intervals.map(i => normalizePc(rootPc + i));
+    return [...new Set(raw)];
+  }
+
+  function positionsForString(s, targetSet, maxFret, allowOpen){
+    const arr = [{type:'mute', string:s.num, stringLabel:s.label, tab:s.tab, pc:null, fret:null, label:'x'}];
+    for(let fret=0; fret<=maxFret; fret++){
+      const pc = normalizePc(s.pc + fret);
+      if(targetSet.has(pc)){
+        if(fret === 0){
+          if(allowOpen) arr.push({type:'open', string:s.num, stringLabel:s.label, tab:s.tab, pc, fret, label:'0', note:noteLabel(pc)});
+        } else {
+          arr.push({type:'fretted', string:s.num, stringLabel:s.label, tab:s.tab, pc, fret, label:String(fret), note:noteLabel(pc)});
+        }
+      }
+    }
+    HARMONICS.forEach(h => {
+      if(h.fret <= maxFret){
+        const pc = normalizePc(s.pc + h.add);
+        if(targetSet.has(pc)){
+          arr.push({type:'harmonic', string:s.num, stringLabel:s.label, tab:s.tab, pc, fret:h.fret, label:`<${h.fret}>`, note:noteLabel(pc), partial:h.partial, hint:h.hint});
+        }
+      }
+    });
+    return arr.sort((a,b) => optionRank(a) - optionRank(b));
+  }
+
+  function optionRank(p){
+    if(p.type === 'mute') return 1000;
+    if(p.type === 'harmonic') return p.fret + 5;
+    if(p.type === 'fretted') return p.fret + 25;
+    if(p.type === 'open') return 35;
+    return 999;
+  }
+
+  function generateVoicings(rootPc, key){
+    const maxFret = Number(maxFretSel.value);
+    const maxNotes = Number(maxNotesSel.value);
+    const mustHaveFretted = needFretted.checked;
+    const allowOpen = includeOpen.checked;
+    const target = chordPcs(rootPc, key);
+    const targetSet = new Set(target);
+    const minNotes = target.length;
+    if(maxNotes < minNotes) return {target, voicings:[], tooFewNotes:true};
+
+    const options = currentStrings.map(s => positionsForString(s, targetSet, maxFret, allowOpen));
+    const out = [];
+    const seen = new Set();
+    const maxValidToGather = 900;
+
+    function hasFuturePc(startIndex, pc){
+      for(let j=startIndex; j<options.length; j++){
+        if(options[j].some(p => p.type !== 'mute' && p.pc === pc)) return true;
+      }
+      return false;
+    }
+
+    function isValid(combo){
+      const played = combo.filter(p => p.type !== 'mute');
+      if(played.length < minNotes || played.length > maxNotes) return false;
+      const pcs = new Set(played.map(p => p.pc));
+      if(!target.every(pc => pcs.has(pc))) return false;
+      if(!played.some(p => p.type === 'harmonic')) return false;
+      if(mustHaveFretted && !played.some(p => p.type === 'fretted')) return false;
+      const counted = played.filter(p => p.fret && p.fret > 0).map(p => p.fret);
+      if(counted.length){
+        const spread = Math.max(...counted) - Math.min(...counted);
+        if(spread > 5) return false;
+      }
+      const tabSig = combo.map(p => p.type === 'mute' ? 'x' : `${p.type[0]}${p.fret}`).join('|');
+      if(seen.has(tabSig)) return false;
+      seen.add(tabSig);
+      return true;
+    }
+
+    function score(combo){
+      const played = combo.filter(p => p.type !== 'mute');
+      const counted = played.filter(p => p.fret && p.fret > 0).map(p => p.fret);
+      const spread = counted.length ? Math.max(...counted) - Math.min(...counted) : 0;
+      const maxUsed = counted.length ? Math.max(...counted) : 0;
+      const minUsed = counted.length ? Math.min(...counted) : 0;
+      const harmonicCount = played.filter(p => p.type === 'harmonic').length;
+      const openCount = played.filter(p => p.type === 'open').length;
+      const mutedCount = combo.length - played.length;
+      const stringSpan = (() => {
+        const nums = played.map(p=>p.string);
+        return nums.length ? Math.max(...nums) - Math.min(...nums) : 0;
+      })();
+      return spread*20 + Math.abs(played.length-minNotes)*10 + Math.abs(harmonicCount-1)*8 + maxUsed*.35 + minUsed*.2 + openCount*1.2 + mutedCount*.45 - stringSpan*.25;
+    }
+
+    function rec(i, combo, playedCount, pcSet){
+      if(out.length >= maxValidToGather) return;
+      if(playedCount > maxNotes) return;
+      const remaining = options.length - i;
+      if(playedCount + remaining < minNotes) return;
+      for(const pc of target){
+        if(!pcSet.has(pc) && !hasFuturePc(i, pc)) return;
+      }
+      if(i === options.length){
+        if(isValid(combo)) out.push({positions:combo.slice(), score:score(combo)});
+        return;
+      }
+      for(const p of options[i]){
+        const newPlayed = playedCount + (p.type === 'mute' ? 0 : 1);
+        if(newPlayed > maxNotes) continue;
+        const nextSet = new Set(pcSet);
+        if(p.type !== 'mute') nextSet.add(p.pc);
+        combo.push(p);
+        rec(i+1, combo, newPlayed, nextSet);
+        combo.pop();
+      }
+    }
+
+    rec(0, [], 0, new Set());
+    out.sort((a,b)=> a.score-b.score);
+    return {target, voicings:out.slice(0, 24), tooFewNotes:false};
+  }
+
+  function tabFor(combo){
+    const sorted = combo.slice().reverse();
+    const labelWidth = Math.max(...sorted.map(p => p.tab.length));
+    const cellWidth = Math.max(7, ...sorted.map(p => {
+      const mark = p.type === 'mute' ? 'x' : p.label;
+      return mark.length + 4;
+    }));
+    return sorted.map(p => {
+      const mark = p.type === 'mute' ? 'x' : p.label;
+      const left = Math.floor((cellWidth - mark.length)/2);
+      const right = cellWidth - mark.length - left;
+      return `${p.tab.padStart(labelWidth,' ')}|${'-'.repeat(left)}${mark}${'-'.repeat(right)}|`;
+    }).join('\n');
+  }
+
+  function diagramSvg(combo){
+    const n = currentStrings.length;
+    const played = combo.filter(p => p.type !== 'mute');
+    const counted = played.filter(p => p.type !== 'open' && p.fret && p.fret > 0).map(p => p.fret);
+    let start = counted.length ? Math.min(...counted) : 1;
+    if(start <= 1) start = 1;
+    const maxCounted = counted.length ? Math.max(...counted) : 5;
+    let end = Math.max(start + 4, maxCounted);
+    const fretsShown = end - start + 1;
+    const width = Math.max(300, 54*n + 42);
+    const height = 420;
+    const top = 78, left = 44, rightPad = 42, gridW = width - left - rightPad, rowH = 48;
+    const stringGap = n > 1 ? gridW / (n-1) : gridW;
+    const xs = currentStrings.map((s,i)=> left + i*stringGap);
+    const right = left + gridW;
+    let svg = `<svg class="chordSvg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Chord diagram">`;
+    svg += `<rect x="0" y="0" width="${width}" height="${height}" rx="18" fill="#fcf6e7"/>`;
+
+    currentStrings.forEach((s,i)=>{
+      svg += `<text x="${xs[i]}" y="28" text-anchor="middle" font-size="15" font-weight="900" fill="#3f372e">${s.label}</text>`;
+    });
+
+    combo.forEach((p,i)=>{
+      const x = xs[i];
+      if(p.type === 'mute'){
+        svg += `<text x="${x}" y="55" text-anchor="middle" font-size="18" font-weight="900" fill="#a14b42">×</text>`;
+      } else if(p.type === 'open'){
+        svg += `<circle cx="${x}" cy="49" r="8" fill="none" stroke="#5f7d52" stroke-width="3"/>`;
+      }
+    });
+
+    currentStrings.forEach((s,i)=>{
+      const edge = (i===0 || i===n-1);
+      svg += `<line x1="${xs[i]}" y1="${top}" x2="${xs[i]}" y2="${top + fretsShown*rowH}" stroke="#746957" stroke-width="${edge ? 2.4 : 1.8}"/>`;
+    });
+
+    for(let r=0; r<=fretsShown; r++){
+      const y = top + r*rowH;
+      const thick = (r===0 && start===1) ? 7 : 2;
+      svg += `<line x1="${left}" y1="${y}" x2="${right}" y2="${y}" stroke="#8b806d" stroke-width="${thick}" stroke-linecap="round"/>`;
+      if(r < fretsShown){
+        const fretNumber = start + r;
+        svg += `<text x="22" y="${y + rowH/2 + 5}" text-anchor="middle" font-size="14" font-weight="850" fill="#786b57">${fretNumber}</text>`;
+      }
+    }
+
+    if(start > 1){
+      svg += `<text x="${right + 20}" y="${top + 27}" text-anchor="middle" font-size="16" font-weight="900" fill="#5a5042">${start}fr</text>`;
+    }
+
+    combo.forEach((p,i)=>{
+      const x = xs[i];
+      if(p.type !== 'mute' && p.type !== 'open' && p.fret >= start && p.fret <= end){
+        const y = top + (p.fret - start + .5)*rowH;
+        if(p.type === 'harmonic'){
+          const size = 15;
+          svg += `<polygon points="${x},${y-size} ${x+size},${y} ${x},${y+size} ${x-size},${y}" fill="#8a3c75" stroke="#4f2145" stroke-width="1.6"/>`;
+          svg += `<text x="${x}" y="${y+4}" text-anchor="middle" font-size="10" font-weight="950" fill="white">${pcName(p.pc)}</text>`;
+        } else {
+          svg += `<circle cx="${x}" cy="${y}" r="15" fill="#29496b" stroke="#14263a" stroke-width="1.6"/>`;
+          svg += `<text x="${x}" y="${y+4}" text-anchor="middle" font-size="10" font-weight="950" fill="white">${pcName(p.pc)}</text>`;
+        }
+      }
+    });
+
+    svg += `</svg>`;
+    return svg;
+  }
+
+  function describePositions(combo){
+    return combo.filter(p => p.type !== 'mute').map(p => {
+      const cls = p.type === 'harmonic' ? 'harm' : p.type === 'open' ? 'open' : 'fretted';
+      const type = p.type === 'harmonic' ? `harmonic ${p.label}` : p.type === 'open' ? 'open' : `fret ${p.fret}`;
+      return `<span class="noteChip ${cls}">${p.note} · ${type}</span>`;
+    }).join('');
+  }
+
+  function targetLabel(pcs){
+    return pcs.map(pc => noteLabel(pc)).join(' · ');
+  }
+
+  function render(){
+    updateTuning();
+    const rootPc = Number(rootSel.value);
+    const key = qualitySel.value;
+    const name = chordName(rootPc, key);
+    title.textContent = `${name} harmonic chords`;
+    const result = generateVoicings(rootPc, key);
+    const voicings = result.voicings;
+    lastVoicings = voicings;
+    lastChordName = name;
+    lastTarget = result.target || [];
+    count.textContent = `${voicings.length} shown`;
+    if(result.tooFewNotes){
+      results.innerHTML = `<div class="empty">${name} needs at least ${result.target.length} different chord tones: ${targetLabel(result.target)}.<br>Increase “Most notes in chord” to ${result.target.length} or higher.</div>`;
+      return;
+    }
+    if(!voicings.length){
+      results.innerHTML = `<div class="empty">No shapes found with the current settings for ${name}.<br>Try allowing open strings, increasing the highest fret, allowing more notes, or turning off “Require at least one fretted note.”</div>`;
+      return;
+    }
+    results.innerHTML = voicings.map((v,idx)=>{
+      const played = v.positions.filter(p=>p.type !== 'mute');
+      const harmonics = played.filter(p=>p.type === 'harmonic').length;
+      const counted = played.filter(p=>p.fret && p.fret > 0).map(p=>p.fret);
+      const stretch = counted.length ? Math.max(...counted)-Math.min(...counted) : 0;
+      return `<article class="card voicing">
+        <div class="voicingTop">
+          <div class="voicingTitle">${name} voicing ${idx+1}</div>
+          <div class="meta">${played.length} notes<br>${harmonics} harmonic${harmonics===1?'':'s'} · ${stretch}-fret stretch</div>
+        </div>
+        <div class="voicingBody">
+          <div class="diagramBox">${diagramSvg(v.positions)}</div>
+          <div class="tabWrap"><div class="tabLabel">TAB</div><pre class="tab">${tabFor(v.positions)}</pre></div>
+        </div>
+      </article>`;
+    }).join('');
+  }
+
+
+  let lastVoicings = [];
+  let lastChordName = '';
+  let lastTarget = [];
+
+  function pdfSafe(value){
+    return String(value ?? '')
+      .replace(/♭/g,'b')
+      .replace(/♯/g,'#')
+      .replace(/–/g,'-')
+      .replace(/—/g,'-')
+      .replace(/·/g,'-')
+      .replace(/[“”]/g,'"')
+      .replace(/[‘’]/g,"'")
+      .replace(/[^\x20-\x7E]/g,'')
+      .replace(/\\/g,'\\\\')
+      .replace(/\(/g,'\\(')
+      .replace(/\)/g,'\\)');
+  }
+
+  function pdfText(cmds, text, x, y, size=10, font='F1'){
+    cmds.push(`BT /${font} ${size} Tf ${x.toFixed(1)} ${y.toFixed(1)} Td (${pdfSafe(text)}) Tj ET`);
+  }
+
+  function pdfLine(cmds, x1, y1, x2, y2, width=1){
+    cmds.push(`${width.toFixed(2)} w ${x1.toFixed(1)} ${y1.toFixed(1)} m ${x2.toFixed(1)} ${y2.toFixed(1)} l S`);
+  }
+
+  function pdfCircle(cmds, cx, cy, r, fill=false){
+    const c = 0.5522847498 * r;
+    cmds.push(`${(cx+r).toFixed(1)} ${cy.toFixed(1)} m ${(cx+r).toFixed(1)} ${(cy+c).toFixed(1)} ${(cx+c).toFixed(1)} ${(cy+r).toFixed(1)} ${cx.toFixed(1)} ${(cy+r).toFixed(1)} c ${(cx-c).toFixed(1)} ${(cy+r).toFixed(1)} ${(cx-r).toFixed(1)} ${(cy+c).toFixed(1)} ${(cx-r).toFixed(1)} ${cy.toFixed(1)} c ${(cx-r).toFixed(1)} ${(cy-c).toFixed(1)} ${(cx-c).toFixed(1)} ${(cy-r).toFixed(1)} ${cx.toFixed(1)} ${(cy-r).toFixed(1)} c ${(cx+c).toFixed(1)} ${(cy-r).toFixed(1)} ${(cx+r).toFixed(1)} ${(cy-c).toFixed(1)} ${(cx+r).toFixed(1)} ${cy.toFixed(1)} c ${fill ? 'f' : 'S'}`);
+  }
+
+  function pdfDiamond(cmds, cx, cy, r){
+    cmds.push(`${cx.toFixed(1)} ${(cy+r).toFixed(1)} m ${(cx+r).toFixed(1)} ${cy.toFixed(1)} l ${cx.toFixed(1)} ${(cy-r).toFixed(1)} l ${(cx-r).toFixed(1)} ${cy.toFixed(1)} l h f`);
+  }
+
+  function pdfDiagram(cmds, combo, x, yTop, w=210){
+    const n = currentStrings.length;
+    const played = combo.filter(p => p.type !== 'mute');
+    const counted = played.filter(p => p.type !== 'open' && p.fret && p.fret > 0).map(p => p.fret);
+    let start = counted.length ? Math.min(...counted) : 1;
+    if(start <= 1) start = 1;
+    const maxCounted = counted.length ? Math.max(...counted) : 5;
+    const end = Math.max(start + 4, maxCounted);
+    const fretsShown = end - start + 1;
+    const left = x + 22, right = x + w - 18;
+    const top = yTop - 36;
+    const rowH = 26;
+    const gap = n > 1 ? (right-left)/(n-1) : right-left;
+    const xs = currentStrings.map((_,i)=>left + i*gap);
+
+    cmds.push('0 0 0 RG 0 0 0 rg');
+    currentStrings.forEach((str,i)=>pdfText(cmds, str.label, xs[i]-3, yTop-8, 8, 'F2'));
+    combo.forEach((p,i)=>{
+      const sx = xs[i];
+      if(p.type === 'mute') pdfText(cmds, 'x', sx-3, yTop-25, 10, 'F1');
+      if(p.type === 'open') pdfCircle(cmds, sx, yTop-21, 4.2, false);
+    });
+
+    currentStrings.forEach((_,i)=>pdfLine(cmds, xs[i], top, xs[i], top - fretsShown*rowH, i===0 || i===n-1 ? 1.3 : .8));
+    for(let r=0; r<=fretsShown; r++){
+      const yy = top - r*rowH;
+      pdfLine(cmds, left, yy, right, yy, (r===0 && start===1) ? 3.2 : 1);
+      if(r<fretsShown) pdfText(cmds, String(start+r), x+2, yy-rowH/2-3, 8, 'F1');
+    }
+    if(start>1) pdfText(cmds, `${start}fr`, right+5, top-14, 8, 'F1');
+
+    combo.forEach((p,i)=>{
+      if(p.type === 'fretted' || p.type === 'harmonic'){
+        const sx = xs[i];
+        if(p.fret < start || p.fret > end) return;
+        const yy = top - (p.fret - start + .5)*rowH;
+        if(p.type === 'harmonic'){
+          cmds.push('0.54 0.24 0.46 rg');
+          pdfDiamond(cmds, sx, yy, 8);
+        } else {
+          cmds.push('0.16 0.29 0.42 rg');
+          pdfCircle(cmds, sx, yy, 8, true);
+        }
+        cmds.push('1 1 1 rg');
+        pdfText(cmds, pcName(p.pc), sx-4, yy-3, 6, 'F1');
+        cmds.push('0 0 0 rg');
+      }
+    });
+  }
+
+  function buildPdf(){
+    if(!lastVoicings.length){
+      alert('There are no chord shapes to export yet. Find chords first.');
+      return;
+    }
+    const tuning = selectedTuning();
+    const pages = [];
+    const perPage = 2;
+    for(let i=0; i<lastVoicings.length; i+=perPage){
+      const cmds = [];
+      pdfText(cmds, 'Guitar Harmonic Chord Builder', 50, 760, 18, 'F1');
+      pdfText(cmds, `${lastChordName}     Tuning: ${tuning.name}     Notes: ${targetLabel(lastTarget)}`, 50, 742, 9, 'F1');
+      const pageItems = lastVoicings.slice(i, i+perPage);
+      pageItems.forEach((v, localIdx)=>{
+        const y = localIdx === 0 ? 705 : 375;
+        const idx = i + localIdx + 1;
+        const played = v.positions.filter(p=>p.type !== 'mute');
+        const harmonics = played.filter(p=>p.type === 'harmonic').length;
+        const counted = played.filter(p=>p.fret && p.fret > 0).map(p=>p.fret);
+        const stretch = counted.length ? Math.max(...counted)-Math.min(...counted) : 0;
+        pdfText(cmds, `${lastChordName} voicing ${idx}`, 50, y, 13, 'F1');
+        pdfText(cmds, `${played.length} notes; ${harmonics} harmonic${harmonics===1?'':'s'}; ${stretch}-fret stretch`, 50, y-16, 8, 'F1');
+        pdfDiagram(cmds, v.positions, 50, y-28, 215);
+        pdfText(cmds, 'TAB', 310, y-36, 9, 'F1');
+        const tabLines = tabFor(v.positions).split('\n');
+        tabLines.forEach((line, j)=>pdfText(cmds, line, 310, y-54-j*12, 10, 'F2'));
+        cmds.push('0.82 0.82 0.82 RG');
+        pdfLine(cmds, 50, y-302, 562, y-302, .6);
+        cmds.push('0 0 0 RG');
+      });
+      pages.push(cmds.join('\n'));
+    }
+
+    const objects = [];
+    function add(obj){ objects.push(obj); return objects.length; }
+    const catalogId = add('');
+    const pagesId = add('');
+    const font1Id = add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+    const font2Id = add('<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>');
+    const pageIds = [];
+    pages.forEach(content => {
+      const stream = `<< /Length ${content.length} >>\nstream\n${content}\nendstream`;
+      const contentId = add(stream);
+      const pageId = add(`<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 ${font1Id} 0 R /F2 ${font2Id} 0 R >> >> /Contents ${contentId} 0 R >>`);
+      pageIds.push(pageId);
+    });
+    objects[catalogId-1] = `<< /Type /Catalog /Pages ${pagesId} 0 R >>`;
+    objects[pagesId-1] = `<< /Type /Pages /Kids [${pageIds.map(id=>`${id} 0 R`).join(' ')}] /Count ${pageIds.length} >>`;
+
+    let pdf = '%PDF-1.4\n';
+    const offsets = [0];
+    objects.forEach((obj, i)=>{
+      offsets.push(pdf.length);
+      pdf += `${i+1} 0 obj\n${obj}\nendobj\n`;
+    });
+    const xref = pdf.length;
+    pdf += `xref\n0 ${objects.length+1}\n0000000000 65535 f \n`;
+    for(let i=1;i<offsets.length;i++) pdf += `${String(offsets[i]).padStart(10,'0')} 00000 n \n`;
+    pdf += `trailer\n<< /Size ${objects.length+1} /Root ${catalogId} 0 R >>\nstartxref\n${xref}\n%%EOF`;
+
+    const blob = new Blob([pdf], {type:'application/pdf'});
+    const a = document.createElement('a');
+    const safeName = `${lastChordName}-${tuning.name}`.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${safeName || 'harmonic-chords'}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+
+  document.getElementById('findBtn').addEventListener('click', render);
+  document.getElementById('pdfBtn').addEventListener('click', buildPdf);
+  document.getElementById('randomBtn').addEventListener('click', () => {
+    rootSel.value = Math.floor(Math.random()*12);
+    const qs = Object.keys(CHORDS);
+    qualitySel.value = qs[Math.floor(Math.random()*qs.length)];
+    render();
+  });
+  [tuningSel,rootSel,qualitySel,maxFretSel,maxNotesSel,needFretted,includeOpen].forEach(el => el.addEventListener('change', render));
+
+  initTuningOptions();
+  initRootOptions();
+  initChordOptions();
+  updateTuning();
+  maxNotesSel.value = String(Math.min(4, currentStrings.length));
+  render();
+})();
+</script>
+</body>
+</html>
