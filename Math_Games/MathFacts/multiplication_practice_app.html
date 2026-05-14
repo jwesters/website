@@ -428,7 +428,7 @@
       <div class="grid">
         <div class="card card-pad">
           <h2>Set up practice</h2>
-          <p class="section-note">Students enter only the final answer. The app saves their answers quietly and reveals the score at the end.</p>
+          <p class="section-note">Students enter only the final answer. Leave the seed blank for a fresh random set each time, or enter a seed/class code to reuse the same questions.</p>
           <div class="options">
             <div class="option-row">
               <label for="questionCount">Number of questions</label>
@@ -464,7 +464,7 @@
 
         <div class="card card-pad seed-panel">
           <h2>Short class code</h2>
-          <p class="section-note">This shorter code includes the number of questions, question type, decimal setting, and seed. Give the same code to students to get the same question set.</p>
+          <p class="section-note">Short codes are for shared/repeatable practice. Leave the seed blank when you want new random facts each time.</p>
           <div class="code-box" id="classCodeBox"></div>
 
           <div class="option-row seed-card-row">
@@ -652,8 +652,16 @@
       return Math.floor(rng() * (max - min + 1)) + min;
     }
 
-    function getConfigFromControls(){
-      const seedText = (els.seedInput.value || '').trim() || 'class-seed-' + new Date().toISOString().slice(0,10);
+    function makeFreshPracticeSeed(){
+      const randomPart = (window.crypto && crypto.getRandomValues)
+        ? Array.from(crypto.getRandomValues(new Uint32Array(2))).map(n => n.toString(36)).join('-')
+        : Math.random().toString(36).slice(2, 12);
+      return `practice-${Date.now().toString(36)}-${randomPart}`;
+    }
+
+    function getConfigFromControls(options = {}){
+      const typedSeed = (els.seedInput.value || '').trim();
+      const seedText = typedSeed || (options.randomizeBlank ? makeFreshPracticeSeed() : 'preview-random');
       return {
         v: 2,
         count: Number(els.questionCount.value),
@@ -753,13 +761,17 @@
 
     function updateClassCode(){
       let config;
-      const decoded = parseClassCode(els.seedInput.value);
+      const typedSeed = (els.seedInput.value || '').trim();
+      const decoded = parseClassCode(typedSeed);
       if(decoded){
         config = decoded;
+        els.classCodeBox.textContent = makeClassCode(config);
       }else{
         config = getConfigFromControls();
+        els.classCodeBox.textContent = typedSeed
+          ? makeClassCode(config)
+          : 'Random each start — enter a seed or click Random Seed to make a shareable code.';
       }
-      els.classCodeBox.textContent = makeClassCode(config);
       els.modePill.textContent = `${config.mode === '2x3' ? '2 digit × 3 digit' : '2 digit × 2 digit'} • ${config.count} questions • ${config.decimals ? 'Decimals on' : 'No decimals'}`;
     }
 
@@ -1177,13 +1189,18 @@
     }
 
     els.startBtn.addEventListener('click', () => {
-      const decoded = parseClassCode(els.seedInput.value);
-      const config = decoded || getConfigFromControls();
+      const typedSeed = (els.seedInput.value || '').trim();
+      const decoded = parseClassCode(typedSeed);
+      const config = decoded || getConfigFromControls({randomizeBlank:true});
       if(decoded) applyConfigToControls(decoded);
       beginPractice(config);
     });
 
     els.copyCodeBtn.addEventListener('click', async () => {
+      if(!(els.seedInput.value || '').trim()){
+        els.seedInput.value = randomSeedPhrase();
+        setSeedStatus('Random seed added so this short code will keep the same questions for students.', 'good');
+      }
       updateClassCode();
       const text = els.classCodeBox.textContent;
       try{
