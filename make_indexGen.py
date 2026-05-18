@@ -417,13 +417,13 @@ TOP_LEVEL_CATEGORIES = {
     'Misc_Games': 'Games & Puzzles',
     'Tetris_Games': 'Games & Puzzles',
     'Teacher_Tools': 'Tools & Classroom Utilities',
-    'Subject_Specific': 'Science & Study',
+    'Subject_Specific': 'Subject Specific',
 }
 
 CATEGORY_ORDER = [
     "Math & Numeracy",
     "Literacy & Language",
-    "Science & Study",
+    "Subject Specific",
     "Tools & Classroom Utilities",
     "Quizzes & Quick Play",
     "Games & Puzzles",
@@ -433,7 +433,7 @@ CATEGORY_ORDER = [
 CATEGORY_ICONS = {
     'Math & Numeracy': '➗',
     'Literacy & Language': '📖',
-    'Science & Study': '🔬',
+    'Subject Specific': '📚',
     'Tools & Classroom Utilities': '🧰',
     'Quizzes & Quick Play': '🟩',
     'Games & Puzzles': '🎮',
@@ -450,7 +450,7 @@ def category_for_top_folder(name: str) -> str:
     if any(k in low for k in ["ela", "reading", "writing", "word", "spelling"]):
         return "Literacy & Language"
     if any(k in low for k in ["science", "study"]):
-        return "Science & Study"
+        return "Subject Specific"
     if any(k in low for k in ["tool", "misc", "generator", "maker"]):
         return "Tools & Classroom Utilities"
     if any(k in low for k in ["game", "tetris", "chess", "maze", "puzzle"]):

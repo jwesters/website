@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pool Ball +/- Drop</title>
+  <style>
+    :root{
+      --bg1:#eef6ff;
+      --bg2:#dfeeff;
+      --ink:#16324a;
+      --muted:#58728c;
+      --accent:#2f80ed;
+      --accent-dark:#1d63bf;
+      --line:#c7dcf3;
+      --danger:#cf4d5d;
+      --success:#1d8f64;
+      --shadow:0 10px 30px rgba(22,50,74,.13);
+    }
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;
+      min-height:100%;
+      font-family:"Trebuchet MS","Segoe UI",Arial,sans-serif;
+      background:radial-gradient(circle at top,#f8fcff 0%,var(--bg1) 40%,var(--bg2) 100%);
+      color:var(--ink);
+    }
+    body{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:12px;
+    }
+    .app{
+      width:min(940px,100%);
+      background:rgba(255,255,255,.84);
+      border:1px solid #d8e8fa;
+      border-radius:20px;
+      box-shadow:var(--shadow);
+      padding:12px;
+      backdrop-filter:blur(4px);
+    }
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:4px 4px 10px;
+      flex-wrap:wrap;
+    }
+    h1{
+      margin:0;
+      font-size:clamp(1.35rem,2.4vw,1.95rem);
+      line-height:1.05;
+      letter-spacing:.02em;
+    }
+    .subtitle{
+      margin:4px 0 0;
+      color:var(--muted);
+      font-size:.9rem;
+    }
+    .controls{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    button{
+      border:0;
+      border-radius:12px;
+      padding:10px 15px;
+      font-size:.95rem;
+      font-weight:700;
+      cursor:pointer;
+      color:#fff;
+      background:linear-gradient(180deg,var(--accent),var(--accent-dark));
+      box-shadow:0 6px 16px rgba(47,128,237,.24);
+      transition:transform .08s ease, filter .15s ease;
+    }
+    button:hover{filter:brightness(1.04)}
+    button:active{transform:translateY(1px) scale(.995)}
+    button.secondary{
+      color:var(--ink);
+      background:linear-gradient(180deg,#fafdff,#e6f1fc);
+      box-shadow:0 6px 16px rgba(66,102,146,.12);
+    }
+    .game-shell{
+      position:relative;
+      background:linear-gradient(180deg,#f9fcff 0%,#ecf5ff 100%);
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:10px;
+      overflow:hidden;
+    }
+    .hud{
+      display:flex;
+      align-items:center;
+      justify-content:flex-start;
+      gap:10px;
+      margin-bottom:8px;
+      flex-wrap:wrap;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      background:rgba(255,255,255,.78);
+      border:1px solid #d7e7f8;
+      border-radius:999px;
+      padding:6px 10px;
+      font-weight:700;
+      min-height:40px;
+      font-size:.85rem;
+    }
+    #nextBallCanvas{
+      display:block;
+      width:32px;
+      height:32px;
+      border-radius:50%;
+      background:transparent;
+    }
+    .canvas-wrap{
+      position:relative;
+      display:grid;
+      place-items:center;
+    }
+    canvas#gameCanvas{
+      display:block;
+      width:min(100%,500px);
+      aspect-ratio:9 / 13;
+      background:linear-gradient(180deg,#ffffff 0%,#eef7ff 100%);
+      border-radius:16px;
+      border:1px solid #d6e5f7;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.65), inset 0 -12px 30px rgba(67,132,211,.08);
+      touch-action:none;
+      cursor:crosshair;
+    }
+    .overlay{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+      background:rgba(235,245,255,.42);
+      border-radius:16px;
+      backdrop-filter:blur(2px);
+    }
+    .card{
+      width:min(455px,calc(100% - 12px));
+      background:rgba(255,255,255,.97);
+      border:1px solid #d9e8f8;
+      border-radius:18px;
+      box-shadow:0 12px 30px rgba(22,50,74,.16);
+      padding:20px;
+      text-align:center;
+    }
+    .card h2{
+      margin:0 0 8px;
+      font-size:clamp(1.35rem,2.7vw,1.8rem);
+    }
+    .card p{
+      margin:0;
+      color:var(--muted);
+      line-height:1.45;
+      font-size:.95rem;
+    }
+    .rules{
+      text-align:left;
+      margin:16px auto 0;
+      padding:14px;
+      border-radius:16px;
+      background:#f3f8ff;
+      border:1px solid #dbeafb;
+      color:#365671;
+      max-width:430px;
+      font-size:1.02rem;
+      line-height:1.35;
+    }
+    .rules b{color:var(--ink)}
+    .rule-title{
+      text-align:center;
+      font-weight:900;
+      color:var(--ink);
+      font-size:1.15rem;
+      margin-bottom:10px;
+    }
+    .rule-row{
+      display:grid;
+      grid-template-columns:38px 1fr;
+      gap:10px;
+      align-items:center;
+      padding:9px 0;
+      border-top:1px solid rgba(130,170,210,.28);
+    }
+    .rule-row:first-of-type{border-top:0}
+    .mini-ball{
+      width:34px;
+      height:34px;
+      border-radius:50%;
+      display:grid;
+      place-items:center;
+      border:2px solid rgba(16,44,72,.58);
+      font-size:.72rem;
+      font-weight:900;
+      color:#111;
+      background:#f7d21b;
+      box-shadow:inset 0 0 0 8px rgba(255,255,255,.9);
+      white-space:nowrap;
+    }
+    .mini-ball.negative{
+      background:linear-gradient(180deg,#fff 0 30%,#2f6fe4 30% 70%,#fff 70% 100%);
+    }
+    .mini-ball.cue{
+      background:#fff;
+      color:#333;
+      box-shadow:inset -5px -7px 13px rgba(20,40,60,.12);
+    }
+    .mini-ball.bronze{
+      background:#a66a2c;
+      color:#111;
+      box-shadow:inset -5px -7px 13px rgba(72,42,12,.24), inset 5px 6px 13px rgba(255,255,255,.38);
+    }
+    .mini-ball.silver{
+      background:#c9d0d8;
+      color:#111;
+      box-shadow:inset -5px -7px 13px rgba(50,64,78,.2), inset 5px 6px 13px rgba(255,255,255,.55);
+    }
+    .mini-ball.gold{
+      background:#d8a317;
+      color:#111;
+      box-shadow:inset -5px -7px 13px rgba(72,48,8,.24), inset 5px 6px 13px rgba(255,255,255,.42);
+    }
+    .rule-example{
+      display:block;
+      margin-top:2px;
+      font-weight:900;
+      color:#143452;
+    }
+    .actions{
+      margin-top:16px;
+      display:flex;
+      justify-content:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .hidden{display:none !important}
+    .gameover h2{color:var(--danger)}
+    .small-note{
+      color:var(--muted);
+      font-size:.9rem;
+      margin-top:10px;
+    }
+    #statusText{
+      min-width:min(100%,230px);
+      justify-content:center;
+      color:#244762;
+    }
+    .positive-text{color:var(--success)}
+    .negative-text{color:var(--danger)}
+    @media (max-width:700px){
+      .app{padding:10px;border-radius:16px}
+      .game-shell{padding:8px}
+      .card{padding:18px 14px}
+      .pill{font-size:.8rem; padding:5px 8px}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div>
+        <h1>Pool Ball +/- Drop</h1>
+        <div class="subtitle">Opposite signs subtract. Same numbers double. Cue, bronze, silver, and gold balls are rare.</div>
+      </div>
+      <div class="controls">
+        <button id="helpBtn">Help</button>
+        <button id="restartTopBtn" class="secondary">Restart</button>
+      </div>
+    </div>
+
+    <div class="game-shell">
+      <div class="hud">
+        <span id="statusText" class="hidden">Waiting to start</span>
+        <span id="rangeText" class="hidden">-5 to +5</span>
+        <span id="mergeText" class="hidden">0</span>
+        <div class="pill">Next: <canvas id="nextBallCanvas" width="44" height="44" aria-label="Next ball preview"></canvas></div>
+        <div class="pill">Score: <span id="scoreText">0</span></div>
+        <div class="pill">High: <span id="highScoreText">0</span></div>
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas id="gameCanvas" width="500" height="720" aria-label="Pool Ball plus-minus drop game"></canvas>
+
+        <div id="startOverlay" class="overlay">
+          <div class="card">
+            <h2>Rules</h2>
+            <div class="rules">
+              <div class="rule-title">Quick rules</div>
+              <div class="rule-row">
+                <span class="mini-ball">+8</span>
+                <div><b>Solid = positive. Striped = negative.</b><span class="rule-example">+8 or -3</span></div>
+              </div>
+              <div class="rule-row">
+                <span class="mini-ball">±</span>
+                <div><b>Opposite signs subtract.</b><span class="rule-example">Equal opposites vanish</span></div>
+              </div>
+              <div class="rule-row">
+                <span class="mini-ball">×2</span>
+                <div><b>Same numbers double.</b><span class="rule-example">Two ±15s make a cue ball</span></div>
+              </div>
+              <div class="rule-row">
+                <span class="mini-ball cue"></span>
+                <div><b>Special balls match only.</b><span class="rule-example">Cue=25 · Bronze=50 · Silver=75 · Gold=100</span></div>
+              </div>
+              <div class="rule-row">
+                <span class="mini-ball silver">Ag</span>
+                <div><b>Rare drops unlock with score.</b><span class="rule-example">Bronze 500 · Silver 750 · Gold 1000</span></div>
+              </div>
+              <div class="rule-row">
+                <span class="mini-ball">⛓</span>
+                <div><b>Chains boost points.</b><span class="rule-example">×1, ×1.5, ×2, then +0.5 each reaction</span></div>
+              </div>
+            </div>
+            <div class="actions">
+              <button id="startBtn">Start Game</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="helpOverlay" class="overlay hidden">
+          <div class="card">
+            <h2>Rules</h2>
+            <div class="rules">
+              <div class="rule-title">Quick rules</div>
+              <div class="rule-row">
+                <span class="mini-ball">+8</span>
+                <div><b>Solid = positive. Striped = negative.</b><span class="rule-example">+8 or -3</span></div>
+              </div>
+              <div class="rule-row">
+                <span class="mini-ball">±</span>
+                <div><b>Opposite signs subtract.</b><span class="rule-example">Equal opposites vanish</span></div>
+              </div>
+              <div class="rule-row">
+                <span class="mini-ball">×2</span>
+                <div><b>Same numbers double.</b><span class="rule-example">Two ±15s make a cue ball</span></div>
+              </div>
+              <div class="rule-row">
+                <span class="mini-ball cue"></span>
+                <div><b>Special balls match only.</b><span class="rule-example">Cue=25 · Bronze=50 · Silver=75 · Gold=100</span></div>
+              </div>
+              <div class="rule-row">
+                <span class="mini-ball silver">Ag</span>
+                <div><b>Rare drops unlock with score.</b><span class="rule-example">Bronze 500 · Silver 750 · Gold 1000</span></div>
+              </div>
+              <div class="rule-row">
+                <span class="mini-ball">⛓</span>
+                <div><b>Chains boost points.</b><span class="rule-example">×1, ×1.5, ×2, then +0.5 each reaction</span></div>
+              </div>
+            </div>
+            <div class="actions">
+              <button id="closeHelpBtn">Back to Game</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="gameOverOverlay" class="overlay hidden">
+          <div class="card gameover">
+            <h2>Game Over</h2>
+            <p>The settled stack reached above the top line.</p>
+            <div class="small-note" id="finalBallCount"></div>
+            <div class="actions">
+              <button id="restartBtn">Play Again</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const nextBallCanvas = document.getElementById('nextBallCanvas');
+  const nextCtx = nextBallCanvas.getContext('2d');
+
+  const startOverlay = document.getElementById('startOverlay');
+  const gameOverOverlay = document.getElementById('gameOverOverlay');
+  const startBtn = document.getElementById('startBtn');
+  const restartBtn = document.getElementById('restartBtn');
+  const helpBtn = document.getElementById('helpBtn');
+  const closeHelpBtn = document.getElementById('closeHelpBtn');
+  const restartTopBtn = document.getElementById('restartTopBtn');
+  const helpOverlay = document.getElementById('helpOverlay');
+  const statusText = document.getElementById('statusText');
+  const finalBallCount = document.getElementById('finalBallCount');
+  const scoreText = document.getElementById('scoreText');
+  const rangeText = document.getElementById('rangeText');
+  const mergeText = document.getElementById('mergeText');
+  const highScoreText = document.getElementById('highScoreText');
+
+  const W = canvas.width;
+  const H = canvas.height;
+
+  const MIN_VALUE = 1;
+  const MAX_VALUE = 15;
+  const BASE_R = 24.75;
+
+  const BALL_COLORS = {
+    1:'#f7d21b',
+    2:'#2f6fe4',
+    3:'#e1422f',
+    4:'#7c40d6',
+    5:'#f28a1f',
+    6:'#228d57',
+    7:'#7a1f14',
+    8:'#202020',
+    9:'#d4b317',
+    10:'#2359bd',
+    11:'#b93327',
+    12:'#5f32ad',
+    13:'#c86f16',
+    14:'#176c42',
+    15:'#111111'
+  };
+
+  const world = {
+    left: 68,
+    right: W - 68,
+    floor: H - 44,
+    topLine: 108,
+    gravity: 0.42,
+    bounce: 0.025,
+    air: 0.996,
+    rollDamping: 0.988,
+    settleSpeed: 0.14,
+    settleFrames: 18,
+    spawnY: 42,
+    collisionIterations: 3,
+    cellSize: 78,
+    snapStrength: 0.55,
+    maxSnapGap: 7,
+  };
+
+  const state = {
+    started: false,
+    over: false,
+    balls: [],
+    canDrop: false,
+    previewX: (world.left + world.right) / 2,
+    ballCount: 0,
+    currentBall: null,
+    nextBall: null,
+    fx: [],
+    lastId: 0,
+    score: 0,
+    highScore: 0,
+    merges: 0,
+    chainReactions: 0,
+    nextDropAllowedAt: 0,
+    lineBreachStart: 0,
+  };
+
+  function clampDropX(x, r){
+    return Math.max(world.left + r, Math.min(world.right - r, x));
+  }
+
+  function radiusForValue(v){
+    let r = BASE_R;
+    for (let i = 2; i <= Math.abs(v); i++){
+      if (i <= 8){
+        r *= 1.10;
+      } else {
+        r *= 1.075;
+      }
+    }
+    return r;
+  }
+
+  function isCueBall(ball){
+    return !!(ball && ball.cue);
+  }
+
+  function isBronzeBall(ball){
+    return !!(ball && ball.bronze);
+  }
+
+  function isSilverBall(ball){
+    return !!(ball && ball.silver);
+  }
+
+  function isGoldBall(ball){
+    return !!(ball && ball.gold);
+  }
+
+  function signedNumber(ball){
+    if (isCueBall(ball) || isBronzeBall(ball) || isSilverBall(ball) || isGoldBall(ball)) return 0;
+    return ball.sign * ball.value;
+  }
+
+  function currentDropLimits(){
+    const nums = state.balls
+      .filter(b => !b.remove && !isCueBall(b) && !isBronzeBall(b) && !isSilverBall(b) && !isGoldBall(b))
+      .map(signedNumber);
+
+    let negativeLimit = 5;
+    let positiveLimit = 5;
+
+    if (nums.some(n => n <= -6 || n >= 6)){
+      negativeLimit = 9;
+      positiveLimit = 9;
+    }
+    if (nums.some(n => n <= -10)){
+      negativeLimit = 15;
+    }
+    if (nums.some(n => n >= 10)){
+      positiveLimit = 15;
+    }
+
+    return { negativeLimit, positiveLimit };
+  }
+
+  function colorForValue(v){
+    return BALL_COLORS[v] || BALL_COLORS[1];
+  }
+
+  function radiusForBall(ballLike){
+    return (isCueBall(ballLike) || isBronzeBall(ballLike) || isSilverBall(ballLike) || isGoldBall(ballLike)) ? radiusForValue(10) : radiusForValue(ballLike.value);
+  }
+
+  function signedLabel(ball){
+    if (isCueBall(ball)) return 'cue ball';
+    if (isBronzeBall(ball)) return 'bronze ball';
+    if (isSilverBall(ball)) return 'silver ball';
+    if (isGoldBall(ball)) return 'gold ball';
+    return `${ball.sign > 0 ? '+' : '-'}${ball.value}`;
+  }
+
+  function gridKey(cx, cy){
+    return `${cx},${cy}`;
+  }
+
+  function buildSpatialGrid(){
+    const grid = new Map();
+    for (const ball of state.balls){
+      if (ball.remove) continue;
+      const minX = Math.floor((ball.x - ball.r) / world.cellSize);
+      const maxX = Math.floor((ball.x + ball.r) / world.cellSize);
+      const minY = Math.floor((ball.y - ball.r) / world.cellSize);
+      const maxY = Math.floor((ball.y + ball.r) / world.cellSize);
+      for (let cx = minX; cx <= maxX; cx++){
+        for (let cy = minY; cy <= maxY; cy++){
+          const key = gridKey(cx, cy);
+          if (!grid.has(key)) grid.set(key, []);
+          grid.get(key).push(ball);
+        }
+      }
+    }
+    return grid;
+  }
+
+  function getNearbyFromGrid(ball, grid){
+    const out = new Set();
+    const minX = Math.floor((ball.x - ball.r) / world.cellSize) - 1;
+    const maxX = Math.floor((ball.x + ball.r) / world.cellSize) + 1;
+    const minY = Math.floor((ball.y - ball.r) / world.cellSize) - 1;
+    const maxY = Math.floor((ball.y + ball.r) / world.cellSize) + 1;
+    for (let cx = minX; cx <= maxX; cx++){
+      for (let cy = minY; cy <= maxY; cy++){
+        const bucket = grid.get(gridKey(cx, cy));
+        if (!bucket) continue;
+        for (const other of bucket){
+          if (other !== ball && !other.remove) out.add(other);
+        }
+      }
+    }
+    return out;
+  }
+
+  function makeCueBallChoice(){
+    return { cue: true, bronze: false, silver: false, gold: false, value: 10, sign: 0 };
+  }
+
+  function makeBronzeBallChoice(){
+    return { cue: false, bronze: true, silver: false, gold: false, value: 10, sign: 0 };
+  }
+
+  function makeSilverBallChoice(){
+    return { cue: false, bronze: false, silver: true, gold: false, value: 10, sign: 0 };
+  }
+
+  function makeGoldBallChoice(){
+    return { cue: false, bronze: false, silver: false, gold: true, value: 10, sign: 0 };
+  }
+
+  function makeNormalSignedBall(){
+    const { negativeLimit, positiveLimit } = currentDropLimits();
+    const sign = Math.random() < 0.6 ? 1 : -1;
+    const limit = sign > 0 ? positiveLimit : negativeLimit;
+    return {
+      value: MIN_VALUE + Math.floor(Math.random() * limit),
+      sign,
+      cue: false,
+      bronze: false,
+      silver: false,
+      gold: false,
+    };
+  }
+
+  function makeOutOfRangeSignedBall(){
+    const { negativeLimit, positiveLimit } = currentDropLimits();
+    const choices = [];
+    for (let n = -MAX_VALUE; n <= MAX_VALUE; n++){
+      if (n === 0) continue;
+      if (n < -negativeLimit || n > positiveLimit){
+        choices.push(n);
+      }
+    }
+    if (!choices.length) return makeNormalSignedBall();
+    const pick = choices[Math.floor(Math.random() * choices.length)];
+    return {
+      value: Math.abs(pick),
+      sign: pick > 0 ? 1 : -1,
+      cue: false,
+      bronze: false,
+      silver: false,
+      gold: false,
+    };
+  }
+
+  function currentCueBallChance(){
+    const bonusSteps = Math.min(7, Math.floor(state.score / 300));
+    return 0.03 + (bonusSteps * 0.01);
+  }
+
+  function currentBronzeBallChance(){
+    return state.score >= 500 ? 0.01 : 0;
+  }
+
+  function currentSilverBallChance(){
+    return state.score >= 750 ? 0.005 : 0;
+  }
+
+  function currentGoldBallChance(){
+    return state.score >= 1000 ? 0.0025 : 0;
+  }
+
+  function makeRandomSignedBall(){
+    const roll = Math.random();
+    const cueChance = currentCueBallChance();
+    const bronzeChance = currentBronzeBallChance();
+    const silverChance = currentSilverBallChance();
+    const goldChance = currentGoldBallChance();
+    const outOfRangeChance = 0.10;
+    if (roll < cueChance) return makeCueBallChoice();
+    if (roll < cueChance + bronzeChance) return makeBronzeBallChoice();
+    if (roll < cueChance + bronzeChance + silverChance) return makeSilverBallChoice();
+    if (roll < cueChance + bronzeChance + silverChance + goldChance) return makeGoldBallChoice();
+    if (roll < cueChance + bronzeChance + silverChance + goldChance + outOfRangeChance) return makeOutOfRangeSignedBall();
+    return makeNormalSignedBall();
+  }
+
+  function createBall(value, sign, x, y = world.spawnY, cue = false, bronze = false, silver = false, gold = false){
+    const ballLike = cue ? makeCueBallChoice() : (bronze ? makeBronzeBallChoice() : (silver ? makeSilverBallChoice() : (gold ? makeGoldBallChoice() : { value, sign, cue: false, bronze: false, silver: false, gold: false })));
+    return {
+      id: ++state.lastId,
+      value: ballLike.value,
+      sign: ballLike.sign,
+      cue: !!cue,
+      bronze: !!bronze,
+      silver: !!silver,
+      gold: !!gold,
+      r: radiusForBall(ballLike),
+      x,
+      y,
+      vx: 0,
+      vy: 0,
+      settled: false,
+      settleCounter: 0,
+      remove: false,
+      mergeCooldown: 2,
+    };
+  }
+
+  function loadHighScore(){
+    const raw = localStorage.getItem('positiveNegativeBallDropHighScoreV4');
+    const parsed = Number(raw);
+    state.highScore = Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
+    updateScoreDisplays();
+  }
+
+  function saveHighScore(){
+    localStorage.setItem('positiveNegativeBallDropHighScoreV4', String(state.highScore));
+  }
+
+  function updateScoreDisplays(){
+    scoreText.textContent = String(state.score);
+    mergeText.textContent = String(state.merges);
+    highScoreText.textContent = String(state.highScore);
+    if (rangeText){
+      const { negativeLimit, positiveLimit } = currentDropLimits();
+      rangeText.textContent = `-${negativeLimit} to +${positiveLimit}`;
+    }
+  }
+
+  function addScoreForResult(value){
+    const basePoints = Math.abs(value);
+    const reactionNumber = state.chainReactions + 1;
+    const multiplier = 1 + ((reactionNumber - 1) * 0.5);
+    const points = Math.ceil(basePoints * multiplier);
+
+    state.chainReactions = reactionNumber;
+    state.score += points;
+    state.merges += 1;
+
+    if (state.score > state.highScore){
+      state.highScore = state.score;
+      saveHighScore();
+    }
+    updateScoreDisplays();
+
+    return { points, multiplier, reactionNumber };
+  }
+
+  function resetToMenu(){
+    state.started = false;
+    state.over = false;
+    state.balls = [];
+    state.canDrop = false;
+    state.ballCount = 0;
+    state.fx = [];
+    state.score = 0;
+    state.merges = 0;
+    state.chainReactions = 0;
+    state.currentBall = makeRandomSignedBall();
+    state.nextBall = makeRandomSignedBall();
+    state.previewX = (world.left + world.right) / 2;
+    state.nextDropAllowedAt = 0;
+    state.lineBreachStart = 0;
+    statusText.textContent = 'Waiting to start';
+    finalBallCount.textContent = '';
+    startOverlay.classList.remove('hidden');
+    gameOverOverlay.classList.add('hidden');
+    helpOverlay.classList.add('hidden');
+    updateScoreDisplays();
+    drawBallPreviews();
+  }
+
+  function startGame(){
+    state.started = true;
+    state.over = false;
+    state.balls = [];
+    state.canDrop = true;
+    state.ballCount = 0;
+    state.fx = [];
+    state.score = 0;
+    state.merges = 0;
+    state.chainReactions = 0;
+    state.currentBall = makeRandomSignedBall();
+    state.nextBall = makeRandomSignedBall();
+    state.nextDropAllowedAt = 0;
+    state.lineBreachStart = 0;
+    statusText.textContent = 'Click to drop a ball';
+    finalBallCount.textContent = '';
+    startOverlay.classList.add('hidden');
+    gameOverOverlay.classList.add('hidden');
+    helpOverlay.classList.add('hidden');
+    updateScoreDisplays();
+    drawBallPreviews();
+  }
+
+  function dropBall(x){
+    const now = performance.now();
+    if (!state.started || state.over || !state.canDrop) return;
+    if (now < state.nextDropAllowedAt) return;
+
+    const choice = state.currentBall;
+    const r = radiusForBall(choice);
+    const ball = createBall(choice.value, choice.sign, clampDropX(x, r), world.spawnY, isCueBall(choice), isBronzeBall(choice), isGoldBall(choice));
+
+    state.chainReactions = 0;
+    state.balls.push(ball);
+    state.nextDropAllowedAt = now + 500;
+    state.ballCount += 1;
+    state.currentBall = state.nextBall;
+    state.nextBall = makeRandomSignedBall();
+    statusText.textContent = `${signedLabel(ball)} falling...`;
+    drawBallPreviews();
+  }
+
+  function isBallSupported(ball, grid){
+    if (Math.abs((ball.y + ball.r) - world.floor) < 1.2) return true;
+
+    for (const other of getNearbyFromGrid(ball, grid)){
+      const dx = ball.x - other.x;
+      const dy = ball.y - other.y;
+      const dist = Math.hypot(dx, dy);
+      const target = ball.r + other.r;
+      const inContact = dist <= target + 1.4;
+      const otherBelow = other.y > ball.y + 0.5;
+      const verticalSupport = dy > Math.abs(dx) * 0.22;
+      if (inContact && otherBelow && verticalSupport) return true;
+    }
+    return false;
+  }
+
+  function snapBallToSupport(ball, grid){
+    let snapped = false;
+    const floorGap = world.floor - (ball.y + ball.r);
+    if (floorGap >= 0 && floorGap <= world.maxSnapGap && Math.abs(ball.vx) < 0.35 && Math.abs(ball.vy) < 0.6){
+      ball.y += floorGap * world.snapStrength;
+      if (floorGap < 0.7) ball.y = world.floor - ball.r;
+      snapped = true;
+    }
+
+    let best = null;
+    let bestGap = Infinity;
+    for (const other of getNearbyFromGrid(ball, grid)){
+      const dx = ball.x - other.x;
+      const dy = ball.y - other.y;
+      const dist = Math.hypot(dx, dy);
+      const target = ball.r + other.r;
+      const gap = target - dist;
+      const absGap = Math.abs(gap);
+      const otherBelow = other.y > ball.y + 0.5;
+      const verticalSupport = dy < -Math.abs(dx) * 0.15;
+      if (otherBelow && verticalSupport && absGap < bestGap && absGap <= world.maxSnapGap){
+        bestGap = absGap;
+        best = {other, dx, dy, dist, target};
+      }
+    }
+
+    if (best && best.dist > 0.0001 && Math.abs(ball.vx) < 0.35 && Math.abs(ball.vy) < 0.6){
+      const nx = best.dx / best.dist;
+      const ny = best.dy / best.dist;
+      const desiredX = best.other.x + nx * best.target;
+      const desiredY = best.other.y + ny * best.target;
+      ball.x += (desiredX - ball.x) * world.snapStrength;
+      ball.y += (desiredY - ball.y) * world.snapStrength;
+      if (Math.abs(desiredX - ball.x) < 0.7) ball.x = desiredX;
+      if (Math.abs(desiredY - ball.y) < 0.7) ball.y = desiredY;
+      snapped = true;
+    }
+
+    return snapped;
+  }
+
+  function anyBallAboveTopLine(){
+    return state.balls.some(b => !b.remove && (b.y - b.r) < world.topLine);
+  }
+
+  function updateGameOverTimer(){
+    const breached = anyBallAboveTopLine();
+    const now = performance.now();
+
+    if (breached){
+      if (!state.lineBreachStart) state.lineBreachStart = now;
+      if (now - state.lineBreachStart >= 1000){
+        return true;
+      }
+    } else {
+      state.lineBreachStart = 0;
+    }
+    return false;
+  }
+
+  function triggerGameOver(){
+    state.over = true;
+    state.canDrop = false;
+    state.nextDropAllowedAt = Infinity;
+    state.lineBreachStart = 0;
+    statusText.textContent = 'Game over';
+    finalBallCount.textContent = `Balls dropped: ${state.ballCount} · Merges: ${state.merges} · Score: ${state.score}`;
+    gameOverOverlay.classList.remove('hidden');
+  }
+
+  function integrate(ball){
+    if (ball.remove || ball.settled) return;
+    if (ball.mergeCooldown > 0) ball.mergeCooldown--;
+
+    ball.vy += world.gravity;
+    ball.vx *= world.rollDamping;
+    ball.vy *= world.air;
+
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+
+    if (ball.x - ball.r < world.left){
+      ball.x = world.left + ball.r;
+      ball.vx = Math.abs(ball.vx) * world.bounce;
+      if (Math.abs(ball.vx) < 0.1) ball.vx = 0;
+    }
+    if (ball.x + ball.r > world.right){
+      ball.x = world.right - ball.r;
+      ball.vx = -Math.abs(ball.vx) * world.bounce;
+      if (Math.abs(ball.vx) < 0.1) ball.vx = 0;
+    }
+    if (ball.y + ball.r > world.floor){
+      ball.y = world.floor - ball.r;
+      if (Math.abs(ball.vy) < 0.4) ball.vy = 0;
+      else ball.vy = -Math.abs(ball.vy) * world.bounce;
+      ball.vx *= 0.94;
+      if (Math.abs(ball.vx) < 0.1) ball.vx = 0;
+    }
+
+    const cornerFloor = Math.abs((ball.y + ball.r) - world.floor) < 0.6;
+    const cornerLeft = Math.abs((ball.x - ball.r) - world.left) < 0.6;
+    const cornerRight = Math.abs((ball.x + ball.r) - world.right) < 0.6;
+    if (cornerFloor && (cornerLeft || cornerRight) && Math.abs(ball.vx) < 0.18 && Math.abs(ball.vy) < 0.18){
+      ball.vx = 0;
+      ball.vy = 0;
+    }
+  }
+
+  function solvePair(a, b){
+    if (a.remove || b.remove) return;
+    let dx = b.x - a.x;
+    let dy = b.y - a.y;
+    let dist = Math.hypot(dx, dy);
+    const minDist = a.r + b.r;
+
+    if (dist === 0){
+      dx = 0.001;
+      dy = 0;
+      dist = 0.001;
+    }
+    if (dist >= minDist) return;
+
+    const nx = dx / dist;
+    const ny = dy / dist;
+    const overlap = minDist - dist;
+
+    const baseMassA = Math.max(1, a.r * a.r);
+    const baseMassB = Math.max(1, b.r * b.r);
+
+    const aOnGround = Math.abs((a.y + a.r) - world.floor) < 1.2;
+    const bOnGround = Math.abs((b.y + b.r) - world.floor) < 1.2;
+
+    const groundedMassA = baseMassA * (aOnGround ? 2.2 : 1);
+    const groundedMassB = baseMassB * (bOnGround ? 2.2 : 1);
+
+    let moveA = groundedMassB / (groundedMassA + groundedMassB);
+    let moveB = groundedMassA / (groundedMassA + groundedMassB);
+
+    if (a.settled && aOnGround) moveA *= 0.18;
+    else if (a.settled) moveA *= 0.38;
+
+    if (b.settled && bOnGround) moveB *= 0.18;
+    else if (b.settled) moveB *= 0.38;
+
+    a.x -= nx * overlap * moveA;
+    a.y -= ny * overlap * moveA;
+    b.x += nx * overlap * moveB;
+    b.y += ny * overlap * moveB;
+
+    const rvx = b.vx - a.vx;
+    const rvy = b.vy - a.vy;
+    const impact = rvx * nx + rvy * ny;
+
+    if (impact < 0){
+      const restitution = 0.01;
+      const impulse = (-(1 + restitution) * impact) / ((1 / groundedMassA) + (1 / groundedMassB));
+
+      if (!a.settled){
+        const dampA = aOnGround ? 0.35 : 0.5;
+        a.vx -= (impulse / groundedMassA) * nx * dampA;
+        a.vy -= (impulse / groundedMassA) * ny * dampA;
+      }
+      if (!b.settled){
+        const dampB = bOnGround ? 0.35 : 0.5;
+        b.vx += (impulse / groundedMassB) * nx * dampB;
+        b.vy += (impulse / groundedMassB) * ny * dampB;
+      }
+    }
+
+    const tangentX = -ny;
+    const tangentY = nx;
+    const tangentSpeed = rvx * tangentX + rvy * tangentY;
+    const frictionImpulse = tangentSpeed * 0.016;
+    if (!a.settled){
+      const groundDragA = aOnGround ? 0.28 : 0.4;
+      a.vx += frictionImpulse * tangentX * groundDragA;
+      a.vy += frictionImpulse * tangentY * groundDragA;
+    }
+    if (!b.settled){
+      const groundDragB = bOnGround ? 0.28 : 0.4;
+      b.vx -= frictionImpulse * tangentX * groundDragB;
+      b.vy -= frictionImpulse * tangentY * groundDragB;
+    }
+
+    if (a.settled && Math.hypot(a.vx, a.vy) > (aOnGround ? 0.42 : 0.24)){
+      a.settled = false;
+      a.settleCounter = 0;
+    }
+    if (b.settled && Math.hypot(b.vx, b.vy) > (bOnGround ? 0.42 : 0.24)){
+      b.settled = false;
+      b.settleCounter = 0;
+    }
+  }
+
+  function solveCollisions(){
+    for (let iter = 0; iter < world.collisionIterations; iter++){
+      const grid = buildSpatialGrid();
+      for (const ball of state.balls){
+        if (ball.remove) continue;
+        for (const other of getNearbyFromGrid(ball, grid)){
+          if (other.id <= ball.id) continue;
+          solvePair(ball, other);
+        }
+      }
+      for (const ball of state.balls){
+        if (ball.remove) continue;
+        if (ball.x - ball.r < world.left){
+          ball.x = world.left + ball.r;
+          ball.vx = Math.abs(ball.vx) * world.bounce;
+          if (Math.abs(ball.vx) < 0.1) ball.vx = 0;
+        }
+        if (ball.x + ball.r > world.right){
+          ball.x = world.right - ball.r;
+          ball.vx = -Math.abs(ball.vx) * world.bounce;
+          if (Math.abs(ball.vx) < 0.1) ball.vx = 0;
+        }
+        if (ball.y + ball.r > world.floor){
+          ball.y = world.floor - ball.r;
+          if (Math.abs(ball.vy) < 0.4) ball.vy = 0;
+          else ball.vy = -Math.abs(ball.vy) * world.bounce;
+          ball.vx *= 0.94;
+          if (Math.abs(ball.vx) < 0.1) ball.vx = 0;
+        }
+      }
+    }
+  }
+
+  function releaseFloatingBalls(){
+    const grid = buildSpatialGrid();
+    for (const ball of state.balls){
+      if (ball.remove || !ball.settled) continue;
+      if (!isBallSupported(ball, grid)){
+        ball.settled = false;
+        ball.settleCounter = 0;
+        ball.vy = Math.max(ball.vy, 0.35);
+      }
+    }
+  }
+
+  function queueBurst(x, y, color, count, size){
+    for (let i = 0; i < count; i++){
+      const angle = Math.random() * Math.PI * 2;
+      const speed = (1.2 + Math.random() * 2.4) * size;
+      state.fx.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 24 + Math.floor(Math.random() * 10),
+        maxLife: 34,
+        color,
+        radius: 2 + Math.random() * 4 * size,
+      });
+    }
+  }
+
+  function cleanupRemoved(){
+    state.balls = state.balls.filter(b => !b.remove);
+  }
+
+  function tryMerge(a, b){
+    if (a.remove || b.remove) return false;
+    if (a.mergeCooldown > 0 || b.mergeCooldown > 0) return false;
+
+    const x = (a.x + b.x) / 2;
+    const y = (a.y + b.y) / 2;
+
+    if (isCueBall(a) || isCueBall(b) || isBronzeBall(a) || isBronzeBall(b) || isSilverBall(a) || isSilverBall(b) || isGoldBall(a) || isGoldBall(b)){
+      if (isCueBall(a) && isCueBall(b)){
+        a.remove = true;
+        b.remove = true;
+        const scoreInfo = addScoreForResult(25);
+        queueBurst(x, y, '#ffffff', 24, 1.35);
+        statusText.textContent = `Two cue balls disappeared! +${scoreInfo.points} points`;
+        cleanupRemoved();
+        updateScoreDisplays();
+        return true;
+      }
+      if (isBronzeBall(a) && isBronzeBall(b)){
+        a.remove = true;
+        b.remove = true;
+        const scoreInfo = addScoreForResult(50);
+        queueBurst(x, y, '#c08345', 24, 1.35);
+        statusText.textContent = `Two bronze balls disappeared! +${scoreInfo.points} points`;
+        cleanupRemoved();
+        updateScoreDisplays();
+        return true;
+      }
+      if (isSilverBall(a) && isSilverBall(b)){
+        a.remove = true;
+        b.remove = true;
+        const scoreInfo = addScoreForResult(75);
+        queueBurst(x, y, '#c9d0d8', 24, 1.35);
+        statusText.textContent = `Two silver balls disappeared! +${scoreInfo.points} points`;
+        cleanupRemoved();
+        updateScoreDisplays();
+        return true;
+      }
+      if (isGoldBall(a) && isGoldBall(b)){
+        a.remove = true;
+        b.remove = true;
+        const scoreInfo = addScoreForResult(100);
+        queueBurst(x, y, '#d8a317', 24, 1.35);
+        statusText.textContent = `Two gold balls disappeared! +${scoreInfo.points} points`;
+        cleanupRemoved();
+        updateScoreDisplays();
+        return true;
+      }
+      return false;
+    }
+
+    if (a.sign === b.sign){
+      if (a.value !== b.value) return false;
+
+      a.remove = true;
+      b.remove = true;
+
+      if (a.value === MAX_VALUE && b.value === MAX_VALUE){
+        const scoreInfo = addScoreForResult(MAX_VALUE);
+        const cue = createBall(10, 0, x, y, true);
+        cue.vx = (a.vx + b.vx) * 0.04;
+        cue.vy = (a.vy + b.vy) * 0.04;
+        cue.mergeCooldown = 2;
+        queueBurst(x, y, '#ffffff', 24, 1.35);
+        statusText.textContent = `${signedLabel(a)} and ${signedLabel(b)} made a cue ball! +${scoreInfo.points} points`;
+        state.balls.push(cue);
+        cleanupRemoved();
+        updateScoreDisplays();
+        return true;
+      }
+
+      const resultValue = Math.min(MAX_VALUE, a.value * 2);
+      const scoreInfo = addScoreForResult(resultValue);
+      const merged = createBall(resultValue, a.sign, x, y);
+      merged.vx = (a.vx + b.vx) * 0.05;
+      merged.vy = (a.vy + b.vy) * 0.05;
+      merged.mergeCooldown = 2;
+
+      queueBurst(x, y, colorForValue(resultValue), 14, 1);
+      statusText.textContent = `${signedLabel(a)} + ${signedLabel(b)} = ${signedLabel(merged)} (+${scoreInfo.points} points)`;
+
+      state.balls.push(merged);
+      cleanupRemoved();
+      updateScoreDisplays();
+      return true;
+    }
+
+    const result = (a.sign * a.value) + (b.sign * b.value);
+    const resultValue = Math.abs(result);
+
+    a.remove = true;
+    b.remove = true;
+
+    if (resultValue === 0){
+      const scoreInfo = addScoreForResult(0);
+      queueBurst(x, y, '#9ed5ff', 22, 1.25);
+      statusText.textContent = `${signedLabel(a)} and ${signedLabel(b)} evaporated! +${scoreInfo.points} points`;
+      cleanupRemoved();
+      updateScoreDisplays();
+      return true;
+    }
+
+    const resultSign = result > 0 ? 1 : -1;
+    const scoreInfo = addScoreForResult(resultValue);
+    const merged = createBall(resultValue, resultSign, x, y);
+    merged.vx = (a.vx + b.vx) * 0.05;
+    merged.vy = (a.vy + b.vy) * 0.05;
+    merged.mergeCooldown = 2;
+
+    queueBurst(x, y, colorForValue(resultValue), 14, 1);
+    statusText.textContent = `${signedLabel(a)} + ${signedLabel(b)} = ${signedLabel(merged)} (+${scoreInfo.points} points)`;
+
+    state.balls.push(merged);
+    cleanupRemoved();
+    updateScoreDisplays();
+    return true;
+  }
+
+  function processMerges(){
+    let mergesThisFrame = 0;
+    let found = true;
+    while (found && mergesThisFrame < 5){
+      found = false;
+      const grid = buildSpatialGrid();
+      for (const a of state.balls){
+        if (!a || a.remove) continue;
+        for (const b of getNearbyFromGrid(a, grid)){
+          if (!b || b.remove || b.id <= a.id) continue;
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist <= a.r + b.r + 1.8){
+            if (tryMerge(a, b)){
+              solveCollisions();
+              found = true;
+              mergesThisFrame++;
+              break;
+            }
+          }
+        }
+        if (found) break;
+      }
+    }
+  }
+
+  function updateSettling(ball, grid){
+    if (ball.remove) return;
+
+    snapBallToSupport(ball, grid);
+
+    const speed = Math.hypot(ball.vx, ball.vy);
+    const supported = isBallSupported(ball, grid);
+    const touchingFloor = Math.abs((ball.y + ball.r) - world.floor) < 0.8;
+    const touchingLeft = Math.abs((ball.x - ball.r) - world.left) < 0.8;
+    const touchingRight = Math.abs((ball.x + ball.r) - world.right) < 0.8;
+    const cornerTrap = touchingFloor && (touchingLeft || touchingRight) && speed < 0.18;
+
+    if ((speed < world.settleSpeed && supported) || cornerTrap){
+      ball.settleCounter++;
+      ball.vx *= 0.8;
+      ball.vy *= 0.15;
+
+      if (cornerTrap && ball.settleCounter >= 4){
+        ball.vx = 0;
+        ball.vy = 0;
+      }
+
+      if (ball.settleCounter >= world.settleFrames || (cornerTrap && ball.settleCounter >= 6)){
+        ball.vx = 0;
+        ball.vy = 0;
+        ball.settled = true;
+      }
+    } else {
+      ball.settleCounter = 0;
+      if (speed > 0.12) ball.settled = false;
+    }
+  }
+
+  function updateFX(){
+    for (const p of state.fx){
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vx *= 0.96;
+      p.vy *= 0.96;
+      p.life--;
+    }
+    state.fx = state.fx.filter(p => p.life > 0);
+  }
+
+  function update(){
+    if (!state.started || state.over){
+      updateFX();
+      return;
+    }
+
+    for (const ball of state.balls){
+      if (!ball.remove && !ball.settled) integrate(ball);
+    }
+
+    solveCollisions();
+    processMerges();
+    releaseFloatingBalls();
+
+    const grid = buildSpatialGrid();
+    for (const ball of state.balls){
+      if (!ball.remove) updateSettling(ball, grid);
+    }
+
+    updateFX();
+
+    if (!state.over && updateGameOverTimer()){
+      triggerGameOver();
+    }
+  }
+
+  function roundRectPath(ctxRef, x, y, w, h, r){
+    ctxRef.beginPath();
+    ctxRef.moveTo(x + r, y);
+    ctxRef.arcTo(x + w, y, x + w, y + h, r);
+    ctxRef.arcTo(x + w, y + h, x, y + h, r);
+    ctxRef.arcTo(x, y + h, x, y, r);
+    ctxRef.arcTo(x, y, x + w, y, r);
+    ctxRef.closePath();
+  }
+
+  function drawBallOnContext(ctxRef, x, y, ballLike, r, preview=false){
+    const cue = isCueBall(ballLike);
+    const bronze = isBronzeBall(ballLike);
+    const silver = isSilverBall(ballLike);
+    const gold = isGoldBall(ballLike);
+    const value = (cue || bronze || silver || gold) ? 10 : ballLike.value;
+    const sign = (cue || bronze || silver || gold) ? 0 : ballLike.sign;
+    const isPositive = sign > 0;
+    const fill = cue ? '#ffffff' : (bronze ? '#a66a2c' : (silver ? '#c9d0d8' : (gold ? '#d8a317' : colorForValue(value))));
+
+    ctxRef.save();
+    ctxRef.beginPath();
+    ctxRef.arc(x, y, r, 0, Math.PI * 2);
+    ctxRef.clip();
+
+    if (cue){
+      const bodyGrad = ctxRef.createRadialGradient(x - r * 0.35, y - r * 0.45, r * 0.12, x, y, r);
+      bodyGrad.addColorStop(0, '#ffffff');
+      bodyGrad.addColorStop(0.58, '#fdfdfd');
+      bodyGrad.addColorStop(1, '#d9e3ee');
+      ctxRef.fillStyle = bodyGrad;
+      ctxRef.fillRect(x - r - 1, y - r - 1, r * 2 + 2, r * 2 + 2);
+    } else if (bronze){
+      const bodyGrad = ctxRef.createRadialGradient(x - r * 0.35, y - r * 0.45, r * 0.18, x, y, r);
+      bodyGrad.addColorStop(0, '#ffe0b0');
+      bodyGrad.addColorStop(0.22, fill);
+      bodyGrad.addColorStop(1, '#6f3f16');
+      ctxRef.fillStyle = bodyGrad;
+      ctxRef.fillRect(x - r - 1, y - r - 1, r * 2 + 2, r * 2 + 2);
+    } else if (silver){
+      const bodyGrad = ctxRef.createRadialGradient(x - r * 0.35, y - r * 0.45, r * 0.18, x, y, r);
+      bodyGrad.addColorStop(0, '#ffffff');
+      bodyGrad.addColorStop(0.24, fill);
+      bodyGrad.addColorStop(1, '#7d8792');
+      ctxRef.fillStyle = bodyGrad;
+      ctxRef.fillRect(x - r - 1, y - r - 1, r * 2 + 2, r * 2 + 2);
+    } else if (gold){
+      const bodyGrad = ctxRef.createRadialGradient(x - r * 0.35, y - r * 0.45, r * 0.18, x, y, r);
+      bodyGrad.addColorStop(0, '#fff6c6');
+      bodyGrad.addColorStop(0.24, fill);
+      bodyGrad.addColorStop(1, '#8f6500');
+      ctxRef.fillStyle = bodyGrad;
+      ctxRef.fillRect(x - r - 1, y - r - 1, r * 2 + 2, r * 2 + 2);
+    } else if (isPositive){
+      const bodyGrad = ctxRef.createRadialGradient(x - r * 0.35, y - r * 0.45, r * 0.18, x, y, r);
+      bodyGrad.addColorStop(0, '#ffffff');
+      bodyGrad.addColorStop(0.18, fill);
+      bodyGrad.addColorStop(1, fill);
+      ctxRef.fillStyle = bodyGrad;
+      ctxRef.fillRect(x - r - 1, y - r - 1, r * 2 + 2, r * 2 + 2);
+    } else {
+      ctxRef.fillStyle = '#ffffff';
+      ctxRef.fillRect(x - r - 1, y - r - 1, r * 2 + 2, r * 2 + 2);
+      ctxRef.fillStyle = fill;
+      ctxRef.fillRect(x - r - 1, y - r * 0.48, r * 2 + 2, r * 0.96);
+      ctxRef.strokeStyle = 'rgba(255,255,255,.75)';
+      ctxRef.lineWidth = Math.max(1, r * 0.08);
+      for (let yy = y - r * 0.35; yy <= y + r * 0.35; yy += r * 0.23){
+        ctxRef.beginPath();
+        ctxRef.moveTo(x - r, yy);
+        ctxRef.lineTo(x + r, yy);
+        ctxRef.stroke();
+      }
+    }
+
+    const shine = ctxRef.createRadialGradient(x - r * 0.35, y - r * 0.42, r * 0.05, x - r * 0.35, y - r * 0.42, r * 0.45);
+    shine.addColorStop(0, 'rgba(255,255,255,.95)');
+    shine.addColorStop(1, 'rgba(255,255,255,0)');
+    ctxRef.fillStyle = shine;
+    ctxRef.beginPath();
+    ctxRef.arc(x - r * 0.18, y - r * 0.2, r * 0.7, 0, Math.PI * 2);
+    ctxRef.fill();
+
+    ctxRef.restore();
+
+    ctxRef.strokeStyle = preview ? 'rgba(16,44,72,.5)' : 'rgba(16,44,72,.72)';
+    ctxRef.lineWidth = Math.max(1.4, r * 0.08);
+    ctxRef.beginPath();
+    ctxRef.arc(x, y, r, 0, Math.PI * 2);
+    ctxRef.stroke();
+
+    const whiteR = (cue || bronze || silver || gold) ? Math.max(14, r * 0.38) : Math.max(11, r * 0.47);
+    ctxRef.fillStyle = (cue || bronze || silver || gold) ? 'rgba(255,255,255,.72)' : 'rgba(255,255,255,.96)';
+    ctxRef.beginPath();
+    ctxRef.arc(x, y, whiteR, 0, Math.PI * 2);
+    ctxRef.fill();
+    ctxRef.strokeStyle = 'rgba(18,58,92,.15)';
+    ctxRef.lineWidth = 1;
+    ctxRef.stroke();
+
+    const label = cue ? 'CUE' : (bronze ? 'BRONZE' : (silver ? 'SILVER' : (gold ? 'GOLD' : `${isPositive ? '+' : '-'}${value}`)));
+    ctxRef.fillStyle = '#111';
+    ctxRef.textAlign = 'center';
+    ctxRef.textBaseline = 'middle';
+    if (cue || bronze || silver || gold){
+      ctxRef.font = `900 ${Math.max(10, Math.round(r * 0.30))}px Trebuchet MS, Arial, sans-serif`;
+    } else {
+      ctxRef.font = `800 ${value >= 10 ? Math.round(r * 0.46) : Math.round(r * 0.56)}px Trebuchet MS, Arial, sans-serif`;
+    }
+    ctxRef.fillText(label, x, y + 0.5);
+  }
+
+  function drawBallPreviews(){
+    nextCtx.clearRect(0, 0, nextBallCanvas.width, nextBallCanvas.height);
+    if (state.nextBall) drawBallOnContext(nextCtx, nextBallCanvas.width / 2, nextBallCanvas.height / 2, state.nextBall, Math.min(18, radiusForBall(state.nextBall)), true);
+  }
+
+  function drawFX(){
+    for (const p of state.fx){
+      const alpha = Math.max(0, p.life / p.maxLife);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawScene(){
+    ctx.clearRect(0, 0, W, H);
+
+    ctx.fillStyle = '#eef7ff';
+    roundRectPath(ctx, 14, 14, W - 28, H - 28, 16);
+    ctx.fill();
+
+    ctx.save();
+    roundRectPath(ctx, world.left, 30, world.right - world.left, world.floor - 30, 14);
+    ctx.clip();
+
+    const bg = ctx.createLinearGradient(0, 30, 0, world.floor);
+    bg.addColorStop(0, '#ffffff');
+    bg.addColorStop(1, '#e9f4ff');
+    ctx.fillStyle = bg;
+    ctx.fillRect(world.left, 30, world.right - world.left, world.floor - 30);
+
+    ctx.strokeStyle = 'rgba(89,136,184,.08)';
+    ctx.lineWidth = 1;
+    for (let y = 48; y < world.floor; y += 26){
+      ctx.beginPath();
+      ctx.moveTo(world.left + 12, y);
+      ctx.lineTo(world.right - 12, y);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    ctx.strokeStyle = '#74a8db';
+    ctx.lineWidth = 7;
+    roundRectPath(ctx, world.left, 30, world.right - world.left, world.floor - 30, 14);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#db5066';
+    ctx.setLineDash([8, 8]);
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(world.left + 10, world.topLine);
+    ctx.lineTo(world.right - 10, world.topLine);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#62a1de';
+    ctx.fillRect(world.left - 10, world.floor, world.right - world.left + 20, 10);
+
+    if (state.started && !state.over && state.canDrop && state.currentBall){
+      const r = radiusForBall(state.currentBall);
+      const px = clampDropX(state.previewX, r);
+      ctx.strokeStyle = 'rgba(47,128,237,.38)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 7]);
+      ctx.beginPath();
+      ctx.moveTo(px, 36);
+      ctx.lineTo(px, world.topLine - 10);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      drawBallOnContext(ctx, px, world.spawnY, state.currentBall, r, true);
+    }
+
+    for (const ball of state.balls){
+      drawBallOnContext(ctx, ball.x, ball.y, ball, ball.r, false);
+    }
+
+    drawFX();
+  }
+
+  function frame(){
+    update();
+    drawScene();
+    requestAnimationFrame(frame);
+  }
+
+  function getPointerPos(evt){
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+    return { x: (clientX - rect.left) * scaleX };
+  }
+
+  function handleMove(evt){
+    const p = getPointerPos(evt);
+    state.previewX = p.x;
+  }
+
+  function handleDrop(evt){
+    if (evt.cancelable) evt.preventDefault();
+    const p = getPointerPos(evt);
+    state.previewX = p.x;
+    dropBall(state.previewX);
+  }
+
+  canvas.addEventListener('mousemove', handleMove);
+  canvas.addEventListener('click', handleDrop);
+  canvas.addEventListener('touchstart', (evt) => {
+    handleMove(evt);
+    handleDrop(evt);
+  }, { passive: false });
+  canvas.addEventListener('touchmove', (evt) => {
+    if (evt.cancelable) evt.preventDefault();
+    handleMove(evt);
+  }, { passive: false });
+
+  startBtn.addEventListener('click', startGame);
+  restartBtn.addEventListener('click', startGame);
+  helpBtn.addEventListener('click', () => {
+    helpOverlay.classList.remove('hidden');
+  });
+  closeHelpBtn.addEventListener('click', () => {
+    helpOverlay.classList.add('hidden');
+  });
+  restartTopBtn.addEventListener('click', resetToMenu);
+
+  loadHighScore();
+  resetToMenu();
+  frame();
+})();
+</script>
+</body>
+</html>
