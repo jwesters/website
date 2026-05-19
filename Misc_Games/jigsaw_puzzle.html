@@ -1,0 +1,1598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Picture Jigsaw Puzzle</title>
+<style>
+  :root {
+    --bg1: #12233d;
+    --bg2: #1d3b64;
+    --panel: rgba(255,255,255,0.94);
+    --ink: #18314f;
+    --accent: #3b82f6;
+    --accent2: #0ea5e9;
+    --good: #17b978;
+    --shadow: 0 14px 34px rgba(0,0,0,0.22);
+    --radius: 18px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(circle at top left, rgba(255,255,255,0.10), transparent 28%),
+      radial-gradient(circle at bottom right, rgba(255,255,255,0.08), transparent 22%),
+      linear-gradient(160deg, var(--bg1), var(--bg2));
+  }
+
+  body {
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .topbar {
+    display: grid;
+    grid-template-columns: minmax(540px, 700px) minmax(0, 1fr);
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .card {
+    background: var(--panel);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(255,255,255,0.6);
+  }
+
+  .setup-card {
+    padding: 16px;
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+  }
+
+  .thumb {
+    width: 120px;
+    height: 90px;
+    border-radius: 14px;
+    object-fit: cover;
+    display: block;
+    background: linear-gradient(180deg, #eef5ff, #d8e6f5);
+    border: 3px solid rgba(59,130,246,0.16);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.5);
+  }
+
+  .title {
+    font-size: clamp(1.2rem, 1.1vw + 0.9rem, 1.55rem);
+    line-height: 1.1;
+    font-weight: 800;
+    margin: 0 0 4px 0;
+    color: #102843;
+  }
+
+  .subtitle {
+    margin: 0 0 10px 0;
+    font-size: 0.95rem;
+    color: #45617d;
+    line-height: 1.35;
+  }
+
+  .source-note {
+    margin: 0 0 12px 0;
+    font-size: 0.85rem;
+    color: #365674;
+    font-weight: 700;
+  }
+
+  .controls-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(150px, 1fr));
+    gap: 10px;
+    align-items: end;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .field label {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: #34516e;
+  }
+
+  select, input[type="file"], input[type="text"], button {
+    font: inherit;
+  }
+
+  select, input[type="file"], input[type="text"] {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid #c8d7e8;
+    background: white;
+    color: var(--ink);
+    outline: none;
+    min-width: 0;
+  }
+
+  input[type="file"] {
+    padding: 8px 10px;
+  }
+
+  .stats-card {
+    padding: 14px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(120px, 1fr)) minmax(260px, 1.2fr);
+    gap: 10px;
+    align-items: stretch;
+    min-width: 0;
+  }
+
+  .stat-box, .actions-box, .share-box {
+    background: rgba(240,247,255,0.92);
+    border-radius: 14px;
+    border: 1px solid rgba(59,130,246,0.12);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 92px;
+  }
+
+  .stat-label {
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #56728d;
+    font-weight: 700;
+  }
+
+  .stat-value {
+    font-size: 1.4rem;
+    font-weight: 800;
+    margin-top: 6px;
+    color: #163756;
+  }
+
+  .actions-box, .share-box {
+    gap: 10px;
+    grid-column: 1 / -1;
+  }
+
+  .actions-box {
+    grid-column: 3;
+  }
+
+  .button-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  button {
+    border: none;
+    border-radius: 12px;
+    padding: 11px 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+    white-space: nowrap;
+  }
+
+  button:hover { transform: translateY(-1px); }
+  button:active { transform: translateY(0); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white;
+    box-shadow: 0 8px 18px rgba(59,130,246,0.28);
+  }
+
+  .btn-soft {
+    background: white;
+    color: #1d466e;
+    border: 1px solid #c9d8e8;
+  }
+
+  .btn-good {
+    background: linear-gradient(135deg, #17b978, #12a86a);
+    color: white;
+    box-shadow: 0 8px 18px rgba(20,184,106,0.25);
+  }
+
+  .share-input {
+    font-size: 0.85rem;
+  }
+
+  .share-note {
+    font-size: 0.78rem;
+    color: #5b7893;
+    line-height: 1.3;
+  }
+
+  .workspace-card {
+    flex: 1;
+    min-height: 0;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .workspace {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    border-radius: 18px;
+    background:
+      radial-gradient(circle at top, rgba(255,255,255,0.14), transparent 35%),
+      linear-gradient(180deg, #dbeafe 0%, #ecf5ff 100%);
+    border: 2px dashed rgba(59,130,246,0.22);
+    overflow: hidden;
+  }
+
+  .workspace::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.34) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.34) 1px, transparent 1px);
+    background-size: 36px 36px;
+    opacity: 0.45;
+    pointer-events: none;
+  }
+
+  .board {
+    position: absolute;
+    border-radius: 8px;
+    border: 3px solid rgba(59,130,246,0.24);
+    box-shadow: inset 0 0 0 4px rgba(255,255,255,0.46);
+    background-size: cover;
+    background-position: center;
+    opacity: 0.15;
+    overflow: hidden;
+  }
+
+  .board::after {
+    content: "Drop and connect the pieces";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.82);
+    color: #35506c;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+
+  .piece-layer {
+    position: absolute;
+    inset: 0;
+  }
+
+  .piece {
+    position: absolute;
+    touch-action: none;
+    user-select: none;
+    cursor: grab;
+    transform: translateZ(0);
+  }
+
+  .piece canvas {
+    display: block;
+    filter: drop-shadow(0 8px 10px rgba(0,0,0,0.22));
+  }
+
+  .piece.dragging {
+    cursor: grabbing;
+    z-index: 9999 !important;
+  }
+
+  .piece.dragging canvas {
+    filter: drop-shadow(0 16px 18px rgba(0,0,0,0.30));
+  }
+
+  .hint-preview {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    width: 180px;
+    border-radius: 14px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.94);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+    border: 2px solid rgba(255,255,255,0.8);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+  }
+
+  .hint-preview.hidden {
+    opacity: 0.08;
+    transform: scale(0.98);
+  }
+
+  .hint-head {
+    padding: 8px 10px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #284666;
+    background: rgba(231,242,255,0.94);
+    border-bottom: 1px solid rgba(59,130,246,0.12);
+  }
+
+  .hint-image {
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+    background: linear-gradient(180deg, #eef5ff, #d8e6f5);
+  }
+
+  .hint-image img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+  }
+
+  .hint-foot {
+    padding: 8px 10px;
+    font-size: 0.79rem;
+    color: #496882;
+    background: rgba(255,255,255,0.96);
+  }
+
+  .message {
+    position: absolute;
+    left: 50%;
+    top: 16px;
+    transform: translateX(-50%);
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: rgba(16,40,67,0.92);
+    color: white;
+    font-weight: 700;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.18);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease, top 0.18s ease;
+    z-index: 2000;
+  }
+
+  .message.show {
+    opacity: 1;
+    top: 24px;
+  }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,23,39,0.56);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 10000;
+  }
+
+  .overlay.show { display: flex; }
+
+  .modal {
+    width: min(460px, 100%);
+    background: white;
+    border-radius: 22px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.28);
+    padding: 22px;
+    text-align: center;
+  }
+
+  .modal h2 {
+    margin: 0 0 10px 0;
+    font-size: 1.8rem;
+    color: #123354;
+  }
+
+  .modal p {
+    margin: 8px 0;
+    color: #43637c;
+    line-height: 1.45;
+  }
+
+  .result-grid {
+    margin: 18px 0;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .result-box {
+    background: #f0f7ff;
+    border-radius: 16px;
+    padding: 12px;
+    border: 1px solid rgba(59,130,246,0.12);
+  }
+
+  .result-box .small {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #5a7893;
+    text-transform: uppercase;
+  }
+
+  .result-box .big {
+    margin-top: 6px;
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #183757;
+  }
+
+  .footer-note {
+    margin-top: 8px;
+    font-size: 0.82rem;
+    color: #5f7b96;
+  }
+
+  @media (max-width: 1280px) {
+    .topbar { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 980px) {
+    body { overflow: auto; }
+    .app-shell { height: auto; min-height: 100vh; padding: 10px; gap: 10px; }
+    .stats-card { grid-template-columns: repeat(2, 1fr); }
+    .share-box { grid-column: 1 / -1; }
+    .setup-card { grid-template-columns: 1fr; }
+    .thumb { width: 100%; height: 170px; }
+    .controls-grid { grid-template-columns: 1fr; }
+    .workspace-card { min-height: 68vh; }
+  }
+
+  @media (max-width: 700px) {
+    .result-grid { grid-template-columns: 1fr; }
+    .hint-preview { display: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="app-shell">
+    <div class="topbar">
+      <section class="card setup-card">
+        <img id="topThumb" class="thumb" alt="Puzzle preview" />
+        <div>
+          <h1 class="title">Picture Jigsaw Puzzle</h1>
+          <p class="subtitle">Choose a built-in picture or upload your own image. Pieces snap together and connected groups move as one. You can also create a shareable link for the current puzzle image and settings.</p>
+          <p id="sourceNote" class="source-note">Current picture: Loading…</p>
+          <div class="controls-grid">
+            <div class="field">
+              <label for="imageSelect">Built-in Picture</label>
+              <select id="imageSelect"></select>
+            </div>
+            <div class="field">
+              <label for="uploadInput">Upload Your Own Image</label>
+              <input id="uploadInput" type="file" accept="image/*" />
+            </div>
+            <div class="field">
+              <label for="difficultySelect">Difficulty</label>
+              <select id="difficultySelect"></select>
+            </div>
+            <div class="field">
+              <label for="previewSelect">Reference Preview</label>
+              <select id="previewSelect">
+                <option value="show" selected>Show reference</option>
+                <option value="hide">Hide reference</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card stats-card">
+        <div class="stat-box">
+          <div class="stat-label">Time</div>
+          <div id="timeStat" class="stat-value">00:00</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Status</div>
+          <div id="statusStat" class="stat-value" style="font-size:1.1rem;">Ready</div>
+        </div>
+        <div class="actions-box">
+          <div class="button-row">
+            <button id="startBtn" class="btn-primary">Start New Puzzle</button>
+            <button id="shuffleBtn" class="btn-soft">Shuffle Pieces</button>
+          </div>
+          <div class="button-row">
+            <button id="togglePreviewBtn" class="btn-soft">Hide Preview</button>
+            <button id="solveBtn" class="btn-good">Quick Solve</button>
+          </div>
+        </div>
+        <div class="share-box">
+          <div class="button-row">
+            <button id="shareBtn" class="btn-soft">Create Share Link</button>
+            <button id="copyLinkBtn" class="btn-primary">Copy Link</button>
+          </div>
+          <input id="shareLink" class="share-input" type="text" readonly placeholder="Share link will appear here" />
+          <div class="share-note">Built-in pictures create shorter links. Uploaded-image links are resized and compressed automatically, but may still be longer.</div>
+        </div>
+      </section>
+    </div>
+
+    <section class="card workspace-card">
+      <div id="workspace" class="workspace">
+        <div id="board" class="board"></div>
+        <div id="piecesLayer" class="piece-layer"></div>
+        <div id="message" class="message"></div>
+        <div id="hintPreview" class="hint-preview">
+          <div class="hint-head">Reference Image</div>
+          <div class="hint-image"><img id="hintImage" alt="Reference preview" /></div>
+          <div class="hint-foot">Use this preview to help assemble the jigsaw.</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="overlay" class="overlay">
+    <div class="modal">
+      <h2>Puzzle Complete!</h2>
+      <p>You connected all the pieces and rebuilt the picture.</p>
+      <div class="result-grid">
+        <div class="result-box">
+          <div class="small">Time</div>
+          <div id="resultTime" class="big">00:00</div>
+        </div>
+        <div class="result-box">
+          <div class="small">Difficulty</div>
+          <div id="resultDifficulty" class="big">4 × 4</div>
+        </div>
+      </div>
+      <div class="button-row" style="justify-content:center;">
+        <button id="playAgainBtn" class="btn-primary">Play Again</button>
+        <button id="closeOverlayBtn" class="btn-soft">Close</button>
+      </div>
+      <div class="footer-note">Tip: uploaded images can also be shared using the share-link buttons above.</div>
+    </div>
+  </div>
+
+  <div id="confirmOverlay" class="overlay">
+    <div class="modal">
+      <h2>Change Difficulty?</h2>
+      <p>If you change the difficulty now, the current puzzle will reset and the piece sizes will update.</p>
+      <div class="button-row" style="justify-content:center; margin-top: 16px;">
+        <button id="confirmChangeBtn" class="btn-primary">Yes, Change It</button>
+        <button id="cancelChangeBtn" class="btn-soft">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+
+<script>
+(() => {
+  const imageSelect = document.getElementById('imageSelect');
+  const uploadInput = document.getElementById('uploadInput');
+  const difficultySelect = document.getElementById('difficultySelect');
+  const previewSelect = document.getElementById('previewSelect');
+  const startBtn = document.getElementById('startBtn');
+  const shuffleBtn = document.getElementById('shuffleBtn');
+  const togglePreviewBtn = document.getElementById('togglePreviewBtn');
+  const solveBtn = document.getElementById('solveBtn');
+  const shareBtn = document.getElementById('shareBtn');
+  const copyLinkBtn = document.getElementById('copyLinkBtn');
+  const shareLink = document.getElementById('shareLink');
+  const workspace = document.getElementById('workspace');
+  const boardEl = document.getElementById('board');
+  const piecesLayer = document.getElementById('piecesLayer');
+  const hintPreview = document.getElementById('hintPreview');
+  const hintImage = document.getElementById('hintImage');
+  const topThumb = document.getElementById('topThumb');
+  const messageEl = document.getElementById('message');
+  const sourceNote = document.getElementById('sourceNote');
+
+  const timeStat = document.getElementById('timeStat');
+  const statusStat = document.getElementById('statusStat');
+
+  const overlay = document.getElementById('overlay');
+  const resultTime = document.getElementById('resultTime');
+  const resultDifficulty = document.getElementById('resultDifficulty');
+  const playAgainBtn = document.getElementById('playAgainBtn');
+  const closeOverlayBtn = document.getElementById('closeOverlayBtn');
+  const confirmOverlay = document.getElementById('confirmOverlay');
+  const confirmChangeBtn = document.getElementById('confirmChangeBtn');
+  const cancelChangeBtn = document.getElementById('cancelChangeBtn');
+
+  const state = {
+    images: [],
+    image: null,
+    imageUrl: '',
+    imageLabel: '',
+    imageMode: 'builtin',
+    selectedBuiltinId: '',
+    pieces: [],
+    groups: new Map(),
+    rows: 4,
+    cols: 4,
+    tileW: 0,
+    tileH: 0,
+    knob: 0,
+    boardX: 0,
+    boardY: 0,
+    boardW: 0,
+    boardH: 0,
+    pointer: null,
+    zCounter: 1,
+    startTime: null,
+    timerId: null,
+    elapsedBefore: 0,
+    started: false,
+    solved: false,
+    previewVisible: true,
+    loadedFromHash: false,
+    hasProgress: false,
+    currentDifficulty: 4,
+    pendingDifficulty: null,
+  };
+
+  const scenePresets = [
+    { name: 'Sunny Farm', sky1: '#67c8ff', sky2: '#e7f9ff', ground1: '#9be15d', ground2: '#4fa54a', hill1: '#89b7d8', hill2: '#6ea0c2', sun: '#ffd85b', feature: 'house', accent: '#d66157' },
+    { name: 'River Valley', sky1: '#73d5ff', sky2: '#f0fbff', ground1: '#8fe388', ground2: '#3d9f59', hill1: '#98b0d6', hill2: '#708bbd', sun: '#ffdb6e', feature: 'bridge', accent: '#8367c7' },
+    { name: 'Beach Day', sky1: '#79d7ff', sky2: '#ebfdff', ground1: '#f5dd87', ground2: '#e0bf62', hill1: '#7bc9f8', hill2: '#40a9e8', sun: '#ffd166', feature: 'lighthouse', accent: '#ff6b6b' },
+    { name: 'Castle Hill', sky1: '#97ccff', sky2: '#eef7ff', ground1: '#9adf7a', ground2: '#5ea34d', hill1: '#7f9bc9', hill2: '#5c76a8', sun: '#ffe08a', feature: 'castle', accent: '#8b5cf6' },
+    { name: 'Hot Air Balloons', sky1: '#86d9ff', sky2: '#eefcff', ground1: '#b4e275', ground2: '#67b254', hill1: '#9ab9d8', hill2: '#7399bd', sun: '#ffd86f', feature: 'balloons', accent: '#ef476f' },
+    { name: 'Winter Cabin', sky1: '#b0dcff', sky2: '#f7fbff', ground1: '#f8fbff', ground2: '#dfe8f2', hill1: '#b8cce3', hill2: '#91a9c7', sun: '#fff0ad', feature: 'winter', accent: '#cc584f' },
+    { name: 'Desert Cactus', sky1: '#79d4ff', sky2: '#fff3d8', ground1: '#f7d08a', ground2: '#dca95c', hill1: '#dca166', hill2: '#bf7f4a', sun: '#ffc857', feature: 'cactus', accent: '#49a078' },
+    { name: 'Windmill Meadow', sky1: '#78ceff', sky2: '#effcff', ground1: '#a8e06f', ground2: '#5ba94f', hill1: '#96bfd8', hill2: '#72a2c3', sun: '#ffd369', feature: 'windmill', accent: '#f77f00' },
+    { name: 'Rainbow Park', sky1: '#7fd6ff', sky2: '#f1fbff', ground1: '#96e070', ground2: '#48a94b', hill1: '#89b9d7', hill2: '#6c97bc', sun: '#ffd766', feature: 'rainbow', accent: '#4d96ff' },
+    { name: 'Moonlit Night', sky1: '#1d3b78', sky2: '#5f88c3', ground1: '#5fb06e', ground2: '#2d6d45', hill1: '#405c92', hill2: '#2b4273', sun: '#f7f0b0', feature: 'night', accent: '#f4d35e' },
+    { name: 'Garden Path', sky1: '#88d9ff', sky2: '#f2fdff', ground1: '#9fe178', ground2: '#53a84e', hill1: '#95b4d4', hill2: '#7393b9', sun: '#ffdb75', feature: 'flowers', accent: '#ff5d8f' },
+    { name: 'Rocket Launch', sky1: '#9ed9ff', sky2: '#eef8ff', ground1: '#aadf72', ground2: '#5da24b', hill1: '#8cb3d0', hill2: '#6d8cb1', sun: '#ffd673', feature: 'rocket', accent: '#ef4444' },
+    { name: 'Forest Lake', sky1: '#73ccff', sky2: '#ebfbff', ground1: '#8dd67f', ground2: '#367d4f', hill1: '#83b6cf', hill2: '#5c93ac', sun: '#ffdc72', feature: 'lake', accent: '#2a9d8f' }
+  ];
+
+  function makeDataUrl(svg) {
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg.trim());
+  }
+
+  function svgScene(p) {
+    const extras = {
+      house: `
+        <g>
+          <rect x="118" y="370" width="180" height="112" rx="10" fill="#f5d6ae"/>
+          <polygon points="104,380 208,318 312,380" fill="${p.accent}"/>
+          <rect x="142" y="406" width="44" height="76" fill="#a76a42"/>
+          <rect x="204" y="398" width="34" height="34" fill="#dff5ff"/>
+          <rect x="248" y="398" width="34" height="34" fill="#dff5ff"/>
+          <rect x="204" y="442" width="34" height="34" fill="#dff5ff"/>
+          <rect x="248" y="442" width="34" height="34" fill="#dff5ff"/>
+          <rect x="630" y="448" width="26" height="92" fill="#8a6243"/>
+          <circle cx="643" cy="426" r="42" fill="#78c95d"/>
+          <circle cx="611" cy="442" r="28" fill="#78c95d"/>
+          <circle cx="672" cy="445" r="30" fill="#78c95d"/>
+        </g>`,
+      bridge: `
+        <g>
+          <path d="M330 458 Q450 378 580 458" fill="none" stroke="#8d5a3c" stroke-width="18" stroke-linecap="round"/>
+          <line x1="360" y1="442" x2="360" y2="478" stroke="#8d5a3c" stroke-width="8"/>
+          <line x1="420" y1="410" x2="420" y2="478" stroke="#8d5a3c" stroke-width="8"/>
+          <line x1="480" y1="398" x2="480" y2="478" stroke="#8d5a3c" stroke-width="8"/>
+          <line x1="540" y1="420" x2="540" y2="478" stroke="#8d5a3c" stroke-width="8"/>
+        </g>`,
+      lighthouse: `
+        <g>
+          <rect x="670" y="305" width="60" height="190" rx="10" fill="#faf7f2"/>
+          <rect x="670" y="352" width="60" height="28" fill="${p.accent}"/>
+          <rect x="670" y="409" width="60" height="28" fill="${p.accent}"/>
+          <rect x="658" y="285" width="84" height="28" rx="8" fill="#44546a"/>
+          <rect x="690" y="255" width="20" height="36" fill="#44546a"/>
+          <path d="M742 300 L792 285 L792 315 Z" fill="#fff2a8" opacity="0.58"/>
+          <rect x="105" y="450" width="140" height="60" rx="24" fill="#9ed97a"/>
+        </g>`,
+      castle: `
+        <g>
+          <rect x="520" y="310" width="200" height="170" fill="#d9dde7"/>
+          <rect x="565" y="265" width="34" height="80" fill="#c8ced9"/>
+          <rect x="640" y="250" width="34" height="95" fill="#c8ced9"/>
+          <rect x="700" y="278" width="34" height="67" fill="#c8ced9"/>
+          <polygon points="565,265 582,236 599,265" fill="${p.accent}"/>
+          <polygon points="640,250 657,220 674,250" fill="${p.accent}"/>
+          <polygon points="700,278 717,248 734,278" fill="${p.accent}"/>
+          <rect x="595" y="390" width="50" height="90" rx="25" fill="#9b7b67"/>
+          <rect x="545" y="360" width="28" height="28" fill="#dff5ff"/>
+          <rect x="690" y="360" width="28" height="28" fill="#dff5ff"/>
+        </g>`,
+      balloons: `
+        <g>
+          <line x1="220" y1="215" x2="220" y2="285" stroke="#76604b" stroke-width="3"/>
+          <ellipse cx="220" cy="176" rx="34" ry="42" fill="#ff6b6b"/>
+          <rect x="209" y="285" width="22" height="16" fill="#8c6a54"/>
+          <line x1="350" y1="150" x2="350" y2="220" stroke="#76604b" stroke-width="3"/>
+          <ellipse cx="350" cy="112" rx="32" ry="40" fill="#4d96ff"/>
+          <rect x="339" y="220" width="22" height="16" fill="#8c6a54"/>
+          <line x1="760" y1="185" x2="760" y2="255" stroke="#76604b" stroke-width="3"/>
+          <ellipse cx="760" cy="145" rx="35" ry="44" fill="#ffd166"/>
+          <rect x="749" y="255" width="22" height="16" fill="#8c6a54"/>
+        </g>`,
+      winter: `
+        <g>
+          <rect x="130" y="380" width="180" height="96" rx="12" fill="#f8ede4"/>
+          <polygon points="112,392 220,326 328,392" fill="${p.accent}"/>
+          <rect x="155" y="412" width="40" height="64" fill="#8d674b"/>
+          <circle cx="650" cy="418" r="58" fill="#f9fbff"/>
+          <circle cx="650" cy="350" r="40" fill="#f9fbff"/>
+          <circle cx="650" cy="300" r="28" fill="#f9fbff"/>
+          <circle cx="640" cy="294" r="4" fill="#2a3b52"/>
+          <circle cx="660" cy="294" r="4" fill="#2a3b52"/>
+          <polygon points="650,307 658,314 650,317" fill="#f28f3b"/>
+        </g>`,
+      cactus: `
+        <g>
+          <rect x="620" y="360" width="44" height="150" rx="20" fill="#49a078"/>
+          <rect x="582" y="390" width="28" height="70" rx="14" fill="#49a078"/>
+          <rect x="674" y="395" width="28" height="72" rx="14" fill="#49a078"/>
+          <rect x="170" y="398" width="28" height="110" rx="14" fill="#49a078"/>
+          <rect x="142" y="425" width="20" height="56" rx="10" fill="#49a078"/>
+        </g>`,
+      windmill: `
+        <g>
+          <polygon points="655,500 705,500 690,330 670,330" fill="#d6c6a9"/>
+          <circle cx="680" cy="300" r="18" fill="#6f5a48"/>
+          <polygon points="680,120 695,286 665,286" fill="#ffffff" stroke="#8aa4be" stroke-width="3"/>
+          <polygon points="860,300 694,315 694,285" fill="#ffffff" stroke="#8aa4be" stroke-width="3"/>
+          <polygon points="680,480 695,314 665,314" fill="#ffffff" stroke="#8aa4be" stroke-width="3"/>
+          <polygon points="500,300 666,315 666,285" fill="#ffffff" stroke="#8aa4be" stroke-width="3"/>
+        </g>`,
+      rainbow: `
+        <g fill="none" stroke-linecap="round">
+          <path d="M180 410 Q320 180 460 410" stroke="#ff5d73" stroke-width="18"/>
+          <path d="M200 410 Q320 205 440 410" stroke="#ffb347" stroke-width="16"/>
+          <path d="M220 410 Q320 232 420 410" stroke="#ffe066" stroke-width="14"/>
+          <path d="M240 410 Q320 258 400 410" stroke="#5edc7c" stroke-width="12"/>
+          <path d="M258 410 Q320 282 382 410" stroke="#4d96ff" stroke-width="10"/>
+        </g>`,
+      night: `
+        <g>
+          <circle cx="725" cy="120" r="44" fill="#f7f0b0"/>
+          <circle cx="742" cy="110" r="44" fill="#4365a2"/>
+          <circle cx="170" cy="90" r="3" fill="#ffffff"/>
+          <circle cx="220" cy="140" r="2.6" fill="#ffffff"/>
+          <circle cx="340" cy="95" r="2.4" fill="#ffffff"/>
+          <circle cx="500" cy="125" r="2.8" fill="#ffffff"/>
+          <circle cx="610" cy="88" r="2.2" fill="#ffffff"/>
+          <circle cx="790" cy="170" r="3" fill="#ffffff"/>
+          <rect x="120" y="385" width="180" height="98" rx="12" fill="#e8d8bf"/>
+          <polygon points="102,395 210,332 318,395" fill="${p.accent}"/>
+          <rect x="142" y="415" width="40" height="68" fill="#8f6c4d"/>
+          <rect x="206" y="404" width="36" height="32" fill="#fff3b0"/>
+          <rect x="250" y="404" width="36" height="32" fill="#fff3b0"/>
+        </g>`,
+      flowers: `
+        <g>
+          <g transform="translate(210,430)">
+            <line x1="0" y1="0" x2="0" y2="-80" stroke="#4d8f46" stroke-width="6"/>
+            <circle cx="0" cy="-92" r="22" fill="#ff5d8f"/>
+            <circle cx="-18" cy="-92" r="14" fill="#ff88aa"/>
+            <circle cx="18" cy="-92" r="14" fill="#ff88aa"/>
+          </g>
+          <g transform="translate(330,458)">
+            <line x1="0" y1="0" x2="0" y2="-72" stroke="#4d8f46" stroke-width="6"/>
+            <circle cx="0" cy="-84" r="20" fill="#ffd166"/>
+            <circle cx="-16" cy="-84" r="12" fill="#ffe59d"/>
+            <circle cx="16" cy="-84" r="12" fill="#ffe59d"/>
+          </g>
+          <g transform="translate(720,455)">
+            <line x1="0" y1="0" x2="0" y2="-74" stroke="#4d8f46" stroke-width="6"/>
+            <circle cx="0" cy="-86" r="20" fill="#8a5cff"/>
+            <circle cx="-16" cy="-86" r="12" fill="#b59aff"/>
+            <circle cx="16" cy="-86" r="12" fill="#b59aff"/>
+          </g>
+        </g>`,
+      rocket: `
+        <g>
+          <path d="M650 210 Q720 260 700 360 Q635 340 612 280 Q630 240 650 210 Z" fill="#ffffff"/>
+          <path d="M650 210 Q666 250 644 298 Q620 282 612 280 Q630 240 650 210 Z" fill="${p.accent}"/>
+          <circle cx="662" cy="284" r="16" fill="#8fd3ff" stroke="#5a86a8" stroke-width="4"/>
+          <polygon points="615,327 590,370 628,354" fill="#ff8a65"/>
+          <polygon points="704,334 730,378 690,360" fill="#ff8a65"/>
+          <polygon points="650,360 625,430 676,430" fill="#ffd166"/>
+          <polygon points="650,390 635,452 664,452" fill="#ff9f1c"/>
+        </g>`,
+      lake: `
+        <g>
+          <ellipse cx="625" cy="468" rx="175" ry="52" fill="#86d8ff" opacity="0.85"/>
+          <ellipse cx="625" cy="470" rx="120" ry="28" fill="#b5ecff" opacity="0.72"/>
+          <rect x="220" y="432" width="24" height="84" fill="#7d5a3c"/>
+          <circle cx="232" cy="406" r="38" fill="#5fbf6d"/>
+          <circle cx="204" cy="420" r="26" fill="#5fbf6d"/>
+          <circle cx="258" cy="422" r="26" fill="#5fbf6d"/>
+        </g>`
+    };
+
+    return `
+      <svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600">
+        <defs>
+          <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="${p.sky1}"/>
+            <stop offset="100%" stop-color="${p.sky2}"/>
+          </linearGradient>
+          <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="${p.ground1}"/>
+            <stop offset="100%" stop-color="${p.ground2}"/>
+          </linearGradient>
+        </defs>
+        <rect width="900" height="600" fill="url(#sky)"/>
+        <circle cx="730" cy="115" r="60" fill="${p.sun}" opacity="0.96"/>
+        <circle cx="730" cy="115" r="92" fill="#fff7bf" opacity="0.24"/>
+        <g opacity="0.92">
+          <ellipse cx="165" cy="122" rx="60" ry="24" fill="white"/>
+          <ellipse cx="210" cy="118" rx="54" ry="20" fill="white"/>
+          <ellipse cx="126" cy="128" rx="42" ry="18" fill="white"/>
+          <ellipse cx="585" cy="95" rx="52" ry="20" fill="white"/>
+          <ellipse cx="628" cy="92" rx="44" ry="18" fill="white"/>
+        </g>
+        <path d="M0 350 C110 285 180 260 290 280 C380 295 405 250 500 238 C605 224 720 254 900 220 L900 430 L0 430 Z" fill="${p.hill1}"/>
+        <path d="M0 392 C130 322 245 320 352 334 C460 348 570 315 694 304 C780 297 838 304 900 318 L900 470 L0 470 Z" fill="${p.hill2}"/>
+        <path d="M0 436 C150 404 248 416 360 445 C435 464 555 466 650 440 C759 410 820 408 900 424 L900 600 L0 600 Z" fill="url(#ground)"/>
+        ${(p.feature === 'bridge' || p.feature === 'lake' || p.feature === 'lighthouse') ? '<path d="M372 600 C425 515 505 470 588 442 C659 419 737 400 900 378 L900 600 Z" fill="#6cc8ff" opacity="0.88"/>' : ''}
+        ${extras[p.feature] || ''}
+      </svg>
+    `;
+  }
+
+  function buildBuiltInImages() {
+    return scenePresets.map((preset, index) => ({
+      id: `scene-${index + 1}`,
+      name: preset.name,
+      url: makeDataUrl(svgScene(preset))
+    }));
+  }
+
+  function populateSelectors() {
+    imageSelect.innerHTML = '';
+    state.images.forEach(img => {
+      const option = document.createElement('option');
+      option.value = img.id;
+      option.textContent = img.name;
+      imageSelect.appendChild(option);
+    });
+
+    difficultySelect.innerHTML = '';
+    for (let n = 3; n <= 10; n++) {
+      const option = document.createElement('option');
+      option.value = String(n);
+      option.textContent = `${n} × ${n}`;
+      if (n === 4) option.selected = true;
+      difficultySelect.appendChild(option);
+    }
+  }
+
+  function loadImage(url) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = url;
+    });
+  }
+
+  function formatTime(seconds) {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  }
+
+  function updateTime() {
+    const now = state.started && state.startTime ? Math.floor((Date.now() - state.startTime) / 1000) : state.elapsedBefore;
+    timeStat.textContent = formatTime(now);
+  }
+
+  function startTimerIfNeeded() {
+    if (state.solved) return;
+    if (!state.started) {
+      state.started = true;
+      state.startTime = Date.now() - state.elapsedBefore * 1000;
+      if (state.timerId) clearInterval(state.timerId);
+      state.timerId = setInterval(updateTime, 250);
+      statusStat.textContent = 'In Progress';
+    }
+  }
+
+  function stopTimer() {
+    if (state.timerId) clearInterval(state.timerId);
+    state.timerId = null;
+    if (state.started && state.startTime) {
+      state.elapsedBefore = Math.floor((Date.now() - state.startTime) / 1000);
+    }
+    state.started = false;
+    updateTime();
+  }
+
+  function resetStats() {
+    state.startTime = null;
+    state.elapsedBefore = 0;
+    state.started = false;
+    state.solved = false;
+    if (state.timerId) clearInterval(state.timerId);
+    state.timerId = null;
+    timeStat.textContent = '00:00';
+    statusStat.textContent = 'Ready';
+  }
+
+  function clearPuzzle() {
+    piecesLayer.innerHTML = '';
+    state.pieces = [];
+    state.groups.clear();
+    state.pointer = null;
+    state.zCounter = 1;
+  }
+
+  function showMessage(text) {
+    messageEl.textContent = text;
+    messageEl.classList.add('show');
+    clearTimeout(showMessage._timer);
+    showMessage._timer = setTimeout(() => messageEl.classList.remove('show'), 1400);
+  }
+
+  function setPreviewVisibility(show) {
+    state.previewVisible = show;
+    hintPreview.classList.toggle('hidden', !show);
+    togglePreviewBtn.textContent = show ? 'Hide Preview' : 'Show Preview';
+    previewSelect.value = show ? 'show' : 'hide';
+  }
+
+  function updatePreviewImages() {
+    topThumb.src = state.imageUrl;
+    hintImage.src = state.imageUrl;
+    sourceNote.textContent = `Current picture: ${state.imageLabel}`;
+  }
+
+  function selectBuiltInImage(id) {
+    const found = state.images.find(img => img.id === id) || state.images[0];
+    state.selectedBuiltinId = found.id;
+    state.imageMode = 'builtin';
+    state.imageUrl = found.url;
+    state.imageLabel = found.name;
+    imageSelect.value = found.id;
+    updatePreviewImages();
+  }
+
+  async function setActiveImage(url, label, mode) {
+    state.image = await loadImage(url);
+    state.imageUrl = url;
+    state.imageLabel = label;
+    state.imageMode = mode;
+    updatePreviewImages();
+  }
+
+  function randomSign() {
+    return Math.random() > 0.5 ? 1 : -1;
+  }
+
+  function buildConnectors(rows, cols) {
+    const grid = [];
+    for (let r = 0; r < rows; r++) {
+      grid[r] = [];
+      for (let c = 0; c < cols; c++) {
+        const top = r === 0 ? 0 : -grid[r - 1][c].bottom;
+        const left = c === 0 ? 0 : -grid[r][c - 1].right;
+        const right = c === cols - 1 ? 0 : randomSign();
+        const bottom = r === rows - 1 ? 0 : randomSign();
+        grid[r][c] = { top, right, bottom, left };
+      }
+    }
+    return grid;
+  }
+
+  function buildPiecePath(ctx, w, h, k, con) {
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(w * 0.25, 0);
+    if (con.top !== 0) {
+      const sy = -con.top * k;
+      ctx.bezierCurveTo(w * 0.30, 0, w * 0.35, sy, w * 0.50, sy);
+      ctx.bezierCurveTo(w * 0.65, sy, w * 0.70, 0, w * 0.75, 0);
+    }
+    ctx.lineTo(w, 0);
+    ctx.lineTo(w, h * 0.25);
+    if (con.right !== 0) {
+      const sx = con.right * k;
+      ctx.bezierCurveTo(w, h * 0.30, w + sx, h * 0.35, w + sx, h * 0.50);
+      ctx.bezierCurveTo(w + sx, h * 0.65, w, h * 0.70, w, h * 0.75);
+    }
+    ctx.lineTo(w, h);
+    ctx.lineTo(w * 0.75, h);
+    if (con.bottom !== 0) {
+      const sy = con.bottom * k;
+      ctx.bezierCurveTo(w * 0.70, h, w * 0.65, h + sy, w * 0.50, h + sy);
+      ctx.bezierCurveTo(w * 0.35, h + sy, w * 0.30, h, w * 0.25, h);
+    }
+    ctx.lineTo(0, h);
+    ctx.lineTo(0, h * 0.75);
+    if (con.left !== 0) {
+      const sx = -con.left * k;
+      ctx.bezierCurveTo(0, h * 0.70, sx, h * 0.65, sx, h * 0.50);
+      ctx.bezierCurveTo(sx, h * 0.35, 0, h * 0.30, 0, h * 0.25);
+    }
+    ctx.lineTo(0, 0);
+    ctx.closePath();
+  }
+
+  function drawPieceCanvas(piece) {
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.ceil(state.tileW + state.knob * 2);
+    canvas.height = Math.ceil(state.tileH + state.knob * 2);
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.translate(state.knob, state.knob);
+    buildPiecePath(ctx, state.tileW, state.tileH, state.knob * 0.95, piece.con);
+    ctx.save();
+    ctx.clip();
+    ctx.drawImage(state.image, -piece.col * state.tileW, -piece.row * state.tileH, state.boardW, state.boardH);
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(17, 34, 53, 0.55)';
+    ctx.lineWidth = 2;
+    buildPiecePath(ctx, state.tileW, state.tileH, state.knob * 0.95, piece.con);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+    return canvas;
+  }
+
+  function applyPiecePosition(piece) {
+    if (!piece.el) return;
+    piece.el.style.left = (piece.x - state.knob) + 'px';
+    piece.el.style.top = (piece.y - state.knob) + 'px';
+    piece.el.style.zIndex = piece.z || 1;
+  }
+
+  function makePieceElement(piece) {
+    const el = document.createElement('div');
+    el.className = 'piece';
+    el.dataset.id = piece.id;
+    const canvas = drawPieceCanvas(piece);
+    el.appendChild(canvas);
+    el.style.width = canvas.width + 'px';
+    el.style.height = canvas.height + 'px';
+    piece.el = el;
+    applyPiecePosition(piece);
+    attachPointer(el, piece);
+    return el;
+  }
+
+  function createGroups() {
+    state.groups.clear();
+    state.pieces.forEach(piece => {
+      const gid = piece.id;
+      piece.groupId = gid;
+      state.groups.set(gid, { id: gid, members: new Set([piece.id]) });
+    });
+  }
+
+  function getGroup(groupId) {
+    return state.groups.get(groupId);
+  }
+
+  function setGroupZ(groupId) {
+    const group = state.groups.get(groupId);
+    if (!group) return;
+    const z = ++state.zCounter;
+    for (const id of group.members) {
+      const piece = state.pieces[id];
+      piece.z = z;
+      applyPiecePosition(piece);
+    }
+  }
+
+  function moveGroup(groupId, dx, dy) {
+    const group = getGroup(groupId);
+    if (!group) return;
+    for (const id of group.members) {
+      const p = state.pieces[id];
+      p.x += dx;
+      p.y += dy;
+      applyPiecePosition(p);
+    }
+  }
+
+  function mergeGroups(baseId, otherId) {
+    if (baseId === otherId) return baseId;
+    const base = getGroup(baseId);
+    const other = getGroup(otherId);
+    if (!base || !other) return baseId;
+    const keep = base.members.size >= other.members.size ? base : other;
+    const absorb = keep === base ? other : base;
+    for (const id of absorb.members) {
+      keep.members.add(id);
+      state.pieces[id].groupId = keep.id;
+    }
+    state.groups.delete(absorb.id);
+    return keep.id;
+  }
+
+  function pieceNeighbor(piece, direction) {
+    const { row, col } = piece;
+    if (direction === 'left' && col > 0) return state.pieces[piece.id - 1];
+    if (direction === 'right' && col < state.cols - 1) return state.pieces[piece.id + 1];
+    if (direction === 'up' && row > 0) return state.pieces[piece.id - state.cols];
+    if (direction === 'down' && row < state.rows - 1) return state.pieces[piece.id + state.cols];
+    return null;
+  }
+
+  function attemptBoardSnap(groupId) {
+    const group = getGroup(groupId);
+    if (!group) return false;
+    const threshold = Math.max(12, Math.min(state.tileW, state.tileH) * 0.18);
+    for (const id of group.members) {
+      const piece = state.pieces[id];
+      const tx = state.boardX + piece.col * state.tileW;
+      const ty = state.boardY + piece.row * state.tileH;
+      const dx = tx - piece.x;
+      const dy = ty - piece.y;
+      if (Math.hypot(dx, dy) <= threshold) {
+        moveGroup(groupId, dx, dy);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function attemptGroupSnaps(groupId) {
+    const threshold = Math.max(12, Math.min(state.tileW, state.tileH) * 0.18);
+    let changed = true;
+    let activeGroupId = groupId;
+    let snappedAny = false;
+
+    while (changed) {
+      changed = false;
+      const group = getGroup(activeGroupId);
+      if (!group) break;
+      const members = Array.from(group.members);
+      outer:
+      for (const id of members) {
+        const piece = state.pieces[id];
+        const candidates = [
+          ['left', -state.tileW, 0],
+          ['right', state.tileW, 0],
+          ['up', 0, -state.tileH],
+          ['down', 0, state.tileH],
+        ];
+        for (const [dir, ex, ey] of candidates) {
+          const neighbor = pieceNeighbor(piece, dir);
+          if (!neighbor || neighbor.groupId === piece.groupId) continue;
+          const dx = neighbor.x - (piece.x + ex);
+          const dy = neighbor.y - (piece.y + ey);
+          if (Math.hypot(dx, dy) <= threshold) {
+            moveGroup(activeGroupId, dx, dy);
+            const merged = mergeGroups(activeGroupId, neighbor.groupId);
+            activeGroupId = merged;
+            changed = true;
+            snappedAny = true;
+            showMessage('Snap!');
+            break outer;
+          }
+        }
+      }
+    }
+
+    const boardSnapped = attemptBoardSnap(activeGroupId);
+    if (boardSnapped && !snappedAny) showMessage('Locked into place!');
+    checkSolved();
+    return snappedAny || boardSnapped;
+  }
+
+  function isWholePuzzleConnected() {
+    return state.groups.size === 1;
+  }
+
+  function checkSolved() {
+    if (!isWholePuzzleConnected()) return false;
+    const threshold = 1.5;
+    for (const piece of state.pieces) {
+      const tx = state.boardX + piece.col * state.tileW;
+      const ty = state.boardY + piece.row * state.tileH;
+      if (Math.abs(piece.x - tx) > threshold || Math.abs(piece.y - ty) > threshold) {
+        return false;
+      }
+    }
+    state.solved = true;
+    stopTimer();
+    statusStat.textContent = 'Complete';
+    resultTime.textContent = timeStat.textContent;
+    resultDifficulty.textContent = `${state.rows} × ${state.cols}`;
+    overlay.classList.add('show');
+    return true;
+  }
+
+  function hideSolvedOverlay() {
+    overlay.classList.remove('show');
+  }
+
+  function showConfirmOverlay() {
+    confirmOverlay.classList.add('show');
+  }
+
+  function hideConfirmOverlay() {
+    confirmOverlay.classList.remove('show');
+  }
+
+  function attachPointer(el, piece) {
+    el.addEventListener('pointerdown', (e) => {
+      if (state.solved) return;
+      e.preventDefault();
+      startTimerIfNeeded();
+      hideSolvedOverlay();
+      const group = getGroup(piece.groupId);
+      setGroupZ(piece.groupId);
+      const startPositions = {};
+      for (const id of group.members) {
+        const p = state.pieces[id];
+        startPositions[id] = { x: p.x, y: p.y };
+        p.el.classList.add('dragging');
+      }
+      state.pointer = {
+        pieceId: piece.id,
+        groupId: piece.groupId,
+        startX: e.clientX,
+        startY: e.clientY,
+        startPositions,
+      };
+      el.setPointerCapture(e.pointerId);
+    });
+
+    el.addEventListener('pointermove', (e) => {
+      const pointer = state.pointer;
+      if (!pointer) return;
+      const pieceNow = state.pieces[pointer.pieceId];
+      if (pieceNow.groupId !== pointer.groupId) return;
+      const group = getGroup(pointer.groupId);
+      if (!group) return;
+      const dx = e.clientX - pointer.startX;
+      const dy = e.clientY - pointer.startY;
+      for (const id of group.members) {
+        const p = state.pieces[id];
+        p.x = pointer.startPositions[id].x + dx;
+        p.y = pointer.startPositions[id].y + dy;
+        applyPiecePosition(p);
+      }
+    });
+
+    function endDrag() {
+      const pointer = state.pointer;
+      if (!pointer) return;
+      const group = getGroup(pointer.groupId);
+      if (group) {
+        for (const id of group.members) state.pieces[id].el.classList.remove('dragging');
+      } else {
+        state.pieces.forEach(p => p.el.classList.remove('dragging'));
+      }
+      state.hasProgress = true;
+      attemptGroupSnaps(pointer.groupId);
+      state.pointer = null;
+    }
+
+    el.addEventListener('pointerup', endDrag);
+    el.addEventListener('pointercancel', endDrag);
+  }
+
+  function randomPlacementRectangles(pieceCount, pieceOuterW, pieceOuterH) {
+    const rect = workspace.getBoundingClientRect();
+    const placements = [];
+    const boardLeft = state.boardX - pieceOuterW * 0.55;
+    const boardRight = state.boardX + state.boardW + pieceOuterW * 0.12;
+    const boardTop = state.boardY - pieceOuterH * 0.55;
+    const boardBottom = state.boardY + state.boardH + pieceOuterH * 0.12;
+
+    function overlaps(ax, ay) {
+      return !(ax + pieceOuterW < boardLeft || ax > boardRight || ay + pieceOuterH < boardTop || ay > boardBottom);
+    }
+
+    for (let i = 0; i < pieceCount; i++) {
+      let x = 0, y = 0;
+      let tries = 0;
+      do {
+        x = Math.random() * Math.max(10, rect.width - pieceOuterW - 10) + 5;
+        y = Math.random() * Math.max(10, rect.height - pieceOuterH - 10) + 5;
+        tries += 1;
+      } while (overlaps(x, y) && tries < 500);
+      placements.push({ x, y });
+    }
+    return placements;
+  }
+
+  function computeBoardLayout() {
+    const rect = workspace.getBoundingClientRect();
+    const imgAspect = state.image.naturalWidth / state.image.naturalHeight;
+    let boardW = rect.width * 0.50;
+    let boardH = boardW / imgAspect;
+    if (boardH > rect.height * 0.72) {
+      boardH = rect.height * 0.72;
+      boardW = boardH * imgAspect;
+    }
+    if (boardW > rect.width * 0.66) {
+      boardW = rect.width * 0.66;
+      boardH = boardW / imgAspect;
+    }
+    state.boardW = boardW;
+    state.boardH = boardH;
+    state.boardX = (rect.width - boardW) / 2;
+    state.boardY = (rect.height - boardH) / 2;
+    state.tileW = boardW / state.cols;
+    state.tileH = boardH / state.rows;
+    state.knob = Math.max(6, Math.min(state.tileW, state.tileH) * 0.22);
+
+    boardEl.style.left = state.boardX + 'px';
+    boardEl.style.top = state.boardY + 'px';
+    boardEl.style.width = state.boardW + 'px';
+    boardEl.style.height = state.boardH + 'px';
+  }
+
+  function buildPuzzle() {
+    if (!state.image) return;
+    hideSolvedOverlay();
+    hideConfirmOverlay();
+    resetStats();
+    clearPuzzle();
+    state.rows = parseInt(difficultySelect.value, 10);
+    state.currentDifficulty = state.rows;
+    state.hasProgress = false;
+    state.cols = state.rows;
+    computeBoardLayout();
+    const connectors = buildConnectors(state.rows, state.cols);
+    const placements = randomPlacementRectangles(state.rows * state.cols, state.tileW + state.knob * 2, state.tileH + state.knob * 2);
+    let id = 0;
+    for (let r = 0; r < state.rows; r++) {
+      for (let c = 0; c < state.cols; c++) {
+        const placement = placements[id];
+        const piece = {
+          id,
+          row: r,
+          col: c,
+          con: connectors[r][c],
+          x: placement.x + state.knob,
+          y: placement.y + state.knob,
+          z: ++state.zCounter,
+          el: null,
+          groupId: id,
+        };
+        state.pieces.push(piece);
+        const el = makePieceElement(piece);
+        piecesLayer.appendChild(el);
+        id += 1;
+      }
+    }
+    createGroups();
+    boardEl.style.opacity = '0.15';
+    boardEl.style.backgroundImage = `url(${state.imageUrl})`;
+    setPreviewVisibility(previewSelect.value !== 'hide');
+    shareLink.value = '';
+  }
+
+  function shufflePuzzle() {
+    if (!state.pieces.length) return;
+    hideSolvedOverlay();
+    stopTimer();
+    resetStats();
+    const placements = randomPlacementRectangles(state.rows * state.cols, state.tileW + state.knob * 2, state.tileH + state.knob * 2);
+    state.pieces.forEach((piece, i) => {
+      piece.x = placements[i].x + state.knob;
+      piece.y = placements[i].y + state.knob;
+      piece.z = ++state.zCounter;
+      applyPiecePosition(piece);
+    });
+    createGroups();
+    state.hasProgress = false;
+    showMessage('Pieces shuffled!');
+  }
+
+  function quickSolve() {
+    if (!state.pieces.length) return;
+    hideSolvedOverlay();
+    startTimerIfNeeded();
+    state.pieces.forEach(piece => {
+      piece.x = state.boardX + piece.col * state.tileW;
+      piece.y = state.boardY + piece.row * state.tileH;
+      piece.z = ++state.zCounter;
+      applyPiecePosition(piece);
+    });
+    state.hasProgress = true;
+    const allId = state.pieces[0].id;
+    state.groups.clear();
+    const full = { id: allId, members: new Set() };
+    state.pieces.forEach(piece => {
+      piece.groupId = allId;
+      full.members.add(piece.id);
+    });
+    state.groups.set(allId, full);
+    checkSolved();
+  }
+
+  function encodePayload(obj) {
+    const json = JSON.stringify(obj);
+    return btoa(unescape(encodeURIComponent(json))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  }
+
+  function decodePayload(text) {
+    const padded = text.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((text.length + 3) % 4);
+    const json = decodeURIComponent(escape(atob(padded)));
+    return JSON.parse(json);
+  }
+
+  function createShareUrl() {
+    const payload = {
+      v: 2,
+      d: parseInt(difficultySelect.value, 10),
+      p: state.previewVisible ? 1 : 0,
+      m: state.imageMode === 'uploaded' ? 'u' : 'b',
+      id: state.imageMode === 'builtin' ? state.selectedBuiltinId : '',
+      img: state.imageMode === 'uploaded' ? state.imageUrl : '',
+      n: state.imageMode === 'uploaded' ? state.imageLabel : ''
+    };
+    const hash = encodePayload(payload);
+    return `${location.origin}${location.pathname}#${hash}`;
+  }
+
+  async function createShareLink(copyToo = false) {
+    const url = createShareUrl();
+    shareLink.value = url;
+    if (url.length > 12000) {
+      showMessage('Long uploaded-image link created');
+    } else {
+      showMessage('Share link ready');
+    }
+    if (copyToo && navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(url);
+        showMessage('Share link copied!');
+      } catch (err) {
+        showMessage('Could not copy automatically');
+      }
+    }
+  }
+
+  async function resizeAndCompressImage(file) {
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const img = await loadImage(dataUrl);
+    const maxSide = 420;
+    const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.max(120, Math.round(img.naturalWidth * scale));
+    const h = Math.max(120, Math.round(img.naturalHeight * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    let output = canvas.toDataURL('image/webp', 0.68);
+    if (!output.startsWith('data:image/webp')) {
+      output = canvas.toDataURL('image/jpeg', 0.72);
+    }
+    return output;
+  }
+
+  async function handleUpload(file) {
+    if (!file) return;
+    try {
+      const compressed = await resizeAndCompressImage(file);
+      await setActiveImage(compressed, file.name || 'Uploaded Image', 'uploaded');
+      showMessage('Uploaded image ready');
+      buildPuzzle();
+    } catch (err) {
+      console.error(err);
+      alert('That image could not be loaded. Please try another image.');
+    }
+  }
+
+  async function applyHashIfPresent() {
+    if (!location.hash || location.hash.length < 2) return false;
+    try {
+      const payload = decodePayload(location.hash.slice(1));
+      if (payload.d && payload.d >= 3 && payload.d <= 10) difficultySelect.value = String(payload.d);
+      setPreviewVisibility(payload.p !== 0);
+      if (payload.m === 'u' && payload.img) {
+        await setActiveImage(payload.img, payload.n || 'Shared Uploaded Image', 'uploaded');
+      } else if (payload.id) {
+        selectBuiltInImage(payload.id);
+        await setActiveImage(state.imageUrl, state.imageLabel, 'builtin');
+      }
+      state.loadedFromHash = true;
+      return true;
+    } catch (err) {
+      console.warn('Share hash could not be read:', err);
+      return false;
+    }
+  }
+
+  startBtn.addEventListener('click', buildPuzzle);
+  shuffleBtn.addEventListener('click', shufflePuzzle);
+  solveBtn.addEventListener('click', quickSolve);
+  togglePreviewBtn.addEventListener('click', () => setPreviewVisibility(!state.previewVisible));
+  previewSelect.addEventListener('change', () => setPreviewVisibility(previewSelect.value !== 'hide'));
+  playAgainBtn.addEventListener('click', () => {
+    hideSolvedOverlay();
+    buildPuzzle();
+  });
+  closeOverlayBtn.addEventListener('click', hideSolvedOverlay);
+  shareBtn.addEventListener('click', () => createShareLink(false));
+  copyLinkBtn.addEventListener('click', () => createShareLink(true));
+
+  imageSelect.addEventListener('change', async () => {
+    selectBuiltInImage(imageSelect.value);
+    await setActiveImage(state.imageUrl, state.imageLabel, 'builtin');
+    buildPuzzle();
+  });
+
+  uploadInput.addEventListener('change', async () => {
+    const file = uploadInput.files && uploadInput.files[0];
+    await handleUpload(file);
+    uploadInput.value = '';
+  });
+
+  difficultySelect.addEventListener('change', () => {
+    const newDifficulty = parseInt(difficultySelect.value, 10);
+    if (newDifficulty === state.currentDifficulty) return;
+    if (state.pieces.length && state.hasProgress) {
+      state.pendingDifficulty = newDifficulty;
+      showConfirmOverlay();
+    } else {
+      buildPuzzle();
+    }
+  });
+
+  confirmChangeBtn.addEventListener('click', () => {
+    if (state.pendingDifficulty !== null) {
+      difficultySelect.value = String(state.pendingDifficulty);
+    }
+    state.pendingDifficulty = null;
+    buildPuzzle();
+  });
+
+  cancelChangeBtn.addEventListener('click', () => {
+    state.pendingDifficulty = null;
+    difficultySelect.value = String(state.currentDifficulty);
+    hideConfirmOverlay();
+  });
+
+  window.addEventListener('resize', () => {
+    if (!state.image || !state.pieces.length) return;
+    buildPuzzle();
+  });
+
+  async function init() {
+    state.images = buildBuiltInImages();
+    populateSelectors();
+    selectBuiltInImage(state.images[0].id);
+    await setActiveImage(state.imageUrl, state.imageLabel, 'builtin');
+    const applied = await applyHashIfPresent();
+    if (!applied) {
+      setPreviewVisibility(true);
+    }
+    buildPuzzle();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
