@@ -251,7 +251,32 @@ function approxEqual(a,b){ return Math.abs(a-b)<=Math.max(1e-9,Math.abs(b)*1e-9)
 function answerValue(q){ return q.answerNum/q.answerScale; }
 function detectIssue(input,q){ const p=parseDecimalInput(input); if(p.blank) return {key:'blank',label:'Blank answer',detail:'No answer was entered.'}; if(!p.valid) return {key:'format',label:'Answer format',detail:'The answer could not be read as a number.'}; const expected=answerValue(q), typed=p.numeric; if(q.totalDecimalPlaces>0){ for(let shift=-4;shift<=4;shift++){ if(shift!==0 && approxEqual(typed,expected*(10**shift))) return {key:'decimal',label:'Decimal placement',detail:shift>0?'The answer looks too large by a power of 10.':'The answer looks too small by a power of 10.'}; } } const bDigits=String(q.b.rawInt).split('').map(Number).reverse(); const noPlaceValueNum=bDigits.reduce((sum,digit)=>sum+q.a.rawInt*digit,0); if(bDigits.length>1 && approxEqual(typed,noPlaceValueNum/q.answerScale)) return {key:'placevalue',label:'Place value in partial products',detail:'A row may not have been shifted correctly.'}; const diff=Math.abs(typed-expected), relative=expected===0?diff:diff/Math.abs(expected); if(relative>.5) return {key:'estimate',label:'Reasonableness check',detail:'The answer is far from the expected size.'}; if(relative<=.08) return {key:'smallcalc',label:'Small calculation error',detail:'The answer is close, so one step may have slipped.'}; return {key:'arithmetic',label:'Multiplication/addition step',detail:'A multiplication fact or partial-product addition step may need another look.'}; }
 
-function saveCurrentAnswer(){ if(state.questions.length) state.answers[state.currentIndex]=els.answerInput.value.trim(); }
+function cleanAnswerInputValue(value){
+  const allowDecimal = state.config ? !!state.config.decimals : !!els.decimalToggle.checked;
+  let cleaned = '';
+  let hasDecimal = false;
+  for(const ch of String(value||'')){
+    if(/[0-9]/.test(ch)){
+      cleaned += ch;
+    } else if(allowDecimal && ch==='.' && !hasDecimal){
+      cleaned += ch;
+      hasDecimal = true;
+    }
+  }
+  return cleaned;
+}
+function cleanAnswerInput(){
+  const original = els.answerInput.value;
+  const cleaned = cleanAnswerInputValue(original);
+  if(original !== cleaned){
+    const oldPos = els.answerInput.selectionStart || cleaned.length;
+    els.answerInput.value = cleaned;
+    const removedBeforeCursor = original.slice(0, oldPos).length - cleanAnswerInputValue(original.slice(0, oldPos)).length;
+    const newPos = Math.max(0, oldPos - removedBeforeCursor);
+    els.answerInput.setSelectionRange(newPos, newPos);
+  }
+}
+function saveCurrentAnswer(){ cleanAnswerInput(); if(state.questions.length) state.answers[state.currentIndex]=els.answerInput.value.trim(); }
 function renderQuestion(){ const q=state.questions[state.currentIndex]; els.questionNumber.textContent=`Question ${state.currentIndex+1} of ${state.questions.length}`; els.problemText.textContent=q.expression; els.answerInput.value=state.answers[state.currentIndex]||''; els.prevBtn.disabled=state.currentIndex===0; els.nextBtn.classList.toggle('hidden',state.currentIndex===state.questions.length-1); els.finishBtn.classList.toggle('hidden',state.currentIndex!==state.questions.length-1); els.progressBar.style.width=`${(state.currentIndex/state.questions.length)*100}%`; els.quietMessage.textContent='Your answer will be checked at the end.'; setTimeout(()=>els.answerInput.focus(),60); }
 function beginPractice(config){ state.config=sanitizeConfig(config); state.questions=generateQuestions(state.config); state.answers=Array(state.config.count).fill(''); state.currentIndex=0; state.results=[]; els.practiceModePill.textContent=modeLabel(state.config.mode); els.practiceCountPill.textContent=`${state.config.count} questions`; els.practiceDecimalPill.textContent=state.config.decimals?'Decimals included':'No decimals'; showScreen('practice'); renderQuestion(); }
 function startPractice(){ let decoded=parseClassCode(els.seedInput.value); let cfg=decoded || getConfigFromControls(); if(decoded){ applyConfigToControls(decoded); cfg=decoded; } else if(state.autoRandomMode || !String(cfg.seed||'').trim()){ cfg.seed=randomSeedPhrase(); state.lastAutoSeed=cfg.seed; els.seedInput.value=''; setSeedStatus('Fresh random questions generated for this practice. Use Random Seed or type a seed if you want a repeatable set.','good'); } else { state.autoRandomMode=false; } beginPractice(cfg); updateClassCode(); }
@@ -279,6 +304,8 @@ els.nextBtn.addEventListener('click',()=>{ saveCurrentAnswer(); if(state.current
 els.clearBtn.addEventListener('click',()=>{ els.answerInput.value=''; saveCurrentAnswer(); els.answerInput.focus(); });
 els.finishBtn.addEventListener('click',finishPractice);
 els.answerInput.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ e.preventDefault(); if(state.currentIndex===state.questions.length-1) finishPractice(); else els.nextBtn.click(); } });
+els.answerInput.addEventListener('input',cleanAnswerInput);
+els.answerInput.addEventListener('paste',()=>setTimeout(cleanAnswerInput,0));
 els.newPracticeBtn.addEventListener('click',()=>showScreen('setup'));
 els.retrySameBtn.addEventListener('click',()=>beginPractice(state.config));
 els.closeModalBtn.addEventListener('click',closeModal);
