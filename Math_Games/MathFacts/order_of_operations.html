@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order of Operations</title>
+  <style>
+    :root{
+      --bg:#f4f7fb;
+      --card:#fff;
+      --ink:#172033;
+      --muted:#667085;
+      --line:#d8e0ec;
+      --primary:#2f6fed;
+      --primary-dark:#174bc0;
+      --accent:#18a999;
+      --danger:#d64545;
+      --success:#198754;
+      --warn:#f59e0b;
+      --shadow:0 18px 50px rgba(20,42,80,.12);
+      --radius:22px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      color:var(--ink);
+      background:
+        radial-gradient(circle at top left,rgba(47,111,237,.16),transparent 30%),
+        radial-gradient(circle at top right,rgba(24,169,153,.14),transparent 30%),
+        var(--bg);
+    }
+    .wrap{width:min(1160px,calc(100% - 28px));margin:0 auto;padding:28px 0 42px}
+    .hero{
+      background:linear-gradient(135deg,#12346f,#2f6fed);
+      color:white;
+      border-radius:28px;
+      box-shadow:var(--shadow);
+      padding:24px;
+      margin-bottom:18px;
+      position:relative;
+      overflow:hidden;
+    }
+    .hero:after{
+      content:"";
+      position:absolute;
+      right:-60px;
+      top:-60px;
+      width:190px;
+      height:190px;
+      border-radius:50%;
+      background:rgba(255,255,255,.12);
+    }
+    h1{margin:0 0 7px;font-size:clamp(2rem,4vw,3.2rem);line-height:1;letter-spacing:-.045em}
+    .subtitle{margin:0;color:rgba(255,255,255,.86);max-width:850px}
+    .mode-switch{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:14px;
+      margin-bottom:18px;
+    }
+    .mode-card{
+      border:2px solid var(--line);
+      background:rgba(255,255,255,.94);
+      color:var(--ink);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:18px;
+      cursor:pointer;
+      text-align:left;
+      transition:.18s ease;
+      font:inherit;
+    }
+    .mode-card:hover{transform:translateY(-2px)}
+    .mode-card.active{
+      border-color:var(--primary);
+      background:#eef4ff;
+      box-shadow:0 18px 45px rgba(47,111,237,.18);
+    }
+    .mode-card .icon{font-size:2rem;margin-bottom:8px}
+    .mode-card strong{display:block;font-size:1.25rem;margin-bottom:5px}
+    .mode-card span{display:block;color:var(--muted);line-height:1.35}
+    .grid{display:grid;grid-template-columns:380px 1fr;gap:18px;align-items:start}
+    .card{
+      background:rgba(255,255,255,.95);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:18px;
+    }
+    h2{margin:0 0 12px;font-size:1.22rem;letter-spacing:-.02em}
+    h3{margin:0}
+    .field{margin:14px 0}
+    .field-title{font-weight:900;margin-bottom:8px}
+    .option-row{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .choice{
+      border:2px solid var(--line);
+      background:#fff;
+      color:var(--ink);
+      border-radius:16px;
+      padding:12px;
+      cursor:pointer;
+      text-align:left;
+      transition:.16s ease;
+      min-height:72px;
+      font:inherit;
+    }
+    .choice strong{display:block;font-size:1rem;margin-bottom:4px}
+    .choice span{color:var(--muted);font-size:.85rem}
+    .choice.active{
+      border-color:var(--primary);
+      background:#eef4ff;
+      box-shadow:0 8px 20px rgba(47,111,237,.12);
+    }
+    .input{
+      width:100%;
+      border:2px solid var(--line);
+      border-radius:14px;
+      padding:12px 14px;
+      font:inherit;
+      outline:none;
+      background:#fff;
+      color:var(--ink);
+    }
+    .input:focus{border-color:var(--primary);box-shadow:0 0 0 4px rgba(47,111,237,.12)}
+    .range-wrap{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      background:#fff;
+      border:2px solid var(--line);
+      border-radius:16px;
+      padding:12px;
+    }
+    .range-wrap input[type=range]{flex:1;accent-color:var(--primary)}
+    .page-count-badge{
+      width:46px;
+      height:42px;
+      display:grid;
+      place-items:center;
+      border-radius:14px;
+      background:#eef4ff;
+      color:#183e88;
+      font-weight:900;
+      font-size:1.15rem;
+    }
+    .btn{
+      appearance:none;
+      border:0;
+      background:var(--primary);
+      color:white;
+      border-radius:16px;
+      padding:12px 15px;
+      font-weight:900;
+      cursor:pointer;
+      transition:.16s ease;
+      min-height:44px;
+      font-size:.95rem;
+    }
+    .btn:hover{background:var(--primary-dark);transform:translateY(-1px)}
+    .btn.secondary{background:#edf2f7;color:#24324b;border:1px solid var(--line)}
+    .btn.secondary:hover{background:#e2eaf5}
+    .btn.green{background:var(--accent)}
+    .btn.green:hover{background:#138b7e}
+    .btn.red{background:var(--danger)}
+    .btn.red:hover{background:#b93333}
+    .btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+    .btn-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+    .small{font-size:.85rem;color:var(--muted)}
+    .notice{
+      border-radius:16px;
+      padding:12px;
+      background:#f8fafc;
+      border:1px dashed #cbd5e1;
+      color:#334155;
+      font-size:.92rem;
+      line-height:1.45;
+      margin-top:14px;
+    }
+    .notice strong{color:#102a56}
+    .topline{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom:14px;
+    }
+    .stats{display:flex;gap:8px;flex-wrap:wrap}
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      background:#eef4ff;
+      color:#183e88;
+      border:1px solid #cddcff;
+      border-radius:999px;
+      padding:7px 10px;
+      font-weight:800;
+      font-size:.86rem;
+    }
+    .pill.good{background:#e9f9f5;color:#0f695f;border-color:#bce9de}
+    .pill.warn{background:#fff7e6;color:#9a5b00;border-color:#ffe0a3}
+    .questions,.preview-list{display:grid;gap:12px}
+    .q-card{
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:14px;
+      background:#fff;
+      display:grid;
+      grid-template-columns:42px 1fr minmax(130px,170px);
+      gap:12px;
+      align-items:center;
+    }
+    .q-num{
+      width:36px;height:36px;border-radius:12px;display:grid;place-items:center;
+      background:#edf2f7;font-weight:900;color:#26364f;
+    }
+    .expr{font-size:clamp(1.08rem,2vw,1.45rem);font-weight:900;letter-spacing:.01em;line-height:1.25}
+    .answer-area{display:flex;align-items:center;gap:8px}
+    .ans-input{
+      width:100%;
+      border:2px solid var(--line);
+      border-radius:14px;
+      padding:11px;
+      font:inherit;
+      font-weight:800;
+      text-align:center;
+      outline:none;
+    }
+    .ans-input:focus{border-color:var(--primary);box-shadow:0 0 0 4px rgba(47,111,237,.12)}
+    .ans-input.locked{background:#f8fafc;color:#475569}
+    .mark{font-weight:900;min-width:28px;text-align:center;font-size:1.15rem}
+    .q-card.correct{border-color:#9bd8b3;background:#f2fff7}
+    .q-card.wrong{border-color:#f1a8a8;background:#fff5f5}
+    .feedback{grid-column:2 / -1;color:#475569;font-size:.92rem;margin-top:-4px;display:none}
+    .q-card.correct .feedback,.q-card.wrong .feedback{display:block}
+    .empty-state{
+      text-align:center;
+      padding:44px 16px;
+      color:var(--muted);
+      border:2px dashed var(--line);
+      border-radius:22px;
+      background:#fff;
+    }
+    .empty-icon{font-size:3rem;margin-bottom:8px}
+    .score-card{
+      display:none;
+      margin-top:12px;
+      border-radius:18px;
+      padding:16px;
+      background:linear-gradient(135deg,#ecfdf5,#eff6ff);
+      border:1px solid #bfdbfe;
+    }
+    .score-card.show{display:block}
+    .score-card strong{font-size:1.2rem}
+    .sheet-block{
+      border:1px solid var(--line);
+      border-radius:20px;
+      background:#f8fafc;
+      padding:14px;
+    }
+    .sheet-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:10px;
+    }
+    .worksheet-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:10px 14px;
+    }
+    .worksheet-item{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:10px;
+      font-weight:850;
+      display:flex;
+      gap:8px;
+      align-items:center;
+      min-height:42px;
+    }
+    .answer-line{
+      flex:1;
+      border-bottom:2px solid #cbd5e1;
+      min-width:70px;
+      height:1.1em;
+      margin-left:4px;
+    }
+    .answer-key{display:none;margin-top:16px}
+    .answer-key.show{display:block}
+    .key-sheet{
+      border:1px solid var(--line);
+      border-radius:18px;
+      background:#f8fafc;
+      padding:12px;
+      margin-bottom:12px;
+    }
+    .key-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .key-item{
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:10px;
+      background:#fff;
+      display:flex;
+      gap:8px;
+      justify-content:space-between;
+      align-items:flex-start;
+    }
+    .key-item b{white-space:nowrap}
+    .key-expr{font-weight:800;overflow-wrap:anywhere}
+    .key-answer{color:var(--primary-dark);font-weight:900;white-space:nowrap}
+
+    .review-section{
+      display:none;
+      margin-top:16px;
+      border-radius:22px;
+      border:1px solid #bfdbfe;
+      background:linear-gradient(135deg,#eff6ff,#f8fafc);
+      padding:16px;
+    }
+    .review-section.show{display:block}
+    .review-section h2{margin-bottom:4px}
+    .review-intro{margin:0 0 12px;color:#475569;font-size:.92rem}
+    .review-list{display:grid;gap:12px}
+    .review-card{
+      background:white;
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:14px;
+    }
+    .review-card-top{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-bottom:10px;
+    }
+    .review-title{
+      font-weight:950;
+      color:#183e88;
+    }
+    .review-expression{
+      font-size:1.15rem;
+      font-weight:950;
+      margin:8px 0;
+    }
+    .review-answers{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin:8px 0 10px;
+    }
+    .review-chip{
+      border-radius:999px;
+      padding:7px 10px;
+      font-weight:850;
+      font-size:.88rem;
+      border:1px solid var(--line);
+      background:#f8fafc;
+    }
+    .review-chip.wrong{background:#fff5f5;border-color:#fecaca;color:#991b1b}
+    .review-chip.right{background:#f0fdf4;border-color:#bbf7d0;color:#166534}
+    .review-steps{
+      margin:8px 0 0;
+      padding-left:22px;
+      color:#334155;
+      line-height:1.45;
+    }
+    .review-rule{
+      background:#fffbeb;
+      border:1px solid #fde68a;
+      color:#92400e;
+      border-radius:14px;
+      padding:9px 10px;
+      font-size:.9rem;
+      font-weight:750;
+      margin-top:10px;
+    }
+
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:18px;
+      transform:translateX(-50%) translateY(20px);
+      opacity:0;
+      pointer-events:none;
+      background:#172033;
+      color:white;
+      border-radius:999px;
+      padding:10px 14px;
+      font-weight:800;
+      box-shadow:0 10px 30px rgba(0,0,0,.2);
+      transition:.2s ease;
+      z-index:10;
+    }
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    @media (max-width:960px){
+      .grid{grid-template-columns:1fr}
+      .mode-switch{grid-template-columns:1fr}
+    }
+    @media (max-width:650px){
+      .option-row,.worksheet-grid,.key-grid{grid-template-columns:1fr}
+      .q-card{grid-template-columns:38px 1fr}
+      .answer-area{grid-column:2 / -1}
+      .feedback{grid-column:1 / -1}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>Order of Operations</h1>
+      <p class="subtitle">Choose a clean online practice game or a worksheet generator. All questions use whole-number answers only: no negatives and no decimals.</p>
+    </section>
+
+    <section class="mode-switch" aria-label="Choose mode">
+      <button class="mode-card active" data-mode="play" type="button">
+        <div class="icon">🎮</div>
+        <strong>Play Online</strong>
+        <span>Students answer on screen, check their work, and get locked-in feedback.</span>
+      </button>
+      <button class="mode-card" data-mode="print" type="button">
+        <div class="icon">🖨️</div>
+        <strong>Print Worksheets</strong>
+        <span>Generate up to 10 worksheet pages and a matching answer key PDF.</span>
+      </button>
+    </section>
+
+    <main class="grid">
+      <section class="card">
+        <h2 id="setupTitle">Online Game Setup</h2>
+
+        <div class="field">
+          <div class="field-title">Difficulty</div>
+          <div class="option-row">
+            <button class="choice active" data-difficulty="easy" type="button">
+              <strong>Easy</strong>
+              <span>Single-digit numbers</span>
+            </button>
+            <button class="choice" data-difficulty="hard" type="button">
+              <strong>Hard</strong>
+              <span>Double-digit numbers</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field-title" id="countLabel">Number of questions</div>
+          <div class="option-row">
+            <button class="choice active" data-count="10" type="button">
+              <strong>10 Questions</strong>
+              <span id="count10Help">Quick game</span>
+            </button>
+            <button class="choice" data-count="20" type="button">
+              <strong>20 Questions</strong>
+              <span id="count20Help">Longer game</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="field" id="pagesField" style="display:none;">
+          <div class="field-title">Worksheet pages</div>
+          <div class="range-wrap">
+            <input type="range" id="pageCountInput" min="1" max="10" value="1" />
+            <div class="page-count-badge" id="pageCountBadge">1</div>
+          </div>
+          <div class="small">Print 1 to 10 different worksheet pages at once.</div>
+        </div>
+
+        <div class="field">
+          <div class="field-title">Seed</div>
+          <input class="input" id="seedInput" placeholder="Optional: enter a seed" autocomplete="off" />
+          <div class="small" id="seedHelp">Leave blank for a random online game.</div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn" id="generateBtn" type="button">Generate Game</button>
+          <button class="btn secondary" id="copyLinkBtn" type="button" disabled>Copy Share Link</button>
+        </div>
+
+        <div class="notice" id="modeNote">
+          <strong>Online mode:</strong> Students type answers directly into the page. Once answers are checked, everything locks for fair review.
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="topline">
+          <div>
+            <h2 id="workTitle">Online Practice</h2>
+            <div class="small" id="workNote">Choose your setup, then generate a game.</div>
+          </div>
+          <div class="stats">
+            <span class="pill" id="difficultyPill">Difficulty: —</span>
+            <span class="pill" id="countPill">Questions: —</span>
+            <span class="pill warn" id="pagesPill" style="display:none;">Pages: —</span>
+            <span class="pill good" id="scorePill">Score: —</span>
+          </div>
+        </div>
+
+        <div id="mainArea" class="questions">
+          <div class="empty-state">
+            <div class="empty-icon">➕</div>
+            <strong>No game yet.</strong>
+            <p>Choose your setup, then generate a set.</p>
+          </div>
+        </div>
+
+        <div class="btn-row" id="actionButtons" style="display:none;">
+          <button class="btn green" id="checkBtn" type="button">Check Answers</button>
+          <button class="btn secondary" id="pdfBtn" type="button" style="display:none;">Download PDF</button>
+          <button class="btn secondary" id="toggleKeyBtn" type="button" style="display:none;">Show Answer Key</button>
+          <button class="btn red" id="newSetBtn" type="button">New Random Set</button>
+        </div>
+
+        <div class="score-card" id="scoreCard"></div>
+
+        <section class="review-section" id="reviewSection">
+          <h2>Review Mistakes</h2>
+          <p class="review-intro">Use these steps to see where the order of operations matters.</p>
+          <div class="review-list" id="reviewList"></div>
+        </section>
+
+        <section class="answer-key" id="answerKey">
+          <h2>Answer Key</h2>
+          <div id="keyContainer"></div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast">Copied!</div>
+
+<script>
+const state = {
+  mode: 'play',
+  difficulty: 'easy',
+  count: 10,
+  pageCount: 1,
+  seed: '',
+  sheets: [],
+  checked: false,
+  responses: []
+};
+
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+function cyrb128(str) {
+  let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;
+  for (let i = 0, k; i < str.length; i++) {
+    k = str.charCodeAt(i);
+    h1 = h2 ^ Math.imul(h1 ^ k, 597399067);
+    h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);
+    h3 = h4 ^ Math.imul(h3 ^ k, 951274213);
+    h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);
+  }
+  h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067);
+  h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);
+  h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213);
+  h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);
+  return [(h1^h2^h3^h4)>>>0, (h2^h1)>>>0, (h3^h1)>>>0, (h4^h1)>>>0];
+}
+
+function sfc32(a,b,c,d) {
+  return function() {
+    a >>>= 0; b >>>= 0; c >>>= 0; d >>>= 0;
+    let t = (a + b) | 0;
+    a = b ^ b >>> 9;
+    b = c + (c << 3) | 0;
+    c = (c << 21 | c >>> 11);
+    d = d + 1 | 0;
+    t = t + d | 0;
+    c = c + t | 0;
+    return (t >>> 0) / 4294967296;
+  };
+}
+
+function makeRng(seed) {
+  const parts = cyrb128(seed);
+  return sfc32(parts[0], parts[1], parts[2], parts[3]);
+}
+
+function randInt(rng, min, max) {
+  return Math.floor(rng() * (max - min + 1)) + min;
+}
+
+function pick(rng, arr) {
+  return arr[Math.floor(rng() * arr.length)];
+}
+
+function randomSeed() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const arr = new Uint32Array(7);
+  crypto.getRandomValues(arr);
+  let out = '';
+  arr.forEach(n => out += chars[n % chars.length]);
+  return out;
+}
+
+function limits(difficulty) {
+  return difficulty === 'easy' ? {min:1, max:9} : {min:10, max:40};
+}
+
+function exactDivisionPair(rng, difficulty) {
+  const {min,max} = limits(difficulty);
+  const pairs = [];
+  for (let numerator = min; numerator <= max; numerator++) {
+    for (let divisor = min; divisor <= max; divisor++) {
+      if (divisor !== 0 && numerator % divisor === 0 && numerator / divisor >= 1) {
+        if (difficulty === 'hard' && (numerator < 10 || divisor < 10)) continue;
+        pairs.push({ numerator, divisor, quotient:numerator/divisor });
+      }
+    }
+  }
+  return pick(rng, pairs);
+}
+
+function makeOneQuestion(rng, difficulty) {
+  const {min,max} = limits(difficulty);
+  const n = () => randInt(rng, min, max);
+
+  for (let tries = 0; tries < 1500; tries++) {
+    const template = randInt(rng, 0, 13);
+    let a = n(), b = n(), c = n(), d = n();
+    let expr = '', answer = 0;
+
+    if (template === 0) {
+      answer = a + b * c;
+      expr = `${a} + ${b} × ${c}`;
+    } else if (template === 1) {
+      answer = a * (b + c);
+      expr = `${a} × (${b} + ${c})`;
+    } else if (template === 2) {
+      answer = (a + b) * c;
+      expr = `(${a} + ${b}) × ${c}`;
+    } else if (template === 3) {
+      answer = a * b - c;
+      expr = `${a} × ${b} - ${c}`;
+    } else if (template === 4) {
+      const div = exactDivisionPair(rng, difficulty);
+      answer = a + div.quotient;
+      expr = `${a} + ${div.numerator} ÷ ${div.divisor}`;
+    } else if (template === 5) {
+      answer = (a + b) - c * d;
+      expr = `(${a} + ${b}) - ${c} × ${d}`;
+    } else if (template === 6) {
+      const div = exactDivisionPair(rng, difficulty);
+      answer = div.quotient * a;
+      expr = `(${div.numerator} ÷ ${div.divisor}) × ${a}`;
+    } else if (template === 7) {
+      answer = a * b + c - d;
+      expr = `${a} × ${b} + ${c} - ${d}`;
+    } else if (template === 8) {
+      answer = a + (b * c) - d;
+      expr = `${a} + (${b} × ${c}) - ${d}`;
+    } else if (template === 9) {
+      if (a < b) [a,b] = [b,a];
+      answer = (a - b) * c + d;
+      expr = `(${a} - ${b}) × ${c} + ${d}`;
+    } else if (template === 10) {
+      const div = exactDivisionPair(rng, difficulty);
+      answer = a * b + div.quotient;
+      expr = `${a} × ${b} + ${div.numerator} ÷ ${div.divisor}`;
+    } else if (template === 11) {
+      if (a < b) [a,b] = [b,a];
+      answer = a - b + c * d;
+      expr = `${a} - ${b} + ${c} × ${d}`;
+    } else if (template === 12) {
+      const div = exactDivisionPair(rng, difficulty);
+      answer = (a + b) * div.quotient;
+      expr = `(${a} + ${b}) × (${div.numerator} ÷ ${div.divisor})`;
+    } else {
+      const div = exactDivisionPair(rng, difficulty);
+      answer = (a * b) - div.quotient;
+      expr = `${a} × ${b} - ${div.numerator} ÷ ${div.divisor}`;
+    }
+
+    if (Number.isInteger(answer) && answer >= 0 && answer <= 99999) {
+      return { expr, answer };
+    }
+  }
+  return { expr:'2 + 3 × 4', answer:14 };
+}
+
+function generateSheet(rng, difficulty, count, globalSeen) {
+  const questions = [];
+  let safety = 0;
+  while (questions.length < count && safety < 6000) {
+    safety++;
+    const q = makeOneQuestion(rng, difficulty);
+    if (!globalSeen.has(q.expr)) {
+      globalSeen.add(q.expr);
+      questions.push(q);
+    }
+  }
+  while (questions.length < count) questions.push(makeOneQuestion(rng, difficulty));
+  return questions;
+}
+
+function generateSet(randomizeSeed) {
+  if (randomizeSeed) $('#seedInput').value = '';
+  const requestedSeed = $('#seedInput').value.trim();
+  state.seed = requestedSeed || randomSeed();
+  state.checked = false;
+  state.responses = [];
+  hideReviewSection();
+  const pages = state.mode === 'play' ? 1 : state.pageCount;
+  const rng = makeRng(`${state.seed}|${state.mode}|${state.difficulty}|${state.count}|${pages}|order-ops-separated-v1`);
+  const globalSeen = new Set();
+  state.sheets = [];
+  for (let p = 0; p < pages; p++) {
+    state.sheets.push(generateSheet(rng, state.difficulty, state.count, globalSeen));
+  }
+  $('#seedInput').value = state.seed;
+  updateUrl();
+  render();
+}
+
+function setMode(mode) {
+  state.mode = mode;
+  state.checked = false;
+  state.responses = [];
+  state.sheets = [];
+  $('#answerKey').classList.remove('show');
+  $('#toggleKeyBtn').textContent = 'Show Answer Key';
+  updateUrl(false);
+  renderModeUI();
+  render();
+}
+
+function renderModeUI() {
+  $$('.mode-card').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === state.mode));
+  $('#setupTitle').textContent = state.mode === 'play' ? 'Online Game Setup' : 'Worksheet Setup';
+  $('#workTitle').textContent = state.mode === 'play' ? 'Online Practice' : 'Worksheet Preview';
+  $('#countLabel').textContent = state.mode === 'play' ? 'Number of questions' : 'Questions per page';
+  $('#count10Help').textContent = state.mode === 'play' ? 'Quick game' : 'Quick page';
+  $('#count20Help').textContent = state.mode === 'play' ? 'Longer game' : 'Full page';
+  $('#pagesField').style.display = state.mode === 'print' ? 'block' : 'none';
+  $('#pagesPill').style.display = state.mode === 'print' ? 'inline-flex' : 'none';
+  $('#scorePill').style.display = state.mode === 'play' ? 'inline-flex' : 'none';
+  $('#generateBtn').textContent = state.mode === 'play' ? 'Generate Game' : 'Generate Worksheets';
+  $('#seedHelp').textContent = state.mode === 'play' ? 'Leave blank for a random online game.' : 'Leave blank for random printable worksheets.';
+  $('#modeNote').innerHTML = state.mode === 'play'
+    ? '<strong>Online mode:</strong> Students type answers directly into the page. Once answers are checked, everything locks for fair review.'
+    : '<strong>Worksheet mode:</strong> Generate up to 10 clean worksheet pages. The PDF includes all student pages first, then answer-key pages.';
+}
+
+function updateChoiceButtons() {
+  $$('.choice[data-difficulty]').forEach(btn => btn.classList.toggle('active', btn.dataset.difficulty === state.difficulty));
+  $$('.choice[data-count]').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.count) === state.count));
+  $('#pageCountBadge').textContent = state.pageCount;
+  $('#pageCountInput').value = state.pageCount;
+}
+
+function updateUrl(includeSeed = true) {
+  const url = new URL(location.href);
+  url.searchParams.set('mode', state.mode);
+  url.searchParams.set('difficulty', state.difficulty);
+  url.searchParams.set('count', state.count);
+  url.searchParams.set('pages', state.pageCount);
+  if (includeSeed && state.seed) url.searchParams.set('seed', state.seed);
+  if (!includeSeed || !state.seed) url.searchParams.delete('seed');
+  history.replaceState(null, '', url);
+}
+
+function loadFromUrl() {
+  const params = new URLSearchParams(location.search);
+  const mode = params.get('mode');
+  const difficulty = params.get('difficulty');
+  const count = Number(params.get('count'));
+  const pages = Number(params.get('pages'));
+  const seed = params.get('seed');
+
+  if (mode === 'play' || mode === 'print') state.mode = mode;
+  if (difficulty === 'easy' || difficulty === 'hard') state.difficulty = difficulty;
+  if (count === 10 || count === 20) state.count = count;
+  if (Number.isInteger(pages) && pages >= 1 && pages <= 10) state.pageCount = pages;
+
+  if (seed) {
+    $('#seedInput').value = seed;
+    state.seed = seed;
+    const pageTotal = state.mode === 'play' ? 1 : state.pageCount;
+    const rng = makeRng(`${state.seed}|${state.mode}|${state.difficulty}|${state.count}|${pageTotal}|order-ops-separated-v1`);
+    const globalSeen = new Set();
+    state.sheets = [];
+    for (let p = 0; p < pageTotal; p++) {
+      state.sheets.push(generateSheet(rng, state.difficulty, state.count, globalSeen));
+    }
+  }
+
+  updateChoiceButtons();
+  renderModeUI();
+  render();
+}
+
+function totalQuestions() {
+  return state.sheets.reduce((sum, sheet) => sum + sheet.length, 0);
+}
+
+function render() {
+  updateChoiceButtons();
+  $('#difficultyPill').textContent = `Difficulty: ${state.difficulty === 'easy' ? 'Easy' : 'Hard'}`;
+  $('#countPill').textContent = state.mode === 'play' ? `Questions: ${state.count}` : `Per page: ${state.count}`;
+  $('#pagesPill').textContent = `Pages: ${state.pageCount}`;
+  $('#copyLinkBtn').disabled = !state.seed;
+  $('#checkBtn').style.display = state.mode === 'play' ? 'inline-block' : 'none';
+  $('#pdfBtn').style.display = state.mode === 'print' ? 'inline-block' : 'none';
+  $('#toggleKeyBtn').style.display = state.mode === 'print' ? 'inline-block' : 'none';
+  $('#scoreCard').classList.toggle('show', state.mode === 'play' && state.checked);
+
+  if (!state.sheets.length) {
+    $('#actionButtons').style.display = 'none';
+    $('#answerKey').classList.remove('show');
+    hideReviewSection();
+    $('#mainArea').className = state.mode === 'play' ? 'questions' : 'preview-list';
+    $('#mainArea').innerHTML = state.mode === 'play'
+      ? `<div class="empty-state"><div class="empty-icon">🎮</div><strong>No game yet.</strong><p>Choose your setup, then generate a set.</p></div>`
+      : `<div class="empty-state"><div class="empty-icon">🖨️</div><strong>No worksheets yet.</strong><p>Choose your setup, then generate printable pages.</p></div>`;
+    $('#workNote').textContent = state.mode === 'play' ? 'Choose your setup, then generate a game.' : 'Choose your setup, then generate worksheets.';
+    $('#scorePill').textContent = 'Score: —';
+    return;
+  }
+
+  $('#actionButtons').style.display = 'flex';
+  if (state.mode === 'play') renderOnlineGame();
+  else renderWorksheetPreview();
+  renderKey();
+}
+
+function renderOnlineGame() {
+  $('#mainArea').className = 'questions';
+  $('#workNote').textContent = state.checked ? 'Answers are locked. Generate a new set to try again.' : 'Enter whole-number answers only.';
+  const sheet = state.sheets[0] || [];
+  $('#mainArea').innerHTML = sheet.map((q, i) => `
+    <div class="q-card" id="qCard-0-${i}">
+      <div class="q-num">${i + 1}</div>
+      <div class="expr">${q.expr}</div>
+      <div class="answer-area">
+        <input class="ans-input" id="answer-0-${i}" inputmode="numeric" pattern="[0-9]*" autocomplete="off" aria-label="Answer for question ${i + 1}" value="${escapeHtml(state.responses[i] || '')}" ${state.checked ? 'disabled' : ''}>
+        <span class="mark" id="mark-0-${i}"></span>
+      </div>
+      <div class="feedback" id="feedback-0-${i}"></div>
+    </div>
+  `).join('');
+  setupNumericInputs();
+  $('#checkBtn').disabled = state.checked;
+  if (state.checked) applyCheckedState();
+  else $('#scorePill').textContent = 'Score: —';
+}
+
+function renderWorksheetPreview() {
+  $('#mainArea').className = 'preview-list';
+  $('#workNote').textContent = 'Preview the printable pages, then download the PDF.';
+  $('#mainArea').innerHTML = state.sheets.map((sheet, sheetIndex) => `
+    <section class="sheet-block">
+      <div class="sheet-header">
+        <h3>Worksheet Page ${sheetIndex + 1} of ${state.sheets.length}</h3>
+        <span class="small">${sheet.length} questions</span>
+      </div>
+      <div class="worksheet-grid">
+        ${sheet.map((q, qIndex) => `
+          <div class="worksheet-item">
+            <span>${qIndex + 1}. ${q.expr} =</span>
+            <span class="answer-line"></span>
+          </div>
+        `).join('')}
+      </div>
+    </section>
+  `).join('');
+  $('#scorePill').textContent = 'Score: —';
+  $('#scoreCard').classList.remove('show');
+  hideReviewSection();
+}
+
+function setupNumericInputs() {
+  $$('.ans-input').forEach(input => {
+    input.addEventListener('keydown', (e) => {
+      const allowed = ['Backspace','Delete','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Tab','Home','End'];
+      if (allowed.includes(e.key) || e.ctrlKey || e.metaKey) return;
+      if (!/^\d$/.test(e.key)) e.preventDefault();
+    });
+    input.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text');
+      input.value = text.replace(/\D/g, '');
+    });
+    input.addEventListener('input', () => input.value = input.value.replace(/\D/g, ''));
+  });
+}
+
+function checkAnswers() {
+  if (state.mode !== 'play' || !state.sheets.length || state.checked) return;
+  const sheet = state.sheets[0];
+  let blank = false;
+  sheet.forEach((q, i) => {
+    if ($(`#answer-0-${i}`).value.trim() === '') blank = true;
+  });
+  if (blank) {
+    showToast('Please answer every question first.');
+    return;
+  }
+  state.responses = sheet.map((q, i) => $(`#answer-0-${i}`).value.trim());
+  state.checked = true;
+  applyCheckedState();
+}
+
+function applyCheckedState() {
+  if (state.mode !== 'play') return;
+  const sheet = state.sheets[0] || [];
+  let score = 0;
+  const wrongItems = [];
+
+  sheet.forEach((q, i) => {
+    const input = $(`#answer-0-${i}`);
+    const card = $(`#qCard-0-${i}`);
+    const mark = $(`#mark-0-${i}`);
+    const feedback = $(`#feedback-0-${i}`);
+    if (!input || !card) return;
+
+    const savedAnswer = state.responses[i] !== undefined ? state.responses[i] : input.value.trim();
+    input.value = savedAnswer;
+    input.disabled = true;
+    input.classList.add('locked');
+
+    const userAnswer = Number(savedAnswer);
+    const correct = savedAnswer !== '' && userAnswer === q.answer;
+    if (correct) score++;
+    else wrongItems.push({ index:i, question:q, userAnswer:savedAnswer || 'blank' });
+
+    card.classList.toggle('correct', correct);
+    card.classList.toggle('wrong', !correct);
+    mark.textContent = correct ? '✓' : '✗';
+    mark.style.color = correct ? 'var(--success)' : 'var(--danger)';
+    feedback.textContent = correct ? `Question ${i + 1}: Correct.` : `Question ${i + 1}: Correct answer is ${q.answer}.`;
+  });
+
+  const percent = Math.round(score / sheet.length * 100);
+  $('#scorePill').textContent = `Score: ${score}/${sheet.length}`;
+  $('#scoreCard').innerHTML = `<strong>Score: ${score}/${sheet.length} (${percent}%)</strong><br><span class="small">Answers are locked so students can review fairly.</span>`;
+  $('#scoreCard').classList.add('show');
+  $('#workNote').textContent = 'Answers are locked. Review your questions or generate a new set.';
+  $('#checkBtn').disabled = true;
+  renderReviewSection(wrongItems);
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function hideReviewSection() {
+  const review = $('#reviewSection');
+  const list = $('#reviewList');
+  if (review) review.classList.remove('show');
+  if (list) list.innerHTML = '';
+}
+
+function tokenizeExpression(expr) {
+  return String(expr).match(/\d+|[()+\-×÷]/g) || [];
+}
+
+function explainExpression(expr) {
+  const tokens = tokenizeExpression(expr);
+  let pos = 0;
+  const steps = [];
+
+  function parseExpression() {
+    let node = parseTerm();
+    while (tokens[pos] === '+' || tokens[pos] === '-') {
+      const op = tokens[pos++];
+      const right = parseTerm();
+      const value = op === '+' ? node.value + right.value : node.value - right.value;
+      steps.push(`${node.text} ${op} ${right.text} = ${value}`);
+      node = { value, text:String(value) };
+    }
+    return node;
+  }
+
+  function parseTerm() {
+    let node = parseFactor();
+    while (tokens[pos] === '×' || tokens[pos] === '÷') {
+      const op = tokens[pos++];
+      const right = parseFactor();
+      const value = op === '×' ? node.value * right.value : node.value / right.value;
+      steps.push(`${node.text} ${op} ${right.text} = ${value}`);
+      node = { value, text:String(value) };
+    }
+    return node;
+  }
+
+  function parseFactor() {
+    const token = tokens[pos++];
+    if (token === '(') {
+      const start = pos;
+      const inner = parseExpression();
+      const end = pos;
+      if (tokens[pos] === ')') pos++;
+      const inside = tokens.slice(start, end).join(' ');
+      steps.push(`Parentheses: (${inside}) = ${inner.value}`);
+      return { value:inner.value, text:String(inner.value) };
+    }
+    return { value:Number(token), text:String(token) };
+  }
+
+  try {
+    const result = parseExpression();
+    const usefulSteps = steps.filter((step, index, arr) => arr.indexOf(step) === index);
+    if (!usefulSteps.length) usefulSteps.push(`${expr} = ${result.value}`);
+    if (usefulSteps[usefulSteps.length - 1] !== `${expr} = ${result.value}`) {
+      usefulSteps.push(`Final answer: ${result.value}`);
+    }
+    return usefulSteps;
+  } catch (err) {
+    return [
+      'Start with anything inside parentheses.',
+      'Then solve multiplication and division from left to right.',
+      'Then solve addition and subtraction from left to right.'
+    ];
+  }
+}
+
+function renderReviewSection(wrongItems) {
+  const review = $('#reviewSection');
+  const list = $('#reviewList');
+  if (!review || !list) return;
+
+  if (!wrongItems.length) {
+    review.classList.add('show');
+    list.innerHTML = `
+      <div class="review-card">
+        <div class="review-title">Great work!</div>
+        <p class="small" style="margin:8px 0 0;">No mistakes to review this time.</p>
+      </div>`;
+    return;
+  }
+
+  review.classList.add('show');
+  list.innerHTML = wrongItems.map(item => {
+    const steps = explainExpression(item.question.expr);
+    return `
+      <article class="review-card">
+        <div class="review-card-top">
+          <div class="review-title">Question ${item.index + 1}</div>
+          <div class="small">Review the order carefully.</div>
+        </div>
+        <div class="review-expression">${escapeHtml(item.question.expr)}</div>
+        <div class="review-answers">
+          <span class="review-chip wrong">Your answer: ${escapeHtml(item.userAnswer)}</span>
+          <span class="review-chip right">Correct answer: ${item.question.answer}</span>
+        </div>
+        <ol class="review-steps">
+          ${steps.map(step => `<li>${escapeHtml(step)}</li>`).join('')}
+        </ol>
+        <div class="review-rule">Remember: Parentheses first. Then multiplication/division left to right. Then addition/subtraction left to right.</div>
+      </article>
+    `;
+  }).join('');
+}
+
+
+function renderKey() {
+  $('#keyContainer').innerHTML = state.sheets.map((sheet, sheetIndex) => `
+    <section class="key-sheet">
+      <h3>Worksheet Page ${sheetIndex + 1}</h3>
+      <div class="key-grid">
+        ${sheet.map((q, qIndex) => `
+          <div class="key-item">
+            <div>
+              <b>${qIndex + 1}.</b>
+              <span class="key-expr">${q.expr}</span>
+            </div>
+            <span class="key-answer">${q.answer}</span>
+          </div>
+        `).join('')}
+      </div>
+    </section>
+  `).join('');
+}
+
+function showToast(message) {
+  const toast = $('#toast');
+  toast.textContent = message;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 1800);
+}
+
+async function copyShareLink() {
+  if (!state.seed) return;
+  updateUrl(true);
+  try {
+    await navigator.clipboard.writeText(location.href);
+    showToast('Share link copied!');
+  } catch {
+    showToast('Could not copy link.');
+  }
+}
+
+function pdfNum(n) {
+  return Number(n).toFixed(2).replace(/\.?0+$/,'');
+}
+
+function escapePdfText(text) {
+  return String(text)
+    .replace(/\\/g, '\\\\')
+    .replace(/\(/g, '\\(')
+    .replace(/\)/g, '\\)')
+    .replace(/[×]/g, 'x')
+    .replace(/[–—]/g, '-')
+    .replace(/[^\x20-\x7E]/g, '');
+}
+
+function textWidth(text, size, font) {
+  if (!text) return 0;
+  return text.length * size * (font === 'F2' ? 0.6 : 0.52);
+}
+
+function circlePath(cx, cy, r) {
+  const c = r * 0.5522847498;
+  return `${pdfNum(cx+r)} ${pdfNum(cy)} m ` +
+         `${pdfNum(cx+r)} ${pdfNum(cy+c)} ${pdfNum(cx+c)} ${pdfNum(cy+r)} ${pdfNum(cx)} ${pdfNum(cy+r)} c ` +
+         `${pdfNum(cx-c)} ${pdfNum(cy+r)} ${pdfNum(cx-r)} ${pdfNum(cy+c)} ${pdfNum(cx-r)} ${pdfNum(cy)} c ` +
+         `${pdfNum(cx-r)} ${pdfNum(cy-c)} ${pdfNum(cx-c)} ${pdfNum(cy-r)} ${pdfNum(cx)} ${pdfNum(cy-r)} c ` +
+         `${pdfNum(cx+c)} ${pdfNum(cy-r)} ${pdfNum(cx+r)} ${pdfNum(cy-c)} ${pdfNum(cx+r)} ${pdfNum(cy)} c f\n`;
+}
+
+function drawDivisionSign(x, y, size) {
+  const cell = size * 0.6;
+  const left = x + size * 0.08;
+  const right = x + cell - size * 0.08;
+  const midY = y + size * 0.34;
+  const dotX = x + cell / 2;
+  const topY = y + size * 0.66;
+  const bottomY = y + size * 0.06;
+  const r = Math.max(0.8, size * 0.055);
+  return `q\n0 0 0 RG\n0 0 0 rg\n${pdfNum(Math.max(0.7, size * 0.075))} w\n` +
+         `${pdfNum(left)} ${pdfNum(midY)} m ${pdfNum(right)} ${pdfNum(midY)} l S\n` +
+         circlePath(dotX, topY, r) +
+         circlePath(dotX, bottomY, r) +
+         `Q\n`;
+}
+
+function textOps(x, y, text, size, font) {
+  font = font || 'F1';
+  const parts = String(text).split('÷');
+  let cx = x;
+  let out = '';
+  parts.forEach((part, index) => {
+    if (part.length) {
+      out += `BT\n/${font} ${pdfNum(size)} Tf\n1 0 0 1 ${pdfNum(cx)} ${pdfNum(y)} Tm\n(${escapePdfText(part)}) Tj\nET\n`;
+      cx += textWidth(part, size, font);
+    }
+    if (index < parts.length - 1) {
+      out += drawDivisionSign(cx, y, size);
+      cx += size * 0.6;
+    }
+  });
+  return out;
+}
+
+function makePdfContent(lines) {
+  let out = '';
+  lines.forEach(line => {
+    if (line.type === 'text') out += textOps(line.x, line.y, line.text, line.size || 11, line.font || 'F1');
+  });
+  return out;
+}
+
+function buildStudentPage(sheet, sheetIndex) {
+  const diff = state.difficulty === 'easy' ? 'Easy: single-digit numbers' : 'Hard: double-digit numbers';
+  const batchLine = `Seed: ${state.seed}   Difficulty: ${diff}   Worksheet Page: ${sheetIndex + 1} of ${state.sheets.length}`;
+  const lines = [
+    {type:'text', x:54, y:744, text:'Order of Operations Worksheet', size:18},
+    {type:'text', x:54, y:720, text:batchLine, size:10},
+    {type:'text', x:54, y:694, text:'Name: ________________________________     Date: ___________________', size:11},
+    {type:'text', x:54, y:668, text:'Solve each expression. Use order of operations. Answers will be whole numbers.', size:11}
+  ];
+  let y = 634;
+  const lineGap = sheet.length > 10 ? 27 : 35;
+  sheet.forEach((q, i) => {
+    lines.push({type:'text', x:60, y, text:`${i + 1}.  ${q.expr} = __________________`, size:13, font:'F2'});
+    y -= lineGap;
+  });
+  lines.push({type:'text', x:54, y:36, text:`Worksheet Page ${sheetIndex + 1} of ${state.sheets.length}`, size:9});
+  return makePdfContent(lines);
+}
+
+function buildKeyPage(sheet, sheetIndex) {
+  const diff = state.difficulty === 'easy' ? 'Easy: single-digit numbers' : 'Hard: double-digit numbers';
+  const batchLine = `Seed: ${state.seed}   Difficulty: ${diff}   Answer Key Page: ${sheetIndex + 1} of ${state.sheets.length}`;
+  const lines = [
+    {type:'text', x:54, y:744, text:'Order of Operations Answer Key', size:18},
+    {type:'text', x:54, y:720, text:batchLine, size:10}
+  ];
+  let y = 686;
+  const lineGap = sheet.length > 10 ? 28 : 36;
+  sheet.forEach((q, i) => {
+    lines.push({type:'text', x:60, y, text:`${i + 1}.  ${q.expr} = ${q.answer}`, size:12, font:'F2'});
+    y -= lineGap;
+  });
+  lines.push({type:'text', x:54, y:36, text:`Answer Key Page ${sheetIndex + 1} of ${state.sheets.length}`, size:9});
+  return makePdfContent(lines);
+}
+
+function buildPdf() {
+  const pageW = 612, pageH = 792;
+  const pages = [];
+  state.sheets.forEach((sheet, i) => pages.push(buildStudentPage(sheet, i)));
+  state.sheets.forEach((sheet, i) => pages.push(buildKeyPage(sheet, i)));
+
+  const objects = [];
+  objects.push('<< /Type /Catalog /Pages 2 0 R >>');
+  const kids = pages.map((_, i) => `${5 + i * 2} 0 R`).join(' ');
+  objects.push(`<< /Type /Pages /Kids [ ${kids} ] /Count ${pages.length} >>`);
+  objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+  objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>');
+
+  pages.forEach((content, i) => {
+    const contentObj = 6 + i * 2;
+    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentObj} 0 R >>`);
+    objects.push(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+  });
+
+  let pdf = '%PDF-1.4\n';
+  const offsets = [0];
+  objects.forEach((obj, i) => {
+    offsets.push(pdf.length);
+    pdf += `${i + 1} 0 obj\n${obj}\nendobj\n`;
+  });
+  const xrefStart = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n`;
+  pdf += '0000000000 65535 f \n';
+  for (let i = 1; i <= objects.length; i++) pdf += String(offsets[i]).padStart(10, '0') + ' 00000 n \n';
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+  return pdf;
+}
+
+function downloadPdf() {
+  if (state.mode !== 'print' || !state.sheets.length) return;
+  const pdf = buildPdf();
+  const blob = new Blob([pdf], { type:'application/pdf' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `order_of_operations_${state.sheets.length}_pages_${state.seed || 'worksheet'}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  const href = a.href;
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(href), 500);
+}
+
+$$('.mode-card').forEach(btn => btn.addEventListener('click', () => setMode(btn.dataset.mode)));
+$$('.choice[data-difficulty]').forEach(btn => btn.addEventListener('click', () => {
+  state.difficulty = btn.dataset.difficulty;
+  updateChoiceButtons();
+}));
+$$('.choice[data-count]').forEach(btn => btn.addEventListener('click', () => {
+  state.count = Number(btn.dataset.count);
+  updateChoiceButtons();
+}));
+$('#pageCountInput').addEventListener('input', (e) => {
+  state.pageCount = Math.max(1, Math.min(10, Number(e.target.value) || 1));
+  $('#pageCountBadge').textContent = state.pageCount;
+});
+$('#generateBtn').addEventListener('click', () => generateSet(false));
+$('#newSetBtn').addEventListener('click', () => generateSet(true));
+$('#checkBtn').addEventListener('click', checkAnswers);
+$('#pdfBtn').addEventListener('click', downloadPdf);
+$('#copyLinkBtn').addEventListener('click', copyShareLink);
+$('#toggleKeyBtn').addEventListener('click', () => {
+  $('#answerKey').classList.toggle('show');
+  $('#toggleKeyBtn').textContent = $('#answerKey').classList.contains('show') ? 'Hide Answer Key' : 'Show Answer Key';
+});
+
+loadFromUrl();
+</script>
+</body>
+</html>

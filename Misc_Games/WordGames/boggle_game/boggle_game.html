@@ -234,7 +234,8 @@ button:disabled, input:disabled { cursor: not-allowed; opacity: .64; }
             </div>
             <div class="control" style="grid-column: 1 / -1;">
               <label for="seedInput">Seed</label>
-              <input id="seedInput" autocomplete="off" spellcheck="false" />
+              <input id="seedInput" autocomplete="off" spellcheck="false" placeholder="Example: 4X4-OWL-QUEST-1234" />
+              <small class="muted">Press Enter after typing a seed to start. 4X4/5X5 seeds set the board size automatically.</small>
             </div>
           </div>
           <div class="button-row">
@@ -178798,11 +178799,39 @@ ZZZ</script>
     });
   }
 
-  function randomSeed() {
+  function normalizeSeed(seed) {
+    return String(seed || "")
+      .trim()
+      .replace(/\s+/g, "-")
+      .replace(/×/g, "X")
+      .toUpperCase();
+  }
+
+  function seedSizeFromSeed(seed) {
+    const clean = normalizeSeed(seed);
+    const match = clean.match(/(?:^|[-_])([45])X\1(?:$|[-_])/);
+    return match ? Number(match[1]) : null;
+  }
+
+  function replaceSeedSize(seed, size) {
+    const clean = normalizeSeed(seed);
+    const tag = `${size}X${size}`;
+    if (!clean) return randomSeed(size);
+    if (seedSizeFromSeed(clean)) {
+      return clean.replace(/(?:^|[-_])([45])X\1(?=$|[-_])/, (match) => {
+        const prefix = match.startsWith("-") || match.startsWith("_") ? match[0] : "";
+        return `${prefix}${tag}`;
+      });
+    }
+    return `${tag}-${clean}`;
+  }
+
+  function randomSeed(size = Number(els.boardSize.value) || 4) {
+    const safeSize = Number(size) === 5 ? 5 : 4;
     const left = ["OWL", "MAPLE", "ROCKET", "MOOSE", "COMET", "PENCIL", "SPARK", "RIVER", "ORBIT", "LUNAR"];
     const right = ["QUEST", "BOARD", "WORD", "CUBE", "CLASS", "BRAIN", "NORTH", "PUZZLE", "TIMER", "GAME"];
     const n = Math.floor(Math.random() * 9000) + 1000;
-    return `${left[Math.floor(Math.random() * left.length)]}-${right[Math.floor(Math.random() * right.length)]}-${n}`;
+    return `${safeSize}X${safeSize}-${left[Math.floor(Math.random() * left.length)]}-${right[Math.floor(Math.random() * right.length)]}-${n}`;
   }
 
   function scoreWord(word) {
@@ -178828,11 +178857,19 @@ ZZZ</script>
   }
 
   function getConfigFromSetup() {
-    const seed = (els.seedInput.value || "").trim() || randomSeed();
+    let seed = normalizeSeed(els.seedInput.value);
+    if (!seed) {
+      seed = randomSeed(Number(els.boardSize.value));
+    }
+
+    const seedSize = seedSizeFromSeed(seed);
+    const size = seedSize || Number(els.boardSize.value);
+    if (seedSize) els.boardSize.value = String(seedSize);
+
     return {
       v: 1,
       mode: els.mode.value,
-      size: Number(els.boardSize.value),
+      size,
       seconds: Number(els.timerLength.value),
       seed
     };
@@ -178856,7 +178893,7 @@ ZZZ</script>
         mode: cfg.mode === "challenge" ? "challenge" : "solo",
         size: Number(cfg.size),
         seconds: Number(cfg.seconds),
-        seed: String(cfg.seed)
+        seed: normalizeSeed(cfg.seed)
       };
     } catch (err) {
       return null;
@@ -178874,10 +178911,12 @@ ZZZ</script>
   }
 
   function applyConfigToSetup(cfg) {
+    const seed = normalizeSeed(cfg.seed);
+    const seedSize = seedSizeFromSeed(seed);
     els.mode.value = cfg.mode;
-    els.boardSize.value = String(cfg.size);
+    els.boardSize.value = String(seedSize || cfg.size);
     els.timerLength.value = String(cfg.seconds);
-    els.seedInput.value = cfg.seed;
+    els.seedInput.value = seed;
     updateShareOutput();
   }
 
@@ -179219,13 +179258,42 @@ ZZZ</script>
   }
 
   function initEvents() {
-    [els.mode, els.boardSize, els.timerLength, els.seedInput].forEach(el => {
-      el.addEventListener("input", updateShareOutput);
-      el.addEventListener("change", updateShareOutput);
-    });
-    els.randomSeedBtn.addEventListener("click", () => {
-      els.seedInput.value = randomSeed();
+    els.mode.addEventListener("input", updateShareOutput);
+    els.mode.addEventListener("change", updateShareOutput);
+    els.timerLength.addEventListener("input", updateShareOutput);
+    els.timerLength.addEventListener("change", updateShareOutput);
+
+    els.boardSize.addEventListener("input", () => {
+      els.seedInput.value = replaceSeedSize(els.seedInput.value, Number(els.boardSize.value));
       updateShareOutput();
+    });
+    els.boardSize.addEventListener("change", () => {
+      els.seedInput.value = replaceSeedSize(els.seedInput.value, Number(els.boardSize.value));
+      updateShareOutput();
+    });
+
+    els.seedInput.addEventListener("input", () => {
+      const seedSize = seedSizeFromSeed(els.seedInput.value);
+      if (seedSize) els.boardSize.value = String(seedSize);
+      updateShareOutput();
+    });
+    els.seedInput.addEventListener("change", () => {
+      els.seedInput.value = normalizeSeed(els.seedInput.value);
+      const seedSize = seedSizeFromSeed(els.seedInput.value);
+      if (seedSize) els.boardSize.value = String(seedSize);
+      updateShareOutput();
+    });
+    els.seedInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        startGame(getConfigFromSetup());
+      }
+    });
+
+    els.randomSeedBtn.addEventListener("click", () => {
+      els.seedInput.value = randomSeed(Number(els.boardSize.value));
+      updateShareOutput();
+      els.dictionaryStatus.textContent = `Seed ready for ${els.boardSize.value}×${els.boardSize.value}. Press Start Game or Enter.`;
     });
     els.copySetupLinkBtn.addEventListener("click", () => {
       updateShareOutput();
@@ -179262,7 +179330,7 @@ ZZZ</script>
     const incoming = loadConfigFromHash();
     if (incoming) applyConfigToSetup(incoming);
     else {
-      els.seedInput.value = randomSeed();
+      els.seedInput.value = randomSeed(Number(els.boardSize.value));
       updateShareOutput();
     }
     loadBundledDictionary();
