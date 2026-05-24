@@ -32,6 +32,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Iterable, List, Sequence, Tuple
+from urllib.parse import quote
 
 
 # ---------------------------------------------------------------------------
@@ -531,6 +532,11 @@ def esc(s: object) -> str:
     )
 
 
+def href_for(rel_path: str) -> str:
+    # Preserve folder separators while safely encoding spaces and special characters.
+    return quote(rel_path, safe="/")
+
+
 def normalize_path(s: str) -> str:
     return s.replace("\\", "/").strip("/")
 
@@ -788,15 +794,12 @@ def prune_empty_dirs(node: FolderNode) -> None:
 # Recent files
 # ---------------------------------------------------------------------------
 
-def relative_day_label(mtime: float) -> str:
-    changed_date = datetime.fromtimestamp(mtime).date()
-    today = datetime.now().date()
-    delta_days = (today - changed_date).days
-    if delta_days <= 0:
-        return "Today"
-    if delta_days == 1:
-        return "Yesterday"
-    return f"{delta_days} days ago"
+def absolute_day_label(mtime: float) -> str:
+    return datetime.fromtimestamp(mtime).strftime("%B %d, %Y")
+
+
+def changed_date_iso(mtime: float) -> str:
+    return datetime.fromtimestamp(mtime).date().isoformat()
 
 
 def recent_entries(entries: Sequence[FileEntry], days: int) -> List[FileEntry]:
@@ -816,8 +819,8 @@ def render_app_item(entry: FileEntry, recent_paths: set[str], show_path: bool = 
     title = display_name(entry.name, strip_extension=True)
     search_text = f"{title} {entry.name} {entry.rel_path} {entry.category} {entry.subcategory}"
     return (
-        f'<li class="app-item" data-search="{esc(search_text.casefold())}">'
-        f'<a href="{esc(entry.rel_path)}" target="_blank" rel="noopener noreferrer">'
+        f'<li class="app-item" data-path="{esc(entry.rel_path)}" data-search="{esc(search_text.casefold())}">'
+        f'<a href="{esc(href_for(entry.rel_path))}" target="_blank" rel="noopener noreferrer">'
         f'<span class="icon">{esc(entry.icon)}</span>'
         f'<span class="app-title">{esc(title)}</span>'
         f'</a>'
@@ -837,14 +840,15 @@ def render_recent_section(recent: Sequence[FileEntry], recent_days: int) -> str:
 
     items = []
     for entry in recent:
-        changed = relative_day_label(entry.mtime or 0)
+        changed_abs = absolute_day_label(entry.mtime or 0)
+        changed_iso = changed_date_iso(entry.mtime or 0)
         title = display_name(entry.name, strip_extension=True)
         search_text = f"{title} {entry.name} {entry.rel_path} {entry.category} {entry.subcategory}"
         items.append(
-            f'<li class="app-item recent-item" data-search="{esc(search_text.casefold())}">'
-            f'<a href="{esc(entry.rel_path)}" target="_blank" rel="noopener noreferrer">'
+            f'<li class="app-item recent-item" data-path="{esc(entry.rel_path)}" data-search="{esc(search_text.casefold())}">'
+            f'<a href="{esc(href_for(entry.rel_path))}" target="_blank" rel="noopener noreferrer">'
             f'<span class="icon">{esc(entry.icon)}</span><span class="app-title">{esc(title)}</span></a>'
-            f'<span class="changed-note">{esc(changed)}</span>'
+            f'<span class="changed-note" data-changed-date="{esc(changed_iso)}" title="Changed {esc(changed_abs)}">{esc(changed_abs)}</span>'
             '</li>'
         )
 
@@ -886,6 +890,11 @@ def render_sidebar(entries: Sequence[FileEntry], recent_count: int, include_fold
             f'<li><a href="#{esc(slugify(category))}"><span class="icon">{esc(CATEGORY_ICONS.get(category, "📁"))}</span>'
             f'{esc(category)} <span class="muted">({count})</span></a></li>'
         )
+
+    links.append(
+        f'<li><a href="#recently-changed"><span class="icon">🕒</span>'
+        f'Recently Changed <span class="muted">({recent_count})</span></a></li>'
+    )
 
     if include_folder_view:
         links.append('<li><a href="#folder-view"><span class="icon">🗂</span>Folder View</a></li>')
@@ -982,9 +991,7 @@ def render_folder_view(entries: Sequence[FileEntry], recent_paths: set[str], inc
 
 
 def render_page(
-    root: Path,
     entries: Sequence[FileEntry],
-    out_file: str,
     recent_days: int,
     include_folder_view: bool,
 ) -> str:
@@ -1172,6 +1179,7 @@ def render_page(
   .nested {{ padding:0 12px 12px 18px; }}
   .folder-list {{ padding:10px 0; }}
   .footer {{ margin-top:18px; color:var(--muted); font-size:.95em; }}
+  .last-updated {{ margin-bottom:6px; }}
   .footer a {{ font-weight:800; }}
   @media (max-width: 980px) {{
     .page {{ padding:14px; }}
@@ -1208,7 +1216,10 @@ def render_page(
         {category_html}
         {folder_html}
         {recent_html}
-        <div class="footer"><a href="https://github.com/jwesters/website">jwesters github repo</a></div>
+        <div class="footer">
+          <div class="last-updated">Last updated: <strong>{esc(formatted)}</strong></div>
+          <a href="https://github.com/jwesters/website">jwesters github repo</a>
+        </div>
       </main>
     </div>
   </div>
@@ -1227,16 +1238,41 @@ def render_page(
     return !!el && el.style.display !== 'none';
   }}
 
+  function formatLongDate(date) {{
+    return date.toLocaleDateString(undefined, {{ year: 'numeric', month: 'long', day: 'numeric' }});
+  }}
+
+  function updateChangedNotes() {{
+    const today = new Date();
+    const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const oneDay = 24 * 60 * 60 * 1000;
+
+    Array.from(document.querySelectorAll('.changed-note[data-changed-date]')).forEach((note) => {{
+      const iso = note.dataset.changedDate || '';
+      const parts = iso.split('-').map(Number);
+      if (parts.length !== 3 || parts.some(Number.isNaN)) return;
+
+      const changed = new Date(parts[0], parts[1] - 1, parts[2]);
+      const diffDays = Math.floor((todayOnly - changed) / oneDay);
+      let label = 'Today';
+      if (diffDays === 1) label = 'Yesterday';
+      else if (diffDays > 1) label = `${{diffDays}} days ago`;
+
+      note.textContent = label;
+      note.title = `Changed ${{formatLongDate(changed)}}`;
+    }});
+  }}
+
   function applySearch() {{
     const q = norm(input.value);
     const appItems = Array.from(document.querySelectorAll('.app-item'));
-    let visibleApps = 0;
+    const visiblePaths = new Set();
 
     appItems.forEach((item) => {{
       const haystack = item.dataset.search || norm(item.textContent);
       const match = !q || haystack.includes(q);
       item.style.display = match ? '' : 'none';
-      if (match) visibleApps += 1;
+      if (match && item.dataset.path) visiblePaths.add(item.dataset.path);
     }});
 
     Array.from(document.querySelectorAll('.subcategory-block')).forEach((block) => {{
@@ -1273,9 +1309,10 @@ def render_page(
       li.style.display = (!q || isVisible(target)) ? '' : 'none';
     }});
 
-    empty.style.display = q && visibleApps === 0 ? 'block' : 'none';
+    empty.style.display = q && visiblePaths.size === 0 ? 'block' : 'none';
   }}
 
+  updateChangedNotes();
   input.addEventListener('input', applySearch);
 }})();
 </script>
@@ -1318,9 +1355,7 @@ def main() -> int:
     )
 
     html_text = render_page(
-        root=root,
         entries=entries,
-        out_file=args.out,
         recent_days=max(1, args.recent_days),
         include_folder_view=not args.no_folder_view,
     )
