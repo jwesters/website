@@ -228,7 +228,7 @@
   </div>
   <aside class="side">
     <h1>Local Chess</h1>
-    <p class="sub">Two-player classroom chess or play as White against the CPU.</p>
+    <p class="sub">Two-player classroom chess or play against the CPU as White or Black.</p>
     <div class="settings">
       <div class="setting-row">
         <label for="modeSelect">Game mode</label>
@@ -243,6 +243,13 @@
           <option value="easy">Easy</option>
           <option value="medium">Medium</option>
           <option value="hard">Hard</option>
+        </select>
+      </div>
+      <div class="setting-row">
+        <label for="playerColorSelect">Play as</label>
+        <select id="playerColorSelect">
+          <option value="w">White</option>
+          <option value="b">Black</option>
         </select>
       </div>
     </div>
@@ -310,6 +317,7 @@
   const confirmModal = document.getElementById("confirmModal");
   const modeSelect = document.getElementById("modeSelect");
   const difficultySelect = document.getElementById("difficultySelect");
+  const playerColorSelect = document.getElementById("playerColorSelect");
 
   function newState(){
     return {
@@ -326,6 +334,7 @@
       turn:"w",
       mode:"local",
       difficulty:"easy",
+      playerColor:"w",
       castling:{wK:true,wQ:true,bK:true,bQ:true},
       enPassant:null,
       halfmove:0,
@@ -344,7 +353,8 @@
   function clone(obj){return JSON.parse(JSON.stringify(obj))}
   function coord(r,c){return String.fromCharCode(97+c)+(8-r)}
   function sameSq(a,b){return a&&b&&a.r===b.r&&a.c===b.c}
-  function isCPUturn(){return state.mode==="cpu" && state.turn==="b" && !state.gameOver}
+  function cpuColor(){return enemy(state.playerColor || "w")}
+  function isCPUturn(){return state.mode==="cpu" && state.turn===cpuColor() && !state.gameOver}
   function randItem(arr){return arr[Math.floor(Math.random()*arr.length)]}
 
   function load(){
@@ -355,6 +365,7 @@
         if(parsed && parsed.board && parsed.turn){
           if(!parsed.mode) parsed.mode = "local";
           if(!parsed.difficulty) parsed.difficulty = "easy";
+          if(!parsed.playerColor) parsed.playerColor = "w";
           return parsed;
         }
       }
@@ -367,7 +378,9 @@
     boardEl.innerHTML = "";
     modeSelect.value = state.mode || "local";
     difficultySelect.value = state.difficulty || "easy";
+    playerColorSelect.value = state.playerColor || "w";
     difficultySelect.disabled = state.mode !== "cpu";
+    playerColorSelect.disabled = state.mode !== "cpu";
     const rows = flipped ? [...Array(8).keys()].reverse() : [...Array(8).keys()];
     const cols = flipped ? [...Array(8).keys()].reverse() : [...Array(8).keys()];
     const checkKing = isInCheck(state, state.turn) ? findKing(state.board, state.turn) : null;
@@ -418,7 +431,13 @@
   }
 
   function updateSide(){
-    turnEl.textContent = state.gameOver ? "Game Over" : (state.turn==="w" ? "White to move" : (state.mode==="cpu" ? "CPU thinking..." : "Black to move"));
+    if(state.gameOver){
+      turnEl.textContent = "Game Over";
+    }else if(isCPUturn()){
+      turnEl.textContent = "CPU thinking...";
+    }else{
+      turnEl.textContent = state.turn==="w" ? "White to move" : "Black to move";
+    }
     msgEl.textContent = state.lastMessage || "";
     document.getElementById("whiteCaptured").textContent = state.capturedByWhite.map(p=>SYMBOLS[p]).join(" ");
     document.getElementById("blackCaptured").textContent = state.capturedByBlack.map(p=>SYMBOLS[p]).join(" ");
@@ -560,7 +579,7 @@
   }
 
   function doMove(move){
-    if(move.promotion && state.turn === "w"){
+    if(move.promotion && !isCPUturn()){
       pendingPromotion = move;
       showPromotion(colorOf(move.piece));
       return;
@@ -650,7 +669,7 @@
     }else if(checked){
       state.lastMessage = (color==="w" ? "White" : "Black") + " is in check.";
     }else{
-      state.lastMessage = state.mode==="cpu" && state.turn==="b" ? "CPU is thinking..." : "Move played.";
+      state.lastMessage = isCPUturn() ? "CPU is thinking..." : "Move played.";
     }
     save();
     render();
@@ -658,42 +677,43 @@
   }
 
 
-  function evaluateBoard(st){
+  function evaluateBoard(st, perspective){
     let score = 0;
     for(let r=0;r<8;r++) for(let c=0;c<8;c++){
       const p = st.board[r][c];
       if(!p) continue;
-      const sign = colorOf(p)==="b" ? 1 : -1;
+      const sign = colorOf(p)===perspective ? 1 : -1;
       let val = VALUES[typeOf(p)];
       if(typeOf(p)==="P") val += colorOf(p)==="b" ? r*8 : (7-r)*8;
       if(typeOf(p)==="N" || typeOf(p)==="B") val += (3.5 - Math.abs(3.5-r) + 3.5 - Math.abs(3.5-c))*6;
       score += sign * val;
     }
-    if(isInCheck(st,"w")) score += 35;
-    if(isInCheck(st,"b")) score -= 35;
+    if(isInCheck(st,enemy(perspective))) score += 35;
+    if(isInCheck(st,perspective)) score -= 35;
     return score;
   }
 
-  function scoreMove(st, move, depth){
+  function scoreMove(st, move, depth, perspective){
     const next = applyMove(clone(st), move, move.promotion ? "Q" : null, true);
-    let score = evaluateBoard(next);
+    let score = evaluateBoard(next, perspective);
     if(move.capture) score += VALUES[typeOf(move.capture)] || 0;
     if(move.enPassantCapture) score += VALUES.P;
     if(move.promotion) score += VALUES.Q - VALUES.P;
     const replies = allLegalMoves(next, next.turn);
     if(replies.length===0){
-      if(isInCheck(next,next.turn)) score += next.turn==="w" ? 999999 : -999999;
+      if(isInCheck(next,next.turn)) score += next.turn===perspective ? -999999 : 999999;
       else score -= 20;
     }
     if(depth > 1 && replies.length){
-      const replyScores = replies.map(rm=>evaluateBoard(applyMove(clone(next), rm, rm.promotion ? "Q" : null, true)));
-      score = next.turn==="w" ? Math.min(...replyScores) : Math.max(...replyScores);
+      const replyScores = replies.map(rm=>evaluateBoard(applyMove(clone(next), rm, rm.promotion ? "Q" : null, true), perspective));
+      score = Math.min(...replyScores);
     }
     return score + Math.random()*8;
   }
 
   function chooseCPUMove(){
-    const moves = allLegalMoves(state, "b");
+    const perspective = cpuColor();
+    const moves = allLegalMoves(state, perspective);
     if(!moves.length) return null;
     const diff = state.difficulty || "easy";
     if(diff==="easy"){
@@ -702,7 +722,7 @@
       return randItem(moves);
     }
     const depth = diff==="hard" ? 2 : 1;
-    const scored = moves.map(m=>({m, s:scoreMove(state,m,depth)})).sort((a,b)=>b.s-a.s);
+    const scored = moves.map(m=>({m, s:scoreMove(state,m,depth,perspective)})).sort((a,b)=>b.s-a.s);
     if(diff==="medium") return (Math.random()<0.72 ? scored[0] : randItem(scored.slice(0, Math.min(5, scored.length)))).m;
     return (Math.random()<0.9 ? scored[0] : randItem(scored.slice(0, Math.min(3, scored.length)))).m;
   }
@@ -723,12 +743,19 @@
   modeSelect.onchange = ()=>{
     state.mode = modeSelect.value;
     selected = null; legalForSelected = [];
-    if(state.mode==="cpu" && state.turn==="b" && !state.gameOver) state.lastMessage = "CPU is thinking...";
+    if(isCPUturn()) state.lastMessage = "CPU is thinking...";
     save(); render(); maybeCPUMove();
   };
   difficultySelect.onchange = ()=>{
     state.difficulty = difficultySelect.value;
     save(); render();
+  };
+  playerColorSelect.onchange = ()=>{
+    state.playerColor = playerColorSelect.value;
+    selected = null; legalForSelected = [];
+    if(isCPUturn()) state.lastMessage = "CPU is thinking...";
+    else state.lastMessage = "You are playing as " + (state.playerColor==="w" ? "White" : "Black") + ".";
+    save(); render(); maybeCPUMove();
   };
 
   document.getElementById("newGame").onclick = ()=>{ confirmModal.style.display="flex"; };
@@ -737,9 +764,11 @@
     confirmModal.style.display="none";
     const mode = modeSelect.value;
     const difficulty = difficultySelect.value;
+    const playerColor = playerColorSelect.value;
     state = newState();
     state.mode = mode;
     state.difficulty = difficulty;
+    state.playerColor = playerColor;
     selected = null; legalForSelected = [];
     save(); render(); maybeCPUMove();
   };
