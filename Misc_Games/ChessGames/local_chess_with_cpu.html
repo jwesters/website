@@ -161,6 +161,54 @@
     display:grid;
     gap:8px;
   }
+  .history{
+    margin:12px 0;
+    background:#faf3e5;
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:12px;
+  }
+  .history-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    margin-bottom:8px;
+  }
+  .history-head .label{margin:0}
+  .history-head button{
+    padding:8px 10px;
+    font-size:.85rem;
+    white-space:nowrap;
+  }
+  button:disabled, select:disabled{
+    opacity:.55;
+    cursor:not-allowed;
+    transform:none;
+  }
+  button:disabled:hover{
+    background:#fffaf0;
+    transform:none;
+  }
+  .move-history{
+    min-height:70px;
+    max-height:170px;
+    overflow:auto;
+    background:#fffdf7;
+    border:1px dashed #cdb891;
+    border-radius:12px;
+    padding:8px;
+    font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size:.9rem;
+    line-height:1.55;
+  }
+  .move-row{
+    display:grid;
+    grid-template-columns:42px 1fr 1fr;
+    gap:8px;
+  }
+  .move-num{color:var(--muted);font-weight:800}
+  .empty-history{color:var(--muted);font-family:inherit}
   .capbox{
     min-height:45px;
     background:#faf3e5;
@@ -257,6 +305,13 @@
       <div id="turn" class="turn">White to move</div>
       <div id="message" class="message">Game ready.</div>
     </div>
+    <div class="history">
+      <div class="history-head">
+        <div class="label">Move history</div>
+        <button id="exportPGN" type="button" disabled>Export PGN</button>
+      </div>
+      <div id="moveHistory" class="move-history" aria-live="polite"></div>
+    </div>
     <div class="buttons">
       <button id="newGame" class="danger wide">New Game</button>
       <button id="flipBoard">Flip Board</button>
@@ -318,6 +373,8 @@
   const modeSelect = document.getElementById("modeSelect");
   const difficultySelect = document.getElementById("difficultySelect");
   const playerColorSelect = document.getElementById("playerColorSelect");
+  const moveHistoryEl = document.getElementById("moveHistory");
+  const exportPGNBtn = document.getElementById("exportPGN");
 
   function newState(){
     return {
@@ -340,6 +397,9 @@
       halfmove:0,
       fullmove:1,
       gameOver:false,
+      result:"*",
+      moveHistory:[],
+      startedAt:new Date().toISOString(),
       capturedByWhite:[],
       capturedByBlack:[],
       lastMessage:"Game ready."
@@ -366,6 +426,9 @@
           if(!parsed.mode) parsed.mode = "local";
           if(!parsed.difficulty) parsed.difficulty = "easy";
           if(!parsed.playerColor) parsed.playerColor = "w";
+          if(!Array.isArray(parsed.moveHistory)) parsed.moveHistory = [];
+          if(!parsed.result) parsed.result = parsed.gameOver ? "*" : "*";
+          if(!parsed.startedAt) parsed.startedAt = new Date().toISOString();
           return parsed;
         }
       }
@@ -441,6 +504,9 @@
     msgEl.textContent = state.lastMessage || "";
     document.getElementById("whiteCaptured").textContent = state.capturedByWhite.map(p=>SYMBOLS[p]).join(" ");
     document.getElementById("blackCaptured").textContent = state.capturedByBlack.map(p=>SYMBOLS[p]).join(" ");
+    renderMoveHistory();
+    exportPGNBtn.disabled = !state.gameOver;
+    exportPGNBtn.title = state.gameOver ? "Download this game as a PGN file" : "PGN export is available when the game is finished";
   }
 
   function handleClick(r,c){
@@ -584,8 +650,7 @@
       showPromotion(colorOf(move.piece));
       return;
     }
-    state = applyMove(state, move, move.promotion ? "Q" : null, false);
-    afterMove();
+    playMove(move, move.promotion ? "Q" : null);
   }
 
   function showPromotion(color){
@@ -595,13 +660,64 @@
       btn.textContent = SYMBOLS[color+t];
       btn.onclick = ()=>{
         promoModal.style.display = "none";
-        state = applyMove(state, pendingPromotion, t, false);
+        const move = pendingPromotion;
         pendingPromotion = null;
-        afterMove();
+        playMove(move, t);
       };
       promoChoices.appendChild(btn);
     });
     promoModal.style.display = "flex";
+  }
+
+  function playMove(move, promoType){
+    const notation = moveToSAN(state, move, promoType);
+    const moveNumber = state.fullmove;
+    const moveColor = colorOf(move.piece);
+    state = applyMove(state, move, promoType, false);
+    if(!Array.isArray(state.moveHistory)) state.moveHistory = [];
+    state.moveHistory.push({number:moveNumber, color:moveColor, san:notation});
+    afterMove();
+  }
+
+  function moveToSAN(st, move, promoType){
+    const piece = move.piece;
+    const color = colorOf(piece);
+    const type = typeOf(piece);
+    const capture = !!(move.capture || move.enPassantCapture);
+    let san = "";
+
+    if(move.castle){
+      san = move.castle === "K" ? "O-O" : "O-O-O";
+    }else if(type === "P"){
+      if(capture) san += String.fromCharCode(97 + move.from.c) + "x";
+      san += coord(move.to.r, move.to.c);
+      if(move.promotion) san += "=" + (promoType || "Q");
+    }else{
+      san += type;
+      const others = [];
+      for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+        if(r===move.from.r && c===move.from.c) continue;
+        if(st.board[r][c] === piece){
+          const candidateMoves = legalMovesForPiece(st, r, c);
+          if(candidateMoves.some(m=>m.to.r===move.to.r && m.to.c===move.to.c)) others.push({r,c});
+        }
+      }
+      if(others.length){
+        const sameFile = others.some(o=>o.c===move.from.c);
+        const sameRank = others.some(o=>o.r===move.from.r);
+        if(!sameFile) san += String.fromCharCode(97 + move.from.c);
+        else if(!sameRank) san += (8 - move.from.r);
+        else san += coord(move.from.r, move.from.c);
+      }
+      if(capture) san += "x";
+      san += coord(move.to.r, move.to.c);
+    }
+
+    const next = applyMove(clone(st), move, promoType, true);
+    const opponent = next.turn;
+    const replies = allLegalMoves(next, opponent);
+    if(isInCheck(next, opponent)) san += replies.length ? "+" : "#";
+    return san;
   }
 
   function applyMove(st, move, promoType, simulation){
@@ -660,20 +776,47 @@
     const color = state.turn;
     const legal = allLegalMoves(state, color);
     const checked = isInCheck(state, color);
+    state.result = state.result || "*";
     if(legal.length===0 && checked){
       state.gameOver = true;
+      state.result = color === "w" ? "0-1" : "1-0";
       state.lastMessage = (color==="w" ? "White" : "Black") + " is checkmated. " + (color==="w" ? "Black" : "White") + " wins!";
     }else if(legal.length===0){
       state.gameOver = true;
+      state.result = "1/2-1/2";
       state.lastMessage = "Stalemate. The game is a draw.";
+    }else if(isInsufficientMaterial(state)){
+      state.gameOver = true;
+      state.result = "1/2-1/2";
+      state.lastMessage = "Draw by insufficient material.";
     }else if(checked){
+      state.gameOver = false;
+      state.result = "*";
       state.lastMessage = (color==="w" ? "White" : "Black") + " is in check.";
     }else{
+      state.gameOver = false;
+      state.result = "*";
       state.lastMessage = isCPUturn() ? "CPU is thinking..." : "Move played.";
     }
     save();
     render();
     maybeCPUMove();
+  }
+
+  function isInsufficientMaterial(st){
+    const pieces = [];
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+      const p = st.board[r][c];
+      if(p && typeOf(p)!=="K") pieces.push({piece:p,type:typeOf(p),color:colorOf(p),r,c});
+    }
+    if(pieces.length===0) return true;
+    if(pieces.some(x=>x.type==="P" || x.type==="R" || x.type==="Q")) return false;
+    if(pieces.length===1 && (pieces[0].type==="B" || pieces[0].type==="N")) return true;
+    if(pieces.every(x=>x.type==="B")){
+      const firstSquareColor = (pieces[0].r + pieces[0].c) % 2;
+      return pieces.every(x=>((x.r + x.c) % 2) === firstSquareColor);
+    }
+    return false;
   }
 
 
@@ -734,11 +877,114 @@
       const move = chooseCPUMove();
       cpuThinking = false;
       if(move){
-        state = applyMove(state, move, move.promotion ? "Q" : null, false);
-        afterMove();
+        playMove(move, move.promotion ? "Q" : null);
       }
     }, 450);
   }
+
+  function renderMoveHistory(){
+    const history = Array.isArray(state.moveHistory) ? state.moveHistory : [];
+    moveHistoryEl.innerHTML = "";
+    if(!history.length){
+      const empty = document.createElement("div");
+      empty.className = "empty-history";
+      empty.textContent = "No moves yet.";
+      moveHistoryEl.appendChild(empty);
+      return;
+    }
+    const byNumber = [];
+    history.forEach(m=>{
+      let row = byNumber.find(x=>x.number===m.number);
+      if(!row){ row = {number:m.number, w:"", b:""}; byNumber.push(row); }
+      row[m.color] = m.san;
+    });
+    byNumber.forEach(row=>{
+      const div = document.createElement("div");
+      div.className = "move-row";
+      const num = document.createElement("span");
+      num.className = "move-num";
+      num.textContent = row.number + ".";
+      const white = document.createElement("span");
+      white.textContent = row.w || "";
+      const black = document.createElement("span");
+      black.textContent = row.b || "";
+      div.append(num, white, black);
+      moveHistoryEl.appendChild(div);
+    });
+    moveHistoryEl.scrollTop = moveHistoryEl.scrollHeight;
+  }
+
+  function pgnDate(){
+    const d = state.startedAt ? new Date(state.startedAt) : new Date();
+    if(Number.isNaN(d.getTime())) return new Date().toISOString().slice(0,10).replace(/-/g,".");
+    return d.toISOString().slice(0,10).replace(/-/g,".");
+  }
+
+  function pgnPlayers(){
+    if(state.mode === "cpu"){
+      return state.playerColor === "w"
+        ? {white:"Player", black:"CPU"}
+        : {white:"CPU", black:"Player"};
+    }
+    return {white:"White", black:"Black"};
+  }
+
+  function buildPGN(){
+    const players = pgnPlayers();
+    const result = state.result || (state.gameOver ? "1/2-1/2" : "*");
+    const headers = [
+      `[Event "Local Chess"]`,
+      `[Site "Local Browser"]`,
+      `[Date "${pgnDate()}"]`,
+      `[Round "-"]`,
+      `[White "${players.white}"]`,
+      `[Black "${players.black}"]`,
+      `[Result "${result}"]`
+    ];
+    if(state.mode === "cpu") {
+      headers.push(`[Mode "Player vs CPU"]`);
+      headers.push(`[Difficulty "${state.difficulty || "easy"}"]`);
+    }
+
+    const history = Array.isArray(state.moveHistory) ? state.moveHistory : [];
+    const grouped = [];
+    history.forEach(m=>{
+      let row = grouped.find(x=>x.number===m.number);
+      if(!row){ row = {number:m.number, w:"", b:""}; grouped.push(row); }
+      row[m.color] = m.san;
+    });
+    const bodyParts = [];
+    grouped.forEach(row=>{
+      if(row.w){
+        bodyParts.push(`${row.number}. ${row.w}`);
+        if(row.b) bodyParts.push(row.b);
+      }else if(row.b){
+        bodyParts.push(`${row.number}... ${row.b}`);
+      }
+    });
+    bodyParts.push(result);
+    return headers.join("\n") + "\n\n" + bodyParts.join(" ") + "\n";
+  }
+
+  function exportPGN(){
+    if(!state.gameOver){
+      state.lastMessage = "Finish the game first, then export the PGN.";
+      render();
+      return;
+    }
+    const blob = new Blob([buildPGN()], {type:"application/x-chess-pgn;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().slice(0,10);
+    a.href = url;
+    a.download = `local-chess-${stamp}.pgn`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  exportPGNBtn.onclick = exportPGN;
 
   modeSelect.onchange = ()=>{
     state.mode = modeSelect.value;
