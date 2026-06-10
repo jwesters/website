@@ -438,7 +438,27 @@ CATEGORY_ICONS = {
 # Tokens are checked against the full relative path and filename.
 CATEGORY_RULES: List[Tuple[Tuple[str, ...], str, str]] = [
     # Subject-specific / curriculum folders
-    (("subject_specific/ela/", "grade6_ela", "ela6", "spelling-test-audio"), "Literacy & ELA", "ELA Practice & Spelling"),
+    # Keep ELA-specific names here, before Science/Social rules, so files like
+    # "Alberta ELA Practice.html" do not fall into a broader Alberta/Social folder grouping.
+    ((
+        "subject_specific/ela/",
+        "grade6_ela",
+        "grade5_ela",
+        "grade_6_ela",
+        "grade_5_ela",
+        "ela6",
+        "ela5",
+        "alberta ela",
+        "alberta_ela",
+        "ela practice",
+        "ela_practice",
+        "english language arts",
+        "english_language_arts",
+        "english-language-arts",
+        "language arts",
+        "language_arts",
+        "spelling-test-audio",
+    ), "Literacy & ELA", "ELA Practice & Spelling"),
     (("subject_specific/math/", "grade3_math", "grade5_math", "grade6_math", "math_questions_generator"), "Math & Numeracy", "Math Practice & Assessments"),
     (("grade5_science", "grade6_science", "moon_phases", "subject_specific/science/"), "Science & Social Studies", "Science"),
     (("grade5_social", "grade6_social", "social"), "Science & Social Studies", "Social Studies"),

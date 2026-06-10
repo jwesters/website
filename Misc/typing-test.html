@@ -377,7 +377,7 @@
       </div>
 
       <h3>Review</h3>
-      <p class="mini">Highlighted spots show typing differences compared with the test text.</p>
+      <p class="mini">Review shows only the section that was typed. Untyped passage text is not counted as an error.</p>
       <div id="reviewBox" class="reviewBox"></div>
 
       <div class="buttonRow">
@@ -541,20 +541,28 @@ function calculateResults(){
   const elapsedSeconds = Math.max(1, Math.round(((endedAt || Date.now()) - startedAt) / 1000));
   const minutes = elapsedSeconds / 60;
 
+  // Only score the part the student actually typed.
+  // The full passage is intentionally much longer than the timer, so untyped text
+  // should NOT count as errors or lower accuracy.
   let correctChars = 0;
   let errors = 0;
-  const maxLen = Math.max(typed.length, target.length);
+  const attemptedChars = typed.length;
+  const compareLen = Math.min(typed.length, target.length);
 
-  for(let i=0;i<maxLen;i++){
+  for(let i=0;i<compareLen;i++){
     if(typed[i] === target[i]) correctChars++;
     else errors++;
   }
+
+  // If someone somehow types past the target passage, count those extra typed
+  // characters as errors. This should be rare because the passage is very long.
+  errors += Math.max(0, typed.length - target.length);
 
   const typedWords = typed.trim() ? typed.trim().split(/\s+/).length : 0;
   const grossWpm = typedWords / minutes;
   const netWpm = Math.max(0, Math.round((correctChars / 5) / minutes));
   const cpm = Math.round(typed.length / minutes);
-  const accuracy = maxLen ? Math.max(0, Math.round((correctChars / maxLen) * 100)) : 0;
+  const accuracy = attemptedChars ? Math.max(0, Math.round((correctChars / attemptedChars) * 100)) : 0;
 
   return {
     wpm: netWpm,
@@ -576,25 +584,28 @@ function renderResults(){
   $("accuracyResult").textContent = r.accuracy + "%";
   $("errorsResult").textContent = r.errors;
   $("cpmResult").textContent = r.cpm;
-  $("resultMessage").textContent = `${r.modeLabel}. Net WPM uses correct characters divided by 5.`;
+  $("resultMessage").textContent = `${r.modeLabel}. Net WPM uses correct typed characters divided by 5. Accuracy and errors only use what was typed.`;
   $("reviewBox").innerHTML = makeReviewHtml(r.target, r.typed);
   updateBestPill();
 }
 
 function makeReviewHtml(target, typed){
-  const maxLen = Math.max(target.length, typed.length);
+  if(!typed.length){
+    return `<span class="mini">No text was typed.</span>`;
+  }
+
+  // Review only the attempted text. Unfinished target text stays neutral and is
+  // not displayed as a long row of errors.
   let html = "";
-  for(let i=0;i<maxLen;i++){
+  for(let i=0;i<typed.length;i++){
     const expected = target[i] ?? "";
     const got = typed[i] ?? "";
     if(got === expected){
       html += `<span class="ok">${escapeHtml(expected)}</span>`;
-    } else if(got === ""){
-      html += `<span class="bad">□</span>`;
     } else if(expected === ""){
       html += `<span class="bad">${escapeHtml(got)}</span>`;
     } else {
-      html += `<span class="bad">${escapeHtml(expected)}</span>`;
+      html += `<span class="bad" title="Typed: ${escapeHtml(got)}">${escapeHtml(expected)}</span>`;
     }
   }
   return html;
