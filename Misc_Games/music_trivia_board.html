@@ -237,7 +237,7 @@
   .timeText{min-width:72px;text-align:right;color:var(--warn);font-weight:800}
   .answerRow{
     display:grid;
-    grid-template-columns:auto minmax(0,1fr) auto auto;
+    grid-template-columns:auto minmax(0,1fr) auto;
     align-items:center;
     gap:10px;
     margin-top:14px;
@@ -350,7 +350,7 @@
   <section class="instructions" id="instructions">
     <div class="infoCard"><b>Buzz first</b>You have 12 seconds to buzz in after a regular question appears. No buzz means the clue is skipped with no score change.</div>
     <div class="infoCard"><b>Type only the answer</b>The app shows the response starter, such as <em>Who is</em> or <em>What is</em>. You only type the actual answer.</div>
-    <div class="infoCard"><b>Forgiving spelling</b>Answers ignore punctuation, capitalization, many articles, common number formats, and small typos. Wrong answers subtract the question value.</div>
+    <div class="infoCard"><b>Forgiving spelling</b>Answers ignore punctuation, capitalization, many articles, common number formats, last names for full person names, and small typos. Wrong answers subtract the question value.</div>
   </section>
 </div>
 
@@ -401,7 +401,6 @@
         <div class="answerRow">
           <div id="starterText" class="starter">What is</div>
           <input id="answerInput" placeholder="type your answer here" spellcheck="false">
-          <button id="skipAnswerBtn" class="secondary" type="button">Skip</button>
           <button id="submitBtn" class="good" type="submit">Submit</button>
         </div>
         <div class="small" style="margin-top:8px;">Do not type “who is” or “what is” — just the answer.</div>
@@ -474,7 +473,6 @@ const buzzBtn = $('#buzzBtn');
 const skipBuzzBtn = $('#skipBuzzBtn');
 const answerForm = $('#answerForm');
 const answerInput = $('#answerInput');
-const skipAnswerBtn = $('#skipAnswerBtn');
 const starterText = $('#starterText');
 const feedback = $('#feedback');
 const afterActions = $('#afterActions');
@@ -663,6 +661,7 @@ function showClueAndBuzz(){
   starterText.textContent = guessStarter(clue.q, clue.a);
   buzzArea.classList.remove('hidden');
   answerForm.classList.add('hidden');
+  skipBuzzBtn.classList.toggle('hidden', clue.bonusQuestion);
   answerInput.value = '';
   buzzBtn.disabled = false;
   startBuzzTimer();
@@ -703,6 +702,7 @@ function stopBuzzTimer(){
 }
 function buzzIn(){
   stopBuzzTimer();
+  skipBuzzBtn.classList.add('hidden');
   buzzArea.classList.add('hidden');
   answerForm.classList.remove('hidden');
   answerInput.focus();
@@ -724,9 +724,10 @@ function noBuzz(){
   renderBoard();
 }
 function skipQuestion(){
-  stopBuzzTimer();
   if(!state.current || state.current.clue.used) return;
   const clue = state.current.clue;
+  if(clue.bonusQuestion || buzzArea.classList.contains('hidden')) return;
+  stopBuzzTimer();
   markUsed();
   showFeedback(null, `Skipped. No points gained or lost.<br><br><b>Correct response:</b> ${escapeHtml(clue.q)}`);
   renderBoard();
@@ -813,6 +814,29 @@ function normalizeAnswer(s){
   s = s.replace(/\s+/g, ' ').trim();
   return s;
 }
+function personNameLastNameVariants(correct){
+  const raw = String(correct || '');
+  const pieces = [raw];
+  const splitters = [/\s+\/\s+/g, /\s+or\s+/gi, /;\s*/g, /,\s+or\s+/gi];
+  for(const rx of splitters){
+    for(const p of raw.split(rx)) if(p.trim()) pieces.push(p.trim());
+  }
+  const extras = [];
+  for(const piece of pieces){
+    let p = piece.replace(/\([^)]*\)/g,' ').replace(/[“”"']/g,' ').replace(/\s+/g,' ').trim();
+    if(!p || /^(the|a|an)\s+/i.test(p)) continue;
+    if(/[&+]/.test(p)) continue;
+    const words = p.split(/\s+/).filter(Boolean);
+    if(words.length < 2 || words.length > 5) continue;
+    const nameish = words.every(w => /^[A-Z][A-Za-zÀ-ž.'’-]*\.?$/.test(w) || /^[A-Z]\.$/.test(w));
+    if(!nameish) continue;
+    const last = normalizeAnswer(words[words.length - 1]);
+    if(last.length >= 4 && !/^(band|choir|orchestra|quartet|trio|duo|singers|brothers|sisters)$/.test(last)){
+      extras.push(last);
+    }
+  }
+  return extras;
+}
 function variants(correct){
   const raw = String(correct || '');
   const parts = [raw];
@@ -822,6 +846,7 @@ function variants(correct){
   }
   parts.push(raw.replace(/\([^)]*\)/g,' '));
   parts.push(raw.replace(/^the\s+/i,''));
+  parts.push(...personNameLastNameVariants(raw));
   return [...new Set(parts.map(normalizeAnswer).filter(Boolean))];
 }
 function tokens(s){
@@ -901,13 +926,12 @@ $('#newGameBtn').addEventListener('click', () => newGame(randomSeed()));
 $('#newGameBtn2').addEventListener('click', () => newGame(randomSeed()));
 $('#sameSeedBtn').addEventListener('click', () => newGame($('#seedInput').value.trim() || state.seed || randomSeed()));
 $('#helpBtn').addEventListener('click', () => {
-  alert('Pick a category value. You have 12 seconds to buzz in. After buzzing, type only the answer. The app ignores capitalization, punctuation, articles, and small typos. Wrong answers subtract points. One random square is a Bonus Question.');
+  alert('Pick a category value. You have 12 seconds to buzz in. Skip is only available before buzzing on regular questions. After buzzing, type only the answer. The app ignores capitalization, punctuation, articles, common number formats, last names for full person names, and small typos. Wrong answers subtract points. One random square is a Bonus Question.');
 });
 $('#closeBtn').addEventListener('click', closeOverlay);
 $('#continueBtn').addEventListener('click', continueToBoard);
 $('#buzzBtn').addEventListener('click', buzzIn);
 $('#skipBuzzBtn').addEventListener('click', skipQuestion);
-$('#skipAnswerBtn').addEventListener('click', skipQuestion);
 $('#answerForm').addEventListener('submit', submitAnswer);
 $('#wagerStartBtn').addEventListener('click', startBonusQuestion);
 $('#wagerInput').addEventListener('keydown', e => {
