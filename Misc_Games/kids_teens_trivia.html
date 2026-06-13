@@ -459,14 +459,33 @@
       justify-content: space-between;
     }
 
+    .board-wrap { overflow-x: visible; }
+
     .board {
-      grid-template-columns: repeat(6, minmax(116px, 1fr));
-      gap: 8px;
-      min-width: 710px;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 6px;
+      min-width: 0;
     }
 
-    .category { min-height: 84px; }
-    .tile { min-height: 78px; }
+    .category {
+      min-height: 72px;
+      padding: 6px 3px;
+      border-radius: 10px;
+      font-size: clamp(.48rem, 2.35vw, .78rem);
+      line-height: 1.08;
+      word-break: break-word;
+      hyphens: auto;
+    }
+
+    .tile {
+      min-height: 58px;
+      padding: 4px 1px;
+      border-radius: 10px;
+      font-size: clamp(.62rem, 4vw, 1.08rem);
+      letter-spacing: -.04em;
+      white-space: nowrap;
+      overflow: visible;
+    }
 
     .modal-top {
       align-items: center;
@@ -479,7 +498,7 @@
     <header>
       <div>
         <h1>Kids &amp; Teens Trivia</h1>
-        <div class="subtitle">Single-player Jeopardy-style trivia. Buzz in within 7 seconds, type only the answer, and the checker will allow small spelling mistakes.</div>
+        <div class="subtitle">Single-player trivia board. Buzz in within 12 seconds, type only the answer, and the checker will allow small spelling mistakes.</div>
       </div>
       <div class="score-card" aria-live="polite">
         <div>
@@ -526,11 +545,12 @@
 
       <section id="wagerZone" class="wager-zone hidden">
         <div class="modal-kicker">Daily Double!</div>
-        <p class="hint" id="wagerHint">Choose your wager before the 7-second buzz-in timer starts.</p>
+        <p class="hint" id="wagerHint">Choose your wager before the 12-second buzz-in timer starts.</p>
         <div class="wager-row">
           <label class="sr-only" for="wagerInput">Daily Double wager</label>
           <input id="wagerInput" type="number" min="5" step="5" />
           <button class="big-action" id="lockWagerBtn">Lock Wager</button>
+          <button class="btn secondary" id="skipWagerBtn" type="button">Skip</button>
         </div>
       </section>
 
@@ -538,6 +558,7 @@
         <div class="buzz-row">
           <div class="timer" id="buzzTimer">Buzz in: 12.0 seconds</div>
           <button class="big-action" id="buzzBtn">Buzz In</button>
+          <button class="btn secondary" id="skipBuzzBtn" type="button">Skip</button>
         </div>
         <p class="hint">You only lose points if you buzz in and answer incorrectly.</p>
       </section>
@@ -559,17 +580,16 @@
         <p class="correct-answer" id="correctAnswer"></p>
         <div class="result-actions">
           <button class="btn" id="continueBtn">Continue</button>
-          <button class="btn secondary hidden" id="overrideBtn">Count My Answer as Correct</button>
         </div>
       </section>
 
       <section id="helpZone" class="help-zone hidden">
         <p class="hint">
-          Choose a value from the board. You get 7 seconds to buzz in. After buzzing, type just the answer.
+          Choose a value from the board. You get 12 seconds to buzz in. After buzzing, type just the answer.
           Correct answers add the clue value to your score. Wrong answers subtract it. One clue is a hidden Daily Double with a wager.
         </p>
         <p class="hint">
-          The checker ignores punctuation, capitalization, articles like “the,” and small spelling mistakes. Some answers still need teacher/player judgment, so a “Count My Answer as Correct” button appears after a wrong answer.
+          The checker ignores punctuation, capitalization, articles like “the,” small spelling mistakes, and can accept a last name for many full-name answers.
         </p>
       </section>
 
@@ -621,18 +641,15 @@ const lockWagerBtn = document.getElementById('lockWagerBtn');
 const buzzZone = document.getElementById('buzzZone');
 const buzzTimer = document.getElementById('buzzTimer');
 const buzzBtn = document.getElementById('buzzBtn');
-const skipBuzzBtn = document.getElementById('skipBuzzBtn');
 
 const answerZone = document.getElementById('answerZone');
 const answerForm = document.getElementById('answerForm');
 const answerInput = document.getElementById('answerInput');
-const skipAnswerBtn = document.getElementById('skipAnswerBtn');
 
 const resultZone = document.getElementById('resultZone');
 const resultTitle = document.getElementById('resultTitle');
 const correctAnswer = document.getElementById('correctAnswer');
 const continueBtn = document.getElementById('continueBtn');
-const overrideBtn = document.getElementById('overrideBtn');
 
 const helpZone = document.getElementById('helpZone');
 const reviewZone = document.getElementById('reviewZone');
@@ -742,18 +759,19 @@ function renderBoard() {
 
 function hideAllModalZones() {
   [wagerZone, buzzZone, answerZone, resultZone, helpZone, reviewZone].forEach(zone => zone.classList.add('hidden'));
-  overrideBtn.classList.add('hidden');
   setSkipButtons(false, false);
 }
 
-function setSkipButtons(allowBuzzSkip, allowAnswerSkip) {
+function setSkipButtons(allowWagerSkip, allowBuzzSkip) {
+  const skipWagerBtn = document.getElementById('skipWagerBtn');
+  const skipBuzzBtn = document.getElementById('skipBuzzBtn');
+  if (skipWagerBtn) {
+    skipWagerBtn.hidden = !allowWagerSkip;
+    skipWagerBtn.disabled = !allowWagerSkip;
+  }
   if (skipBuzzBtn) {
     skipBuzzBtn.hidden = !allowBuzzSkip;
     skipBuzzBtn.disabled = !allowBuzzSkip;
-  }
-  if (skipAnswerBtn) {
-    skipAnswerBtn.hidden = !allowAnswerSkip;
-    skipAnswerBtn.disabled = !allowAnswerSkip;
   }
 }
 
@@ -761,7 +779,7 @@ function openClue(colIndex, rowIndex) {
   const clue = board[colIndex].clues[rowIndex];
   if (clue.used) return;
 
-  current = { ...clue, colIndex, rowIndex, wager: clue.value, status: 'open', canSkip: !clue.daily, wagerLocked: false };
+  current = { ...clue, colIndex, rowIndex, wager: clue.value, status: 'open' };
   lastWrongRecord = null;
   clearBuzzTimer();
   hideAllModalZones();
@@ -778,12 +796,12 @@ function openClue(colIndex, rowIndex) {
     wagerInput.value = String(Math.min(maxWager, Math.max(clue.value, 100)));
     text(wagerHint, `Choose a wager from $5 to ${money(maxWager)}. Wrong answers subtract the wager.`);
     wagerZone.classList.remove('hidden');
-    setSkipButtons(false, false);
+    setSkipButtons(true, false);
     updatePills();
     setTimeout(() => wagerInput.focus(), 50);
   } else {
     buzzZone.classList.remove('hidden');
-    setSkipButtons(true, false);
+    setSkipButtons(false, true);
     startBuzzTimer();
   }
 
@@ -795,7 +813,6 @@ function startBuzzTimer() {
   const seconds = 12;
   buzzDeadline = performance.now() + seconds * 1000;
   buzzBtn.disabled = false;
-  setSkipButtons(!!(current && current.canSkip && !current.wagerLocked), false);
   tickBuzz();
   buzzInterval = setInterval(tickBuzz, 50);
 }
@@ -822,8 +839,6 @@ function lockWager() {
   if (!Number.isFinite(wager)) wager = current.value;
   wager = Math.max(5, Math.min(max, Math.round(wager / 5) * 5));
   current.wager = wager;
-  current.wagerLocked = true;
-  current.canSkip = false;
   wagerInput.value = String(wager);
   wagerZone.classList.add('hidden');
   buzzZone.classList.remove('hidden');
@@ -835,13 +850,40 @@ function lockWager() {
 function buzzIn() {
   if (!current || !buzzInterval) return;
   clearBuzzTimer();
-  current.status = 'buzzed';
-  buzzBtn.disabled = true;
   setSkipButtons(false, false);
+  buzzBtn.disabled = true;
   buzzZone.classList.add('hidden');
   answerZone.classList.remove('hidden');
   answerInput.value = '';
   setTimeout(() => answerInput.focus(), 50);
+}
+
+function skipClue() {
+  if (!current || current.status !== 'open') return;
+  clearBuzzTimer();
+  setSkipButtons(false, false);
+  markClueUsed();
+  const record = {
+    category: current.category,
+    value: current.value,
+    wager: current.daily ? current.wager : current.value,
+    daily: current.daily,
+    clue: current.clue,
+    response: current.response,
+    typed: '',
+    status: 'Skipped',
+    scoreChange: 0
+  };
+  history.push(record);
+
+  hideAllModalZones();
+  resultZone.classList.remove('hidden');
+  resultTitle.className = 'result-title neutral';
+  text(resultTitle, 'Skipped — no points lost.');
+  text(correctAnswer, `Correct response: ${current.response}`);
+  current = null;
+  updatePills();
+  renderBoard();
 }
 
 function noBuzz() {
@@ -880,34 +922,6 @@ function markClueUsed() {
   }
 }
 
-function skipClue() {
-  if (!current) return;
-  if (current.daily || current.wagerLocked || buzzZone.classList.contains('hidden')) return;
-  clearBuzzTimer();
-  markClueUsed();
-  const record = {
-    category: current.category,
-    value: current.value,
-    wager: current.value,
-    daily: current.daily,
-    clue: current.clue,
-    response: current.response,
-    typed: '',
-    status: 'Skipped',
-    scoreChange: 0
-  };
-  history.push(record);
-
-  hideAllModalZones();
-  resultZone.classList.remove('hidden');
-  resultTitle.className = 'result-title neutral';
-  text(resultTitle, 'Skipped — no points lost.');
-  text(correctAnswer, `Correct response: ${current.response}`);
-  current = null;
-  updatePills();
-  renderBoard();
-}
-
 function submitAnswer(event) {
   event.preventDefault();
   if (!current) return;
@@ -938,30 +952,16 @@ function submitAnswer(event) {
   text(resultTitle, correct ? `Correct! ${money(change)}` : `Not quite. ${money(change)}`);
   text(correctAnswer, `Correct response: ${current.response}`);
 
-  if (!correct) {
-    lastWrongRecord = record;
-    overrideBtn.classList.remove('hidden');
-  } else {
+  if (correct) {
     lastWrongRecord = null;
     popConfetti();
+  } else {
+    lastWrongRecord = record;
   }
 
   current = null;
   updatePills();
   renderBoard();
-}
-
-function overrideWrongAnswer() {
-  if (!lastWrongRecord || lastWrongRecord.status !== 'Wrong') return;
-  const amount = Math.abs(lastWrongRecord.scoreChange);
-  setScore(score + amount * 2);
-  lastWrongRecord.status = 'Correct';
-  lastWrongRecord.scoreChange = amount;
-  resultTitle.className = 'result-title good';
-  text(resultTitle, `Counted as correct! +${money(amount)}`);
-  overrideBtn.classList.add('hidden');
-  lastWrongRecord = null;
-  popConfetti();
 }
 
 function closeModal() {
@@ -1059,39 +1059,6 @@ function compactAnswer(str) {
   return normalizeAnswer(str).replace(/\s+/g, '');
 }
 
-function shortNameVariants(raw) {
-  let clean = String(raw || '')
-    .replace(/\([^)]*\)/g, ' ')
-    .replace(/["“”]/g, '')
-    .replace(/\b(a\.k\.a\.|aka|also known as)\b.*$/i, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  if (!clean || /\d/.test(clean) || /[,:;\/]/.test(clean)) return [];
-
-  let parts = clean.split(/\s+/).map(p => p.replace(/^[^A-Za-zÀ-ÖØ-öø-ÿ]+|[^A-Za-zÀ-ÖØ-öø-ÿ.]+$/g, '')).filter(Boolean);
-  const suffixes = new Set(['jr', 'sr', 'ii', 'iii', 'iv', 'v']);
-  while (parts.length && suffixes.has(parts[parts.length - 1].replace(/\./g, '').toLowerCase())) parts.pop();
-  if (parts.length < 2 || parts.length > 5) return [];
-
-  const nonPersonStarts = new Set(['united', 'new', 'north', 'south', 'east', 'west', 'great', 'los', 'las', 'san', 'star', 'toy', 'jurassic', 'mount', 'lake', 'fort']);
-  if (nonPersonStarts.has(parts[0].toLowerCase())) return [];
-
-  const particles = new Set(['da', 'de', 'del', 'der', 'di', 'du', 'la', 'le', 'van', 'von']);
-  const looksNameLike = parts.every(part => {
-    const lower = part.toLowerCase().replace(/\./g, '');
-    return particles.has(lower) || /^[A-ZÀ-ÖØ-Þ][A-Za-zÀ-ÖØ-öø-ÿ'.-]*$/.test(part) || /^[A-Z]\.?$/.test(part);
-  });
-  if (!looksNameLike) return [];
-
-  const variants = [];
-  const last = parts[parts.length - 1];
-  if (last && last.replace(/\./g, '').length >= 2) variants.push(last);
-
-  const beforeLast = parts[parts.length - 2];
-  if (beforeLast && particles.has(beforeLast.toLowerCase().replace(/\./g, ''))) variants.push(`${beforeLast} ${last}`);
-  return variants;
-}
-
 function expectedVariants(response) {
   const raw = String(response || '');
   const variants = new Set([raw]);
@@ -1112,7 +1079,13 @@ function expectedVariants(response) {
   const commaParts = raw.split(/\s*,\s*/).filter(Boolean);
   if (commaParts.length > 1 && commaParts.length <= 3 && raw.length < 45) commaParts.forEach(p => variants.add(p));
 
-  [...variants].forEach(v => shortNameVariants(v).forEach(shortName => variants.add(shortName)));
+  // Allow surname-only answers for many full-name responses, e.g. "Johann Sebastian Bach" -> "Bach".
+  const cleanedName = normalizeAnswer(raw.replace(/\([^)]*\)/g, ' '));
+  const nameTokens = cleanedName.split(' ').filter(t => t.length > 1);
+  if (nameTokens.length >= 2 && nameTokens.length <= 5 && nameTokens.every(t => /^[a-z]+$/.test(t))) {
+    const last = nameTokens[nameTokens.length - 1];
+    if (last.length >= 3) variants.add(last);
+  }
 
   return [...variants].map(v => normalizeAnswer(v)).filter(Boolean);
 }
@@ -1210,11 +1183,10 @@ document.getElementById('closeDialogBtn').addEventListener('click', closeModal);
 
 lockWagerBtn.addEventListener('click', lockWager);
 buzzBtn.addEventListener('click', buzzIn);
-if (skipBuzzBtn) skipBuzzBtn.addEventListener('click', skipClue);
-if (skipAnswerBtn) skipAnswerBtn.addEventListener('click', skipClue);
 answerForm.addEventListener('submit', submitAnswer);
 continueBtn.addEventListener('click', continueGame);
-overrideBtn.addEventListener('click', overrideWrongAnswer);
+document.getElementById('skipWagerBtn').addEventListener('click', skipClue);
+document.getElementById('skipBuzzBtn').addEventListener('click', skipClue);
 
 dialog.addEventListener('cancel', (event) => {
   event.preventDefault();
@@ -1223,7 +1195,7 @@ dialog.addEventListener('cancel', (event) => {
 
 document.addEventListener('keydown', (event) => {
   if (!dialog.open) return;
-  if (event.code === 'Space' && !buzzZone.classList.contains('hidden') && !buzzBtn.disabled) {
+  if (event.code === 'Space' && !buzzZone.classList.contains('hidden')) {
     event.preventDefault();
     buzzIn();
   }
