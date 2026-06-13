@@ -237,7 +237,7 @@
   .timeText{min-width:72px;text-align:right;color:var(--warn);font-weight:800}
   .answerRow{
     display:grid;
-    grid-template-columns:auto minmax(0,1fr) auto;
+    grid-template-columns:auto minmax(0,1fr) auto auto;
     align-items:center;
     gap:10px;
     margin-top:14px;
@@ -316,7 +316,7 @@
   <header>
     <div>
       <h1>Music Trivia Game</h1>
-      <div class="subtitle">Single-player music trivia. Pick a value, buzz in within 5 seconds, and type only the answer — the app supplies the response starter for you.</div>
+      <div class="subtitle">Single-player music trivia. Pick a value, buzz in within 12 seconds, and type only the answer — the app supplies the response starter for you.</div>
     </div>
     <div class="topStats">
       <div class="stat"><b id="score">$0</b><span>Score</span></div>
@@ -348,9 +348,9 @@
   </section>
 
   <section class="instructions" id="instructions">
-    <div class="infoCard"><b>Buzz first</b>You have 5 seconds to buzz in after a regular question appears. No buzz means the clue is skipped with no score change.</div>
+    <div class="infoCard"><b>Buzz first</b>You have 12 seconds to buzz in after a regular question appears. No buzz means the clue is skipped with no score change.</div>
     <div class="infoCard"><b>Type only the answer</b>The app shows the response starter, such as <em>Who is</em> or <em>What is</em>. You only type the actual answer.</div>
-    <div class="infoCard"><b>Forgiving spelling</b>Answers ignore punctuation, capitalization, many articles, and small typos. Wrong answers subtract the question value.</div>
+    <div class="infoCard"><b>Forgiving spelling</b>Answers ignore punctuation, capitalization, many articles, common number formats, and small typos. Wrong answers subtract the question value.</div>
   </section>
 </div>
 
@@ -386,11 +386,14 @@
       <div id="buzzArea" class="buzzArea">
         <div class="timerRow">
           <div class="timer"><div id="timerFill" class="timerFill"></div></div>
-          <div id="timeText" class="timeText">5.0s</div>
+          <div id="timeText" class="timeText">12.0s</div>
         </div>
         <div class="modalActions">
           <div class="small">Press buzz before the timer runs out.</div>
-          <button id="buzzBtn" class="good">Buzz In</button>
+          <div class="miniBtns">
+            <button id="skipBuzzBtn" class="secondary" type="button">Skip</button>
+            <button id="buzzBtn" class="good" type="button">Buzz In</button>
+          </div>
         </div>
       </div>
 
@@ -398,6 +401,7 @@
         <div class="answerRow">
           <div id="starterText" class="starter">What is</div>
           <input id="answerInput" placeholder="type your answer here" spellcheck="false">
+          <button id="skipAnswerBtn" class="secondary" type="button">Skip</button>
           <button id="submitBtn" class="good" type="submit">Submit</button>
         </div>
         <div class="small" style="margin-top:8px;">Do not type “who is” or “what is” — just the answer.</div>
@@ -441,7 +445,7 @@ async function loadMusicData(){
 
 const VALUES = [200,400,600,800,1000];
 const BOARD_CATS = 6;
-const BUZZ_MS = 5000;
+const BUZZ_MS = 12000;
 const state = {
   score: 0,
   board: [],
@@ -467,8 +471,10 @@ const buzzArea = $('#buzzArea');
 const timerFill = $('#timerFill');
 const timeText = $('#timeText');
 const buzzBtn = $('#buzzBtn');
+const skipBuzzBtn = $('#skipBuzzBtn');
 const answerForm = $('#answerForm');
 const answerInput = $('#answerInput');
+const skipAnswerBtn = $('#skipAnswerBtn');
 const starterText = $('#starterText');
 const feedback = $('#feedback');
 const afterActions = $('#afterActions');
@@ -676,7 +682,7 @@ function startBuzzTimer(){
   stopBuzzTimer();
   state.startTime = performance.now();
   timerFill.style.transform = 'scaleX(1)';
-  timeText.textContent = '5.0s';
+  timeText.textContent = (BUZZ_MS/1000).toFixed(1) + 's';
   state.timer = setInterval(() => {
     const elapsed = performance.now() - state.startTime;
     const left = Math.max(0, BUZZ_MS - elapsed);
@@ -717,6 +723,14 @@ function noBuzz(){
   showFeedback(false, `${msg}<br><br><b>Correct response:</b> ${escapeHtml(clue.q)}`);
   renderBoard();
 }
+function skipQuestion(){
+  stopBuzzTimer();
+  if(!state.current || state.current.clue.used) return;
+  const clue = state.current.clue;
+  markUsed();
+  showFeedback(null, `Skipped. No points gained or lost.<br><br><b>Correct response:</b> ${escapeHtml(clue.q)}`);
+  renderBoard();
+}
 function submitAnswer(e){
   e.preventDefault();
   const clue = state.current.clue;
@@ -737,7 +751,7 @@ function submitAnswer(e){
 function showFeedback(good, html){
   buzzArea.classList.add('hidden');
   answerForm.classList.add('hidden');
-  feedback.className = 'feedback ' + (good ? 'good' : 'bad');
+  feedback.className = good === true ? 'feedback good' : good === false ? 'feedback bad' : 'feedback';
   feedback.innerHTML = html;
   feedback.classList.remove('hidden');
   afterActions.classList.remove('hidden');
@@ -761,8 +775,33 @@ function escapeHtml(str){
 function stripDiacritics(s){
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 }
+function replaceNumberWords(s){
+  const small = {zero:0,oh:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19};
+  const smallOrd = {first:1,second:2,third:3,fourth:4,fifth:5,sixth:6,seventh:7,eighth:8,ninth:9,tenth:10,eleventh:11,twelfth:12,thirteenth:13,fourteenth:14,fifteenth:15,sixteenth:16,seventeenth:17,eighteenth:18,nineteenth:19};
+  const tens = {twenty:20,thirty:30,forty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90};
+  const tensOrd = {twentieth:20,thirtieth:30,fortieth:40,fiftieth:50,sixtieth:60,seventieth:70,eightieth:80,ninetieth:90};
+  s = s.replace(/-/g, ' ');
+  s = s.replace(/\b(twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)\s+(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|one|two|three|four|five|six|seven|eight|nine)\b/g, (m,t,u) => String(tens[t] + (small[u] ?? smallOrd[u])));
+  s = s.replace(/\b(twentieth|thirtieth|fortieth|fiftieth|sixtieth|seventieth|eightieth|ninetieth)\b/g, m => String(tensOrd[m]));
+  s = s.replace(/\b(twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)\b/g, m => String(tens[m]));
+  s = s.replace(/\b(zero|oh|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen)\b/g, m => String(small[m]));
+  s = s.replace(/\b(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth|thirteenth|fourteenth|fifteenth|sixteenth|seventeenth|eighteenth|nineteenth)\b/g, m => String(smallOrd[m]));
+  return s;
+}
+function normalizeNumberFormats(s){
+  // Make common number answers equivalent: 5:00 -> 5, 5.0 -> 5, 1,000 -> 1000, 5th -> 5.
+  s = s.replace(/\b(\d{1,3}(?:,\d{3})+)\b/g, m => m.replace(/,/g,''));
+  s = s.replace(/\b0*(\d{1,2}):00\b/g, (m,h) => String(Number(h)));
+  s = s.replace(/\b(\d+)\.0+\b/g, '$1');
+  s = s.replace(/\b(\d+)(st|nd|rd|th)\b/g, '$1');
+  s = s.replace(/\b0+(\d+)\b/g, '$1');
+  return s;
+}
 function normalizeAnswer(s){
   s = stripDiacritics(String(s || '').toLowerCase());
+  s = normalizeNumberFormats(s);
+  s = replaceNumberWords(s);
+  s = normalizeNumberFormats(s);
   s = s.replace(/&/g, ' and ');
   s = s.replace(/\b(who|what|where|when|why|how)\s+(is|are|was|were|am|be|being|been|do|does|did)\b/g, ' ');
   s = s.replace(/\b(it'?s|its|this is|that is)\b/g, ' ');
@@ -862,11 +901,13 @@ $('#newGameBtn').addEventListener('click', () => newGame(randomSeed()));
 $('#newGameBtn2').addEventListener('click', () => newGame(randomSeed()));
 $('#sameSeedBtn').addEventListener('click', () => newGame($('#seedInput').value.trim() || state.seed || randomSeed()));
 $('#helpBtn').addEventListener('click', () => {
-  alert('Pick a category value. You have 5 seconds to buzz in. After buzzing, type only the answer. The app ignores capitalization, punctuation, articles, and small typos. Wrong answers subtract points. One random square is a Bonus Question.');
+  alert('Pick a category value. You have 12 seconds to buzz in. After buzzing, type only the answer. The app ignores capitalization, punctuation, articles, and small typos. Wrong answers subtract points. One random square is a Bonus Question.');
 });
 $('#closeBtn').addEventListener('click', closeOverlay);
 $('#continueBtn').addEventListener('click', continueToBoard);
 $('#buzzBtn').addEventListener('click', buzzIn);
+$('#skipBuzzBtn').addEventListener('click', skipQuestion);
+$('#skipAnswerBtn').addEventListener('click', skipQuestion);
 $('#answerForm').addEventListener('submit', submitAnswer);
 $('#wagerStartBtn').addEventListener('click', startBonusQuestion);
 $('#wagerInput').addEventListener('keydown', e => {
