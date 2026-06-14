@@ -10,6 +10,8 @@ What this version does differently:
 - Keeps an optional repository-folder view at the bottom for maintenance.
 - Excludes root-level files by default, matching the previous generator.
 - Can hide filenames containing "nsfw" with --hide-nsfw.
+- Also writes an education-only indexEDU.html by default.
+- Always keeps NSFW filenames/paths out of indexEDU.html.
 - Uses only the Python standard library.
 
 Examples:
@@ -431,6 +433,115 @@ CATEGORY_ICONS = {
     "Other / Unsorted": "📁",
 }
 
+# Subcategory icons are used as a safe fallback when a filename does not have
+# a clear icon match. This prevents a file from inheriting the wrong icon just
+# because it lives inside a broad folder such as Science, Social, or ArcadeGames.
+SUBCATEGORY_ICONS = {
+    "ELA Practice & Spelling": "📖",
+    "Writing & Word Work": "✍️",
+    "Reading Tools": "📖",
+    "Word Work Generators": "🔎",
+    "Math Practice & Assessments": "➗",
+    "Math Facts & Operations": "⏱️",
+    "Multiplication & Division": "✖️",
+    "Number Sense & Problem Solving": "🔢",
+    "Math Games": "🎲",
+    "Science": "🔬",
+    "Social Studies": "🌎",
+    "Subject Practice & Tests": "📝",
+    "Classroom Utilities": "🍎",
+    "Accessibility & Communication": "🗣️",
+    "Timers & Routines": "⏱️",
+    "Art & Image Tools": "🎨",
+    "Comic & Annotation Tools": "💬",
+    "Ear Training": "👂",
+    "Guitar, Chords & Theory": "🎸",
+    "Music & Practice Tools": "🎵",
+    "Chess & Knight Games": "♟️",
+    "Connect Four Variants": "🔴",
+    "Strategy & Logic Games": "♟️",
+    "Tic-Tac-Toe Variants": "❌",
+    "Mazes & Logic Puzzles": "🧩",
+    "Trivia & Guessing Games": "🤔",
+    "Word Games": "🔤",
+    "Memory Games": "🧠",
+    "Geography Games": "🌍",
+    "Party & Word Games": "🎡",
+    "Other Games": "🎮",
+    "Miscellaneous Tools": "🛠️",
+}
+
+EDUCATIONAL_CATEGORIES = {
+    "Math & Numeracy",
+    "Literacy & ELA",
+    "Science & Social Studies",
+    "Teacher Tools",
+    "Art, Media & Creation",
+    "Music & Ear Training",
+    "Strategy, Board & Logic Games",
+    "Word, Trivia & Quiz Games",
+}
+
+# Exact filenames that should never appear in indexEDU.html. Exact excludes win
+# over category rules and keyword rules. Keep these case-insensitive.
+EDUCATIONAL_EXCLUDE_FILENAMES = {
+    "alive_for.html",
+    "billboardnumberone.html",
+    "drop67.html",
+    "hockeystats.html",
+    "linedraw.html",
+    "maze_creator.html",
+    "snakes_and_ladders.html",
+    "snakesandladders.html",
+    "soccerstats.html",
+    "weightgame.html",
+}
+
+# Specific arcade/action files that are still useful enough for the education
+# index. Exact excludes above still win.
+EDUCATIONAL_INCLUDE_FILENAMES = {
+    "antisimon.html",
+}
+
+# Fallback keyword checks are intentionally conservative. They help catch new
+# classroom files that have not yet been added to CATEGORY_RULES.
+EDUCATIONAL_INCLUDE_KEYWORDS = (
+    "algebra",
+    "assessment",
+    "boggle",
+    "cartesian",
+    "chess",
+    "classroom",
+    "decimal",
+    "division",
+    "ela",
+    "english",
+    "fraction",
+    "grade",
+    "grammar",
+    "haiku",
+    "logic",
+    "math",
+    "memory",
+    "moon",
+    "multiplication",
+    "pedmas",
+    "phonics",
+    "poem",
+    "quiz",
+    "reading",
+    "science",
+    "scrabble",
+    "shikaku",
+    "social",
+    "spelling",
+    "teacher",
+    "typing",
+    "vocab",
+    "word",
+    "writing",
+)
+
 # Each rule is:
 #   (tokens_to_match, category, subcategory)
 #
@@ -672,6 +783,31 @@ def icon_for(name: str, is_dir: bool) -> str:
     return DEFAULT_FOLDER_ICON if is_dir else DEFAULT_FILE_ICON
 
 
+def icon_for_file(rel_path: str, category: str, subcategory: str) -> str:
+    """Return a file icon without letting folder names mislabel the file.
+
+    Exact filename overrides and filename keywords still work, but broad folder
+    words are ignored for files. If nothing in the filename is clear, fall back
+    to the already-decided subcategory/category. This is what keeps an ELA file
+    inside a Science or Social folder from displaying a Science/Social icon.
+    """
+    base = Path(rel_path).name
+
+    if base in CUSTOM_ICONS:
+        return safe_icon(CUSTOM_ICONS[base])
+
+    low = base.casefold()
+    matches = [(key, icon) for key, icon in ICON_RULES if key.casefold() in low]
+    if matches:
+        matches.sort(key=lambda item: len(item[0]), reverse=True)
+        return safe_icon(matches[0][1])
+
+    if subcategory in SUBCATEGORY_ICONS:
+        return safe_icon(SUBCATEGORY_ICONS[subcategory])
+
+    return safe_icon(CATEGORY_ICONS.get(category, DEFAULT_FILE_ICON))
+
+
 def categorize_file(rel_path: str) -> Tuple[str, str]:
     low = normalize_path(rel_path).casefold()
     filename = Path(low).name
@@ -681,6 +817,39 @@ def categorize_file(rel_path: str) -> Tuple[str, str]:
             return category, subcategory
 
     return "Other / Unsorted", "Other"
+
+
+def is_educational(entry: FileEntry) -> bool:
+    """Decide whether a file belongs in the education-only index.
+
+    The filter is intentionally transparent:
+    1. exact filename exclusions always win;
+    2. any Tetris variant is excluded;
+    3. exact filename inclusions can rescue useful arcade/action tools;
+    4. known educational categories are included;
+    5. conservative filename keywords catch obvious future classroom files.
+    """
+    filename = entry.name.casefold()
+    rel_path = normalize_path(entry.rel_path).casefold()
+
+    # The education-only index is always school-safe: anything marked NSFW is
+    # excluded even when the regular index is generated without --hide-nsfw.
+    if "nsfw" in filename or "nsfw" in rel_path:
+        return False
+
+    if filename in EDUCATIONAL_EXCLUDE_FILENAMES:
+        return False
+
+    if "tetris" in filename or "tetris_games/" in rel_path:
+        return False
+
+    if filename in EDUCATIONAL_INCLUDE_FILENAMES:
+        return True
+
+    if entry.category in EDUCATIONAL_CATEGORIES:
+        return True
+
+    return any(keyword in filename for keyword in EDUCATIONAL_INCLUDE_KEYWORDS)
 
 
 # ---------------------------------------------------------------------------
@@ -750,7 +919,7 @@ def scan_files(
                 rel_path=rel,
                 category=category,
                 subcategory=subcategory,
-                icon=icon_for(rel, False),
+                icon=icon_for_file(rel, category, subcategory),
                 mtime=mtime,
             )
         )
@@ -966,7 +1135,7 @@ def render_folder_files(files: List[Tuple[str, str]], recent_paths: set[str]) ->
             rel_path=relpath,
             category=category,
             subcategory=subcategory,
-            icon=icon_for(relpath, False),
+            icon=icon_for_file(relpath, category, subcategory),
         )
         items.append(render_app_item(entry, recent_paths, show_path=False))
     return '<ul class="app-list folder-list">' + "\n".join(items) + '</ul>'
@@ -1014,10 +1183,12 @@ def render_page(
     entries: Sequence[FileEntry],
     recent_days: int,
     include_folder_view: bool,
+    title: str = "jwesters website",
+    intro: str | None = None,
 ) -> str:
     now = datetime.now()
     formatted = now.strftime("%B %d, %Y at %I:%M %p")
-    title = "jwesters website"
+    intro_text = intro or "Apps are grouped by purpose first, with the original folder view kept for maintenance."
     total_items = len(entries)
     status = "No matching files found." if total_items == 0 else f"{total_items} files indexed"
 
@@ -1215,7 +1386,7 @@ def render_page(
   <div class="page">
     <header class="hero">
       <h1>{esc(title)}</h1>
-      <p>{esc(status)} · Apps are grouped by purpose first, with the original folder view kept for maintenance.<br>
+      <p>{esc(status)} · {esc(intro_text)}<br>
       Generated: <strong>{esc(formatted)}</strong></p>
     </header>
 
@@ -1357,6 +1528,8 @@ def main() -> int:
     parser.add_argument("--hide-nsfw", action="store_true", help='Hide files where "nsfw" appears anywhere in the filename.')
     parser.add_argument("--recent-days", type=int, default=7, help="How many days count as recent. Default: 7.")
     parser.add_argument("--no-folder-view", action="store_true", help="Hide the original repository folder view at the bottom.")
+    parser.add_argument("--edu-out", default="indexEDU.html", help="Education-only output HTML filename. Default: indexEDU.html.")
+    parser.add_argument("--no-edu-index", action="store_true", help="Do not write the education-only indexEDU.html file.")
 
     args = parser.parse_args()
 
@@ -1374,16 +1547,35 @@ def main() -> int:
         hide_nsfw_anywhere=args.hide_nsfw,
     )
 
+    recent_days = max(1, args.recent_days)
+    include_folder_view = not args.no_folder_view
+
     html_text = render_page(
         entries=entries,
-        recent_days=max(1, args.recent_days),
-        include_folder_view=not args.no_folder_view,
+        recent_days=recent_days,
+        include_folder_view=include_folder_view,
+        title="jwesters website",
     )
 
     out_path = root / args.out
     out_path.write_text(html_text, encoding="utf-8")
     print(f"Wrote: {out_path}")
     print(f"Indexed: {len(entries)} files")
+
+    if not args.no_edu_index:
+        edu_entries = [entry for entry in entries if is_educational(entry)]
+        edu_html_text = render_page(
+            entries=edu_entries,
+            recent_days=recent_days,
+            include_folder_view=include_folder_view,
+            title="jwesters educational links",
+            intro="Only links classified as educational or classroom-useful are shown here.",
+        )
+        edu_out_path = root / args.edu_out
+        edu_out_path.write_text(edu_html_text, encoding="utf-8")
+        print(f"Wrote: {edu_out_path}")
+        print(f"Indexed EDU: {len(edu_entries)} files")
+
     return 0
 
 
