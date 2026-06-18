@@ -10,9 +10,6 @@
     --bg2:#dff5ff;
     --ground:#5a3b24;
     --grass:#58b957;
-    --panel:#111827;
-    --accent:#ffd166;
-    --danger:#ef4444;
     --heart:#ff4757;
     --text:#f9fafb;
   }
@@ -106,7 +103,7 @@
     <div class="help">
       Move: <span class="key">←</span><span class="key">→</span> or <span class="key">A</span><span class="key">D</span>
       &nbsp; Jump: <span class="key">↑</span>/<span class="key">W</span>/<span class="key">Space</span>
-      &nbsp; Slide: <span class="key">S</span>/<span class="key">↓</span>
+      &nbsp; Hold Duck: <span class="key">S</span>/<span class="key">↓</span>
       &nbsp; Restart: <span class="key">R</span>
     </div>
   </div>
@@ -139,10 +136,9 @@
   let started = false;
   let time = 0;
   let speed = 4.0;
-  let nextObstacleAt = 120;
-  let nextCoinAt = 70;
   let distance = 0;
-  let shake = 0;
+  let obstacleGapLeft = 420;
+  let coinGapLeft = 210;
 
   const player = {
     x: 170,
@@ -150,18 +146,22 @@
     w: 42,
     h: 82,
     standingH: 82,
-    slideH: 46,
+    duckH: 54,
     vx: 0,
     vy: 0,
     grounded: true,
-    sliding: false,
-    slideTimer: 0,
+    ducking: false,
     invincible: 0,
-    runFrame: 0
+    runFrame: 0,
+    lastFloorY: groundY
   };
 
   function rand(min, max) {
     return Math.random() * (max - min) + min;
+  }
+
+  function clamp(v, min, max) {
+    return Math.max(min, Math.min(max, v));
   }
 
   function rectsOverlap(a, b) {
@@ -169,6 +169,17 @@
            a.x + a.w > b.x &&
            a.y < b.y + b.h &&
            a.y + a.h > b.y;
+  }
+
+  function roundedRect(x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
   }
 
   function resetGame() {
@@ -182,24 +193,21 @@
     started = true;
     time = 0;
     speed = 4.0;
-    nextObstacleAt = 180;
-    nextCoinAt = 120;
     distance = 0;
-    shake = 0;
+    obstacleGapLeft = 460;
+    coinGapLeft = 260;
     Object.assign(player, {
       x: 170,
       y: groundY - 82,
       w: 42,
       h: 82,
-      standingH: 82,
-      slideH: 46,
       vx: 0,
       vy: 0,
       grounded: true,
-      sliding: false,
-      slideTimer: 0,
+      ducking: false,
       invincible: 0,
-      runFrame: 0
+      runFrame: 0,
+      lastFloorY: groundY
     });
     updateHud();
   }
@@ -211,101 +219,172 @@
   }
 
   function addCloud() {
-    clouds.push({
-      x: rand(0, W),
-      y: rand(30, 170),
-      s: rand(0.6, 1.4),
-      vx: rand(0.15, 0.45)
-    });
+    clouds.push({ x: rand(0, W), y: rand(30, 170), s: rand(0.6, 1.4), vx: rand(0.15, 0.45) });
   }
 
   function addBuilding() {
-    buildings.push({
-      x: rand(0, W),
-      y: rand(215, 305),
-      w: rand(45, 90),
-      h: rand(80, 170),
-      shade: Math.floor(rand(180, 230))
-    });
+    buildings.push({ x: rand(0, W), y: rand(215, 305), w: rand(45, 90), h: rand(80, 170), shade: Math.floor(rand(180, 230)) });
   }
 
   for (let i = 0; i < 8; i++) addCloud();
   for (let i = 0; i < 12; i++) addBuilding();
 
+  function playerHitbox() {
+    if (player.ducking) {
+      return { x: player.x + 5, y: player.y + 8, w: player.w - 10, h: player.h - 9 };
+    }
+    return { x: player.x + 8, y: player.y + 7, w: player.w - 16, h: player.h - 10 };
+  }
+
+  function obstacleHitbox(o) {
+    if (o.type === "bench") return { x: o.x + 5, y: o.y + 2, w: o.w - 10, h: o.h - 2 };
+    if (o.type === "chair") return { x: o.x + 8, y: o.y + 4, w: o.w - 16, h: o.h - 4 };
+    if (o.type === "car") return { x: o.x + 6, y: o.y + 10, w: o.w - 12, h: o.h - 10 };
+    if (o.type === "lowbar") return { x: o.x + 6, y: o.y + 2, w: o.w - 12, h: o.h - 4 };
+    return { x: o.x + 4, y: o.y + 4, w: o.w - 8, h: o.h - 4 };
+  }
+
+  function platformSurface(o) {
+    return { x: o.x + 8, y: o.y, w: o.w - 16 };
+  }
+
+  function lastObstacleRight() {
+    let right = -999;
+    for (const o of obstacles) right = Math.max(right, o.x + o.w);
+    return right;
+  }
+
+  function setPlayerHeight(newH, floorY = player.y + player.h) {
+    if (player.h === newH) return;
+    player.h = newH;
+    player.y = floorY - player.h;
+  }
+
+  function setDucking(on) {
+    if (on === player.ducking) return;
+    const foot = player.y + player.h;
+    player.ducking = on;
+    setPlayerHeight(on ? player.duckH : player.standingH, foot);
+  }
+
+  function scheduleNextObstacle() {
+    const base = rand(470, 690);
+    const speedTrim = Math.min(120, (speed - 4) * 11);
+    obstacleGapLeft = Math.max(385, base - speedTrim);
+  }
+
   function spawnObstacle() {
+    if (obstacles.length >= 3) {
+      obstacleGapLeft = 120;
+      return;
+    }
+
+    const right = lastObstacleRight();
+    if (right > W - 110) {
+      obstacleGapLeft = 150;
+      return;
+    }
+
     const types = [
-      { type: "wall",   w: 42, h: 86, mode: "jump",     color: "#9ca3af" },
-      { type: "car",    w: 98, h: 48, mode: "jump",     color: "#2563eb" },
-      { type: "bench",  w: 116, h: 42, mode: "slide",    color: "#8b5a2b" },
-      { type: "chair",  w: 78, h: 72, mode: "platform", color: "#c2410c" }
+      { type: "wall",   w: 44,  h: 86, mode: "jump",     landable: false },
+      { type: "car",    w: 104, h: 50, mode: "jump",     landable: false },
+      { type: "bench",  w: 126, h: 42, mode: "platform", landable: true  },
+      { type: "chair",  w: 82,  h: 58, mode: "platform", landable: true  },
+      { type: "lowbar", w: 138, h: 42, mode: "duck",     landable: false }
     ];
     const template = types[Math.floor(rand(0, types.length))];
-    const y = template.type === "bench" ? groundY - 112 : groundY - template.h;
-    let x = W + rand(40, 100);
-    const last = obstacles[obstacles.length - 1];
-    if (last && x - (last.x + last.w) < 240) {
-      x = last.x + last.w + rand(240, 340);
+    const x = Math.max(W + 80, right + 400);
+    const y = template.type === "lowbar" ? groundY - 108 : groundY - template.h;
+
+    const obstacle = { ...template, x, y, hit: false };
+    obstacles.push(obstacle);
+    removeCoinsInsideObstacles();
+    scheduleNextObstacle();
+  }
+
+  function expandedRect(r, padX, padY) {
+    return { x: r.x - padX, y: r.y - padY, w: r.w + padX * 2, h: r.h + padY * 2 };
+  }
+
+  function coinBox(c) {
+    return { x: c.x - c.r, y: c.y - c.r, w: c.r * 2, h: c.r * 2 };
+  }
+
+  function isCoinSafe(x, y, r = 12) {
+    const box = { x: x - r - 2, y: y - r - 2, w: r * 2 + 4, h: r * 2 + 4 };
+    if (y < groundY - 205 || y > groundY - 72) return false;
+    for (const o of obstacles) {
+      const danger = expandedRect(obstacleHitbox(o), 34, 28);
+      if (rectsOverlap(box, danger)) return false;
     }
-    obstacles.push({
-      ...template,
-      x,
-      y,
-      w: template.w,
-      h: template.h,
-      hit: false
-    });
-    nextObstacleAt = Math.max(180, rand(260, 430) - Math.min(75, speed * 4.5));
+    for (const c of coins) {
+      if (!c.taken && Math.abs(c.x - x) < 28 && Math.abs(c.y - y) < 28) return false;
+    }
+    return true;
+  }
+
+  function removeCoinsInsideObstacles() {
+    for (let i = coins.length - 1; i >= 0; i--) {
+      const c = coins[i];
+      for (const o of obstacles) {
+        if (rectsOverlap(coinBox(c), expandedRect(obstacleHitbox(o), 18, 18))) {
+          coins.splice(i, 1);
+          break;
+        }
+      }
+    }
+  }
+
+  function scheduleNextCoin() {
+    coinGapLeft = rand(245, 390);
   }
 
   function spawnCoinCluster() {
-    const cluster = Math.floor(rand(1, 4));
-    const baseX = W + rand(40, 170);
-    const pattern = Math.random();
-    for (let i = 0; i < cluster; i++) {
-      const y = pattern < 0.33
-        ? groundY - rand(95, 145)
-        : pattern < 0.66
-          ? groundY - 190 + Math.sin(i * 0.9) * 35
-          : groundY - 250 + i * 10;
-      coins.push({
-        x: baseX + i * 36,
-        y,
-        r: 12,
-        taken: false,
-        spin: rand(0, Math.PI * 2)
-      });
-    }
-    nextCoinAt = rand(170, 290);
-  }
+    const cluster = Math.floor(rand(2, 5));
+    let madeAny = false;
 
-  function startSlide() {
-    if (!player.grounded || player.sliding || gameOver) return;
-    player.sliding = true;
-    player.slideTimer = 34; // about half a second
-    player.h = player.slideH;
-    player.y = groundY - player.h;
-    player.vx += 0.9;
+    for (let attempt = 0; attempt < 12 && !madeAny; attempt++) {
+      const baseX = W + rand(90, 230);
+      const pattern = Math.random();
+      const planned = [];
+
+      for (let i = 0; i < cluster; i++) {
+        const x = baseX + i * 38;
+        let y;
+        if (pattern < 0.38) {
+          y = groundY - rand(82, 118);
+        } else if (pattern < 0.74) {
+          y = groundY - 138 + Math.sin(i * 0.9) * 28;
+        } else {
+          y = groundY - 172 + Math.sin(i * 0.8) * 20;
+        }
+        y = clamp(y, groundY - 195, groundY - 78);
+        planned.push({ x, y, r: 12, taken: false, spin: rand(0, Math.PI * 2) });
+      }
+
+      if (planned.every(c => isCoinSafe(c.x, c.y, c.r))) {
+        coins.push(...planned);
+        madeAny = true;
+      }
+    }
+
+    scheduleNextCoin();
   }
 
   function jump() {
-    if (!player.grounded || player.sliding || gameOver) return;
-    player.vy = -14.8;
+    if (!started || gameOver || !player.grounded || player.ducking) return;
+    player.vy = -15.2;
     player.grounded = false;
   }
 
   window.addEventListener("keydown", (e) => {
     const k = e.key.toLowerCase();
     keys[k] = true;
+    if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(k) || e.code === "Space") e.preventDefault();
 
-    if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(e.key.toLowerCase()) || e.key === " ") {
-      e.preventDefault();
-    }
-
-    if (!started && (k === "enter" || k === " " || k === "r")) resetGame();
+    if (!started && (k === "enter" || e.code === "Space" || k === "r")) resetGame();
     if (gameOver && k === "r") resetGame();
-
     if ((k === "w" || k === "arrowup" || e.code === "Space") && started) jump();
-    if ((k === "s" || k === "arrowdown") && started) startSlide();
   }, { passive: false });
 
   window.addEventListener("keyup", (e) => {
@@ -317,38 +396,12 @@
     if (!started || gameOver) resetGame();
   });
 
-  function playerHitbox() {
-    const insetX = 7;
-    const insetY = player.sliding ? 5 : 8;
-    return {
-      x: player.x + insetX,
-      y: player.y + insetY,
-      w: player.w - insetX * 2,
-      h: player.h - insetY
-    };
-  }
-
-  function chairPlatform(o) {
-    return { x: o.x + 8, y: o.y + 24, w: o.w - 18, h: 8 };
-  }
-
-  function obstacleHitbox(o) {
-    if (o.type === "bench") return { x: o.x + 4, y: o.y + 5, w: o.w - 8, h: o.h - 2 };
-    if (o.type === "chair") {
-      const p = chairPlatform(o);
-      return { x: o.x + 7, y: p.y + 9, w: o.w - 14, h: groundY - (p.y + 9) };
-    }
-    if (o.type === "car") return { x: o.x + 5, y: o.y + 8, w: o.w - 10, h: o.h - 8 };
-    return { x: o.x + 4, y: o.y + 4, w: o.w - 8, h: o.h - 4 };
-  }
-
   function damage() {
     if (player.invincible > 0 || gameOver) return;
     health--;
     updateHud();
-    player.invincible = 90;
-    shake = 16;
-    player.vx = -5;
+    player.invincible = 88;
+    player.vx = -4.8;
     for (let i = 0; i < 18; i++) {
       particles.push({
         x: player.x + player.w / 2,
@@ -363,6 +416,8 @@
     if (health <= 0) {
       gameOver = true;
       player.vx = 0;
+      player.vy = 0;
+      setDucking(false);
     }
   }
 
@@ -373,20 +428,53 @@
     score += 10;
     updateHud();
     for (let i = 0; i < 8; i++) {
-      particles.push({
-        x: c.x,
-        y: c.y,
-        vx: rand(-2, 2),
-        vy: rand(-3, 0),
-        life: rand(18, 30),
-        r: rand(2, 4),
-        color: "#fbbf24"
-      });
+      particles.push({ x: c.x, y: c.y, vx: rand(-2, 2), vy: rand(-3, 0), life: rand(18, 30), r: rand(2, 4), color: "#fbbf24" });
+    }
+  }
+
+  function updatePlayerDuck() {
+    const wantsDuck = (keys["s"] || keys["arrowdown"]);
+    if (wantsDuck && player.grounded) setDucking(true);
+    if (!wantsDuck && player.ducking) setDucking(false);
+  }
+
+  function resolvePlatformLanding(prevBottom) {
+    let landed = false;
+    let floorY = groundY;
+
+    for (const o of obstacles) {
+      if (!o.landable) continue;
+      const surf = platformSurface(o);
+      const bottom = player.y + player.h;
+      const horizontal = player.x + player.w - 8 > surf.x && player.x + 8 < surf.x + surf.w;
+      const fallingOntoTop = player.vy >= 0 && prevBottom <= surf.y + 7 && bottom >= surf.y && horizontal;
+      const alreadyOnTop = Math.abs(bottom - surf.y) <= 4 && horizontal && player.vy >= 0;
+      if (fallingOntoTop || alreadyOnTop) {
+        floorY = surf.y;
+        landed = true;
+        break;
+      }
+    }
+
+    if (landed) {
+      player.y = floorY - player.h;
+      player.vy = 0;
+      player.grounded = true;
+      player.lastFloorY = floorY;
+    } else if (player.y + player.h >= groundY) {
+      player.y = groundY - player.h;
+      player.vy = 0;
+      player.grounded = true;
+      player.lastFloorY = groundY;
+    } else {
+      player.grounded = false;
+      player.lastFloorY = groundY;
     }
   }
 
   function update() {
     requestAnimationFrame(update);
+
     if (!started) {
       draw();
       drawStart();
@@ -396,114 +484,84 @@
     if (!gameOver) {
       time++;
       distance += speed;
-      speed = Math.min(13.5, 4 + time * 0.0028);
+      speed = Math.min(13.5, 4 + time * 0.00265);
+      score = Math.floor(distance / 12) + coinCount * 10;
+      updateHud();
 
-      // Left/right momentum.
-      const prevY = player.y;
-      const accel = 0.55;
-      const friction = player.grounded ? 0.86 : 0.94;
-      const maxVx = 8.0;
+      updatePlayerDuck();
+
+      const accel = player.ducking ? 0.34 : 0.55;
+      const friction = player.grounded ? (player.ducking ? 0.91 : 0.86) : 0.94;
+      const maxVx = player.ducking ? 6.8 : 8.0;
       if (keys["arrowleft"] || keys["a"]) player.vx -= accel;
       if (keys["arrowright"] || keys["d"]) player.vx += accel;
       player.vx *= friction;
-      player.vx = Math.max(-maxVx, Math.min(maxVx, player.vx));
+      player.vx = clamp(player.vx, -maxVx, maxVx);
       player.x += player.vx;
 
-      // Keep player on screen with a soft push from edges.
-      if (player.x < 35) {
-        player.x = 35;
-        player.vx *= -0.25;
-      }
-      if (player.x + player.w > W - 35) {
-        player.x = W - 35 - player.w;
-        player.vx *= -0.25;
-      }
+      if (player.x < 35) { player.x = 35; player.vx *= -0.25; }
+      if (player.x + player.w > W - 35) { player.x = W - 35 - player.w; player.vx *= -0.25; }
 
-      // Gravity.
+      for (const o of obstacles) o.x -= speed;
+      for (const c of coins) c.x -= speed;
+
+      const prevBottom = player.y + player.h;
       player.vy += 0.76;
       player.y += player.vy;
-      if (player.y + player.h >= groundY) {
-        player.y = groundY - player.h;
-        player.vy = 0;
-        player.grounded = true;
-      } else {
-        player.grounded = false;
-      }
-
-      // Slide animation.
-      if (player.sliding) {
-        player.slideTimer--;
-        if (player.slideTimer <= 0) {
-          player.sliding = false;
-          player.h = player.standingH;
-          player.y = groundY - player.h;
-        }
-      }
+      resolvePlatformLanding(prevBottom);
+      updatePlayerDuck();
 
       player.runFrame += 0.18 + speed * 0.018;
       if (player.invincible > 0) player.invincible--;
-      if (shake > 0) shake *= 0.86;
 
-      nextObstacleAt -= speed;
-      nextCoinAt -= speed;
-      if (nextObstacleAt <= 0) {
-        const nearby = obstacles.filter(o => o.x + o.w > -30 && o.x < W + 260).length;
-        if (nearby < 2) spawnObstacle();
-        else nextObstacleAt = 110;
-      }
-      if (nextCoinAt <= 0) {
-        const activeCoins = coins.filter(c => !c.taken && c.x > -40 && c.x < W + 260).length;
-        if (activeCoins < 6) spawnCoinCluster();
-        else nextCoinAt = 130;
-      }
+      obstacleGapLeft -= speed;
+      coinGapLeft -= speed;
+      if (obstacleGapLeft <= 0) spawnObstacle();
+      if (coinGapLeft <= 0) spawnCoinCluster();
+      removeCoinsInsideObstacles();
 
+      const ph = playerHitbox();
       for (const o of obstacles) {
-        o.x -= speed;
-        if (o.type === "chair") {
-          const p = chairPlatform(o);
-          const hb = playerHitbox();
-          const prevBottom = prevY + player.h;
-          const currentBottom = player.y + player.h;
-          const overlapsTop = hb.x + hb.w > p.x && hb.x < p.x + p.w;
-          if (player.vy >= 0 && overlapsTop && prevBottom <= p.y + 6 && currentBottom >= p.y) {
-            player.y = p.y - player.h;
-            player.vy = 0;
-            player.grounded = true;
-          }
+        if (o.hit) continue;
+        if (!rectsOverlap(ph, obstacleHitbox(o))) continue;
+
+        if (o.landable) {
+          const surf = platformSurface(o);
+          const feetNearTop = Math.abs((player.y + player.h) - surf.y) <= 8;
+          const onTop = player.x + player.w - 8 > surf.x && player.x + 8 < surf.x + surf.w && feetNearTop;
+          if (onTop) continue;
         }
-        if (!o.hit && rectsOverlap(playerHitbox(), obstacleHitbox(o))) {
-          o.hit = true;
-          damage();
-        }
+
+        o.hit = true;
+        damage();
       }
-      while (obstacles.length && obstacles[0].x + obstacles[0].w < -80) obstacles.shift();
+
+      while (obstacles.length && obstacles[0].x + obstacles[0].w < -90) obstacles.shift();
 
       for (const c of coins) {
-        c.x -= speed;
         c.spin += 0.18;
-        const hb = playerHitbox();
-        const coinBox = { x: c.x - c.r, y: c.y - c.r, w: c.r * 2, h: c.r * 2 };
-        if (!c.taken && rectsOverlap(hb, coinBox)) collectCoin(c);
+        if (!c.taken && rectsOverlap(playerHitbox(), coinBox(c))) collectCoin(c);
       }
       while (coins.length && coins[0].x < -80) coins.shift();
     }
 
-    // Background motion and particles continue even on game over.
-    for (const cloud of clouds) {
-      cloud.x -= cloud.vx + speed * 0.015;
-      if (cloud.x < -120) {
-        cloud.x = W + rand(30, 140);
-        cloud.y = rand(30, 170);
-        cloud.s = rand(0.6, 1.4);
+    if (!gameOver) {
+      for (const cloud of clouds) {
+        cloud.x -= cloud.vx + speed * 0.015;
+        if (cloud.x < -120) {
+          cloud.x = W + rand(30, 140);
+          cloud.y = rand(30, 170);
+          cloud.s = rand(0.6, 1.4);
+        }
       }
-    }
-    for (const b of buildings) {
-      b.x -= speed * 0.25;
-      if (b.x + b.w < -20) {
-        b.x = W + rand(20, 160);
-        b.y = rand(215, 305);
-        b.w = rand(45, 90);
-        b.h = rand(80, 170);
+      for (const b of buildings) {
+        b.x -= speed * 0.25;
+        if (b.x + b.w < -20) {
+          b.x = W + rand(20, 160);
+          b.y = rand(215, 305);
+          b.w = rand(45, 90);
+          b.h = rand(80, 170);
+        }
       }
     }
 
@@ -539,35 +597,65 @@
     const w = player.w;
     const h = player.h;
     const run = Math.sin(player.runFrame);
-    const legSwing = player.grounded && !player.sliding ? run * 10 : 0;
-
-    ctx.save();
-    if (player.sliding) {
-      ctx.translate(x + w / 2, y + h / 2);
-      ctx.rotate(-0.08);
-      ctx.translate(-x - w / 2, -y - h / 2);
-    }
+    const legSwing = player.grounded && !player.ducking ? run * 10 : 0;
 
     // Shadow.
     ctx.fillStyle = "rgba(0,0,0,0.22)";
     ctx.beginPath();
-    ctx.ellipse(x + w / 2, groundY + 7, player.sliding ? 32 : 25, 7, 0, 0, Math.PI * 2);
+    ctx.ellipse(x + w / 2, player.lastFloorY + 7, player.ducking ? 28 : 25, 7, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    if (player.sliding) {
-      // Body slide shape.
+    if (player.ducking) {
+      // Crouched runner, not a flat slide/hot dog.
+      ctx.save();
+      ctx.translate(x, y);
+
+      // Back leg / shoe.
+      ctx.strokeStyle = "#1f2937";
+      ctx.lineWidth = 8;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(15, 38);
+      ctx.lineTo(5, 51);
+      ctx.moveTo(24, 39);
+      ctx.lineTo(43, 51);
+      ctx.stroke();
+
+      ctx.strokeStyle = "#111827";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(0, 52);
+      ctx.lineTo(18, 52);
+      ctx.moveTo(35, 52);
+      ctx.lineTo(54, 52);
+      ctx.stroke();
+
+      // Low torso.
       ctx.fillStyle = "#f97316";
-      roundedRect(x - 3, y + 8, w + 26, 25, 12);
+      roundedRect(10, 24, 34, 22, 8);
       ctx.fill();
-      ctx.fillStyle = "#1f2937";
-      roundedRect(x + 22, y + 26, 34, 12, 6);
-      ctx.fill();
+
+      // Arms.
+      ctx.strokeStyle = "#f9c69a";
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(14, 30);
+      ctx.lineTo(1, 39);
+      ctx.moveTo(38, 29);
+      ctx.lineTo(52, 35);
+      ctx.stroke();
+
+      // Head.
       ctx.fillStyle = "#f9c69a";
       ctx.beginPath();
-      ctx.arc(x + w + 23, y + 17, 13, 0, Math.PI * 2);
+      ctx.arc(33, 14, 14, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = "#111827";
-      ctx.fillRect(x + w + 22, y + 13, 4, 4);
+      ctx.beginPath();
+      ctx.arc(29, 8, 14, Math.PI, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(39, 12, 4, 4);
+
       ctx.restore();
       return;
     }
@@ -608,22 +696,16 @@
     ctx.lineTo(x + 45 - legSwing * 0.4, y + 50);
     ctx.stroke();
 
-    // Head.
+    // Head and hair.
     ctx.fillStyle = "#f9c69a";
     ctx.beginPath();
     ctx.arc(x + w / 2, y + 14, 16, 0, Math.PI * 2);
     ctx.fill();
-
-    // Hair.
     ctx.fillStyle = "#111827";
     ctx.beginPath();
     ctx.arc(x + w / 2 - 3, y + 8, 15, Math.PI, Math.PI * 2);
     ctx.fill();
-
-    // Eye.
-    ctx.fillStyle = "#111827";
     ctx.fillRect(x + w / 2 + 6, y + 10, 4, 4);
-    ctx.restore();
   }
 
   function drawObstacle(o) {
@@ -649,55 +731,69 @@
       roundedRect(o.x, o.y + 10, o.w, o.h - 10, 12);
       ctx.fill();
       ctx.fillStyle = "#93c5fd";
-      roundedRect(o.x + 22, o.y, 38, 22, 7);
+      roundedRect(o.x + 22, o.y, 40, 23, 7);
       ctx.fill();
       ctx.fillStyle = "#111827";
-      ctx.beginPath(); ctx.arc(o.x + 22, o.y + o.h, 11, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(o.x + o.w - 22, o.y + o.h, 11, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(o.x + 23, o.y + o.h, 11, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(o.x + o.w - 23, o.y + o.h, 11, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = "#f8fafc";
-      ctx.beginPath(); ctx.arc(o.x + 22, o.y + o.h, 5, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(o.x + o.w - 22, o.y + o.h, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(o.x + 23, o.y + o.h, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(o.x + o.w - 23, o.y + o.h, 5, 0, Math.PI * 2); ctx.fill();
     }
 
     if (o.type === "bench") {
       ctx.fillStyle = "#92400e";
       roundedRect(o.x, o.y, o.w, 14, 5);
       ctx.fill();
-      roundedRect(o.x, o.y + 24, o.w, 12, 5);
+      ctx.fillStyle = "#a16207";
+      roundedRect(o.x + 8, o.y + 20, o.w - 16, 12, 5);
       ctx.fill();
       ctx.strokeStyle = "#451a03";
       ctx.lineWidth = 6;
+      ctx.lineCap = "round";
       ctx.beginPath();
-      ctx.moveTo(o.x + 18, o.y + 36); ctx.lineTo(o.x + 18, groundY);
-      ctx.moveTo(o.x + o.w - 18, o.y + 36); ctx.lineTo(o.x + o.w - 18, groundY);
+      ctx.moveTo(o.x + 22, o.y + 32); ctx.lineTo(o.x + 22, groundY);
+      ctx.moveTo(o.x + o.w - 22, o.y + 32); ctx.lineTo(o.x + o.w - 22, groundY);
       ctx.stroke();
       ctx.fillStyle = "rgba(255,255,255,0.18)";
-      ctx.fillRect(o.x + 6, o.y + 4, o.w - 12, 3);
+      ctx.fillRect(o.x + 8, o.y + 4, o.w - 16, 3);
     }
 
     if (o.type === "chair") {
-      const p = chairPlatform(o);
       ctx.strokeStyle = "#7c2d12";
       ctx.lineWidth = 6;
       ctx.lineCap = "round";
       ctx.beginPath();
-      ctx.moveTo(o.x + 18, p.y + 12); ctx.lineTo(o.x + 18, groundY);
-      ctx.moveTo(o.x + o.w - 18, p.y + 12); ctx.lineTo(o.x + o.w - 18, groundY);
-      ctx.moveTo(o.x + 16, p.y + 19); ctx.lineTo(o.x + o.w - 16, p.y + 19);
-      ctx.moveTo(o.x + o.w - 20, o.y + 5); ctx.lineTo(o.x + o.w - 20, p.y + 28);
+      ctx.moveTo(o.x + 18, o.y + 24); ctx.lineTo(o.x + 18, groundY);
+      ctx.moveTo(o.x + 60, o.y + 24); ctx.lineTo(o.x + 60, groundY);
+      ctx.moveTo(o.x + 15, o.y + 31); ctx.lineTo(o.x + 65, o.y + 31);
+      ctx.moveTo(o.x + 58, o.y + 2); ctx.lineTo(o.x + 58, o.y + 47);
       ctx.stroke();
       ctx.fillStyle = "#c2410c";
-      roundedRect(p.x, p.y, p.w, 18, 6);
+      roundedRect(o.x + 8, o.y + 24, 58, 16, 6);
       ctx.fill();
-      roundedRect(o.x + o.w - 34, o.y + 4, 26, 42, 5);
+      roundedRect(o.x + 43, o.y + 2, 24, 35, 5);
       ctx.fill();
-      ctx.fillStyle = "rgba(255,255,255,0.18)";
-      ctx.fillRect(p.x + 6, p.y + 4, p.w - 12, 3);
     }
 
-    // Tiny icon reminder: jump or slide.
+    if (o.type === "lowbar") {
+      ctx.strokeStyle = "#78350f";
+      ctx.lineWidth = 7;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(o.x + 8, o.y + 7);
+      ctx.lineTo(o.x + o.w - 8, o.y + 7);
+      ctx.stroke();
+      ctx.fillStyle = "#15803d";
+      for (let i = 0; i < 7; i++) {
+        ctx.beginPath();
+        ctx.ellipse(o.x + 18 + i * 17, o.y + 22 + Math.sin(i) * 6, 17, 10, Math.sin(i) * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
     ctx.globalAlpha = 0.86;
-    ctx.fillStyle = o.mode === "slide" ? "#14b8a6" : o.mode === "platform" ? "#22c55e" : "#f59e0b";
+    ctx.fillStyle = o.mode === "duck" ? "#14b8a6" : (o.landable ? "#22c55e" : "#f59e0b");
     ctx.beginPath();
     ctx.arc(o.x + o.w / 2, o.y - 20, 13, 0, Math.PI * 2);
     ctx.fill();
@@ -705,7 +801,7 @@
     ctx.font = "bold 15px system-ui";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(o.mode === "slide" ? "S" : "↑", o.x + o.w / 2, o.y - 20);
+    ctx.fillText(o.mode === "duck" ? "S" : "↑", o.x + o.w / 2, o.y - 20);
     ctx.restore();
   }
 
@@ -727,34 +823,14 @@
     ctx.restore();
   }
 
-  function roundedRect(x, y, w, h, r) {
-    r = Math.min(r, w / 2, h / 2);
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-  }
-
   function drawGround() {
-    // Grass.
     ctx.fillStyle = "#58b957";
     ctx.fillRect(0, groundY - 16, W, 24);
-
-    // Dirt.
     ctx.fillStyle = "#5a3b24";
     ctx.fillRect(0, groundY + 6, W, H - groundY - 6);
-
-    // Moving lane marks.
     ctx.fillStyle = "rgba(255,255,255,0.25)";
     const offset = -(distance % 70);
-    for (let x = offset; x < W; x += 70) {
-      ctx.fillRect(x, groundY + 38, 38, 6);
-    }
-
-    // Grass blades.
+    for (let x = offset; x < W; x += 70) ctx.fillRect(x, groundY + 38, 38, 6);
     ctx.strokeStyle = "rgba(18,86,34,0.45)";
     ctx.lineWidth = 2;
     for (let x = -(distance % 28); x < W; x += 28) {
@@ -766,7 +842,6 @@
   }
 
   function drawBackground() {
-    // Sky gradient is canvas CSS; add sun.
     ctx.fillStyle = "#fde68a";
     ctx.beginPath();
     ctx.arc(805, 78, 38, 0, Math.PI * 2);
@@ -774,19 +849,15 @@
 
     for (const cloud of clouds) drawCloud(cloud.x, cloud.y, cloud.s);
 
-    // Far buildings.
     for (const b of buildings) {
       ctx.fillStyle = `rgba(${b.shade}, ${b.shade + 10}, ${b.shade + 25}, 0.42)`;
       ctx.fillRect(b.x, b.y - b.h, b.w, b.h);
       ctx.fillStyle = "rgba(255,255,255,0.22)";
       for (let wx = b.x + 10; wx < b.x + b.w - 8; wx += 20) {
-        for (let wy = b.y - b.h + 14; wy < b.y - 10; wy += 26) {
-          ctx.fillRect(wx, wy, 8, 10);
-        }
+        for (let wy = b.y - b.h + 14; wy < b.y - 10; wy += 26) ctx.fillRect(wx, wy, 8, 10);
       }
     }
 
-    // Park trees.
     const treeOffset = -(distance * 0.45 % 180);
     for (let x = treeOffset; x < W + 180; x += 180) {
       ctx.fillStyle = "#7c4a22";
@@ -814,19 +885,13 @@
   function draw() {
     ctx.save();
     ctx.clearRect(0, 0, W, H);
-    const sx = shake ? rand(-shake, shake) : 0;
-    const sy = shake ? rand(-shake, shake) : 0;
-    ctx.translate(sx, sy);
-
     drawBackground();
     drawGround();
-
     for (const c of coins) drawCoin(c);
     for (const o of obstacles) drawObstacle(o);
     drawPlayer();
     drawParticles();
 
-    // Speed meter.
     ctx.fillStyle = "rgba(15,23,42,0.72)";
     roundedRect(18, 18, 190, 44, 12);
     ctx.fill();
@@ -849,30 +914,24 @@
     ctx.save();
     ctx.fillStyle = "rgba(2,6,23,0.72)";
     ctx.fillRect(0, 0, W, H);
-
     ctx.fillStyle = "rgba(15,23,42,0.94)";
-    roundedRect(210, 120, 540, 285, 24);
+    roundedRect(210, 110, 540, 305, 24);
     ctx.fill();
-
     ctx.strokeStyle = "rgba(255,255,255,0.18)";
     ctx.lineWidth = 3;
-    roundedRect(210, 120, 540, 285, 24);
+    roundedRect(210, 110, 540, 305, 24);
     ctx.stroke();
-
     ctx.fillStyle = "#f8fafc";
     ctx.font = "900 42px system-ui";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(title, W / 2, 172);
-
+    ctx.fillText(title, W / 2, 164);
     ctx.font = "700 20px system-ui";
     ctx.fillStyle = "#cbd5e1";
-    lines.forEach((line, i) => ctx.fillText(line, W / 2, 226 + i * 34));
-
+    lines.forEach((line, i) => ctx.fillText(line, W / 2, 222 + i * 32));
     ctx.fillStyle = "#ffd166";
     ctx.font = "900 22px system-ui";
-    ctx.fillText(buttonText, W / 2, 350);
-
+    ctx.fillText(buttonText, W / 2, 360);
     ctx.restore();
   }
 
@@ -881,7 +940,8 @@
       "Parkour Runner",
       [
         "Collect coins. Dodge obstacles. Speed keeps rising.",
-        "Jump walls/cars/chairs. Slide under benches.",
+        "Jump walls/cars. Jump onto benches and chairs.",
+        "Hold S or Down to duck under low branches.",
         "You have 3 hearts."
       ],
       "Press Space/Enter or click to start"
