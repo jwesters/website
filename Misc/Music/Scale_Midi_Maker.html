@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Scale MIDI Maker</title>
+<style>
+  :root{
+    --bg:#0f1421;
+    --bg2:#111a2b;
+    --panel:#172033;
+    --panel2:#202b43;
+    --panel3:#101827;
+    --text:#f5f8ff;
+    --muted:#aab7d0;
+    --line:#34425f;
+    --line2:#485a7c;
+    --accent:#7dd7ff;
+    --accent2:#b8f27c;
+    --accent3:#ffd36f;
+    --pink:#ff9cc8;
+    --danger:#ff8d96;
+    --shadow:0 22px 70px rgba(0,0,0,.38);
+    --radius:22px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:
+    radial-gradient(circle at 18% 0%, rgba(125,215,255,.18), transparent 32%),
+    radial-gradient(circle at 92% 7%, rgba(184,242,124,.13), transparent 30%),
+    linear-gradient(140deg,#0b101a 0%,#101827 50%,#0d121d 100%);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
+  body{padding:20px;}
+  .app{max-width:1240px;margin:0 auto;}
+  header{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:start;margin-bottom:18px;}
+  h1{margin:0;font-size:clamp(2.15rem,5.3vw,4.8rem);line-height:.9;letter-spacing:-.065em;}
+  .subtitle{margin:12px 0 0;max-width:760px;color:var(--muted);font-size:1.03rem;line-height:1.45;}
+  .top-actions{display:flex;flex-wrap:wrap;gap:9px;justify-content:flex-end;}
+  .badge{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.055);border-radius:999px;padding:9px 12px;color:var(--muted);font-weight:900;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+  .badge b{color:var(--accent2)}
+  .layout{display:grid;grid-template-columns:minmax(340px,405px) 1fr;gap:18px;align-items:start;}
+  .panel{border:1px solid rgba(255,255,255,.11);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.027));border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+  .panel-head{padding:18px 18px 2px;}
+  .panel-head h2{margin:0;font-size:1.24rem;letter-spacing:-.02em;}
+  .panel-head p{margin:6px 0 0;color:var(--muted);line-height:1.38;font-size:.93rem;}
+  .controls{display:grid;gap:13px;padding:18px;}
+  .section-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:5px 0 -2px;color:#e9f1ff;font-weight:1000;font-size:.86rem;text-transform:uppercase;letter-spacing:.08em;}
+  .section-title span{color:var(--muted);font-weight:800;text-transform:none;letter-spacing:0;font-size:.78rem;}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+  .row.three{grid-template-columns:1fr 1fr 1fr;}
+  label{display:grid;gap:7px;color:#dce7fb;font-weight:900;font-size:.89rem;}
+  select,input[type="number"],input[type="text"]{width:100%;border:1px solid var(--line);background:#101827;color:var(--text);border-radius:15px;padding:12px 12px;font:inherit;font-weight:800;outline:none;min-height:46px;}
+  select:focus,input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(125,215,255,.13)}
+  .range-wrap{border:1px solid var(--line);background:rgba(0,0,0,.15);border-radius:15px;padding:11px 12px;display:grid;gap:8px;}
+  input[type="range"]{width:100%;accent-color:var(--accent);}
+  .range-line{display:flex;justify-content:space-between;color:var(--muted);font-size:.76rem;font-weight:900;}
+  .segmented{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);background:rgba(0,0,0,.16);border-radius:15px;overflow:hidden;}
+  .segmented input{position:absolute;opacity:0;pointer-events:none;}
+  .segmented label{display:flex;justify-content:center;align-items:center;min-height:44px;padding:8px;color:var(--muted);font-size:.8rem;cursor:pointer;border-right:1px solid var(--line);font-weight:950;}
+  .segmented label:last-child{border-right:0;}
+  .segmented input:checked + span{color:#07101b;background:linear-gradient(180deg,#c8f6ff,#79d8ff);box-shadow:0 8px 25px rgba(125,215,255,.22);}
+  .segmented span{display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-height:32px;border-radius:10px;transition:.15s ease;}
+  .checkline{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:rgba(0,0,0,.14);border-radius:15px;padding:12px;color:var(--muted);font-weight:850;line-height:1.25;}
+  .checkline input{width:20px;height:20px;accent-color:var(--accent2);flex:0 0 auto;}
+  .buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:2px;}
+  button{border:0;border-radius:16px;min-height:48px;padding:12px 14px;font:inherit;font-weight:1000;cursor:pointer;color:#07111c;background:linear-gradient(180deg,#c4f3ff,#74cdf9);box-shadow:0 12px 28px rgba(74,189,255,.16);}
+  button:hover{filter:brightness(1.045)}
+  button:active{transform:translateY(1px)}
+  button.secondary{background:#26324b;color:var(--text);box-shadow:none;border:1px solid var(--line);}
+  button.good{background:linear-gradient(180deg,#d8ffb6,#9de260);}
+  button.warn{background:linear-gradient(180deg,#ffe6a6,#ffc75a);}
+  button.danger{background:#37202b;color:#ffd7dd;border:1px solid #754354;box-shadow:none;}
+  button:disabled{opacity:.43;cursor:not-allowed;filter:grayscale(.35);transform:none;}
+  .status{border:1px solid var(--line);background:rgba(0,0,0,.18);border-radius:17px;padding:12px;color:var(--muted);line-height:1.35;font-size:.93rem;}
+  .status strong{color:var(--text);}
+  .viewer{min-height:760px;}
+  .empty{height:760px;display:grid;place-items:center;text-align:center;color:var(--muted);padding:35px;}
+  .empty .icon{font-size:4.5rem;line-height:1;margin-bottom:12px;filter:drop-shadow(0 10px 18px rgba(0,0,0,.35));}
+  .empty h2{margin:0 0 9px;color:var(--text);font-size:1.8rem;letter-spacing:-.03em;}
+  .summary{padding:18px;display:grid;gap:14px;}
+  .hero-card,.big-card{border:1px solid var(--line);border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.025));padding:17px;}
+  .hero-card{position:relative;overflow:hidden;}
+  .hero-card:before{content:"";position:absolute;right:-70px;top:-95px;width:240px;height:240px;background:radial-gradient(circle,rgba(125,215,255,.19),transparent 67%);pointer-events:none;}
+  .titleline{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;position:relative;}
+  .titleline h2{margin:0;font-size:clamp(1.6rem,3.4vw,2.55rem);letter-spacing:-.055em;line-height:.96;}
+  .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:rgba(0,0,0,.18);border-radius:999px;padding:8px 10px;color:var(--muted);font-weight:900;font-size:.84rem;}
+  .details{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:15px;position:relative;}
+  .stat{border:1px solid var(--line);border-radius:16px;background:rgba(0,0,0,.16);padding:11px;min-width:0;}
+  .stat span{display:block;color:var(--muted);font-size:.72rem;font-weight:950;text-transform:uppercase;letter-spacing:.075em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .stat b{display:block;font-size:1.08rem;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:13px;position:relative;}
+  .chip{border:1px solid var(--line);background:#121a2a;border-radius:999px;padding:7px 10px;color:#dce7fb;font-weight:900;font-size:.86rem;}
+  .chip.root{background:rgba(184,242,124,.13);border-color:rgba(184,242,124,.43);color:#e8ffd4;}
+  .chip.rest{background:rgba(255,211,111,.12);border-color:rgba(255,211,111,.38);color:#ffe4ac;}
+  .chip.chord{background:rgba(255,156,200,.11);border-color:rgba(255,156,200,.35);color:#ffd7e8;}
+  .playback-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;align-items:stretch;}
+  .roll{height:330px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(180deg,#121b2c,#0d1320);position:relative;overflow:hidden;}
+  .roll-label{position:absolute;left:10px;top:8px;z-index:4;color:rgba(245,248,255,.65);font-size:.75rem;font-weight:1000;text-transform:uppercase;letter-spacing:.1em;}
+  .gridline{position:absolute;left:0;right:0;height:1px;background:rgba(255,255,255,.052)}
+  .beatline{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,.058)}
+  .barline{position:absolute;top:0;bottom:0;width:2px;background:rgba(125,215,255,.15)}
+  .note-bar{position:absolute;border-radius:9px;background:linear-gradient(180deg,rgba(125,215,255,.96),rgba(68,170,229,.96));border:1px solid rgba(255,255,255,.22);min-width:7px;box-shadow:0 7px 17px rgba(0,0,0,.2);}
+  .note-bar.root{background:linear-gradient(180deg,rgba(184,242,124,.97),rgba(127,205,84,.97));}
+  .note-label{position:absolute;left:7px;top:50%;transform:translateY(-50%);font-size:.7rem;font-weight:1000;color:#06111b;text-shadow:0 1px rgba(255,255,255,.25);white-space:nowrap;pointer-events:none;}
+  .rest-gap{position:absolute;top:12%;bottom:12%;border-left:2px dashed rgba(255,211,111,.45);}
+  .chord-lane{position:absolute;left:0;right:0;bottom:0;height:44px;border-top:1px solid rgba(255,255,255,.075);background:rgba(255,156,200,.035);}
+  .chord-block{position:absolute;top:8px;height:25px;border-radius:999px;background:rgba(255,156,200,.23);border:1px solid rgba(255,156,200,.37);color:#ffe1ec;font-size:.71rem;font-weight:950;display:flex;align-items:center;padding:0 8px;overflow:hidden;white-space:nowrap;}
+  .playhead{position:absolute;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--accent3),var(--accent));box-shadow:0 0 22px rgba(255,211,111,.5);z-index:8;left:0;pointer-events:none;}
+  .playhead:before{content:"";position:absolute;left:50%;top:0;transform:translateX(-50%);width:14px;height:14px;border-radius:0 0 6px 6px;background:var(--accent3);box-shadow:0 5px 16px rgba(0,0,0,.35);}
+  .playback-side{border:1px solid var(--line);border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.022));padding:13px;display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:10px;min-height:330px;}
+  .now-card{border:1px solid rgba(125,215,255,.24);background:rgba(125,215,255,.07);border-radius:18px;padding:12px;min-width:0;}
+  .now-card span{display:block;color:var(--muted);font-size:.72rem;font-weight:1000;text-transform:uppercase;letter-spacing:.09em;}
+  .now-card b{display:block;margin-top:5px;font-size:1.45rem;letter-spacing:-.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .now-card small{display:block;margin-top:4px;color:var(--muted);font-weight:850;}
+  .mini-meter{height:13px;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:rgba(0,0,0,.18);}
+  .mini-meter div{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:999px;transition:width .04s linear;}
+  .note-list{border:1px solid var(--line);border-radius:22px;background:rgba(255,255,255,.035);padding:13px;max-height:250px;overflow:auto;}
+  .note-list.side{max-height:none;padding:9px;border-radius:18px;}
+  .event-row{transition:background .08s ease, outline .08s ease;}
+  .event-row.active td{background:rgba(255,211,111,.18);outline-top:1px solid rgba(255,211,111,.25);}
+  .event-row.active td:first-child{border-radius:10px 0 0 10px;}
+  .event-row.active td:last-child{border-radius:0 10px 10px 0;}
+  table{width:100%;border-collapse:collapse;font-size:.91rem;}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid rgba(255,255,255,.07);vertical-align:top;}
+  th{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;position:sticky;top:0;background:#111a2a;z-index:2;}
+  tr:last-child td{border-bottom:0;}
+  .small{font-size:.81rem;color:var(--muted);line-height:1.45;}
+  .hidden{display:none!important;}
+  @media(max-width:980px){
+    body{padding:14px;}
+    header{grid-template-columns:1fr;}
+    .top-actions{justify-content:flex-start;}
+    .layout{grid-template-columns:1fr;}
+    .viewer{min-height:auto;}
+    .empty{height:520px;}
+    .details{grid-template-columns:repeat(2,1fr);}
+    .playback-grid{grid-template-columns:1fr;}
+    .playback-side{min-height:300px;}
+  }
+  @media(max-width:560px){
+    .row,.row.three{grid-template-columns:1fr;}
+    .buttons{grid-template-columns:1fr;}
+    .segmented{grid-template-columns:1fr 1fr;}
+    .details{grid-template-columns:1fr 1fr;}
+    .roll{height:290px;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Scale MIDI Maker</h1>
+      <p class="subtitle">Pick a scale, choose the feel, and generate a MIDI melody with varied note lengths. Add chords, rests, call-and-response phrasing, and a cleaner filename that remembers the settings.</p>
+    </div>
+    <div class="top-actions">
+      <div class="badge">Export: <b>.mid</b></div>
+      <div class="badge">BPM: <b>40–240</b></div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Build the MIDI</h2>
+        <p>Scale names and interval patterns match your guitar scale mapper.</p>
+      </div>
+
+      <div class="controls">
+        <div class="section-title">Scale setup <span>key + notes</span></div>
+        <div class="row">
+          <label>Root Note
+            <select id="rootSelect"></select>
+          </label>
+          <label>Scale
+            <select id="scaleSelect"></select>
+          </label>
+        </div>
+
+        <label>BPM <span id="bpmValue" class="small">120</span>
+          <div class="range-wrap">
+            <input id="bpmRange" type="range" min="40" max="240" value="120" />
+            <div class="range-line"><span>40</span><span>240</span></div>
+          </div>
+          <input id="bpmInput" type="number" min="40" max="240" value="120" />
+        </label>
+
+        <div class="section-title">Melody <span>length + movement</span></div>
+        <div class="row">
+          <label>Number of Notes
+            <select id="noteCountSelect">
+              <option value="8">8 notes</option>
+              <option value="16" selected>16 notes</option>
+              <option value="24">24 notes</option>
+              <option value="32">32 notes</option>
+              <option value="48">48 notes</option>
+              <option value="64">64 notes</option>
+            </select>
+          </label>
+          <label>Phrase Shape
+            <select id="phraseSelect">
+              <option value="continuous" selected>Continuous melody</option>
+              <option value="call_response">Call and response</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="row">
+          <label>Melody Direction
+            <select id="directionSelect">
+              <option value="stepwise" selected>Mostly stepwise</option>
+              <option value="random">Random</option>
+              <option value="rising">Mostly rising</option>
+              <option value="falling">Mostly falling</option>
+              <option value="wave">Wave-like</option>
+              <option value="jumps">Big jumps</option>
+            </select>
+          </label>
+          <label>Difficulty / Complexity
+            <select id="difficultySelect">
+              <option value="simple">Simple</option>
+              <option value="medium" selected>Medium</option>
+              <option value="wild">Wild</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="row three">
+          <label>Starting Octave
+            <select id="octaveSelect">
+              <option value="2">Octave 2</option>
+              <option value="3" selected>Octave 3</option>
+              <option value="4">Octave 4</option>
+              <option value="5">Octave 5</option>
+            </select>
+          </label>
+          <label>Octave Range
+            <select id="spanSelect">
+              <option value="1">1 octave</option>
+              <option value="2" selected>2 octaves</option>
+              <option value="3">3 octaves</option>
+            </select>
+          </label>
+          <label>Rests
+            <select id="restsSelect">
+              <option value="none">No rests</option>
+              <option value="few" selected>A few rests</option>
+              <option value="some">Some rests</option>
+              <option value="lots">Lots of rests</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="section-title">Sound <span>instrument + backing</span></div>
+        <div class="row">
+          <label>Melody Instrument
+            <select id="instrumentSelect">
+              <option value="0">Acoustic Grand Piano</option>
+              <option value="4">Electric Piano</option>
+              <option value="10">Music Box</option>
+              <option value="24">Nylon Guitar</option>
+              <option value="25">Steel Guitar</option>
+              <option value="27" selected>Clean Electric Guitar</option>
+              <option value="33">Electric Bass</option>
+              <option value="40">Violin</option>
+              <option value="48">Strings</option>
+              <option value="73">Flute</option>
+              <option value="80">Synth Lead</option>
+              <option value="88">Synth Pad</option>
+            </select>
+          </label>
+          <label>Chord Backing
+            <select id="chordModeSelect">
+              <option value="off">No chords</option>
+              <option value="block" selected>Block chords</option>
+              <option value="pad">Pad chords</option>
+              <option value="broken">Broken chords</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="row" id="chordControls">
+          <label>Chord Progression
+            <select id="progressionSelect">
+              <option value="auto" selected>Auto fit scale</option>
+              <option value="1564">I–V–vi–IV</option>
+              <option value="1645">I–vi–IV–V</option>
+              <option value="1451">I–IV–V–I</option>
+              <option value="1767">i–VII–VI–VII</option>
+            </select>
+          </label>
+          <label>Chord Instrument
+            <select id="chordInstrumentSelect">
+              <option value="0">Piano</option>
+              <option value="24">Nylon Guitar</option>
+              <option value="48" selected>Strings</option>
+              <option value="88">Synth Pad</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="section-title">Generate <span>repeatable seed</span></div>
+        <div class="row">
+          <label>Seed
+            <input id="seedInput" type="text" placeholder="optional" />
+          </label>
+          <label>Velocity
+            <select id="velocitySelect">
+              <option value="72">Soft</option>
+              <option value="88" selected>Medium</option>
+              <option value="106">Loud</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="buttons">
+          <button id="generateBtn">Generate MIDI</button>
+          <button id="newSeedBtn" class="secondary">New Seed</button>
+          <button id="playBtn" class="warn" disabled>Play Preview</button>
+          <button id="stopBtn" class="danger" disabled>Stop</button>
+          <button id="downloadBtn" class="good" disabled style="grid-column:1 / -1;">Download MIDI File</button>
+        </div>
+
+        <div id="status" class="status"><strong>Ready.</strong> Choose your settings, then generate a MIDI idea.</div>
+      </div>
+    </section>
+
+    <section class="panel viewer">
+      <div id="output" class="empty">
+        <div>
+          <div class="icon">🎹</div>
+          <h2>No MIDI generated yet</h2>
+          <p>After generating, this area will show the scale tones, phrase stats, chord progression, and a piano-roll style preview.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(() => {
+  const NOTES = ['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+  const NOTE_TO_PC = Object.fromEntries(NOTES.map((n,i)=>[n,i]));
+  NOTE_TO_PC.Db = 1; NOTE_TO_PC.Gb = 6; NOTE_TO_PC.Ab = 8; NOTE_TO_PC.Bb = 10; NOTE_TO_PC.Eb = 3;
+  const PC_TO_NAME = ['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+
+  const SCALES = [
+    {group:'Scales', name:'Major', id:'major', intervals:[0,2,4,5,7,9,11], degrees:['1','2','3','4','5','6','7']},
+    {group:'Scales', name:'Natural Minor', id:'natmin', intervals:[0,2,3,5,7,8,10], degrees:['1','2','b3','4','5','b6','b7']},
+    {group:'Scales', name:'Major Pentatonic', id:'majpent', intervals:[0,2,4,7,9], degrees:['1','2','3','5','6']},
+    {group:'Scales', name:'Minor Pentatonic', id:'minpent', intervals:[0,3,5,7,10], degrees:['1','b3','4','5','b7']},
+    {group:'Scales', name:'Blues', id:'blues', intervals:[0,3,5,6,7,10], degrees:['1','b3','4','b5','5','b7']},
+    {group:'Scales', name:'Harmonic Minor', id:'harmmin', intervals:[0,2,3,5,7,8,11], degrees:['1','2','b3','4','5','b6','7']},
+    {group:'Scales', name:'Melodic Minor', id:'melmin', intervals:[0,2,3,5,7,9,11], degrees:['1','2','b3','4','5','6','7']},
+    {group:'Scales', name:'Whole Tone', id:'wholetone', intervals:[0,2,4,6,8,10], degrees:['1','2','3','#4','#5','b7']},
+    {group:'Scales', name:'Diminished / Whole-Half', id:'dimwh', intervals:[0,2,3,5,6,8,9,11], degrees:['1','2','b3','4','b5','b6','6','7']},
+    {group:'Scales', name:'Diminished / Half-Whole', id:'dimhw', intervals:[0,1,3,4,6,7,9,10], degrees:['1','b2','#2','3','#4','5','6','b7']},
+    {group:'Scales', name:'Chromatic', id:'chromatic', intervals:[0,1,2,3,4,5,6,7,8,9,10,11], degrees:['1','b2','2','b3','3','4','b5','5','b6','6','b7','7']},
+    {group:'Scales', name:'Hungarian Minor', id:'hungmin', intervals:[0,2,3,6,7,8,11], degrees:['1','2','b3','#4','5','b6','7']},
+    {group:'Scales', name:'Double Harmonic / Byzantine', id:'byz', intervals:[0,1,4,5,7,8,11], degrees:['1','b2','3','4','5','b6','7']},
+    {group:'Scales', name:'Japanese / In Scale', id:'insen', intervals:[0,1,5,7,10], degrees:['1','b2','4','5','b7']},
+    {group:'Scales', name:'Hirajoshi', id:'hirajoshi', intervals:[0,2,3,7,8], degrees:['1','2','b3','5','b6']},
+    {group:'Scales', name:'Arabian', id:'arabian', intervals:[0,2,4,5,6,8,10], degrees:['1','2','3','4','b5','b6','b7']},
+    {group:'Scales', name:'Neapolitan Minor', id:'neapmin', intervals:[0,1,3,5,7,8,11], degrees:['1','b2','b3','4','5','b6','7']},
+    {group:'Scales', name:'Persian', id:'persian', intervals:[0,1,4,5,6,8,11], degrees:['1','b2','3','4','b5','b6','7']},
+    {group:'Modes', name:'Ionian', id:'ionian', intervals:[0,2,4,5,7,9,11], degrees:['1','2','3','4','5','6','7']},
+    {group:'Modes', name:'Dorian', id:'dorian', intervals:[0,2,3,5,7,9,10], degrees:['1','2','b3','4','5','6','b7']},
+    {group:'Modes', name:'Phrygian', id:'phrygian', intervals:[0,1,3,5,7,8,10], degrees:['1','b2','b3','4','5','b6','b7']},
+    {group:'Modes', name:'Lydian', id:'lydian', intervals:[0,2,4,6,7,9,11], degrees:['1','2','3','#4','5','6','7']},
+    {group:'Modes', name:'Mixolydian', id:'mixolydian', intervals:[0,2,4,5,7,9,10], degrees:['1','2','3','4','5','6','b7']},
+    {group:'Modes', name:'Aeolian', id:'aeolian', intervals:[0,2,3,5,7,8,10], degrees:['1','2','b3','4','5','b6','b7']},
+    {group:'Modes', name:'Locrian', id:'locrian', intervals:[0,1,3,5,6,8,10], degrees:['1','b2','b3','4','b5','b6','b7']},
+    {group:'Modes', name:'Phrygian Dominant', id:'phrygdom', intervals:[0,1,4,5,7,8,10], degrees:['1','b2','3','4','5','b6','b7']}
+  ];
+
+  const PPQ = 480;
+  const BAR_TICKS = PPQ * 4;
+  const DURATION_BANK = {
+    simple: [
+      {ticks:480,label:'1/4',w:8}, {ticks:240,label:'1/8',w:3}, {ticks:960,label:'1/2',w:2}
+    ],
+    medium: [
+      {ticks:480,label:'1/4',w:5}, {ticks:240,label:'1/8',w:7}, {ticks:720,label:'dotted 1/4',w:2}, {ticks:960,label:'1/2',w:2}, {ticks:120,label:'1/16',w:2}, {ticks:360,label:'dotted 1/8',w:2}
+    ],
+    wild: [
+      {ticks:240,label:'1/8',w:7}, {ticks:120,label:'1/16',w:6}, {ticks:360,label:'dotted 1/8',w:4}, {ticks:480,label:'1/4',w:3}, {ticks:720,label:'dotted 1/4',w:1}, {ticks:180,label:'triplet-ish',w:3}, {ticks:600,label:'long 1/4',w:1}
+    ]
+  };
+  const REST_CHANCE = {none:0, few:.08, some:.15, lots:.25};
+  const REST_DURATIONS = [
+    {ticks:120,label:'1/16 rest',w:4}, {ticks:240,label:'1/8 rest',w:5}, {ticks:480,label:'1/4 rest',w:2}
+  ];
+  const INSTRUMENT_NAMES = {
+    0:'Piano', 4:'Electric Piano', 10:'Music Box', 24:'Nylon Guitar', 25:'Steel Guitar', 27:'Clean Electric Guitar', 33:'Electric Bass', 40:'Violin', 48:'Strings', 73:'Flute', 80:'Synth Lead', 88:'Synth Pad'
+  };
+  const CHORD_NAMES = {off:'No chords', block:'Block chords', pad:'Pad chords', broken:'Broken chords'};
+  const DIRECTION_NAMES = {stepwise:'Stepwise', random:'Random', rising:'Rising', falling:'Falling', wave:'Wave', jumps:'Big jumps'};
+
+  const $ = id => document.getElementById(id);
+  const rootSelect = $('rootSelect'), scaleSelect = $('scaleSelect'), bpmRange = $('bpmRange'), bpmInput = $('bpmInput'), bpmValue = $('bpmValue');
+  const noteCountSelect = $('noteCountSelect'), phraseSelect = $('phraseSelect'), directionSelect = $('directionSelect'), difficultySelect = $('difficultySelect');
+  const octaveSelect = $('octaveSelect'), spanSelect = $('spanSelect'), restsSelect = $('restsSelect'), instrumentSelect = $('instrumentSelect'), chordModeSelect = $('chordModeSelect');
+  const chordControls = $('chordControls'), progressionSelect = $('progressionSelect'), chordInstrumentSelect = $('chordInstrumentSelect');
+  const seedInput = $('seedInput'), velocitySelect = $('velocitySelect'), output = $('output'), status = $('status');
+  const generateBtn = $('generateBtn'), playBtn = $('playBtn'), stopBtn = $('stopBtn'), downloadBtn = $('downloadBtn'), newSeedBtn = $('newSeedBtn');
+
+  let currentSequence = null;
+  let currentMidiBlob = null;
+  let audioContext = null;
+  let scheduledNodes = [];
+  let playbackRaf = null;
+  let lastActiveEventIndex = null;
+
+  function setupSelects(){
+    NOTES.forEach(n => rootSelect.appendChild(new Option(n,n)));
+    rootSelect.value = 'C';
+    ['Scales','Modes'].forEach(groupName => {
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = groupName;
+      SCALES.filter(s=>s.group===groupName).forEach(s => optgroup.appendChild(new Option(s.name, s.id)));
+      scaleSelect.appendChild(optgroup);
+    });
+    scaleSelect.value = 'major';
+    setNewSeed();
+    toggleChordControls();
+  }
+  function clampBpm(v){
+    const num = Math.round(Number(v));
+    if(!Number.isFinite(num)) return 120;
+    return Math.max(40, Math.min(240, num));
+  }
+  function syncBpm(v){
+    const bpm = clampBpm(v);
+    bpmRange.value = bpm; bpmInput.value = bpm; bpmValue.textContent = bpm;
+  }
+  function toggleChordControls(){
+    chordControls.classList.toggle('hidden', chordModeSelect.value === 'off');
+  }
+
+  function cyrb128(str) {
+    let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;
+    for (let i = 0, k; i < str.length; i++) {
+      k = str.charCodeAt(i);
+      h1 = h2 ^ Math.imul(h1 ^ k, 597399067);
+      h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);
+      h3 = h4 ^ Math.imul(h3 ^ k, 951274213);
+      h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);
+    }
+    h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067);
+    h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);
+    h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213);
+    h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);
+    return [(h1^h2^h3^h4)>>>0, (h2^h1)>>>0, (h3^h1)>>>0, (h4^h1)>>>0];
+  }
+  function mulberry32(a) {
+    return function() {
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+  }
+  function rngFromSeed(seed){ return mulberry32(cyrb128(seed)[0]); }
+  function setNewSeed(){ seedInput.value = Math.random().toString(36).slice(2,8).toUpperCase(); }
+  function weightedChoice(items, rng){
+    const total = items.reduce((s,i)=>s+i.w,0);
+    let r = rng()*total;
+    for(const item of items){ r -= item.w; if(r <= 0) return item; }
+    return items[items.length-1];
+  }
+  function selectedScale(){ return SCALES.find(s=>s.id===scaleSelect.value) || SCALES[0]; }
+  function midiName(midi){ return PC_TO_NAME[((midi % 12) + 12) % 12] + (Math.floor(midi/12)-1); }
+  function safeProgram(v){ return Math.max(0, Math.min(127, Number(v) || 0)); }
+  function buildScaleNotes(rootName, octave, span, scale){
+    const rootPc = NOTE_TO_PC[rootName];
+    const lowRoot = (octave + 1) * 12 + rootPc;
+    const maxMidi = lowRoot + span * 12;
+    const notes = [];
+    for(let oct = -1; oct <= span + 1; oct++){
+      for(let i=0;i<scale.intervals.length;i++){
+        const midi = lowRoot + oct*12 + scale.intervals[i];
+        if(midi >= lowRoot && midi <= maxMidi && midi >= 0 && midi <= 127){
+          notes.push({midi, name:midiName(midi), degree:scale.degrees[i], degreeIndex:i, isRoot:((midi%12)===rootPc)});
+        }
+      }
+    }
+    notes.sort((a,b)=>a.midi-b.midi);
+    return notes;
+  }
+  function closestRootIndex(notes, targetIndex){
+    const roots = notes.map((n,i)=>({n,i})).filter(x=>x.n.isRoot);
+    if(!roots.length) return Math.max(0, Math.min(notes.length-1, targetIndex));
+    return roots.reduce((best,x)=> Math.abs(x.i-targetIndex) < Math.abs(best.i-targetIndex) ? x : best, roots[0]).i;
+  }
+  function pickDuration(rng){
+    return weightedChoice(DURATION_BANK[difficultySelect.value] || DURATION_BANK.medium, rng);
+  }
+  function pickRest(rng){ return weightedChoice(REST_DURATIONS, rng); }
+  function chooseMove(direction, difficulty, rng, i, total){
+    const wildBonus = difficulty === 'wild' ? 1 : 0;
+    const simpleTame = difficulty === 'simple' ? 1 : 0;
+    if(direction === 'random'){
+      const reach = difficulty === 'simple' ? 3 : difficulty === 'wild' ? 12 : 7;
+      return Math.floor(rng() * (reach*2+1)) - reach;
+    }
+    if(direction === 'rising'){
+      const pool = [{d:-1,w:simpleTame?1:2},{d:0,w:1},{d:1,w:6},{d:2,w:3+wildBonus},{d:3,w:1+wildBonus}];
+      return weightedChoice(pool, rng).d;
+    }
+    if(direction === 'falling'){
+      const pool = [{d:1,w:simpleTame?1:2},{d:0,w:1},{d:-1,w:6},{d:-2,w:3+wildBonus},{d:-3,w:1+wildBonus}];
+      return weightedChoice(pool, rng).d;
+    }
+    if(direction === 'wave'){
+      const phase = Math.floor((i / Math.max(1,total-1)) * 4);
+      const dir = (phase === 0 || phase === 3) ? 1 : -1;
+      return dir * weightedChoice([{d:1,w:5},{d:2,w:2},{d:3,w:wildBonus+1}], rng).d;
+    }
+    if(direction === 'jumps'){
+      const pool = [{d:-8,w:1},{d:-7,w:1},{d:-5,w:2},{d:-4,w:2},{d:-3,w:2},{d:3,w:2},{d:4,w:2},{d:5,w:2},{d:7,w:1},{d:8,w:1}];
+      if(difficulty === 'simple') return weightedChoice([{d:-3,w:2},{d:-2,w:3},{d:2,w:3},{d:3,w:2}], rng).d;
+      if(difficulty === 'wild') pool.push({d:10,w:1},{d:-10,w:1},{d:12,w:1},{d:-12,w:1});
+      return weightedChoice(pool, rng).d;
+    }
+    const pool = difficulty === 'simple'
+      ? [{d:-1,w:5},{d:0,w:2},{d:1,w:5},{d:-2,w:1},{d:2,w:1}]
+      : difficulty === 'wild'
+        ? [{d:-5,w:1},{d:-4,w:1},{d:-3,w:2},{d:-2,w:3},{d:-1,w:5},{d:0,w:1},{d:1,w:5},{d:2,w:3},{d:3,w:2},{d:4,w:1},{d:5,w:1}]
+        : [{d:-3,w:1},{d:-2,w:2},{d:-1,w:5},{d:0,w:1},{d:1,w:5},{d:2,w:2},{d:3,w:1}];
+    return weightedChoice(pool, rng).d;
+  }
+  function bounceIndex(idx, max){
+    if(max <= 0) return 0;
+    while(idx < 0 || idx > max){
+      if(idx < 0) idx = Math.abs(idx);
+      if(idx > max) idx = max - (idx - max);
+    }
+    return Math.max(0, Math.min(max, idx));
+  }
+  function generateNotePlan(notes, count, rng){
+    const direction = directionSelect.value;
+    const difficulty = difficultySelect.value;
+    const notePlan = [];
+    let idx = closestRootIndex(notes, Math.floor(notes.length * .38));
+    const firstDuration = pickDuration(rng);
+    notePlan.push({...notes[idx], duration:firstDuration.ticks, durationLabel:firstDuration.label});
+
+    if(phraseSelect.value === 'call_response'){
+      const callCount = Math.ceil(count / 2);
+      for(let i=1;i<callCount;i++){
+        idx = bounceIndex(idx + chooseMove(direction, difficulty, rng, i, callCount), notes.length-1);
+        const dur = pickDuration(rng);
+        notePlan.push({...notes[idx], duration:dur.ticks, durationLabel:dur.label});
+      }
+      const responseCount = count - callCount;
+      const pivot = Math.floor(notes.length / 2);
+      for(let i=0;i<responseCount;i++){
+        const source = notePlan[Math.min(callCount-1, i)];
+        let sourceIndex = notes.findIndex(n => n.midi === source.midi);
+        if(sourceIndex < 0) sourceIndex = idx;
+        const nudge = i === responseCount-1 ? 0 : Math.round((rng()-.5) * (difficulty === 'wild' ? 6 : 3));
+        let responseIndex = bounceIndex(pivot - (sourceIndex - pivot) + nudge, notes.length-1);
+        if(i === responseCount-1 || (i > responseCount-3 && rng() < .45)) responseIndex = closestRootIndex(notes, responseIndex);
+        const dur = notePlan[i]?.duration ? {ticks:notePlan[i].duration, label:notePlan[i].durationLabel} : pickDuration(rng);
+        notePlan.push({...notes[responseIndex], duration:dur.ticks, durationLabel:dur.label});
+      }
+      return notePlan.slice(0,count);
+    }
+
+    for(let i=1;i<count;i++){
+      if(i === count-1 && rng() < .72) idx = closestRootIndex(notes, idx);
+      else idx = bounceIndex(idx + chooseMove(direction, difficulty, rng, i, count), notes.length-1);
+      const dur = pickDuration(rng);
+      notePlan.push({...notes[idx], duration:dur.ticks, durationLabel:dur.label});
+    }
+    return notePlan;
+  }
+  function assembleMelodyEvents(notePlan, rng){
+    const events = [];
+    const restChance = REST_CHANCE[restsSelect.value] ?? .08;
+    let start = 0;
+    notePlan.forEach((n, i) => {
+      if(i > 0 && restChance > 0 && rng() < restChance){
+        const rest = pickRest(rng);
+        events.push({kind:'rest', rest:true, start, duration:rest.ticks, durationLabel:rest.label});
+        start += rest.ticks;
+      }
+      events.push({kind:'note', rest:false, start, midi:n.midi, name:n.name, degree:n.degree, degreeIndex:n.degreeIndex, isRoot:n.isRoot, duration:n.duration, durationLabel:n.durationLabel});
+      start += n.duration;
+    });
+    return events;
+  }
+  function scaleStepMidi(rootPc, octave, scale, step){
+    const len = scale.intervals.length;
+    let octShift = Math.floor(step / len);
+    let deg = step % len;
+    if(deg < 0){ deg += len; octShift -= 1; }
+    const base = (octave + 1) * 12 + rootPc;
+    return base + octShift * 12 + scale.intervals[deg];
+  }
+  function chordLabel(scale, degree){
+    const roman = ['I','II','III','IV','V','VI','VII'];
+    return roman[degree % 7] || `D${degree+1}`;
+  }
+  function progressionDegrees(scale, prog){
+    const max = Math.max(1, scale.intervals.length);
+    if(prog === '1564') return [0,4%max,5%max,3%max];
+    if(prog === '1645') return [0,5%max,3%max,4%max];
+    if(prog === '1451') return [0,3%max,4%max,0];
+    if(prog === '1767') return [0,(max-1)%max,(max-2+max)%max,(max-1)%max];
+    if(max <= 5) return [0, Math.min(2,max-1), Math.min(3,max-1), 0];
+    return [0,4%max,5%max,3%max];
+  }
+  function buildChordEvents(seq){
+    const mode = chordModeSelect.value;
+    if(mode === 'off') return {events:[], summary:[]};
+    const bars = Math.max(1, Math.ceil(seq.totalTicks / BAR_TICKS));
+    const rootPc = NOTE_TO_PC[seq.rootName];
+    const chordOctave = Math.max(1, Number(octaveSelect.value) - 1);
+    const degrees = progressionDegrees(seq.scale, progressionSelect.value);
+    const events = [];
+    const summary = [];
+    for(let bar=0; bar<bars; bar++){
+      const degree = degrees[bar % degrees.length];
+      const chordNotes = [degree, degree+2, degree+4].map(step => Math.max(0, Math.min(127, scaleStepMidi(rootPc, chordOctave, seq.scale, step))));
+      const label = chordLabel(seq.scale, degree);
+      summary.push({bar:bar+1, degree, label, notes:chordNotes.map(midiName), start:bar*BAR_TICKS, duration:BAR_TICKS});
+      if(mode === 'broken'){
+        const slice = PPQ;
+        for(let beat=0; beat<4; beat++){
+          const note = chordNotes[beat % chordNotes.length];
+          events.push({kind:'chord', start:bar*BAR_TICKS + beat*slice, duration:Math.max(120, slice-45), midi:note, name:midiName(note), label});
+        }
+      }else{
+        const duration = mode === 'pad' ? BAR_TICKS : Math.max(120, BAR_TICKS - 60);
+        chordNotes.forEach(note => events.push({kind:'chord', start:bar*BAR_TICKS, duration, midi:note, name:midiName(note), label}));
+      }
+    }
+    return {events, summary};
+  }
+  function makeSeedString(){
+    return [seedInput.value || '', rootSelect.value, scaleSelect.value, bpmInput.value, noteCountSelect.value, phraseSelect.value, directionSelect.value, difficultySelect.value, octaveSelect.value, spanSelect.value, restsSelect.value, chordModeSelect.value, progressionSelect.value].join('|');
+  }
+  function generateSequence(){
+    stopPreview(false);
+    const bpm = clampBpm(bpmInput.value);
+    const scale = selectedScale();
+    const rootName = rootSelect.value;
+    const noteCount = Number(noteCountSelect.value);
+    const seed = (seedInput.value || Math.random().toString(36).slice(2,8).toUpperCase()).trim();
+    seedInput.value = seed;
+    const rng = rngFromSeed(makeSeedString());
+    const scaleNotes = buildScaleNotes(rootName, Number(octaveSelect.value), Number(spanSelect.value), scale);
+    if(!scaleNotes.length){
+      status.innerHTML = '<strong>Could not generate.</strong> Try a different octave or range.';
+      return;
+    }
+    const notePlan = generateNotePlan(scaleNotes, noteCount, rng);
+    const melodyEvents = assembleMelodyEvents(notePlan, rng);
+    const totalTicks = melodyEvents.reduce((end,e)=>Math.max(end,e.start+e.duration),0);
+    const seqBase = {bpm, scale, rootName, rootPc:NOTE_TO_PC[rootName], noteCount, seed, scaleNotes, melodyEvents, totalTicks};
+    const chordData = buildChordEvents(seqBase);
+    currentSequence = {
+      ...seqBase,
+      chordEvents: chordData.events,
+      chordSummary: chordData.summary,
+      settings: {
+        phrase: phraseSelect.value,
+        direction: directionSelect.value,
+        difficulty: difficultySelect.value,
+        rests: restsSelect.value,
+        melodyProgram: safeProgram(instrumentSelect.value),
+        chordProgram: safeProgram(chordInstrumentSelect.value),
+        chordMode: chordModeSelect.value,
+        progression: progressionSelect.value,
+        velocity: Number(velocitySelect.value)
+      }
+    };
+    currentMidiBlob = new Blob([makeMidiFile(currentSequence)], {type:'audio/midi'});
+    renderOutput(currentSequence);
+    playBtn.disabled = false;
+    downloadBtn.disabled = false;
+    const restCount = melodyEvents.filter(e=>e.rest).length;
+    const chordText = chordModeSelect.value === 'off' ? 'no chord backing' : CHORD_NAMES[chordModeSelect.value].toLowerCase();
+    status.innerHTML = `<strong>Generated.</strong> ${noteCount} notes, ${rootName} ${scale.name}, ${bpm} BPM, ${restCount} rests, ${chordText}.`;
+  }
+
+  function vlq(value){
+    value = Math.max(0, Math.round(value));
+    let buffer = value & 0x7F;
+    const bytes = [];
+    while((value >>= 7)){
+      buffer <<= 8;
+      buffer |= ((value & 0x7F) | 0x80);
+    }
+    while(true){
+      bytes.push(buffer & 0xFF);
+      if(buffer & 0x80) buffer >>= 8; else break;
+    }
+    return bytes;
+  }
+  function strBytes(str){ return Array.from(str).map(ch=>ch.charCodeAt(0) & 255); }
+  function u16(n){ return [(n>>8)&255,n&255]; }
+  function u32(n){ return [(n>>24)&255,(n>>16)&255,(n>>8)&255,n&255]; }
+  function metaText(delta, type, text){ const b = strBytes(text); return [...vlq(delta),0xFF,type,...vlq(b.length),...b]; }
+  function tempoEvent(bpm){
+    const mpqn = Math.round(60000000 / bpm);
+    return [...vlq(0),0xFF,0x51,0x03,(mpqn>>16)&255,(mpqn>>8)&255,mpqn&255];
+  }
+  function makeTrackChunk(bytes){ return [...strBytes('MTrk'), ...u32(bytes.length), ...bytes]; }
+  function noteTrack(name, channel, program, noteItems, velocity){
+    const track = [];
+    track.push(...metaText(0,0x03,name));
+    track.push(...[0x00,0xC0 + channel,safeProgram(program)]);
+    const items = [];
+    noteItems.forEach(item => {
+      const note = Math.max(0, Math.min(127, item.midi));
+      items.push({time:item.start, order:1, bytes:[0x90 + channel,note,velocity]});
+      items.push({time:item.start + item.duration, order:0, bytes:[0x80 + channel,note,0x40]});
+    });
+    items.sort((a,b)=> a.time-b.time || a.order-b.order);
+    let last = 0;
+    items.forEach(item => {
+      track.push(...vlq(item.time-last), ...item.bytes);
+      last = item.time;
+    });
+    track.push(...vlq(0),0xFF,0x2F,0x00);
+    return track;
+  }
+  function makeMidiFile(seq){
+    const tempoTrack = [];
+    const title = `${seq.rootName} ${seq.scale.name} ${seq.bpm} BPM ${seq.noteCount} notes`;
+    tempoTrack.push(...metaText(0,0x03,title));
+    tempoTrack.push(...tempoEvent(seq.bpm));
+    tempoTrack.push(...[0x00,0xFF,0x58,0x04,0x04,0x02,0x18,0x08]);
+    tempoTrack.push(...metaText(0,0x01,`Seed: ${seq.seed}`));
+    tempoTrack.push(...[0x00,0xFF,0x2F,0x00]);
+    const melodyItems = seq.melodyEvents.filter(e=>!e.rest);
+    const melodyTrack = noteTrack('Melody', 0, seq.settings.melodyProgram, melodyItems, seq.settings.velocity);
+    const chunks = [makeTrackChunk(tempoTrack), makeTrackChunk(melodyTrack)];
+    if(seq.chordEvents.length){
+      const chordTrack = noteTrack('Chord Backing', 1, seq.settings.chordProgram, seq.chordEvents, Math.max(45, Math.round(seq.settings.velocity * .68)));
+      chunks.push(makeTrackChunk(chordTrack));
+    }
+    const header = [...strBytes('MThd'), ...u32(6), ...u16(1), ...u16(chunks.length), ...u16(PPQ)];
+    return new Uint8Array([...header, ...chunks.flat()]);
+  }
+
+  function renderOutput(seq){
+    const nonRests = seq.melodyEvents.filter(e=>!e.rest);
+    const lowest = Math.min(...nonRests.map(e=>e.midi));
+    const highest = Math.max(...nonRests.map(e=>e.midi));
+    const range = Math.max(1, highest-lowest);
+    const visualTicks = Math.max(seq.totalTicks, Math.ceil(seq.totalTicks / BAR_TICKS) * BAR_TICKS);
+    const beats = Math.ceil(visualTicks / PPQ);
+    let rollHtml = '<div class="roll-label">Piano roll</div>';
+    for(let i=0;i<=10;i++) rollHtml += `<div class="gridline" style="top:${i*10}%"></div>`;
+    for(let b=0;b<=beats;b++){
+      const left = (b / beats) * 100;
+      rollHtml += `<div class="${b%4===0?'barline':'beatline'}" style="left:${left}%"></div>`;
+    }
+    seq.melodyEvents.forEach(e => {
+      if(e.rest){
+        const left = (e.start / visualTicks) * 100;
+        rollHtml += `<div class="rest-gap" title="${escapeHtml(e.durationLabel)}" style="left:${left}%"></div>`;
+        return;
+      }
+      const left = (e.start / visualTicks) * 100;
+      const width = Math.max(1.4, (e.duration / visualTicks) * 100);
+      const top = 80 - ((e.midi-lowest)/range)*66;
+      rollHtml += `<div class="note-bar ${e.isRoot?'root':''}" style="left:${left}%;top:${top}%;width:${width}%;height:22px"><span class="note-label">${e.name}</span></div>`;
+    });
+    if(seq.chordSummary.length){
+      rollHtml += '<div class="chord-lane">';
+      seq.chordSummary.forEach(c => {
+        const left = (c.start / visualTicks) * 100;
+        const width = Math.max(3, (c.duration / visualTicks) * 100);
+        rollHtml += `<div class="chord-block" style="left:${left}%;width:${width}%">${c.label}: ${c.notes.join('-')}</div>`;
+      });
+      rollHtml += '</div>';
+    }
+
+    const scaleChips = seq.scale.intervals.map((int, i) => `<span class="chip ${int===0?'root':''}">${seq.scale.degrees[i]} · ${PC_TO_NAME[(seq.rootPc+int)%12]}</span>`).join('');
+    const phraseChips = seq.melodyEvents.slice(0,34).map(e => e.rest ? `<span class="chip rest">${e.durationLabel}</span>` : `<span class="chip ${e.isRoot?'root':''}">${e.name} <small>${e.durationLabel}</small></span>`).join('');
+    const chordChips = seq.chordSummary.length ? seq.chordSummary.slice(0,8).map(c=>`<span class="chip chord">${c.label}: ${c.notes.join('-')}</span>`).join('') : '<span class="chip">No chord backing</span>';
+    const rows = seq.melodyEvents.map((e,i)=> `<tr class="event-row" data-event-index="${i}" data-start="${e.start}" data-end="${e.start + e.duration}"><td>${i+1}</td><td>${(e.start/PPQ).toFixed(2)}</td><td>${e.rest ? 'Rest' : `<strong>${e.name}</strong>`}</td><td>${e.rest ? '—' : e.degree}</td><td>${e.durationLabel}</td></tr>`);
+    const totalSeconds = (seq.totalTicks / PPQ) * (60 / seq.bpm);
+    output.className = 'summary';
+    output.innerHTML = `
+      <div class="hero-card">
+        <div class="titleline">
+          <h2>${seq.rootName} ${seq.scale.name}</h2>
+          <span class="pill">Seed: ${escapeHtml(seq.seed)}</span>
+        </div>
+        <div class="details">
+          <div class="stat"><span>BPM</span><b>${seq.bpm}</b></div>
+          <div class="stat"><span>Notes</span><b>${seq.noteCount}</b></div>
+          <div class="stat"><span>Length</span><b>${totalSeconds.toFixed(1)}s</b></div>
+          <div class="stat"><span>Direction</span><b>${DIRECTION_NAMES[seq.settings.direction]}</b></div>
+          <div class="stat"><span>Backing</span><b>${CHORD_NAMES[seq.settings.chordMode]}</b></div>
+        </div>
+        <div class="chips">${scaleChips}</div>
+      </div>
+
+      <div class="playback-grid">
+        <div class="roll">${rollHtml}<div id="playhead" class="playhead hidden"></div></div>
+        <div class="playback-side">
+          <div class="now-card">
+            <span>Preview position</span>
+            <b id="nowNote">Ready</b>
+            <small id="nowBeat">Beat 0.00 · 0%</small>
+          </div>
+          <div class="mini-meter"><div id="playProgress"></div></div>
+          <div class="note-list side"><table><thead><tr><th>#</th><th>Beat</th><th>Note</th><th>Len.</th></tr></thead><tbody>${seq.melodyEvents.map((e,i)=> `<tr class="event-row" data-event-index="${i}" data-start="${e.start}" data-end="${e.start + e.duration}"><td>${i+1}</td><td>${(e.start/PPQ).toFixed(2)}</td><td>${e.rest ? 'Rest' : `<strong>${e.name}</strong>`}</td><td>${e.durationLabel}</td></tr>`).join('')}</tbody></table></div>
+        </div>
+      </div>
+
+      <div class="big-card">
+        <div class="titleline">
+          <h2 style="font-size:1.35rem;letter-spacing:-.03em;">Generated Phrase</h2>
+          <span class="pill">${seq.settings.phrase === 'call_response' ? 'Call and response' : 'Continuous melody'} · ${seq.settings.difficulty}</span>
+        </div>
+        <div class="chips">${phraseChips}${seq.melodyEvents.length>34?'<span class="chip">+'+(seq.melodyEvents.length-34)+' more</span>':''}</div>
+      </div>
+
+      <div class="big-card">
+        <div class="titleline">
+          <h2 style="font-size:1.35rem;letter-spacing:-.03em;">Chord Backing</h2>
+          <span class="pill">${INSTRUMENT_NAMES[seq.settings.chordProgram] || 'Instrument ' + seq.settings.chordProgram}</span>
+        </div>
+        <div class="chips">${chordChips}</div>
+      </div>
+
+      <div class="note-list"><table><thead><tr><th>#</th><th>Beat</th><th>Note</th><th>Degree</th><th>Length</th></tr></thead><tbody>${rows.join('')}</tbody></table></div>
+    `;
+  }
+  function escapeHtml(str){
+    return String(str).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  }
+
+  function oscTypeForProgram(program){
+    program = Number(program);
+    if(program === 80) return 'sawtooth';
+    if(program === 88 || program === 48) return 'sine';
+    if(program === 33) return 'square';
+    return 'triangle';
+  }
+  function scheduleTone(ctx, master, midi, startSeconds, durationSeconds, volume, type){
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const freq = 440 * Math.pow(2, (midi - 69) / 12);
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, startSeconds);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.002, volume), startSeconds + 0.018);
+    gain.gain.exponentialRampToValueAtTime(0.0001, Math.max(startSeconds + 0.05, startSeconds + durationSeconds - 0.04));
+    osc.connect(gain); gain.connect(master);
+    osc.start(startSeconds); osc.stop(startSeconds + durationSeconds + .05);
+    scheduledNodes.push(osc, gain);
+  }
+
+  function clearPlaybackDisplay(reset=true){
+    if(playbackRaf){ cancelAnimationFrame(playbackRaf); playbackRaf = null; }
+    lastActiveEventIndex = null;
+    document.querySelectorAll('.event-row.active').forEach(row => row.classList.remove('active'));
+    const playhead = $('playhead');
+    const progress = $('playProgress');
+    const nowNote = $('nowNote');
+    const nowBeat = $('nowBeat');
+    if(playhead){
+      playhead.classList.toggle('hidden', reset);
+      if(reset) playhead.style.left = '0%';
+    }
+    if(progress && reset) progress.style.width = '0%';
+    if(nowNote && reset) nowNote.textContent = 'Ready';
+    if(nowBeat && reset) nowBeat.textContent = 'Beat 0.00 · 0%';
+  }
+  function updatePlaybackDisplay(ctx, startAt, secPerTick, totalTicks){
+    if(!currentSequence || !audioContext || audioContext !== ctx) return;
+    const elapsed = Math.max(0, ctx.currentTime - startAt);
+    const currentTicks = Math.min(totalTicks, elapsed / secPerTick);
+    const pct = totalTicks ? Math.max(0, Math.min(100, (currentTicks / totalTicks) * 100)) : 0;
+    const playhead = $('playhead');
+    const progress = $('playProgress');
+    const nowNote = $('nowNote');
+    const nowBeat = $('nowBeat');
+    if(playhead){ playhead.classList.remove('hidden'); playhead.style.left = pct + '%'; }
+    if(progress) progress.style.width = pct + '%';
+
+    let activeIndex = currentSequence.melodyEvents.findIndex(e => currentTicks >= e.start && currentTicks < e.start + e.duration);
+    if(activeIndex < 0 && currentTicks >= currentSequence.totalTicks) activeIndex = currentSequence.melodyEvents.length - 1;
+    if(activeIndex !== lastActiveEventIndex){
+      document.querySelectorAll('.event-row.active').forEach(row => row.classList.remove('active'));
+      document.querySelectorAll(`.event-row[data-event-index="${activeIndex}"]`).forEach(row => row.classList.add('active'));
+      const sideRow = document.querySelector(`.note-list.side .event-row[data-event-index="${activeIndex}"]`);
+      if(sideRow) sideRow.scrollIntoView({block:'nearest'});
+      lastActiveEventIndex = activeIndex;
+    }
+    const active = currentSequence.melodyEvents[activeIndex];
+    if(nowNote) nowNote.textContent = active ? (active.rest ? 'Rest' : active.name) : 'Starting…';
+    if(nowBeat) nowBeat.textContent = `Beat ${(currentTicks/PPQ).toFixed(2)} · ${Math.round(pct)}%`;
+    if(currentTicks < totalTicks && audioContext === ctx){
+      playbackRaf = requestAnimationFrame(() => updatePlaybackDisplay(ctx, startAt, secPerTick, totalTicks));
+    }
+  }
+
+  async function playPreview(){
+    if(!currentSequence) return;
+    stopPreview(false);
+    clearPlaybackDisplay(true);
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = audioContext;
+    const startAt = ctx.currentTime + .08;
+    const master = ctx.createGain();
+    master.gain.value = 0.17;
+    master.connect(ctx.destination);
+    scheduledNodes.push(master);
+    const secPerTick = (60 / currentSequence.bpm) / PPQ;
+    const totalTicksForPreview = Math.max(currentSequence.totalTicks, ...currentSequence.chordEvents.map(e=>e.start+e.duration), 1);
+    const melodyType = oscTypeForProgram(currentSequence.settings.melodyProgram);
+    currentSequence.melodyEvents.filter(e=>!e.rest).forEach(e => {
+      scheduleTone(ctx, master, e.midi, startAt + e.start * secPerTick, e.duration * secPerTick, e.isRoot ? .78 : .62, melodyType);
+    });
+    if(currentSequence.chordEvents.length){
+      const chordType = oscTypeForProgram(currentSequence.settings.chordProgram);
+      currentSequence.chordEvents.forEach(e => {
+        scheduleTone(ctx, master, e.midi, startAt + e.start * secPerTick, e.duration * secPerTick, .25, chordType);
+      });
+    }
+    playBtn.disabled = true;
+    stopBtn.disabled = false;
+    updatePlaybackDisplay(ctx, startAt, secPerTick, totalTicksForPreview);
+    const totalSeconds = (totalTicksForPreview * secPerTick) + .3;
+    setTimeout(() => { if(audioContext === ctx) stopPreview(false); }, Math.max(300, totalSeconds * 1000));
+  }
+  function stopPreview(update=true){
+    clearPlaybackDisplay(true);
+    scheduledNodes.forEach(n => { try{ if(n.stop) n.stop(); if(n.disconnect) n.disconnect(); }catch(e){} });
+    scheduledNodes = [];
+    if(audioContext){ try{ audioContext.close(); }catch(e){} audioContext = null; }
+    if(update && currentSequence){ status.innerHTML = '<strong>Stopped.</strong> Preview playback stopped.'; }
+    playBtn.disabled = !currentSequence;
+    stopBtn.disabled = true;
+  }
+  function safeNamePiece(str){
+    return String(str).toLowerCase().replace(/#/g,'sharp').replace(/b/g,'flat').replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,34) || 'midi';
+  }
+  function downloadMidi(){
+    if(!currentMidiBlob || !currentSequence) return;
+    const s = currentSequence;
+    const chordBit = s.settings.chordMode === 'off' ? 'nochords' : s.settings.chordMode + 'chords';
+    const filename = `${safeNamePiece(s.rootName)}_${safeNamePiece(s.scale.name)}_${s.bpm}bpm_${s.noteCount}notes_${safeNamePiece(s.settings.direction)}_${safeNamePiece(s.settings.difficulty)}_${chordBit}_${safeNamePiece(s.seed)}.mid`;
+    const url = URL.createObjectURL(currentMidiBlob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 3000);
+    status.innerHTML = `<strong>Downloaded.</strong> Saved as ${escapeHtml(filename)}.`;
+  }
+
+  bpmRange.addEventListener('input', e => syncBpm(e.target.value));
+  bpmInput.addEventListener('input', e => syncBpm(e.target.value));
+  chordModeSelect.addEventListener('change', toggleChordControls);
+  generateBtn.addEventListener('click', generateSequence);
+  playBtn.addEventListener('click', playPreview);
+  stopBtn.addEventListener('click', () => stopPreview(true));
+  downloadBtn.addEventListener('click', downloadMidi);
+  newSeedBtn.addEventListener('click', () => { setNewSeed(); generateSequence(); status.innerHTML = '<strong>New seed generated.</strong> A fresh MIDI idea is ready to preview or download.'; });
+  setupSelects();
+  syncBpm(120);
+})();
+</script>
+</body>
+</html>
