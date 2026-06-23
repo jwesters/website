@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bingo Ball Caller</title>
+  <style>
+    :root {
+      --bg1: #101828;
+      --bg2: #1d2939;
+      --card: rgba(255,255,255,0.1);
+      --card2: rgba(255,255,255,0.16);
+      --text: #f8fafc;
+      --muted: #cbd5e1;
+      --accent: #fbbf24;
+      --accent2: #38bdf8;
+      --danger: #fb7185;
+      --good: #34d399;
+      --shadow: 0 20px 60px rgba(0,0,0,.35);
+      --radius: 24px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 20% 10%, rgba(56,189,248,.26), transparent 30%),
+        radial-gradient(circle at 80% 25%, rgba(251,191,36,.18), transparent 30%),
+        linear-gradient(135deg, var(--bg1), var(--bg2));
+      padding: 22px;
+    }
+
+    .app {
+      max-width: 1220px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(320px, 440px) 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      padding: 2px 4px 4px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 4rem);
+      line-height: .95;
+      letter-spacing: -0.05em;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 1.05rem;
+      margin-top: 8px;
+    }
+
+    .status-pill {
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 999px;
+      padding: 12px 16px;
+      font-weight: 800;
+      color: var(--muted);
+      box-shadow: var(--shadow);
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      overflow: hidden;
+    }
+
+    .caller {
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      align-items: center;
+      text-align: center;
+    }
+
+    .ball-wrap {
+      width: min(78vw, 350px);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      padding: 14px;
+      background: linear-gradient(145deg, rgba(255,255,255,.4), rgba(255,255,255,.08));
+      box-shadow: inset -16px -20px 35px rgba(0,0,0,.20), inset 10px 8px 35px rgba(255,255,255,.17), 0 24px 60px rgba(0,0,0,.35);
+      display: grid;
+      place-items: center;
+      transform-origin: center;
+    }
+
+    .ball-wrap.pop { animation: pop .34s ease; }
+    @keyframes pop {
+      0% { transform: scale(.96) rotate(-3deg); }
+      55% { transform: scale(1.04) rotate(2deg); }
+      100% { transform: scale(1) rotate(0); }
+    }
+
+    .ball {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(circle at 28% 22%, #fff 0 10%, #fef3c7 11% 18%, #fbbf24 36%, #d97706 80%);
+      color: #111827;
+      display: grid;
+      place-items: center;
+      box-shadow: inset -28px -34px 42px rgba(0,0,0,.22), inset 12px 12px 35px rgba(255,255,255,.55);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .ball::after {
+      content: "";
+      position: absolute;
+      width: 42%;
+      height: 18%;
+      left: 18%;
+      top: 12%;
+      background: rgba(255,255,255,.45);
+      filter: blur(10px);
+      border-radius: 50%;
+      transform: rotate(-24deg);
+    }
+
+    .ball-inner {
+      width: 64%;
+      height: 64%;
+      border-radius: 50%;
+      background: rgba(255,255,255,.92);
+      display: grid;
+      place-items: center;
+      box-shadow: inset 0 0 18px rgba(0,0,0,.16), 0 5px 10px rgba(0,0,0,.18);
+      z-index: 1;
+    }
+
+    .call-letter {
+      display: block;
+      font-size: clamp(4rem, 14vw, 7.5rem);
+      line-height: .78;
+      font-weight: 1000;
+      letter-spacing: -.08em;
+    }
+
+    .call-number {
+      display: block;
+      font-size: clamp(4rem, 14vw, 7.5rem);
+      line-height: .78;
+      font-weight: 1000;
+      letter-spacing: -.08em;
+    }
+
+    .no-call {
+      font-size: clamp(2rem, 9vw, 4rem);
+      font-weight: 1000;
+      line-height: .95;
+      letter-spacing: -.08em;
+      color: #111827;
+    }
+
+    .spoken-call {
+      min-height: 42px;
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      font-weight: 950;
+      letter-spacing: -.035em;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      width: 100%;
+    }
+
+    button, select, input[type="number"] {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      border-radius: 18px;
+      padding: 14px 18px;
+      cursor: pointer;
+      color: #0f172a;
+      font-weight: 900;
+      background: linear-gradient(180deg, #fde68a, var(--accent));
+      box-shadow: 0 10px 20px rgba(0,0,0,.20);
+      transition: transform .12s ease, filter .12s ease, opacity .12s ease;
+    }
+
+    button:hover { transform: translateY(-1px); filter: brightness(1.03); }
+    button:active { transform: translateY(1px); }
+    button.secondary {
+      background: rgba(255,255,255,.15);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,.20);
+    }
+    button.danger {
+      background: linear-gradient(180deg, #fecdd3, var(--danger));
+      color: #3f0d17;
+    }
+    button:disabled { opacity: .48; cursor: not-allowed; transform: none; }
+
+    .controls {
+      width: 100%;
+      display: grid;
+      gap: 12px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 20px;
+      padding: 14px;
+    }
+
+    .control-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    label { color: var(--muted); font-weight: 800; }
+    .checkline {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .checkline input { width: 18px; height: 18px; }
+
+    select, input[type="number"] {
+      color: var(--text);
+      background: rgba(15,23,42,.72);
+      border: 1px solid rgba(255,255,255,.24);
+      border-radius: 14px;
+      padding: 10px 12px;
+      font-weight: 850;
+      outline: none;
+    }
+
+    .board-panel { padding: 18px; }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      letter-spacing: -.02em;
+    }
+    .hint { color: var(--muted); font-weight: 750; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+    }
+
+    .col {
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.13);
+      border-radius: 18px;
+      padding: 10px;
+      min-width: 0;
+    }
+
+    .col-title {
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 1000;
+      text-align: center;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255,255,255,.16);
+      margin-bottom: 8px;
+    }
+
+    .nums {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .num {
+      aspect-ratio: 1;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-weight: 950;
+      background: rgba(15,23,42,.50);
+      color: rgba(255,255,255,.42);
+      border: 1px solid rgba(255,255,255,.10);
+      font-size: clamp(.9rem, 1.7vw, 1.1rem);
+      transition: transform .15s ease, background .15s ease, color .15s ease;
+    }
+
+    .num.called {
+      background: linear-gradient(180deg, rgba(56,189,248,.95), rgba(14,165,233,.95));
+      color: #082f49;
+      border-color: rgba(255,255,255,.55);
+      box-shadow: 0 8px 16px rgba(0,0,0,.18);
+    }
+
+    .num.latest {
+      outline: 4px solid rgba(251,191,36,.95);
+      transform: scale(1.08);
+      z-index: 1;
+    }
+
+    .history-panel {
+      grid-column: 1 / -1;
+      padding: 18px;
+    }
+
+    .history-list {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      min-height: 54px;
+      align-items: center;
+      padding: 12px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.13);
+      max-height: 230px;
+      overflow: auto;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 52px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      font-weight: 950;
+      color: #0f172a;
+      background: rgba(255,255,255,.86);
+      box-shadow: 0 8px 14px rgba(0,0,0,.14);
+    }
+
+    .chip.latest-chip {
+      background: var(--accent);
+      transform: scale(1.04);
+    }
+
+    .empty-history { color: var(--muted); font-weight: 800; }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%) translateY(20px);
+      opacity: 0;
+      background: rgba(15,23,42,.92);
+      border: 1px solid rgba(255,255,255,.16);
+      color: white;
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-weight: 850;
+      box-shadow: var(--shadow);
+      pointer-events: none;
+      transition: opacity .2s ease, transform .2s ease;
+      z-index: 10;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 920px) {
+      body { padding: 14px; }
+      .app { grid-template-columns: 1fr; }
+      .grid { gap: 8px; }
+      .col { padding: 8px; border-radius: 14px; }
+      .nums { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+      .num { font-size: .92rem; }
+    }
+
+    @media (max-width: 560px) {
+      header { align-items: flex-start; }
+      .status-pill { width: 100%; text-align: center; }
+      .grid { grid-template-columns: 1fr; }
+      .nums { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+      .col-title { padding-bottom: 4px; margin-bottom: 6px; }
+      button { width: 100%; }
+      .control-line { align-items: stretch; }
+      select, input[type="number"] { width: 100%; }
+    }
+
+    @media print {
+      body { background: white; color: black; padding: 0; }
+      .caller, header .status-pill, .controls, .history-panel { display: none; }
+      .app, .board-panel { display: block; max-width: none; box-shadow: none; }
+      .panel, .col { background: white; color: black; border-color: #bbb; box-shadow: none; }
+      .num { color: #aaa; border-color: #ddd; background: white; }
+      .num.called { color: black; background: #ddd; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div>
+        <h1>Bingo Ball Caller</h1>
+        <div class="subtitle">Randomly calls B-I-N-G-O balls and keeps a running list.</div>
+      </div>
+      <div class="status-pill" id="statusPill">0 / 75 called</div>
+    </header>
+
+    <section class="panel caller" aria-label="Bingo caller controls">
+      <div class="ball-wrap" id="ballWrap">
+        <div class="ball" id="ball">
+          <div class="ball-inner" id="ballInner">
+            <div class="no-call">READY</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="spoken-call" id="spokenCall">Press “Call Next Ball” to begin.</div>
+
+      <div class="button-row">
+        <button id="callBtn">Call Next Ball</button>
+        <button class="secondary" id="autoBtn">Start Auto Call</button>
+        <button class="danger" id="resetBtn">Reset Game</button>
+      </div>
+
+      <div class="controls">
+        <div class="control-line">
+          <label for="speedSelect">Auto-call speed</label>
+          <select id="speedSelect">
+            <option value="3000">Every 3 seconds</option>
+            <option value="5000" selected>Every 5 seconds</option>
+            <option value="8000">Every 8 seconds</option>
+            <option value="10000">Every 10 seconds</option>
+          </select>
+        </div>
+        <div class="control-line">
+          <label class="checkline"><input type="checkbox" id="speakToggle" checked /> Speak calls</label>
+          <label class="checkline"><input type="checkbox" id="soundToggle" checked /> Pop sound</label>
+        </div>
+        <div class="button-row">
+          <button class="secondary" id="copyBtn">Copy Called List</button>
+          <button class="secondary" id="printBtn">Print Board</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel board-panel" aria-label="Called bingo board">
+      <div class="section-title">
+        <h2>Called Balls Board</h2>
+        <div class="hint" id="remainingHint">75 remaining</div>
+      </div>
+      <div class="grid" id="bingoGrid"></div>
+    </section>
+
+    <section class="panel history-panel" aria-label="Running called list">
+      <div class="section-title">
+        <h2>Running List</h2>
+        <div class="hint">Newest ball is highlighted</div>
+      </div>
+      <div class="history-list" id="historyList">
+        <span class="empty-history">No balls called yet.</span>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast">Copied!</div>
+
+  <script>
+    const LETTERS = [
+      { letter: 'B', min: 1, max: 15 },
+      { letter: 'I', min: 16, max: 30 },
+      { letter: 'N', min: 31, max: 45 },
+      { letter: 'G', min: 46, max: 60 },
+      { letter: 'O', min: 61, max: 75 }
+    ];
+
+    const state = {
+      pool: [],
+      called: [],
+      latest: null,
+      autoTimer: null,
+      audioCtx: null
+    };
+
+    const bingoGrid = document.getElementById('bingoGrid');
+    const ballWrap = document.getElementById('ballWrap');
+    const ballInner = document.getElementById('ballInner');
+    const spokenCall = document.getElementById('spokenCall');
+    const historyList = document.getElementById('historyList');
+    const statusPill = document.getElementById('statusPill');
+    const remainingHint = document.getElementById('remainingHint');
+    const callBtn = document.getElementById('callBtn');
+    const autoBtn = document.getElementById('autoBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const speedSelect = document.getElementById('speedSelect');
+    const speakToggle = document.getElementById('speakToggle');
+    const soundToggle = document.getElementById('soundToggle');
+    const copyBtn = document.getElementById('copyBtn');
+    const printBtn = document.getElementById('printBtn');
+    const toast = document.getElementById('toast');
+
+    function makePool() {
+      const balls = [];
+      LETTERS.forEach(group => {
+        for (let n = group.min; n <= group.max; n++) {
+          balls.push({ letter: group.letter, number: n, id: `${group.letter}${n}` });
+        }
+      });
+      return balls;
+    }
+
+    function renderBoard() {
+      bingoGrid.innerHTML = '';
+      LETTERS.forEach(group => {
+        const col = document.createElement('div');
+        col.className = 'col';
+        const title = document.createElement('div');
+        title.className = 'col-title';
+        title.textContent = group.letter;
+        const nums = document.createElement('div');
+        nums.className = 'nums';
+        for (let n = group.min; n <= group.max; n++) {
+          const num = document.createElement('div');
+          const id = `${group.letter}${n}`;
+          const isCalled = state.called.some(ball => ball.id === id);
+          const isLatest = state.latest && state.latest.id === id;
+          num.className = `num${isCalled ? ' called' : ''}${isLatest ? ' latest' : ''}`;
+          num.textContent = n;
+          nums.appendChild(num);
+        }
+        col.appendChild(title);
+        col.appendChild(nums);
+        bingoGrid.appendChild(col);
+      });
+    }
+
+    function renderBall() {
+      if (!state.latest) {
+        ballInner.innerHTML = '<div class="no-call">READY</div>';
+        spokenCall.textContent = 'Press “Call Next Ball” to begin.';
+        return;
+      }
+      ballInner.innerHTML = `
+        <div aria-label="${state.latest.letter} ${state.latest.number}">
+          <span class="call-letter">${state.latest.letter}</span>
+          <span class="call-number">${state.latest.number}</span>
+        </div>
+      `;
+      spokenCall.textContent = `${state.latest.letter} ${state.latest.number}`;
+      ballWrap.classList.remove('pop');
+      void ballWrap.offsetWidth;
+      ballWrap.classList.add('pop');
+    }
+
+    function renderHistory() {
+      historyList.innerHTML = '';
+      if (!state.called.length) {
+        const empty = document.createElement('span');
+        empty.className = 'empty-history';
+        empty.textContent = 'No balls called yet.';
+        historyList.appendChild(empty);
+        return;
+      }
+      state.called.forEach((ball, index) => {
+        const chip = document.createElement('span');
+        chip.className = `chip${index === state.called.length - 1 ? ' latest-chip' : ''}`;
+        chip.textContent = `${ball.letter}${ball.number}`;
+        historyList.appendChild(chip);
+      });
+      historyList.scrollTop = historyList.scrollHeight;
+    }
+
+    function renderStats() {
+      statusPill.textContent = `${state.called.length} / 75 called`;
+      remainingHint.textContent = `${state.pool.length} remaining`;
+      callBtn.disabled = state.pool.length === 0;
+      if (state.pool.length === 0) stopAuto();
+    }
+
+    function renderAll() {
+      renderBall();
+      renderBoard();
+      renderHistory();
+      renderStats();
+    }
+
+    function speak(ball) {
+      if (!speakToggle.checked || !('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(`${ball.letter} ${ball.number}`);
+      utterance.rate = 0.82;
+      utterance.pitch = 1;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function playPop() {
+      if (!soundToggle.checked) return;
+      try {
+        state.audioCtx = state.audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        const ctx = state.audioCtx;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(520, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(760, ctx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.001, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.16);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.17);
+      } catch (err) {
+        console.warn('Audio not available:', err);
+      }
+    }
+
+    function callNextBall() {
+      if (state.pool.length === 0) {
+        spokenCall.textContent = 'All 75 balls have been called!';
+        return;
+      }
+      const index = Math.floor(Math.random() * state.pool.length);
+      const [ball] = state.pool.splice(index, 1);
+      state.latest = ball;
+      state.called.push(ball);
+      renderAll();
+      playPop();
+      speak(ball);
+    }
+
+    function startAuto() {
+      if (state.autoTimer || state.pool.length === 0) return;
+      autoBtn.textContent = 'Stop Auto Call';
+      autoBtn.classList.remove('secondary');
+      callNextBall();
+      state.autoTimer = setInterval(callNextBall, Number(speedSelect.value));
+    }
+
+    function stopAuto() {
+      if (state.autoTimer) clearInterval(state.autoTimer);
+      state.autoTimer = null;
+      autoBtn.textContent = 'Start Auto Call';
+      autoBtn.classList.add('secondary');
+    }
+
+    function resetGame() {
+      stopAuto();
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      state.pool = makePool();
+      state.called = [];
+      state.latest = null;
+      renderAll();
+    }
+
+    async function copyCalledList() {
+      const text = state.called.length
+        ? state.called.map(ball => `${ball.letter}${ball.number}`).join(', ')
+        : 'No balls called yet.';
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast('Called list copied!');
+      } catch {
+        const area = document.createElement('textarea');
+        area.value = text;
+        document.body.appendChild(area);
+        area.select();
+        document.execCommand('copy');
+        area.remove();
+        showToast('Called list copied!');
+      }
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1600);
+    }
+
+    callBtn.addEventListener('click', callNextBall);
+    autoBtn.addEventListener('click', () => state.autoTimer ? stopAuto() : startAuto());
+    resetBtn.addEventListener('click', () => {
+      const shouldReset = state.called.length === 0 || confirm('Reset this bingo game and clear the called list?');
+      if (shouldReset) resetGame();
+    });
+    speedSelect.addEventListener('change', () => {
+      if (state.autoTimer) {
+        stopAuto();
+        startAuto();
+      }
+    });
+    copyBtn.addEventListener('click', copyCalledList);
+    printBtn.addEventListener('click', () => window.print());
+
+    document.addEventListener('keydown', event => {
+      if (event.code === 'Space' && !event.repeat) {
+        event.preventDefault();
+        callNextBall();
+      }
+    });
+
+    resetGame();
+  </script>
+</body>
+</html>
