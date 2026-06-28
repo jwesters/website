@@ -1,0 +1,1876 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cryptoquip Puzzle</title>
+  <style>
+    :root {
+      --bg1: #141827;
+      --bg2: #24304c;
+      --panel: rgba(255,255,255,0.94);
+      --panel-solid: #ffffff;
+      --ink: #162033;
+      --muted: #5a657b;
+      --accent: #4f6df5;
+      --accent2: #17a673;
+      --danger: #db3f4a;
+      --warn: #c47a13;
+      --card: #ffffff;
+      --line: #d8deeb;
+      --cipher: #111827;
+      --guess: #27345a;
+      --soft: #eef2ff;
+      --soft-border: #ccd6ff;
+      --shadow: 0 18px 45px rgba(0,0,0,0.25);
+      --radius: 18px;
+      --focus: rgba(79, 109, 245, 0.16);
+      --body-grad:
+        radial-gradient(circle at top left, rgba(99, 102, 241, .35), transparent 38%),
+        radial-gradient(circle at bottom right, rgba(23, 166, 115, .22), transparent 36%),
+        linear-gradient(135deg, var(--bg1), var(--bg2));
+      --header-text: #ffffff;
+      --header-sub: rgba(255,255,255,0.78);
+    }
+
+    html[data-theme="light"] {
+      --bg1: #f7f9ff;
+      --bg2: #e8eefc;
+      --panel: rgba(255,255,255,0.98);
+      --panel-solid: #ffffff;
+      --ink: #172033;
+      --muted: #61708a;
+      --accent: #3657e8;
+      --accent2: #12845e;
+      --danger: #c93240;
+      --warn: #b86a0a;
+      --card: #ffffff;
+      --line: #d6dceb;
+      --cipher: #111827;
+      --guess: #27345a;
+      --soft: #eef2ff;
+      --soft-border: #cbd6ff;
+      --shadow: 0 16px 38px rgba(48, 60, 100, 0.15);
+      --focus: rgba(54, 87, 232, 0.15);
+      --body-grad:
+        radial-gradient(circle at top left, rgba(79, 109, 245, .16), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(23, 166, 115, .14), transparent 35%),
+        linear-gradient(135deg, var(--bg1), var(--bg2));
+      --header-text: #172033;
+      --header-sub: #5d6a82;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--body-grad);
+      color: var(--ink);
+      min-height: 100vh;
+      padding: 18px;
+    }
+
+    .app {
+      max-width: 1160px;
+      margin: 0 auto;
+    }
+
+    header {
+      color: var(--header-text);
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 8px 0 18px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      margin: 0;
+      letter-spacing: -0.05em;
+      line-height: .95;
+    }
+
+    .tagline {
+      margin: 8px 0 0;
+      color: var(--header-sub);
+      font-size: 1.05rem;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    button, select, input {
+      font: inherit;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 16px;
+      background: var(--accent);
+      color: white;
+      font-weight: 850;
+      cursor: pointer;
+      box-shadow: 0 10px 18px rgba(0,0,0,0.14);
+      transition: transform .12s ease, filter .12s ease, box-shadow .12s ease, opacity .12s ease;
+    }
+
+    button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.04); }
+    button:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
+    button:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
+
+    button.secondary {
+      background: var(--panel-solid);
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+
+    button.good { background: var(--accent2); }
+    button.warn { background: var(--warn); }
+    button.danger { background: var(--danger); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 330px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.52);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .puzzle-panel {
+      padding: clamp(16px, 3vw, 28px);
+      min-height: 560px;
+    }
+
+    .side-panel {
+      padding: 18px;
+      position: sticky;
+      top: 14px;
+    }
+
+    .start-screen {
+      background: var(--panel-solid);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: clamp(18px, 4vw, 34px);
+    }
+
+    .start-title {
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      line-height: 1;
+      letter-spacing: -0.04em;
+      margin: 0 0 10px;
+    }
+
+    .start-text {
+      color: var(--muted);
+      font-weight: 650;
+      line-height: 1.45;
+      max-width: 740px;
+      margin: 0 0 20px;
+    }
+
+    .difficulty-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin: 18px 0;
+    }
+
+    .difficulty-card {
+      text-align: left;
+      background: var(--panel-solid);
+      color: var(--ink);
+      border: 2px solid var(--line);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: none;
+      min-height: 122px;
+    }
+
+    .difficulty-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 10px 22px rgba(0,0,0,0.08);
+    }
+
+    .difficulty-card strong {
+      display: block;
+      font-size: 1.2rem;
+      margin-bottom: 4px;
+    }
+
+    .difficulty-card span {
+      display: block;
+      color: var(--muted);
+      font-size: .92rem;
+      line-height: 1.35;
+      font-weight: 650;
+    }
+
+    .load-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: end;
+      margin-top: 16px;
+      max-width: 680px;
+    }
+
+    .hidden { display: none !important; }
+
+    .status-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .stat {
+      background: var(--panel-solid);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px;
+      min-height: 78px;
+    }
+
+    .stat .label {
+      color: var(--muted);
+      font-size: .78rem;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 5px;
+    }
+
+    .stat .value {
+      font-size: 1.25rem;
+      font-weight: 950;
+      color: var(--ink);
+      line-height: 1.05;
+    }
+
+    .message {
+      background: var(--soft);
+      border: 1px solid var(--soft-border);
+      border-radius: 16px;
+      padding: 14px 16px;
+      margin-bottom: 18px;
+      color: #263160;
+      font-weight: 750;
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+    }
+
+    html[data-theme="dark"] .message {
+      color: #263160;
+    }
+
+    .message.success {
+      background: #e9fff6;
+      border-color: #b7edd8;
+      color: #105b41;
+    }
+
+    .message.error {
+      background: #fff0f1;
+      border-color: #ffc5ca;
+      color: #7c1822;
+    }
+
+    .message.neutral {
+      background: #f8fafc;
+      border-color: #e2e8f0;
+      color: #334155;
+    }
+
+    .puzzle-board {
+      background: var(--panel-solid);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: clamp(14px, 2vw, 22px);
+      overflow-x: auto;
+      min-height: 220px;
+    }
+
+    .word {
+      display: inline-flex;
+      gap: 4px;
+      margin: 8px 12px 12px 0;
+      vertical-align: top;
+      white-space: nowrap;
+    }
+
+    .letter-cell {
+      width: 37px;
+      text-align: center;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      user-select: none;
+    }
+
+    .cipher-letter {
+      color: var(--cipher);
+      font-weight: 950;
+      font-size: 1.25rem;
+      line-height: 1;
+      height: 22px;
+      letter-spacing: .03em;
+    }
+
+    .guess-input {
+      width: 33px;
+      height: 38px;
+      border: 2px solid #cbd5e1;
+      border-radius: 10px;
+      text-align: center;
+      text-transform: uppercase;
+      font-weight: 950;
+      font-size: 1.3rem;
+      color: var(--guess);
+      background: #fbfdff;
+      caret-color: transparent;
+      outline: none;
+    }
+
+    .guess-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px var(--focus);
+      background: #fff;
+    }
+
+    .guess-input.filled {
+      background: #f1f5ff;
+      border-color: #aebcff;
+    }
+
+    .guess-input.locked {
+      background: #dff9ee;
+      border-color: #55c59a;
+      color: #0f6b4d;
+    }
+
+    .guess-input.correct {
+      background: #e9fff6;
+      border-color: #60c99c;
+    }
+
+    .guess-input.wrong {
+      background: #fff0f1;
+      border-color: #f17581;
+    }
+
+    .punct {
+      width: auto;
+      min-width: 12px;
+      height: 60px;
+      display: inline-flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 21px;
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: var(--cipher);
+    }
+
+    .space-break {
+      display: inline-block;
+      width: 8px;
+    }
+
+    .side-title {
+      font-size: 1.18rem;
+      font-weight: 950;
+      margin: 0 0 10px;
+      color: var(--ink);
+    }
+
+    .side-section {
+      border-top: 1px solid var(--line);
+      padding-top: 14px;
+      margin-top: 14px;
+    }
+
+    .side-section:first-of-type {
+      border-top: none;
+      padding-top: 0;
+      margin-top: 0;
+    }
+
+    .controls {
+      display: grid;
+      gap: 8px;
+    }
+
+    .controls button {
+      width: 100%;
+      border-radius: 12px;
+      padding: 10px 12px;
+      min-height: 42px;
+      box-shadow: none;
+      font-size: .94rem;
+      letter-spacing: .01em;
+    }
+
+    .controls button.secondary {
+      background: #f8fafc;
+    }
+
+    .controls button.warn {
+      background: #c97908;
+    }
+
+    .controls button.danger {
+      background: #d93a48;
+    }
+
+    .seed-row {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    label {
+      color: var(--muted);
+      font-weight: 850;
+      font-size: .88rem;
+    }
+
+    .seed-box {
+      width: 100%;
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      padding: 11px 12px;
+      background: var(--panel-solid);
+      color: var(--ink);
+      font-weight: 750;
+      outline: none;
+    }
+
+    .seed-box:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px var(--focus);
+    }
+
+    .alphabet-map {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 7px;
+      margin-top: 10px;
+    }
+
+    .map-item {
+      background: var(--panel-solid);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 7px 9px;
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      font-weight: 900;
+    }
+
+    .map-item .from {
+      color: var(--cipher);
+    }
+
+    .map-item .arrow {
+      color: var(--muted);
+      font-size: .9rem;
+    }
+
+    .map-item .to {
+      color: var(--accent);
+      min-width: 18px;
+      text-align: right;
+    }
+
+    .map-item.locked .to {
+      color: var(--accent2);
+    }
+
+    .hint-text, .instructions {
+      color: var(--muted);
+      line-height: 1.45;
+      font-weight: 650;
+      font-size: .95rem;
+      margin: 8px 0 0;
+    }
+
+    .small {
+      font-size: .84rem;
+    }
+
+    .clue-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .clue-pill {
+      background: #e9fff6;
+      border: 1px solid #b7edd8;
+      color: #105b41;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-weight: 950;
+    }
+
+    dialog {
+      border: none;
+      border-radius: 22px;
+      padding: 0;
+      width: min(560px, calc(100vw - 32px));
+      box-shadow: 0 24px 70px rgba(0,0,0,.45);
+      overflow: hidden;
+    }
+
+    dialog::backdrop {
+      background: rgba(8, 12, 24, .62);
+      backdrop-filter: blur(5px);
+    }
+
+    .dialog-inner {
+      padding: 22px;
+      background: white;
+      color: #162033;
+    }
+
+    .dialog-inner h2 {
+      margin: 0 0 10px;
+      font-size: 1.65rem;
+      line-height: 1.1;
+    }
+
+    .answer-box {
+      background: #f8fafc;
+      border: 1px solid #d8deeb;
+      border-radius: 14px;
+      padding: 14px;
+      font-size: 1.18rem;
+      font-weight: 900;
+      line-height: 1.4;
+      margin: 12px 0;
+    }
+
+    .dialog-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    .pdf-options {
+      display: grid;
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .pdf-option-card {
+      background: #f8fafc;
+      border: 1px solid #d8deeb;
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    .pdf-option-card label {
+      display: block;
+      color: #5a657b;
+      font-weight: 850;
+      margin-bottom: 8px;
+    }
+
+    .pdf-option-card input[type="number"] {
+      width: 100%;
+      border: 2px solid #d8deeb;
+      border-radius: 12px;
+      padding: 11px 12px;
+      font-weight: 850;
+      color: #162033;
+      background: white;
+      outline: none;
+    }
+
+    .pdf-option-card input[type="number"]:focus {
+      border-color: #4f6df5;
+      box-shadow: 0 0 0 4px rgba(79, 109, 245, 0.14);
+    }
+
+    .pdf-check-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #162033;
+      font-weight: 850;
+    }
+
+    .pdf-check-row input {
+      width: 19px;
+      height: 19px;
+      margin: 0;
+      accent-color: #4f6df5;
+    }
+
+    .print-only { display: none; }
+
+    @media (max-width: 960px) {
+      body { padding: 12px; }
+      .layout { grid-template-columns: 1fr; }
+      .side-panel { position: static; }
+      .status-strip { grid-template-columns: repeat(2, 1fr); }
+      header { align-items: flex-start; }
+      .top-actions { justify-content: flex-start; }
+      .puzzle-panel { min-height: 0; }
+      .letter-cell { width: 32px; }
+      .guess-input { width: 29px; height: 34px; font-size: 1.12rem; border-radius: 9px; }
+      .cipher-letter { font-size: 1.08rem; height: 19px; }
+      .punct { height: 53px; padding-top: 19px; }
+      .word { margin-right: 8px; }
+      .alphabet-map { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .map-item { font-size: .9rem; padding: 6px 8px; }
+    }
+
+    @media (max-width: 620px) {
+      .difficulty-grid { grid-template-columns: 1fr; }
+      .load-row { grid-template-columns: 1fr; }
+      .alphabet-map { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .top-actions button { flex: 1 1 140px; }
+      .status-strip { gap: 8px; grid-template-columns: 1fr; }
+      .stat { min-height: 66px; }
+      .stat .value { font-size: 1.14rem; }
+    }
+
+    @media print {
+      body {
+        background: white;
+        color: black;
+        padding: 0;
+      }
+
+      header, .side-panel, .message, .top-actions, .screen-only {
+        display: none !important;
+      }
+
+      .app { max-width: none; }
+      .layout { display: block; }
+      .panel {
+        box-shadow: none;
+        border: none;
+      }
+      .puzzle-panel {
+        padding: 0.35in;
+      }
+      .puzzle-board {
+        border: 2px solid #000;
+        overflow: visible;
+        min-height: 0;
+      }
+      .guess-input {
+        background: white !important;
+        color: black !important;
+        border-color: #000 !important;
+      }
+      .guess-input.locked {
+        color: #000 !important;
+        background: #eee !important;
+      }
+      .print-only {
+        display: block;
+        margin-bottom: 16px;
+      }
+      .print-meta {
+        border: 1px solid #000;
+        padding: 10px;
+        margin-bottom: 12px;
+        font-weight: 700;
+      }
+      .status-strip { display: none; }
+      .start-screen { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <h1>Cryptoquip</h1>
+        <p class="tagline">Solve the secret message. Type a letter once and every matching cipher letter updates automatically.</p>
+      </div>
+      <div class="top-actions">
+        <button class="secondary" id="themeBtn">Light Mode</button>
+        <button class="secondary" id="clearBtn">Clear Guesses</button>
+        <button class="good" id="newBtn">New Puzzle</button>
+        <button class="secondary" id="printBtn">Export PDF Worksheets</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel puzzle-panel">
+        <div id="startScreen" class="start-screen">
+          <h2 class="start-title">Choose a difficulty</h2>
+          <p class="start-text">
+            Pick a level to start. Easier levels use shorter puzzles and give more starting clues.
+            The share code saves the exact puzzle and difficulty.
+          </p>
+
+          <div class="difficulty-grid">
+            <button class="difficulty-card" data-difficulty="very_easy">
+              <strong>Very Easy</strong>
+              <span>Shorter puzzles with 3 starting letter clues.</span>
+            </button>
+            <button class="difficulty-card" data-difficulty="easy">
+              <strong>Easy</strong>
+              <span>Short to medium puzzles with 2 starting letter clues.</span>
+            </button>
+            <button class="difficulty-card" data-difficulty="medium">
+              <strong>Medium</strong>
+              <span>Medium to longer puzzles with 1 starting letter clue.</span>
+            </button>
+            <button class="difficulty-card" data-difficulty="hard">
+              <strong>Hard</strong>
+              <span>Longer/trickier puzzles with no starting clues.</span>
+            </button>
+          </div>
+
+          <div class="load-row">
+            <div>
+              <label for="startSeedBox">Load a share code</label>
+              <input id="startSeedBox" class="seed-box" autocomplete="off" spellcheck="false" placeholder="Example: CQ2:medium:AB12CD:0276" />
+            </div>
+            <button id="startLoadSeedBtn">Load</button>
+          </div>
+
+          <p class="hint-text small">Puzzle bank: 500 total puzzles, with 125 puzzles in each difficulty.</p>
+        </div>
+
+        <div id="gameScreen" class="hidden">
+          <div id="clueList" class="hidden"></div>
+          <div id="alphabetMap" class="hidden"></div>
+
+          <div class="print-only">
+            <h1>Cryptoquip Worksheet</h1>
+            <div class="print-meta">
+              <div>Name: ________________________________ Date: __________________</div>
+              <div id="printInfo">Difficulty: — | Clues: —</div>
+            </div>
+          </div>
+
+          <div class="status-strip screen-only">
+            <div class="stat">
+              <div class="label">Difficulty</div>
+              <div class="value" id="difficultyDisplay">—</div>
+            </div>
+            <div class="stat">
+              <div class="label">Puzzle</div>
+              <div class="value" id="puzzleNumber">—</div>
+            </div>
+            <div class="stat">
+              <div class="label">Clues</div>
+              <div class="value" id="clueDisplay">—</div>
+            </div>
+            <div class="stat">
+              <div class="label">Progress</div>
+              <div class="value" id="progressDisplay">0%</div>
+            </div>
+          </div>
+
+          <div id="message" class="message neutral screen-only">Choose a difficulty to start.</div>
+
+          <div id="printClues" class="print-only print-meta"></div>
+          <div id="puzzleBoard" class="puzzle-board" aria-label="Cryptoquip puzzle"></div>
+        </div>
+      </section>
+
+      <aside class="panel side-panel">
+        <section class="side-section">
+          <h2 class="side-title">Game Controls</h2>
+          <div class="controls">
+            <button id="checkBtn">Check Puzzle</button>
+            <button class="secondary" id="showMistakesBtn">Show Mistakes</button>
+            <button class="warn" id="revealBtn">Reveal Letter</button>
+            <button class="danger" id="giveUpBtn">Show Answer</button>
+          </div>
+          <p class="instructions">Green letters are locked clues. Use New Puzzle at the top to return to the main menu.</p>
+        </section>
+
+        <section class="side-section">
+          <h2 class="side-title">Share This Puzzle</h2>
+          <div class="seed-row">
+            <label for="seedBox">Share code</label>
+            <input id="seedBox" class="seed-box" autocomplete="off" spellcheck="false" />
+            <button class="secondary" id="copySeedBtn">Copy Share Code</button>
+            <button class="secondary" id="loadSeedBtn">Load Share Code</button>
+          </div>
+          <p class="hint-text small">The share code preserves the exact puzzle, difficulty, and cipher.</p>
+        </section>
+
+      </aside>
+    </main>
+  </div>
+
+  <dialog id="answerDialog">
+    <div class="dialog-inner">
+      <h2 id="dialogTitle">Puzzle Answer</h2>
+      <p id="dialogText">Here is the decoded message:</p>
+      <div class="answer-box" id="answerBox"></div>
+      <div class="dialog-actions">
+        <button class="secondary" id="closeDialogBtn">Close</button>
+        <button class="good" id="newFromDialogBtn">New Puzzle</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="pdfDialog">
+    <div class="dialog-inner">
+      <h2>Export PDF Worksheets</h2>
+      <p>Choose how many puzzle pages to create. The current puzzle will be first, and extra puzzles will use the same difficulty.</p>
+
+      <div class="pdf-options">
+        <div class="pdf-option-card">
+          <label for="pdfCount">How many pages? <span style="font-weight:700; color:#64748b;">(max 20)</span></label>
+          <input id="pdfCount" type="number" min="1" max="20" value="1" />
+        </div>
+
+        <div class="pdf-option-card">
+          <label class="pdf-check-row">
+            <input id="includeAnswers" type="checkbox" />
+            <span>Include answer pages</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="dialog-actions">
+        <button class="secondary" id="cancelPdfBtn">Cancel</button>
+        <button class="good" id="exportPdfConfirmBtn">Export PDF</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script>
+    const PUZZLES = [{"difficulty": "very_easy", "text": "KIND WORDS CAN HELP"}, {"difficulty": "very_easy", "text": "READERS FIND NEW WORLDS"}, {"difficulty": "very_easy", "text": "A GOOD PLAN HELPS"}, {"difficulty": "very_easy", "text": "TRY ONE MORE TIME"}, {"difficulty": "very_easy", "text": "BIG IDEAS START SMALL"}, {"difficulty": "very_easy", "text": "THE CLUE IS HIDING"}, {"difficulty": "very_easy", "text": "PRACTICE BUILDS SKILL"}, {"difficulty": "very_easy", "text": "ASK A BETTER QUESTION"}, {"difficulty": "very_easy", "text": "A BRAVE CHOICE MATTERS"}, {"difficulty": "very_easy", "text": "SHARE THE BEST IDEA"}, {"difficulty": "very_easy", "text": "CALM BRAINS SOLVE PUZZLES"}, {"difficulty": "very_easy", "text": "FRIENDS HELP FRIENDS"}, {"difficulty": "very_easy", "text": "NOTICE THE PATTERN"}, {"difficulty": "very_easy", "text": "LISTEN BEFORE YOU ANSWER"}, {"difficulty": "very_easy", "text": "EVERY STEP COUNTS"}, {"difficulty": "very_easy", "text": "THE MAP SHOWS A WAY"}, {"difficulty": "very_easy", "text": "WRITE THE IDEA DOWN"}, {"difficulty": "very_easy", "text": "QUIET WORK CAN SHINE"}, {"difficulty": "very_easy", "text": "SMALL CLUES ADD UP"}, {"difficulty": "very_easy", "text": "A KIND NOTE LASTS"}, {"difficulty": "very_easy", "text": "THE BOOK WAITS ON MONDAY"}, {"difficulty": "very_easy", "text": "THE BACKPACK SPINS ON MONDAY"}, {"difficulty": "very_easy", "text": "THE MUSIC SPINS UNDER THE DESK"}, {"difficulty": "very_easy", "text": "GENTLE EXPLORERS NOTICE KIND WORDS"}, {"difficulty": "very_easy", "text": "QUICK EXPLORERS NOTICE SMALL CLUES"}, {"difficulty": "very_easy", "text": "A CURIOUS BACKPACK CAN START"}, {"difficulty": "very_easy", "text": "BRAVE ARTISTS WONDER KIND WORDS"}, {"difficulty": "very_easy", "text": "BRAVE BUILDERS TRY NEW IDEAS"}, {"difficulty": "very_easy", "text": "THE QUESTION WAITS BY THE DOOR"}, {"difficulty": "very_easy", "text": "THE RAINBOW SPINS IN THE GYM"}, {"difficulty": "very_easy", "text": "QUIET HELPERS NOTICE WISE ANSWERS"}, {"difficulty": "very_easy", "text": "CURIOUS BUILDERS ASK BRAVE CHOICES"}, {"difficulty": "very_easy", "text": "CALM EXPLORERS HELP FUN STORIES"}, {"difficulty": "very_easy", "text": "THE PLAN SHINES NEAR THE WINDOW"}, {"difficulty": "very_easy", "text": "A GENTLE LUNCHBOX CAN FIX"}, {"difficulty": "very_easy", "text": "A HONEST ROCKET CAN START"}, {"difficulty": "very_easy", "text": "A BOLD MAP CAN SPARK"}, {"difficulty": "very_easy", "text": "TEAMWORK MAKES TEAMS STRONG"}, {"difficulty": "very_easy", "text": "THE RAINBOW RESTS ON MONDAY"}, {"difficulty": "very_easy", "text": "PRACTICE MAKES READERS STRONG"}, {"difficulty": "very_easy", "text": "QUICK TEAMS TRY FRESH STARTS"}, {"difficulty": "very_easy", "text": "A HELPFUL LUNCHBOX CAN BRIGHTEN"}, {"difficulty": "very_easy", "text": "CURIOUS KIDS THINK FUN STORIES"}, {"difficulty": "very_easy", "text": "CURIOUS KIDS THINK SMALL CLUES"}, {"difficulty": "very_easy", "text": "KIND FRIENDS HELP BRAVE CHOICES"}, {"difficulty": "very_easy", "text": "THE RAINBOW RESTS AT SCHOOL"}, {"difficulty": "very_easy", "text": "PRACTICE MAKES ARTISTS STRONG"}, {"difficulty": "very_easy", "text": "A QUIET COOKIE CAN START"}, {"difficulty": "very_easy", "text": "A HAPPY PLAN CAN CHANGE"}, {"difficulty": "very_easy", "text": "HAPPY LEARNERS ASK CLEAR GOALS"}, {"difficulty": "very_easy", "text": "BRAVE TEAMS NOTICE FUN STORIES"}, {"difficulty": "very_easy", "text": "LAUGHTER MAKES LEARNERS STRONG"}, {"difficulty": "very_easy", "text": "BRAVE KIDS NOTICE BETTER HABITS"}, {"difficulty": "very_easy", "text": "THE RAINBOW WAITS AFTER LUNCH"}, {"difficulty": "very_easy", "text": "THE ROCKET SHINES IN CLASS"}, {"difficulty": "very_easy", "text": "A HONEST PUZZLE CAN START"}, {"difficulty": "very_easy", "text": "A HONEST PLAN CAN FIX"}, {"difficulty": "very_easy", "text": "THE LUNCHBOX SPINS AFTER LUNCH"}, {"difficulty": "very_easy", "text": "A HONEST MUSIC CAN FIX"}, {"difficulty": "very_easy", "text": "A CLEVER COOKIE CAN CHANGE"}, {"difficulty": "very_easy", "text": "QUICK FRIENDS NOTICE FRESH STARTS"}, {"difficulty": "very_easy", "text": "THE DRAGON WOBBLES AT SCHOOL"}, {"difficulty": "very_easy", "text": "HONEST BUILDERS CREATE CLEAR GOALS"}, {"difficulty": "very_easy", "text": "A PATIENT PLAN CAN CHANGE"}, {"difficulty": "very_easy", "text": "HELPFUL LEARNERS BUILD GOOD PLANS"}, {"difficulty": "very_easy", "text": "TEAMWORK MAKES WRITERS STRONG"}, {"difficulty": "very_easy", "text": "A CREATIVE QUESTION CAN HELP"}, {"difficulty": "very_easy", "text": "A BRAVE MUSIC CAN FIX"}, {"difficulty": "very_easy", "text": "A CREATIVE NOTEBOOK CAN HELP"}, {"difficulty": "very_easy", "text": "A QUICK PUZZLE CAN START"}, {"difficulty": "very_easy", "text": "THE DRAGON RESTS NEAR THE WINDOW"}, {"difficulty": "very_easy", "text": "THE PENCIL SHINES AT RECESS"}, {"difficulty": "very_easy", "text": "LAUGHTER MAKES THINKERS STRONG"}, {"difficulty": "very_easy", "text": "CREATIVE THINKERS NOTICE KIND WORDS"}, {"difficulty": "very_easy", "text": "THE PUZZLE WOBBLES AFTER LUNCH"}, {"difficulty": "very_easy", "text": "PATIENCE MAKES READERS STRONG"}, {"difficulty": "very_easy", "text": "A WISE NOTEBOOK CAN GROW"}, {"difficulty": "very_easy", "text": "PRACTICE MAKES FRIENDS STRONG"}, {"difficulty": "very_easy", "text": "A HONEST IDEA CAN SPARK"}, {"difficulty": "very_easy", "text": "PATIENT READERS HELP BETTER HABITS"}, {"difficulty": "very_easy", "text": "A QUIET MAP CAN GUIDE"}, {"difficulty": "very_easy", "text": "RESPECT MAKES THINKERS STRONG"}, {"difficulty": "very_easy", "text": "KINDNESS MAKES TEAMS STRONG"}, {"difficulty": "very_easy", "text": "THE LUNCHBOX RESTS BY THE DOOR"}, {"difficulty": "very_easy", "text": "A HELPFUL RAINBOW CAN HELP"}, {"difficulty": "very_easy", "text": "WISE LEARNERS BUILD SMALL CLUES"}, {"difficulty": "very_easy", "text": "RESPECT MAKES WRITERS STRONG"}, {"difficulty": "very_easy", "text": "THE NOTEBOOK RESTS NEAR THE WINDOW"}, {"difficulty": "very_easy", "text": "CURIOSITY MAKES EXPLORERS STRONG"}, {"difficulty": "very_easy", "text": "HONESTY MAKES HELPERS STRONG"}, {"difficulty": "very_easy", "text": "THE BOOK DANCES BY THE DOOR"}, {"difficulty": "very_easy", "text": "THE ROCKET WOBBLES NEAR THE WINDOW"}, {"difficulty": "very_easy", "text": "FOCUS MAKES TEAMS STRONG"}, {"difficulty": "very_easy", "text": "THE MUSIC WAITS UNDER THE DESK"}, {"difficulty": "very_easy", "text": "A PATIENT ROCKET CAN GROW"}, {"difficulty": "very_easy", "text": "QUICK ARTISTS BUILD BIG QUESTIONS"}, {"difficulty": "very_easy", "text": "A BOLD LUNCHBOX CAN FIX"}, {"difficulty": "very_easy", "text": "THE NOTEBOOK WOBBLES ON MONDAY"}, {"difficulty": "very_easy", "text": "TEAMWORK MAKES READERS STRONG"}, {"difficulty": "very_easy", "text": "FOCUS MAKES EXPLORERS STRONG"}, {"difficulty": "very_easy", "text": "THE PUZZLE WOBBLES AT RECESS"}, {"difficulty": "very_easy", "text": "A HELPFUL ROCKET CAN CHANGE"}, {"difficulty": "very_easy", "text": "THE IDEA RESTS IN CLASS"}, {"difficulty": "very_easy", "text": "FOCUS MAKES FRIENDS STRONG"}, {"difficulty": "very_easy", "text": "A HONEST NOTEBOOK CAN SPARK"}, {"difficulty": "very_easy", "text": "PRACTICE MAKES LEARNERS STRONG"}, {"difficulty": "very_easy", "text": "A KIND ROCKET CAN SPARK"}, {"difficulty": "very_easy", "text": "THE ROCKET SPINS BY THE DOOR"}, {"difficulty": "very_easy", "text": "HELPFUL TEAMS NOTICE FRESH STARTS"}, {"difficulty": "very_easy", "text": "KIND BUILDERS SHARE FUN STORIES"}, {"difficulty": "very_easy", "text": "A HONEST NOTEBOOK CAN START"}, {"difficulty": "very_easy", "text": "A BOLD COOKIE CAN HELP"}, {"difficulty": "very_easy", "text": "TEAMWORK MAKES ARTISTS STRONG"}, {"difficulty": "very_easy", "text": "A BRAVE ROCKET CAN GROW"}, {"difficulty": "very_easy", "text": "CREATIVE TEAMS TRY SMALL CLUES"}, {"difficulty": "very_easy", "text": "THE MAP RESTS IN THE GYM"}, {"difficulty": "very_easy", "text": "THE ROCKET SPINS NEAR THE WINDOW"}, {"difficulty": "very_easy", "text": "A QUICK MUSIC CAN HELP"}, {"difficulty": "very_easy", "text": "KINDNESS MAKES KIDS STRONG"}, {"difficulty": "very_easy", "text": "A QUICK LUNCHBOX CAN GUIDE"}, {"difficulty": "very_easy", "text": "THE QUESTION SHINES BY THE DOOR"}, {"difficulty": "very_easy", "text": "A CALM RAINBOW CAN BRIGHTEN"}, {"difficulty": "very_easy", "text": "RESPECT MAKES EXPLORERS STRONG"}, {"difficulty": "very_easy", "text": "A BOLD PENCIL CAN GROW"}, {"difficulty": "very_easy", "text": "A BRAVE DRAGON CAN FIX"}, {"difficulty": "easy", "text": "A GOOD QUESTION CAN OPEN A NEW DOOR"}, {"difficulty": "easy", "text": "THE BEST PLAN OFTEN STARTS WITH A PAUSE"}, {"difficulty": "easy", "text": "MISTAKES ARE PROOF THAT YOUR BRAIN IS WORKING"}, {"difficulty": "easy", "text": "KINDNESS CAN CHANGE THE WHOLE MORNING"}, {"difficulty": "easy", "text": "READ THE QUESTION TWICE BEFORE YOU ANSWER"}, {"difficulty": "easy", "text": "A PUZZLE GETS EASIER WHEN YOU FIND A PATTERN"}, {"difficulty": "easy", "text": "TEAMWORK WORKS BEST WHEN EVERY VOICE MATTERS"}, {"difficulty": "easy", "text": "PATIENCE CAN TURN A PROBLEM INTO A PLAN"}, {"difficulty": "easy", "text": "A SHARP PENCIL AND A CALM BRAIN CAN SOLVE A LOT"}, {"difficulty": "easy", "text": "THE CLASSROOM PLANT KNOWS ALL THE SECRETS"}, {"difficulty": "easy", "text": "NEVER TRUST A SANDWICH THAT SMILES BACK"}, {"difficulty": "easy", "text": "THE BEST IDEAS CAN GROW INTO SOMETHING BIG"}, {"difficulty": "easy", "text": "WISE CHOICES CAN FIX A TRICKY PROBLEM"}, {"difficulty": "easy", "text": "THE IDEA FOLLOWED THE NEW IDEAS BY THE DOOR"}, {"difficulty": "easy", "text": "PATIENCE IS EASIER TO SHOW WHEN THE DAY GETS BUSY"}, {"difficulty": "easy", "text": "GOOD HABITS CAN MAKE LEARNING EASIER"}, {"difficulty": "easy", "text": "A KIND FRIEND CAN FIND THE HIDDEN CLUE WHEN THEY ASK WHY"}, {"difficulty": "easy", "text": "FUNNY MOMENTS CAN MAKE LEARNING EASIER"}, {"difficulty": "easy", "text": "A CLEVER TEAM CAN HELP THE GROUP THINK WHEN THEY TRY AGAIN"}, {"difficulty": "easy", "text": "THE BEST IDEAS CAN HELP A TEAM SUCCEED"}, {"difficulty": "easy", "text": "BRAVE QUESTIONS CAN FIX A TRICKY PROBLEM"}, {"difficulty": "easy", "text": "PRACTICE IS EASIER TO SHOW WHEN THE DAY GETS BUSY"}, {"difficulty": "easy", "text": "CURIOSITY IS EASIER TO SHOW WHEN THE DAY GETS BUSY"}, {"difficulty": "easy", "text": "HONESTY IS EASIER TO SHOW WHEN THE DAY GETS BUSY"}, {"difficulty": "easy", "text": "FRESH STARTS CAN MAKE LEARNING EASIER"}, {"difficulty": "easy", "text": "THE BEST IDEAS CAN MAKE LEARNING EASIER"}, {"difficulty": "easy", "text": "THE NOTEBOOK LEFT THE FUN STORIES IN THE GYM"}, {"difficulty": "easy", "text": "THE QUESTION BORROWED THE BETTER HABITS ON MONDAY"}, {"difficulty": "easy", "text": "THE COOKIE HID THE KIND WORDS BY THE DOOR"}, {"difficulty": "easy", "text": "KINDNESS IS EASIER TO SHOW WHEN THE DAY GETS BUSY"}, {"difficulty": "easy", "text": "TEAMWORK IS EASIER TO SHOW WHEN THE DAY GETS BUSY"}, {"difficulty": "easy", "text": "THE COOKIE BORROWED THE SMALL CLUES IN THE GYM"}, {"difficulty": "easy", "text": "THE PENCIL FOUND THE CLEAR GOALS ON MONDAY"}, {"difficulty": "easy", "text": "COURAGE IS EASIER TO SHOW WHEN THE DAY GETS BUSY"}, {"difficulty": "easy", "text": "THE MAP LEFT THE QUIET MOMENTS UNDER THE DESK"}, {"difficulty": "easy", "text": "FOCUS IS EASIER TO SHOW WHEN THE DAY GETS BUSY"}, {"difficulty": "easy", "text": "THE NOTEBOOK FOLLOWED THE NEW IDEAS AT RECESS"}, {"difficulty": "easy", "text": "THE LUNCHBOX LEFT THE BRAVE CHOICES AT RECESS"}, {"difficulty": "easy", "text": "RESPECT IS EASIER TO SHOW WHEN THE DAY GETS BUSY"}, {"difficulty": "easy", "text": "THE BEST IDEAS CAN FIX A TRICKY PROBLEM"}, {"difficulty": "easy", "text": "THE RAINBOW BORROWED THE FUN STORIES ON MONDAY"}, {"difficulty": "easy", "text": "LAUGHTER IS EASIER TO SHOW WHEN THE DAY GETS BUSY"}, {"difficulty": "easy", "text": "THE ROCKET BORROWED THE BIG QUESTIONS AT SCHOOL"}, {"difficulty": "easy", "text": "GOOD HABITS CAN CHANGE THE WHOLE ROOM"}, {"difficulty": "easy", "text": "THE BACKPACK BORROWED THE CLEAR GOALS UNDER THE DESK"}, {"difficulty": "easy", "text": "THE COOKIE LEFT THE SMALL CLUES IN CLASS"}, {"difficulty": "easy", "text": "WISE CHOICES CAN START A NEW ADVENTURE"}, {"difficulty": "easy", "text": "A QUIET ARTIST CAN FIND THE HIDDEN CLUE WHEN THEY ASK WHY"}, {"difficulty": "easy", "text": "BRAVE QUESTIONS CAN CHANGE THE WHOLE ROOM"}, {"difficulty": "easy", "text": "A KIND FRIEND CAN HELP THE GROUP THINK WHEN THEY ASK WHY"}, {"difficulty": "easy", "text": "THE PLAN FOUND THE KIND WORDS AFTER LUNCH"}, {"difficulty": "easy", "text": "THE MUSIC FOUND THE WISE ANSWERS UNDER THE DESK"}, {"difficulty": "easy", "text": "FUNNY MOMENTS CAN HELP A TEAM SUCCEED"}, {"difficulty": "easy", "text": "CLEAR DIRECTIONS CAN FIX A TRICKY PROBLEM"}, {"difficulty": "easy", "text": "THE QUESTION FOUND THE GOOD PLANS IN THE GYM"}, {"difficulty": "easy", "text": "THE PUZZLE HID THE GOOD PLANS UNDER THE DESK"}, {"difficulty": "easy", "text": "FRESH STARTS CAN GROW INTO SOMETHING BIG"}, {"difficulty": "easy", "text": "THE MAP BORROWED THE SMALL CLUES ON MONDAY"}, {"difficulty": "easy", "text": "THE QUESTION FOUND THE QUIET MOMENTS UNDER THE DESK"}, {"difficulty": "easy", "text": "FUNNY MOMENTS CAN GROW INTO SOMETHING BIG"}, {"difficulty": "easy", "text": "THE DRAGON LEFT THE BRAVE CHOICES AT SCHOOL"}, {"difficulty": "easy", "text": "THE COOKIE BORROWED THE WISE ANSWERS ON MONDAY"}, {"difficulty": "easy", "text": "THE IDEA BORROWED THE FRESH STARTS IN CLASS"}, {"difficulty": "easy", "text": "THE MUSIC FOUND THE QUIET MOMENTS AFTER LUNCH"}, {"difficulty": "easy", "text": "THE BOOK HID THE BIG QUESTIONS AFTER LUNCH"}, {"difficulty": "easy", "text": "THE PENCIL FOUND THE CLEAR GOALS IN CLASS"}, {"difficulty": "easy", "text": "A KIND FRIEND CAN SPOT A PATTERN QUICKLY WHEN THEY ASK WHY"}, {"difficulty": "easy", "text": "THE COOKIE FOLLOWED THE FUN STORIES IN CLASS"}, {"difficulty": "easy", "text": "SMALL ACTS OF KINDNESS CAN GROW INTO SOMETHING BIG"}, {"difficulty": "easy", "text": "THE BACKPACK FOLLOWED THE BIG QUESTIONS AT RECESS"}, {"difficulty": "easy", "text": "THE LUNCHBOX LEFT THE WISE ANSWERS UNDER THE DESK"}, {"difficulty": "easy", "text": "GOOD HABITS CAN FIX A TRICKY PROBLEM"}, {"difficulty": "easy", "text": "THE BEST IDEAS CAN START A NEW ADVENTURE"}, {"difficulty": "easy", "text": "SMALL ACTS OF KINDNESS CAN FIX A TRICKY PROBLEM"}, {"difficulty": "easy", "text": "THE IDEA FOLLOWED THE WISE ANSWERS IN CLASS"}, {"difficulty": "easy", "text": "THE PLAN HID THE QUIET MOMENTS NEAR THE WINDOW"}, {"difficulty": "easy", "text": "THE PUZZLE FOUND THE CLEAR GOALS AT RECESS"}, {"difficulty": "easy", "text": "THE PUZZLE BORROWED THE BRAVE CHOICES ON MONDAY"}, {"difficulty": "easy", "text": "THE RAINBOW HID THE CLEAR GOALS UNDER THE DESK"}, {"difficulty": "easy", "text": "WISE CHOICES CAN HELP A TEAM SUCCEED"}, {"difficulty": "easy", "text": "THE BACKPACK BORROWED THE SMALL CLUES IN THE GYM"}, {"difficulty": "easy", "text": "A KIND FRIEND CAN HELP THE GROUP THINK WHEN THEY STAY CALM"}, {"difficulty": "easy", "text": "WISE CHOICES CAN MAKE LEARNING EASIER"}, {"difficulty": "easy", "text": "THE PUZZLE FOUND THE FRESH STARTS NEAR THE WINDOW"}, {"difficulty": "easy", "text": "THE PENCIL FOLLOWED THE BETTER HABITS AT RECESS"}, {"difficulty": "easy", "text": "FRESH STARTS CAN CHANGE THE WHOLE ROOM"}, {"difficulty": "easy", "text": "THE RAINBOW LEFT THE FRESH STARTS IN CLASS"}, {"difficulty": "easy", "text": "THE IDEA FOLLOWED THE BETTER HABITS BY THE DOOR"}, {"difficulty": "easy", "text": "FRESH STARTS CAN HELP A TEAM SUCCEED"}, {"difficulty": "easy", "text": "THE PENCIL HID THE WISE ANSWERS AT RECESS"}, {"difficulty": "easy", "text": "WISE CHOICES CAN CHANGE THE WHOLE ROOM"}, {"difficulty": "easy", "text": "THE PUZZLE FOLLOWED THE CLEAR GOALS IN THE GYM"}, {"difficulty": "easy", "text": "THE PUZZLE FOUND THE WISE ANSWERS NEAR THE WINDOW"}, {"difficulty": "easy", "text": "BRAVE QUESTIONS CAN START A NEW ADVENTURE"}, {"difficulty": "easy", "text": "THE IDEA BORROWED THE BETTER HABITS ON MONDAY"}, {"difficulty": "easy", "text": "THE BACKPACK FOUND THE BETTER HABITS NEAR THE WINDOW"}, {"difficulty": "easy", "text": "WISE CHOICES CAN GROW INTO SOMETHING BIG"}, {"difficulty": "easy", "text": "GOOD HABITS CAN HELP A TEAM SUCCEED"}, {"difficulty": "easy", "text": "FRESH STARTS CAN FIX A TRICKY PROBLEM"}, {"difficulty": "easy", "text": "THE PENCIL BORROWED THE QUIET MOMENTS ON MONDAY"}, {"difficulty": "easy", "text": "THE COOKIE LEFT THE BETTER HABITS IN THE GYM"}, {"difficulty": "easy", "text": "BRAVE QUESTIONS CAN GROW INTO SOMETHING BIG"}, {"difficulty": "easy", "text": "THE NOTEBOOK BORROWED THE BRAVE CHOICES AT RECESS"}, {"difficulty": "easy", "text": "CLEAR DIRECTIONS CAN HELP A TEAM SUCCEED"}, {"difficulty": "easy", "text": "BRAVE QUESTIONS CAN HELP A TEAM SUCCEED"}, {"difficulty": "easy", "text": "THE NOTEBOOK HID THE KIND WORDS NEAR THE WINDOW"}, {"difficulty": "easy", "text": "SMALL ACTS OF KINDNESS CAN HELP A TEAM SUCCEED"}, {"difficulty": "easy", "text": "THE BACKPACK FOUND THE FUN STORIES IN CLASS"}, {"difficulty": "easy", "text": "THE MUSIC BORROWED THE KIND WORDS ON MONDAY"}, {"difficulty": "easy", "text": "SMALL ACTS OF KINDNESS CAN MAKE LEARNING EASIER"}, {"difficulty": "easy", "text": "THE IDEA BORROWED THE FUN STORIES AT SCHOOL"}, {"difficulty": "easy", "text": "THE ROCKET FOUND THE FRESH STARTS IN CLASS"}, {"difficulty": "easy", "text": "THE COOKIE LEFT THE BIG QUESTIONS AT SCHOOL"}, {"difficulty": "easy", "text": "THE MAP FOUND THE FUN STORIES BY THE DOOR"}, {"difficulty": "easy", "text": "CLEAR DIRECTIONS CAN START A NEW ADVENTURE"}, {"difficulty": "easy", "text": "THE BACKPACK BORROWED THE BETTER HABITS IN CLASS"}, {"difficulty": "easy", "text": "BRAVE QUESTIONS CAN MAKE LEARNING EASIER"}, {"difficulty": "easy", "text": "THE RAINBOW FOUND THE BETTER HABITS NEAR THE WINDOW"}, {"difficulty": "easy", "text": "THE MUSIC FOUND THE NEW IDEAS ON MONDAY"}, {"difficulty": "easy", "text": "THE PLAN HID THE SMALL CLUES BY THE DOOR"}, {"difficulty": "easy", "text": "A CLEVER TEAM CAN HELP THE GROUP THINK WHEN THEY SLOW DOWN"}, {"difficulty": "easy", "text": "THE MAP HID THE WISE ANSWERS AT SCHOOL"}, {"difficulty": "easy", "text": "THE BACKPACK FOLLOWED THE BETTER HABITS AT RECESS"}, {"difficulty": "easy", "text": "THE MAP LEFT THE FRESH STARTS ON MONDAY"}, {"difficulty": "easy", "text": "THE COOKIE HID THE CLEAR GOALS IN CLASS"}, {"difficulty": "medium", "text": "LEARNING GROWS WHEN CURIOSITY LEADS THE WAY AND PRACTICE FOLLOWS CLOSE BEHIND"}, {"difficulty": "medium", "text": "THE ANSWER MAY BE HIDING INSIDE THE QUESTION, SO READ IT WITH CARE"}, {"difficulty": "medium", "text": "GOOD LISTENERS OFTEN FIND THE DETAIL THAT EVERYONE ELSE MISSED"}, {"difficulty": "medium", "text": "WONDER IS THE SPARK THAT STARTS MANY DISCOVERIES IN THE CLASSROOM"}, {"difficulty": "medium", "text": "BRAVE THINKERS ARE NOT AFRAID TO CHANGE THEIR MINDS AFTER NEW EVIDENCE"}, {"difficulty": "medium", "text": "WHEN ONE PLAN FAILS, ANOTHER PLAN CAN BEGIN WITH A BETTER IDEA"}, {"difficulty": "medium", "text": "IMAGINATION CAN TURN A BLANK PAGE INTO A WHOLE NEW ADVENTURE"}, {"difficulty": "medium", "text": "DIFFERENT IDEAS CAN BUILD A SOLUTION THAT ONE IDEA COULD NOT"}, {"difficulty": "medium", "text": "THE LONGEST JOURNEY CAN BEGIN WITH ONE TINY BUT DETERMINED STEP"}, {"difficulty": "medium", "text": "THE PUZZLE BECOMES EASIER WHEN YOU ASK FOR HELP AT THE RIGHT TIME"}, {"difficulty": "medium", "text": "FOCUS DOES NOT NEED TO BE LOUD SOMETIMES IT SHOWS UP IN SMALL CHOICES"}, {"difficulty": "medium", "text": "A CREATIVE TEAM CAN BUILD CONFIDENCE FROM ONE SMALL SUCCESS WHEN THEY SLOW DOWN AND THINK"}, {"difficulty": "medium", "text": "CURIOSITY DOES NOT NEED TO BE LOUD SOMETIMES IT SHOWS UP IN SMALL CHOICES"}, {"difficulty": "medium", "text": "HONESTY DOES NOT NEED TO BE LOUD SOMETIMES IT SHOWS UP IN SMALL CHOICES"}, {"difficulty": "medium", "text": "THE PUZZLE BECOMES EASIER WHEN YOU NOTICE WHAT CHANGED AND WHAT STAYED THE SAME"}, {"difficulty": "medium", "text": "TEAMWORK DOES NOT NEED TO BE LOUD SOMETIMES IT SHOWS UP IN SMALL CHOICES"}, {"difficulty": "medium", "text": "THE DISCUSSION INVITES BETTER IDEAS WHEN YOU ASK FOR HELP AT THE RIGHT TIME"}, {"difficulty": "medium", "text": "THE STORY STARTS TO CHANGE WHEN YOU KEEP TRYING AFTER THE FIRST MISTAKE"}, {"difficulty": "medium", "text": "RESPECT DOES NOT NEED TO BE LOUD SOMETIMES IT SHOWS UP IN SMALL CHOICES"}, {"difficulty": "medium", "text": "THE ADVENTURE MAKES MORE SENSE WHEN YOU ASK FOR HELP AT THE RIGHT TIME"}, {"difficulty": "medium", "text": "THE LESSON REVEALS NEW CLUES WHEN YOU TAKE NOTES AND CHECK YOUR THINKING"}, {"difficulty": "medium", "text": "A KIND LEADER CAN MAKE A NEW PLAN AFTER THE FIRST ONE FAILS WHEN THEY SLOW DOWN AND THINK"}, {"difficulty": "medium", "text": "A CURIOUS CLASS CAN TURN CONFUSION INTO A CLEAR NEXT STEP WHEN THEY SLOW DOWN AND THINK"}, {"difficulty": "medium", "text": "THE DISCUSSION BECOMES EASIER WHEN YOU KEEP TRYING AFTER THE FIRST MISTAKE"}, {"difficulty": "medium", "text": "THE CHALLENGE STARTS TO CHANGE WHEN YOU NOTICE WHAT CHANGED AND WHAT STAYED THE SAME"}, {"difficulty": "medium", "text": "THE LESSON INVITES BETTER IDEAS WHEN YOU KEEP TRYING AFTER THE FIRST MISTAKE"}, {"difficulty": "medium", "text": "COURAGE DOES NOT NEED TO BE LOUD SOMETIMES IT SHOWS UP IN SMALL CHOICES"}, {"difficulty": "medium", "text": "A CREATIVE TEAM CAN CHANGE A GROUP BY LISTENING WITH RESPECT WHEN QUESTIONS ARE WELCOME"}, {"difficulty": "medium", "text": "THE LESSON REVEALS NEW CLUES WHEN YOU LOOK FOR THE PATTERN INSTEAD OF GUESSING"}, {"difficulty": "medium", "text": "THE DISCUSSION INVITES BETTER IDEAS WHEN YOU NOTICE WHAT CHANGED AND WHAT STAYED THE SAME"}, {"difficulty": "medium", "text": "A CAREFUL THINKER CAN BUILD CONFIDENCE FROM ONE SMALL SUCCESS WHEN QUESTIONS ARE WELCOME"}, {"difficulty": "medium", "text": "KINDNESS DOES NOT NEED TO BE LOUD SOMETIMES IT SHOWS UP IN SMALL CHOICES"}, {"difficulty": "medium", "text": "PRACTICE DOES NOT NEED TO BE LOUD SOMETIMES IT SHOWS UP IN SMALL CHOICES"}, {"difficulty": "medium", "text": "THE CHALLENGE MAKES MORE SENSE WHEN YOU NOTICE WHAT CHANGED AND WHAT STAYED THE SAME"}, {"difficulty": "medium", "text": "A CAREFUL THINKER CAN MAKE A TOUGH PROBLEM FEEL MUCH SMALLER WHEN THEY SLOW DOWN AND THINK"}, {"difficulty": "medium", "text": "THE STORY REVEALS NEW CLUES WHEN YOU NOTICE WHAT CHANGED AND WHAT STAYED THE SAME"}, {"difficulty": "medium", "text": "THE PROJECT INVITES BETTER IDEAS WHEN YOU KEEP TRYING AFTER THE FIRST MISTAKE"}, {"difficulty": "medium", "text": "THE PUZZLE REVEALS NEW CLUES WHEN YOU TAKE NOTES AND CHECK YOUR THINKING"}, {"difficulty": "medium", "text": "THE LESSON BUILDS MOMENTUM WHEN YOU KEEP TRYING AFTER THE FIRST MISTAKE"}, {"difficulty": "medium", "text": "THE MYSTERY STARTS TO CHANGE WHEN YOU ASK FOR HELP AT THE RIGHT TIME"}, {"difficulty": "medium", "text": "THE CHALLENGE BECOMES EASIER WHEN YOU LOOK FOR THE PATTERN INSTEAD OF GUESSING"}, {"difficulty": "medium", "text": "THE ADVENTURE INVITES BETTER IDEAS WHEN YOU LOOK FOR THE PATTERN INSTEAD OF GUESSING"}, {"difficulty": "medium", "text": "PATIENCE DOES NOT NEED TO BE LOUD SOMETIMES IT SHOWS UP IN SMALL CHOICES"}, {"difficulty": "medium", "text": "THE LESSON REVEALS NEW CLUES WHEN YOU KEEP TRYING AFTER THE FIRST MISTAKE"}, {"difficulty": "medium", "text": "THE LESSON BECOMES EASIER WHEN YOU KEEP TRYING AFTER THE FIRST MISTAKE"}, {"difficulty": "medium", "text": "THE PUZZLE BUILDS MOMENTUM WHEN YOU NOTICE WHAT CHANGED AND WHAT STAYED THE SAME"}, {"difficulty": "medium", "text": "A FOCUSED READER CAN FIND A PATTERN WHERE OTHERS SEE A MESS WHEN QUESTIONS ARE WELCOME"}, {"difficulty": "medium", "text": "THE STORY REVEALS NEW CLUES WHEN YOU KEEP TRYING AFTER THE FIRST MISTAKE"}, {"difficulty": "medium", "text": "LAUGHTER DOES NOT NEED TO BE LOUD SOMETIMES IT SHOWS UP IN SMALL CHOICES"}, {"difficulty": "medium", "text": "THE DISCUSSION STARTS TO CHANGE WHEN YOU NOTICE WHAT CHANGED AND WHAT STAYED THE SAME"}, {"difficulty": "medium", "text": "THE MYSTERY BUILDS MOMENTUM WHEN YOU KEEP TRYING AFTER THE FIRST MISTAKE"}, {"difficulty": "medium", "text": "THE DISCUSSION BECOMES EASIER WHEN YOU TAKE NOTES AND CHECK YOUR THINKING"}, {"difficulty": "medium", "text": "THE PUZZLE BUILDS MOMENTUM WHEN YOU ASK FOR HELP AT THE RIGHT TIME"}, {"difficulty": "medium", "text": "THE STORY BUILDS MOMENTUM WHEN YOU KEEP TRYING AFTER THE FIRST MISTAKE"}, {"difficulty": "medium", "text": "THE CHALLENGE REVEALS NEW CLUES WHEN YOU LOOK FOR THE PATTERN INSTEAD OF GUESSING"}, {"difficulty": "medium", "text": "A KIND LEADER CAN BUILD CONFIDENCE FROM ONE SMALL SUCCESS WHEN THEY SLOW DOWN AND THINK"}, {"difficulty": "medium", "text": "THE MYSTERY BECOMES EASIER WHEN YOU KEEP TRYING AFTER THE FIRST MISTAKE"}, {"difficulty": "medium", "text": "A KIND LEADER CAN TURN CONFUSION INTO A CLEAR NEXT STEP WHEN QUESTIONS ARE WELCOME"}, {"difficulty": "medium", "text": "THE PROJECT MAKES MORE SENSE WHEN YOU NOTICE WHAT CHANGED AND WHAT STAYED THE SAME"}, {"difficulty": "medium", "text": "THE CHALLENGE INVITES BETTER IDEAS WHEN YOU ASK FOR HELP AT THE RIGHT TIME"}, {"difficulty": "medium", "text": "THE ADVENTURE BECOMES EASIER WHEN YOU NOTICE WHAT CHANGED AND WHAT STAYED THE SAME"}, {"difficulty": "medium", "text": "THE LESSON INVITES BETTER IDEAS WHEN YOU TAKE NOTES AND CHECK YOUR THINKING"}, {"difficulty": "medium", "text": "THE STORY REVEALS NEW CLUES WHEN YOU TAKE NOTES AND CHECK YOUR THINKING"}, {"difficulty": "medium", "text": "THE CHALLENGE BUILDS MOMENTUM WHEN YOU KEEP TRYING AFTER THE FIRST MISTAKE"}, {"difficulty": "medium", "text": "A KIND LEADER CAN CHANGE A GROUP BY LISTENING WITH RESPECT WHEN EVERY VOICE GETS A CHANCE"}, {"difficulty": "medium", "text": "THE PUZZLE MAKES MORE SENSE WHEN YOU LOOK FOR THE PATTERN INSTEAD OF GUESSING"}, {"difficulty": "medium", "text": "THE PROJECT REVEALS NEW CLUES WHEN YOU TAKE NOTES AND CHECK YOUR THINKING"}, {"difficulty": "medium", "text": "A CAREFUL THINKER CAN FIND A PATTERN WHERE OTHERS SEE A MESS WHEN THEY SLOW DOWN AND THINK"}, {"difficulty": "medium", "text": "THE STORY BECOMES EASIER WHEN YOU NOTICE WHAT CHANGED AND WHAT STAYED THE SAME"}, {"difficulty": "medium", "text": "A CURIOUS CLASS CAN FIND A PATTERN WHERE OTHERS SEE A MESS WHEN THEY SLOW DOWN AND THINK"}, {"difficulty": "medium", "text": "THE DISCUSSION INVITES BETTER IDEAS WHEN YOU LOOK FOR THE PATTERN INSTEAD OF GUESSING"}, {"difficulty": "medium", "text": "THE STORY REVEALS NEW CLUES WHEN YOU ASK FOR HELP AT THE RIGHT TIME"}, {"difficulty": "medium", "text": "THE DISCUSSION MAKES MORE SENSE WHEN YOU LOOK FOR THE PATTERN INSTEAD OF GUESSING"}, {"difficulty": "medium", "text": "A CURIOUS CLASS CAN BUILD CONFIDENCE FROM ONE SMALL SUCCESS WHEN QUESTIONS ARE WELCOME"}, {"difficulty": "medium", "text": "A KIND LEADER CAN BUILD CONFIDENCE FROM ONE SMALL SUCCESS WHEN EVERY VOICE GETS A CHANCE"}, {"difficulty": "medium", "text": "THE ADVENTURE MAKES MORE SENSE WHEN YOU KEEP TRYING AFTER THE FIRST MISTAKE"}, {"difficulty": "medium", "text": "A CAREFUL THINKER CAN TURN CONFUSION INTO A CLEAR NEXT STEP WHEN THEY SLOW DOWN AND THINK"}, {"difficulty": "medium", "text": "THE ADVENTURE BECOMES EASIER WHEN YOU KEEP TRYING AFTER THE FIRST MISTAKE"}, {"difficulty": "medium", "text": "A CAREFUL THINKER CAN TURN CONFUSION INTO A CLEAR NEXT STEP WHEN QUESTIONS ARE WELCOME"}, {"difficulty": "medium", "text": "THE MYSTERY REVEALS NEW CLUES WHEN YOU TAKE NOTES AND CHECK YOUR THINKING"}, {"difficulty": "medium", "text": "A CURIOUS CLASS CAN CHANGE A GROUP BY LISTENING WITH RESPECT WHEN THEY SLOW DOWN AND THINK"}, {"difficulty": "medium", "text": "THE MYSTERY BECOMES EASIER WHEN YOU ASK FOR HELP AT THE RIGHT TIME"}, {"difficulty": "medium", "text": "A BRAVE LEARNER CAN TURN CONFUSION INTO A CLEAR NEXT STEP WHEN QUESTIONS ARE WELCOME"}, {"difficulty": "medium", "text": "THE MYSTERY INVITES BETTER IDEAS WHEN YOU NOTICE WHAT CHANGED AND WHAT STAYED THE SAME"}, {"difficulty": "medium", "text": "A DETERMINED WRITER CAN MAKE A TOUGH PROBLEM FEEL MUCH SMALLER WHEN QUESTIONS ARE WELCOME"}, {"difficulty": "medium", "text": "THE CHALLENGE INVITES BETTER IDEAS WHEN YOU KEEP TRYING AFTER THE FIRST MISTAKE"}, {"difficulty": "medium", "text": "THE PROJECT REVEALS NEW CLUES WHEN YOU ASK FOR HELP AT THE RIGHT TIME"}, {"difficulty": "medium", "text": "THE LESSON MAKES MORE SENSE WHEN YOU KEEP TRYING AFTER THE FIRST MISTAKE"}, {"difficulty": "medium", "text": "THE LESSON MAKES MORE SENSE WHEN YOU NOTICE WHAT CHANGED AND WHAT STAYED THE SAME"}, {"difficulty": "medium", "text": "THE STORY STARTS TO CHANGE WHEN YOU ASK FOR HELP AT THE RIGHT TIME"}, {"difficulty": "medium", "text": "THE STORY INVITES BETTER IDEAS WHEN YOU ASK FOR HELP AT THE RIGHT TIME"}, {"difficulty": "medium", "text": "THE ADVENTURE BECOMES EASIER WHEN YOU LOOK FOR THE PATTERN INSTEAD OF GUESSING"}, {"difficulty": "medium", "text": "THE LESSON REVEALS NEW CLUES WHEN YOU ASK FOR HELP AT THE RIGHT TIME"}, {"difficulty": "medium", "text": "THE PUZZLE REVEALS NEW CLUES WHEN YOU ASK FOR HELP AT THE RIGHT TIME"}, {"difficulty": "medium", "text": "THE LESSON INVITES BETTER IDEAS WHEN YOU NOTICE WHAT CHANGED AND WHAT STAYED THE SAME"}, {"difficulty": "medium", "text": "THE ADVENTURE INVITES BETTER IDEAS WHEN YOU NOTICE WHAT CHANGED AND WHAT STAYED THE SAME"}, {"difficulty": "medium", "text": "THE PROJECT INVITES BETTER IDEAS WHEN YOU LOOK FOR THE PATTERN INSTEAD OF GUESSING"}, {"difficulty": "medium", "text": "THE LESSON BECOMES EASIER WHEN YOU LOOK FOR THE PATTERN INSTEAD OF GUESSING"}, {"difficulty": "medium", "text": "THE PROJECT STARTS TO CHANGE WHEN YOU NOTICE WHAT CHANGED AND WHAT STAYED THE SAME"}, {"difficulty": "medium", "text": "THE PUZZLE STARTS TO CHANGE WHEN YOU ASK FOR HELP AT THE RIGHT TIME"}, {"difficulty": "medium", "text": "THE ADVENTURE MAKES MORE SENSE WHEN YOU TAKE NOTES AND CHECK YOUR THINKING"}, {"difficulty": "medium", "text": "THE STORY STARTS TO CHANGE WHEN YOU LOOK FOR THE PATTERN INSTEAD OF GUESSING"}, {"difficulty": "medium", "text": "THE CHALLENGE REVEALS NEW CLUES WHEN YOU ASK FOR HELP AT THE RIGHT TIME"}, {"difficulty": "medium", "text": "A KIND LEADER CAN MAKE A NEW PLAN AFTER THE FIRST ONE FAILS WHEN EVERY VOICE GETS A CHANCE"}, {"difficulty": "medium", "text": "A BRAVE LEARNER CAN CHANGE A GROUP BY LISTENING WITH RESPECT WHEN QUESTIONS ARE WELCOME"}, {"difficulty": "medium", "text": "A CURIOUS CLASS CAN BUILD CONFIDENCE FROM ONE SMALL SUCCESS WHEN EVERY VOICE GETS A CHANCE"}, {"difficulty": "medium", "text": "THE MYSTERY STARTS TO CHANGE WHEN YOU LOOK FOR THE PATTERN INSTEAD OF GUESSING"}, {"difficulty": "medium", "text": "THE PROJECT MAKES MORE SENSE WHEN YOU KEEP TRYING AFTER THE FIRST MISTAKE"}, {"difficulty": "medium", "text": "THE STORY BECOMES EASIER WHEN YOU TAKE NOTES AND CHECK YOUR THINKING"}, {"difficulty": "medium", "text": "THE PROJECT REVEALS NEW CLUES WHEN YOU KEEP TRYING AFTER THE FIRST MISTAKE"}, {"difficulty": "medium", "text": "THE CHALLENGE BUILDS MOMENTUM WHEN YOU NOTICE WHAT CHANGED AND WHAT STAYED THE SAME"}, {"difficulty": "medium", "text": "THE MYSTERY BECOMES EASIER WHEN YOU NOTICE WHAT CHANGED AND WHAT STAYED THE SAME"}, {"difficulty": "medium", "text": "THE STORY MAKES MORE SENSE WHEN YOU NOTICE WHAT CHANGED AND WHAT STAYED THE SAME"}, {"difficulty": "medium", "text": "THE PROJECT MAKES MORE SENSE WHEN YOU TAKE NOTES AND CHECK YOUR THINKING"}, {"difficulty": "medium", "text": "THE DISCUSSION BUILDS MOMENTUM WHEN YOU ASK FOR HELP AT THE RIGHT TIME"}, {"difficulty": "medium", "text": "A BRAVE LEARNER CAN TURN CONFUSION INTO A CLEAR NEXT STEP WHEN EVERY VOICE GETS A CHANCE"}, {"difficulty": "medium", "text": "THE DISCUSSION REVEALS NEW CLUES WHEN YOU LOOK FOR THE PATTERN INSTEAD OF GUESSING"}, {"difficulty": "medium", "text": "THE DISCUSSION BUILDS MOMENTUM WHEN YOU KEEP TRYING AFTER THE FIRST MISTAKE"}, {"difficulty": "medium", "text": "THE ADVENTURE INVITES BETTER IDEAS WHEN YOU ASK FOR HELP AT THE RIGHT TIME"}, {"difficulty": "medium", "text": "THE CHALLENGE REVEALS NEW CLUES WHEN YOU NOTICE WHAT CHANGED AND WHAT STAYED THE SAME"}, {"difficulty": "medium", "text": "THE PUZZLE MAKES MORE SENSE WHEN YOU NOTICE WHAT CHANGED AND WHAT STAYED THE SAME"}, {"difficulty": "medium", "text": "THE PUZZLE BECOMES EASIER WHEN YOU LOOK FOR THE PATTERN INSTEAD OF GUESSING"}, {"difficulty": "medium", "text": "THE PROJECT STARTS TO CHANGE WHEN YOU LOOK FOR THE PATTERN INSTEAD OF GUESSING"}, {"difficulty": "medium", "text": "A CAREFUL THINKER CAN MAKE A NEW PLAN AFTER THE FIRST ONE FAILS WHEN QUESTIONS ARE WELCOME"}, {"difficulty": "medium", "text": "A FOCUSED READER CAN FIND A PATTERN WHERE OTHERS SEE A MESS WHEN EVERY VOICE GETS A CHANCE"}, {"difficulty": "hard", "text": "A PUZZLE DOES NOT BECOME SIMPLE BECAUSE WE STARE AT IT IT BECOMES SIMPLE WHEN WE TEST A STRATEGY"}, {"difficulty": "hard", "text": "A GOOD QUESTION CAN BE MORE POWERFUL THAN A QUICK ANSWER BECAUSE IT KEEPS THE THINKING MOVING"}, {"difficulty": "hard", "text": "A BRAVE LEADER CAN TURN A SETBACK INTO A USEFUL LESSON WITH HONEST REFLECTION AS LONG AS EVERY MISTAKE BECOMES INFORMATION"}, {"difficulty": "hard", "text": "A CURIOUS SCIENTIST CAN CHANGE CONFUSION INTO PROGRESS BY SORTING THE CLUES AS LONG AS EVERY MISTAKE BECOMES INFORMATION"}, {"difficulty": "hard", "text": "THE QUIETEST PART OF A GOOD IDEA CAN TURN INTO A CLUE WHEN YOU COMPARE PATTERNS BECAUSE A NEW VIEW CAN CHANGE THE ENTIRE PROBLEM"}, {"difficulty": "hard", "text": "THE HARDEST PART OF A CHALLENGE MAY REQUIRE A PAUSE BEFORE ANYONE REPLIES BECAUSE A QUICK GUESS CAN MISS THE IMPORTANT EVIDENCE"}, {"difficulty": "hard", "text": "A CREATIVE CLASS CAN TURN A SETBACK INTO A USEFUL LESSON WITH HONEST REFLECTION WHEN THE GROUP VALUES LISTENING AS MUCH AS SPEAKING"}, {"difficulty": "hard", "text": "THE QUIETEST PART OF A GOOD IDEA WORKS BETTER WHEN THE WHOLE TEAM CONTRIBUTES BECAUSE GOOD IDEAS DO NOT ALWAYS ARRIVE IN ORDER"}, {"difficulty": "hard", "text": "A CURIOUS SCIENTIST CAN DISCOVER A BETTER PATH BY QUESTIONING THE FIRST ANSWER ESPECIALLY WHEN THE EASY OPTION IS NOT THE WISEST ONE"}, {"difficulty": "hard", "text": "A CAREFUL READER CAN CHANGE CONFUSION INTO PROGRESS BY SORTING THE CLUES ESPECIALLY WHEN THE EASY OPTION IS NOT THE WISEST ONE"}, {"difficulty": "hard", "text": "A PATIENT TEAM CAN FIND THE HIDDEN PATTERN BY COMPARING WHAT SEEMS UNRELATED ESPECIALLY WHEN THE EASY OPTION IS NOT THE WISEST ONE"}, {"difficulty": "hard", "text": "THE MOST INTERESTING PART OF LEARNING IS OFTEN THE DETAIL EVERYONE SKIPPED BECAUSE A QUICK GUESS CAN MISS THE IMPORTANT EVIDENCE"}, {"difficulty": "hard", "text": "THE MOST USEFUL PART OF A QUESTION WORKS BETTER WHEN THE WHOLE TEAM CONTRIBUTES BECAUSE A QUICK GUESS CAN MISS THE IMPORTANT EVIDENCE"}, {"difficulty": "hard", "text": "THE MOST INTERESTING PART OF LEARNING WORKS BETTER WHEN THE WHOLE TEAM CONTRIBUTES BECAUSE GOOD IDEAS DO NOT ALWAYS ARRIVE IN ORDER"}, {"difficulty": "hard", "text": "A DETERMINED WRITER CAN FIND THE HIDDEN PATTERN BY COMPARING WHAT SEEMS UNRELATED WHEN CURIOSITY STAYS STRONGER THAN FRUSTRATION"}, {"difficulty": "hard", "text": "A CAREFUL READER CAN TURN A SETBACK INTO A USEFUL LESSON WITH HONEST REFLECTION ESPECIALLY WHEN THE EASY OPTION IS NOT THE WISEST ONE"}, {"difficulty": "hard", "text": "A PATIENT TEAM CAN FIND THE HIDDEN PATTERN BY COMPARING WHAT SEEMS UNRELATED AS LONG AS EVERY MISTAKE BECOMES INFORMATION"}, {"difficulty": "hard", "text": "THE FUNNIEST PART OF A LONG DAY USUALLY REWARDS THE PERSON WHO STAYS CURIOUS BECAUSE STRATEGY MATTERS MORE THAN SPEED"}, {"difficulty": "hard", "text": "A CAREFUL READER CAN CHANGE CONFUSION INTO PROGRESS BY SORTING THE CLUES WHEN THE GROUP VALUES LISTENING AS MUCH AS SPEAKING"}, {"difficulty": "hard", "text": "A DETERMINED WRITER CAN MAKE A BIG PROBLEM SMALLER BY NAMING THE FIRST STEP AS LONG AS EVERY MISTAKE BECOMES INFORMATION"}, {"difficulty": "hard", "text": "A PATIENT TEAM CAN DISCOVER A BETTER PATH BY QUESTIONING THE FIRST ANSWER WHEN THE GROUP VALUES LISTENING AS MUCH AS SPEAKING"}, {"difficulty": "hard", "text": "THE MOST INTERESTING PART OF LEARNING CAN APPEAR RIGHT AFTER THE FIRST MISTAKE BECAUSE STRATEGY MATTERS MORE THAN SPEED"}, {"difficulty": "hard", "text": "A HELPFUL FRIEND CAN CHANGE CONFUSION INTO PROGRESS BY SORTING THE CLUES ESPECIALLY WHEN THE EASY OPTION IS NOT THE WISEST ONE"}, {"difficulty": "hard", "text": "THE SMARTEST PART OF A PLAN IS OFTEN THE DETAIL EVERYONE SKIPPED BECAUSE CAREFUL THINKING NEEDS TIME TO GROW"}, {"difficulty": "hard", "text": "THE MOST USEFUL PART OF A QUESTION CAN TURN INTO A CLUE WHEN YOU COMPARE PATTERNS BECAUSE GOOD IDEAS DO NOT ALWAYS ARRIVE IN ORDER"}, {"difficulty": "hard", "text": "A CAREFUL READER CAN TURN A SETBACK INTO A USEFUL LESSON WITH HONEST REFLECTION WHEN THE GROUP VALUES LISTENING AS MUCH AS SPEAKING"}, {"difficulty": "hard", "text": "THE MOST INTERESTING PART OF LEARNING USUALLY REWARDS THE PERSON WHO STAYS CURIOUS BECAUSE A NEW VIEW CAN CHANGE THE ENTIRE PROBLEM"}, {"difficulty": "hard", "text": "A DIFFICULT PUZZLE CAN MAKE A BIG PROBLEM SMALLER BY NAMING THE FIRST STEP WHEN CURIOSITY STAYS STRONGER THAN FRUSTRATION"}, {"difficulty": "hard", "text": "A DIFFICULT PUZZLE CAN FIND THE HIDDEN PATTERN BY COMPARING WHAT SEEMS UNRELATED WHEN CURIOSITY STAYS STRONGER THAN FRUSTRATION"}, {"difficulty": "hard", "text": "A DETERMINED WRITER CAN TURN A SETBACK INTO A USEFUL LESSON WITH HONEST REFLECTION WHEN CURIOSITY STAYS STRONGER THAN FRUSTRATION"}, {"difficulty": "hard", "text": "THE MOST INTERESTING PART OF LEARNING USUALLY REWARDS THE PERSON WHO STAYS CURIOUS BECAUSE EVERY VOICE CAN ADD A MISSING PIECE"}, {"difficulty": "hard", "text": "THE SMARTEST PART OF A PLAN USUALLY REWARDS THE PERSON WHO STAYS CURIOUS BECAUSE A QUICK GUESS CAN MISS THE IMPORTANT EVIDENCE"}, {"difficulty": "hard", "text": "THE BRAVEST PART OF A CONVERSATION CAN TURN INTO A CLUE WHEN YOU COMPARE PATTERNS BECAUSE STRATEGY MATTERS MORE THAN SPEED"}, {"difficulty": "hard", "text": "THE QUIETEST PART OF A GOOD IDEA CAN TURN INTO A CLUE WHEN YOU COMPARE PATTERNS BECAUSE STRATEGY MATTERS MORE THAN SPEED"}, {"difficulty": "hard", "text": "THE SMARTEST PART OF A PLAN CAN TURN INTO A CLUE WHEN YOU COMPARE PATTERNS BECAUSE A NEW VIEW CAN CHANGE THE ENTIRE PROBLEM"}, {"difficulty": "hard", "text": "THE QUIETEST PART OF A GOOD IDEA IS OFTEN THE DETAIL EVERYONE SKIPPED BECAUSE STRATEGY MATTERS MORE THAN SPEED"}, {"difficulty": "hard", "text": "A CREATIVE CLASS CAN TURN A SETBACK INTO A USEFUL LESSON WITH HONEST REFLECTION ESPECIALLY WHEN THE EASY OPTION IS NOT THE WISEST ONE"}, {"difficulty": "hard", "text": "THE MOST USEFUL PART OF A QUESTION MAY REQUIRE A PAUSE BEFORE ANYONE REPLIES BECAUSE GOOD IDEAS DO NOT ALWAYS ARRIVE IN ORDER"}, {"difficulty": "hard", "text": "THE MOST USEFUL PART OF A QUESTION IS OFTEN THE DETAIL EVERYONE SKIPPED BECAUSE STRATEGY MATTERS MORE THAN SPEED"}, {"difficulty": "hard", "text": "A PATIENT TEAM CAN DISCOVER A BETTER PATH BY QUESTIONING THE FIRST ANSWER WHEN CURIOSITY STAYS STRONGER THAN FRUSTRATION"}, {"difficulty": "hard", "text": "THE SMARTEST PART OF A PLAN IS OFTEN THE DETAIL EVERYONE SKIPPED BECAUSE A NEW VIEW CAN CHANGE THE ENTIRE PROBLEM"}, {"difficulty": "hard", "text": "THE QUIETEST PART OF A GOOD IDEA CAN APPEAR RIGHT AFTER THE FIRST MISTAKE BECAUSE CAREFUL THINKING NEEDS TIME TO GROW"}, {"difficulty": "hard", "text": "A DIFFICULT PUZZLE CAN DISCOVER A BETTER PATH BY QUESTIONING THE FIRST ANSWER EVEN WHEN THE SOLUTION TAKES LONGER THAN EXPECTED"}, {"difficulty": "hard", "text": "A CURIOUS SCIENTIST CAN FIND THE HIDDEN PATTERN BY COMPARING WHAT SEEMS UNRELATED ESPECIALLY WHEN THE EASY OPTION IS NOT THE WISEST ONE"}, {"difficulty": "hard", "text": "THE STRANGEST PART OF A MYSTERY IS OFTEN THE DETAIL EVERYONE SKIPPED BECAUSE CAREFUL THINKING NEEDS TIME TO GROW"}, {"difficulty": "hard", "text": "THE SMARTEST PART OF A PLAN CAN APPEAR RIGHT AFTER THE FIRST MISTAKE BECAUSE A QUICK GUESS CAN MISS THE IMPORTANT EVIDENCE"}, {"difficulty": "hard", "text": "A HELPFUL FRIEND CAN TURN A SETBACK INTO A USEFUL LESSON WITH HONEST REFLECTION WHEN THE GROUP VALUES LISTENING AS MUCH AS SPEAKING"}, {"difficulty": "hard", "text": "A CREATIVE CLASS CAN MAKE A BIG PROBLEM SMALLER BY NAMING THE FIRST STEP WHEN THE GROUP VALUES LISTENING AS MUCH AS SPEAKING"}, {"difficulty": "hard", "text": "THE FUNNIEST PART OF A LONG DAY IS OFTEN THE DETAIL EVERYONE SKIPPED BECAUSE CAREFUL THINKING NEEDS TIME TO GROW"}, {"difficulty": "hard", "text": "THE SMARTEST PART OF A PLAN CAN APPEAR RIGHT AFTER THE FIRST MISTAKE BECAUSE STRATEGY MATTERS MORE THAN SPEED"}, {"difficulty": "hard", "text": "THE FUNNIEST PART OF A LONG DAY IS OFTEN THE DETAIL EVERYONE SKIPPED BECAUSE A QUICK GUESS CAN MISS THE IMPORTANT EVIDENCE"}, {"difficulty": "hard", "text": "A CAREFUL READER CAN DISCOVER A BETTER PATH BY QUESTIONING THE FIRST ANSWER AS LONG AS EVERY MISTAKE BECOMES INFORMATION"}, {"difficulty": "hard", "text": "A CAREFUL READER CAN FIND THE HIDDEN PATTERN BY COMPARING WHAT SEEMS UNRELATED WHEN THE GROUP VALUES LISTENING AS MUCH AS SPEAKING"}, {"difficulty": "hard", "text": "THE FUNNIEST PART OF A LONG DAY USUALLY REWARDS THE PERSON WHO STAYS CURIOUS BECAUSE GOOD IDEAS DO NOT ALWAYS ARRIVE IN ORDER"}, {"difficulty": "hard", "text": "A HELPFUL FRIEND CAN CHANGE CONFUSION INTO PROGRESS BY SORTING THE CLUES AS LONG AS EVERY MISTAKE BECOMES INFORMATION"}, {"difficulty": "hard", "text": "THE MOST INTERESTING PART OF LEARNING USUALLY REWARDS THE PERSON WHO STAYS CURIOUS BECAUSE STRATEGY MATTERS MORE THAN SPEED"}, {"difficulty": "hard", "text": "THE FUNNIEST PART OF A LONG DAY CAN APPEAR RIGHT AFTER THE FIRST MISTAKE BECAUSE GOOD IDEAS DO NOT ALWAYS ARRIVE IN ORDER"}, {"difficulty": "hard", "text": "THE STRANGEST PART OF A MYSTERY CAN TURN INTO A CLUE WHEN YOU COMPARE PATTERNS BECAUSE CAREFUL THINKING NEEDS TIME TO GROW"}, {"difficulty": "hard", "text": "THE MOST USEFUL PART OF A QUESTION CAN TURN INTO A CLUE WHEN YOU COMPARE PATTERNS BECAUSE CAREFUL THINKING NEEDS TIME TO GROW"}, {"difficulty": "hard", "text": "A DIFFICULT PUZZLE CAN MAKE A BIG PROBLEM SMALLER BY NAMING THE FIRST STEP EVEN WHEN THE SOLUTION TAKES LONGER THAN EXPECTED"}, {"difficulty": "hard", "text": "THE MOST USEFUL PART OF A QUESTION USUALLY REWARDS THE PERSON WHO STAYS CURIOUS BECAUSE A NEW VIEW CAN CHANGE THE ENTIRE PROBLEM"}, {"difficulty": "hard", "text": "THE BRAVEST PART OF A CONVERSATION CAN TURN INTO A CLUE WHEN YOU COMPARE PATTERNS BECAUSE EVERY VOICE CAN ADD A MISSING PIECE"}, {"difficulty": "hard", "text": "A CREATIVE CLASS CAN DISCOVER A BETTER PATH BY QUESTIONING THE FIRST ANSWER ESPECIALLY WHEN THE EASY OPTION IS NOT THE WISEST ONE"}, {"difficulty": "hard", "text": "THE BRAVEST PART OF A CONVERSATION IS OFTEN THE DETAIL EVERYONE SKIPPED BECAUSE GOOD IDEAS DO NOT ALWAYS ARRIVE IN ORDER"}, {"difficulty": "hard", "text": "A PATIENT TEAM CAN MAKE A BIG PROBLEM SMALLER BY NAMING THE FIRST STEP WHEN CURIOSITY STAYS STRONGER THAN FRUSTRATION"}, {"difficulty": "hard", "text": "THE MOST INTERESTING PART OF LEARNING IS OFTEN THE DETAIL EVERYONE SKIPPED BECAUSE STRATEGY MATTERS MORE THAN SPEED"}, {"difficulty": "hard", "text": "A DIFFICULT PUZZLE CAN TURN A SETBACK INTO A USEFUL LESSON WITH HONEST REFLECTION WHEN THE GROUP VALUES LISTENING AS MUCH AS SPEAKING"}, {"difficulty": "hard", "text": "THE STRANGEST PART OF A MYSTERY WORKS BETTER WHEN THE WHOLE TEAM CONTRIBUTES BECAUSE A QUICK GUESS CAN MISS THE IMPORTANT EVIDENCE"}, {"difficulty": "hard", "text": "A CURIOUS SCIENTIST CAN DISCOVER A BETTER PATH BY QUESTIONING THE FIRST ANSWER WHEN THE GROUP VALUES LISTENING AS MUCH AS SPEAKING"}, {"difficulty": "hard", "text": "A BRAVE LEADER CAN TURN A SETBACK INTO A USEFUL LESSON WITH HONEST REFLECTION EVEN WHEN THE SOLUTION TAKES LONGER THAN EXPECTED"}, {"difficulty": "hard", "text": "THE SMARTEST PART OF A PLAN CAN APPEAR RIGHT AFTER THE FIRST MISTAKE BECAUSE CAREFUL THINKING NEEDS TIME TO GROW"}, {"difficulty": "hard", "text": "THE FUNNIEST PART OF A LONG DAY IS OFTEN THE DETAIL EVERYONE SKIPPED BECAUSE A NEW VIEW CAN CHANGE THE ENTIRE PROBLEM"}, {"difficulty": "hard", "text": "A DIFFICULT PUZZLE CAN DISCOVER A BETTER PATH BY QUESTIONING THE FIRST ANSWER AS LONG AS EVERY MISTAKE BECOMES INFORMATION"}, {"difficulty": "hard", "text": "A CREATIVE CLASS CAN FIND THE HIDDEN PATTERN BY COMPARING WHAT SEEMS UNRELATED EVEN WHEN THE SOLUTION TAKES LONGER THAN EXPECTED"}, {"difficulty": "hard", "text": "THE QUIETEST PART OF A GOOD IDEA USUALLY REWARDS THE PERSON WHO STAYS CURIOUS BECAUSE CAREFUL THINKING NEEDS TIME TO GROW"}, {"difficulty": "hard", "text": "A CAREFUL READER CAN MAKE A BIG PROBLEM SMALLER BY NAMING THE FIRST STEP EVEN WHEN THE SOLUTION TAKES LONGER THAN EXPECTED"}, {"difficulty": "hard", "text": "THE FUNNIEST PART OF A LONG DAY CAN TURN INTO A CLUE WHEN YOU COMPARE PATTERNS BECAUSE GOOD IDEAS DO NOT ALWAYS ARRIVE IN ORDER"}, {"difficulty": "hard", "text": "A CAREFUL READER CAN TURN A SETBACK INTO A USEFUL LESSON WITH HONEST REFLECTION AS LONG AS EVERY MISTAKE BECOMES INFORMATION"}, {"difficulty": "hard", "text": "THE SMARTEST PART OF A PLAN CAN APPEAR RIGHT AFTER THE FIRST MISTAKE BECAUSE GOOD IDEAS DO NOT ALWAYS ARRIVE IN ORDER"}, {"difficulty": "hard", "text": "THE QUIETEST PART OF A GOOD IDEA CAN APPEAR RIGHT AFTER THE FIRST MISTAKE BECAUSE STRATEGY MATTERS MORE THAN SPEED"}, {"difficulty": "hard", "text": "A HELPFUL FRIEND CAN FIND THE HIDDEN PATTERN BY COMPARING WHAT SEEMS UNRELATED WHEN THE GROUP VALUES LISTENING AS MUCH AS SPEAKING"}, {"difficulty": "hard", "text": "A DETERMINED WRITER CAN CHANGE CONFUSION INTO PROGRESS BY SORTING THE CLUES AS LONG AS EVERY MISTAKE BECOMES INFORMATION"}, {"difficulty": "hard", "text": "THE QUIETEST PART OF A GOOD IDEA CAN TURN INTO A CLUE WHEN YOU COMPARE PATTERNS BECAUSE GOOD IDEAS DO NOT ALWAYS ARRIVE IN ORDER"}, {"difficulty": "hard", "text": "A HELPFUL FRIEND CAN MAKE A BIG PROBLEM SMALLER BY NAMING THE FIRST STEP WHEN THE GROUP VALUES LISTENING AS MUCH AS SPEAKING"}, {"difficulty": "hard", "text": "A DETERMINED WRITER CAN FIND THE HIDDEN PATTERN BY COMPARING WHAT SEEMS UNRELATED ESPECIALLY WHEN THE EASY OPTION IS NOT THE WISEST ONE"}, {"difficulty": "hard", "text": "THE SMARTEST PART OF A PLAN CAN TURN INTO A CLUE WHEN YOU COMPARE PATTERNS BECAUSE CAREFUL THINKING NEEDS TIME TO GROW"}, {"difficulty": "hard", "text": "A CURIOUS SCIENTIST CAN MAKE A BIG PROBLEM SMALLER BY NAMING THE FIRST STEP EVEN WHEN THE SOLUTION TAKES LONGER THAN EXPECTED"}, {"difficulty": "hard", "text": "A CURIOUS SCIENTIST CAN MAKE A BIG PROBLEM SMALLER BY NAMING THE FIRST STEP WHEN THE GROUP VALUES LISTENING AS MUCH AS SPEAKING"}, {"difficulty": "hard", "text": "THE HARDEST PART OF A CHALLENGE WORKS BETTER WHEN THE WHOLE TEAM CONTRIBUTES BECAUSE A QUICK GUESS CAN MISS THE IMPORTANT EVIDENCE"}, {"difficulty": "hard", "text": "A CURIOUS SCIENTIST CAN CHANGE CONFUSION INTO PROGRESS BY SORTING THE CLUES ESPECIALLY WHEN THE EASY OPTION IS NOT THE WISEST ONE"}, {"difficulty": "hard", "text": "THE BRAVEST PART OF A CONVERSATION CAN APPEAR RIGHT AFTER THE FIRST MISTAKE BECAUSE A QUICK GUESS CAN MISS THE IMPORTANT EVIDENCE"}, {"difficulty": "hard", "text": "A CAREFUL READER CAN TURN A SETBACK INTO A USEFUL LESSON WITH HONEST REFLECTION WHEN CURIOSITY STAYS STRONGER THAN FRUSTRATION"}, {"difficulty": "hard", "text": "A DETERMINED WRITER CAN MAKE A BIG PROBLEM SMALLER BY NAMING THE FIRST STEP WHEN THE GROUP VALUES LISTENING AS MUCH AS SPEAKING"}, {"difficulty": "hard", "text": "A PATIENT TEAM CAN CHANGE CONFUSION INTO PROGRESS BY SORTING THE CLUES AS LONG AS EVERY MISTAKE BECOMES INFORMATION"}, {"difficulty": "hard", "text": "THE BRAVEST PART OF A CONVERSATION IS OFTEN THE DETAIL EVERYONE SKIPPED BECAUSE A NEW VIEW CAN CHANGE THE ENTIRE PROBLEM"}, {"difficulty": "hard", "text": "A BRAVE LEADER CAN DISCOVER A BETTER PATH BY QUESTIONING THE FIRST ANSWER WHEN THE GROUP VALUES LISTENING AS MUCH AS SPEAKING"}, {"difficulty": "hard", "text": "THE MOST INTERESTING PART OF LEARNING USUALLY REWARDS THE PERSON WHO STAYS CURIOUS BECAUSE GOOD IDEAS DO NOT ALWAYS ARRIVE IN ORDER"}, {"difficulty": "hard", "text": "THE QUIETEST PART OF A GOOD IDEA USUALLY REWARDS THE PERSON WHO STAYS CURIOUS BECAUSE STRATEGY MATTERS MORE THAN SPEED"}, {"difficulty": "hard", "text": "THE HARDEST PART OF A CHALLENGE USUALLY REWARDS THE PERSON WHO STAYS CURIOUS BECAUSE EVERY VOICE CAN ADD A MISSING PIECE"}, {"difficulty": "hard", "text": "THE QUIETEST PART OF A GOOD IDEA MAY REQUIRE A PAUSE BEFORE ANYONE REPLIES BECAUSE GOOD IDEAS DO NOT ALWAYS ARRIVE IN ORDER"}, {"difficulty": "hard", "text": "THE BRAVEST PART OF A CONVERSATION CAN TURN INTO A CLUE WHEN YOU COMPARE PATTERNS BECAUSE A QUICK GUESS CAN MISS THE IMPORTANT EVIDENCE"}, {"difficulty": "hard", "text": "A DETERMINED WRITER CAN FIND THE HIDDEN PATTERN BY COMPARING WHAT SEEMS UNRELATED AS LONG AS EVERY MISTAKE BECOMES INFORMATION"}, {"difficulty": "hard", "text": "A BRAVE LEADER CAN TURN A SETBACK INTO A USEFUL LESSON WITH HONEST REFLECTION WHEN THE GROUP VALUES LISTENING AS MUCH AS SPEAKING"}, {"difficulty": "hard", "text": "THE MOST USEFUL PART OF A QUESTION IS OFTEN THE DETAIL EVERYONE SKIPPED BECAUSE GOOD IDEAS DO NOT ALWAYS ARRIVE IN ORDER"}, {"difficulty": "hard", "text": "THE HARDEST PART OF A CHALLENGE CAN APPEAR RIGHT AFTER THE FIRST MISTAKE BECAUSE EVERY VOICE CAN ADD A MISSING PIECE"}, {"difficulty": "hard", "text": "A DETERMINED WRITER CAN DISCOVER A BETTER PATH BY QUESTIONING THE FIRST ANSWER WHEN CURIOSITY STAYS STRONGER THAN FRUSTRATION"}, {"difficulty": "hard", "text": "THE MOST USEFUL PART OF A QUESTION USUALLY REWARDS THE PERSON WHO STAYS CURIOUS BECAUSE CAREFUL THINKING NEEDS TIME TO GROW"}, {"difficulty": "hard", "text": "A DETERMINED WRITER CAN DISCOVER A BETTER PATH BY QUESTIONING THE FIRST ANSWER AS LONG AS EVERY MISTAKE BECOMES INFORMATION"}, {"difficulty": "hard", "text": "A CREATIVE CLASS CAN MAKE A BIG PROBLEM SMALLER BY NAMING THE FIRST STEP EVEN WHEN THE SOLUTION TAKES LONGER THAN EXPECTED"}, {"difficulty": "hard", "text": "THE QUIETEST PART OF A GOOD IDEA MAY REQUIRE A PAUSE BEFORE ANYONE REPLIES BECAUSE STRATEGY MATTERS MORE THAN SPEED"}, {"difficulty": "hard", "text": "THE HARDEST PART OF A CHALLENGE MAY REQUIRE A PAUSE BEFORE ANYONE REPLIES BECAUSE A NEW VIEW CAN CHANGE THE ENTIRE PROBLEM"}, {"difficulty": "hard", "text": "A DIFFICULT PUZZLE CAN CHANGE CONFUSION INTO PROGRESS BY SORTING THE CLUES WHEN CURIOSITY STAYS STRONGER THAN FRUSTRATION"}, {"difficulty": "hard", "text": "A CAREFUL READER CAN MAKE A BIG PROBLEM SMALLER BY NAMING THE FIRST STEP WHEN THE GROUP VALUES LISTENING AS MUCH AS SPEAKING"}, {"difficulty": "hard", "text": "A PATIENT TEAM CAN DISCOVER A BETTER PATH BY QUESTIONING THE FIRST ANSWER ESPECIALLY WHEN THE EASY OPTION IS NOT THE WISEST ONE"}, {"difficulty": "hard", "text": "A CREATIVE CLASS CAN FIND THE HIDDEN PATTERN BY COMPARING WHAT SEEMS UNRELATED WHEN CURIOSITY STAYS STRONGER THAN FRUSTRATION"}, {"difficulty": "hard", "text": "A DIFFICULT PUZZLE CAN MAKE A BIG PROBLEM SMALLER BY NAMING THE FIRST STEP ESPECIALLY WHEN THE EASY OPTION IS NOT THE WISEST ONE"}, {"difficulty": "hard", "text": "A DIFFICULT PUZZLE CAN DISCOVER A BETTER PATH BY QUESTIONING THE FIRST ANSWER ESPECIALLY WHEN THE EASY OPTION IS NOT THE WISEST ONE"}, {"difficulty": "hard", "text": "A HELPFUL FRIEND CAN FIND THE HIDDEN PATTERN BY COMPARING WHAT SEEMS UNRELATED AS LONG AS EVERY MISTAKE BECOMES INFORMATION"}, {"difficulty": "hard", "text": "THE MOST INTERESTING PART OF LEARNING IS OFTEN THE DETAIL EVERYONE SKIPPED BECAUSE A NEW VIEW CAN CHANGE THE ENTIRE PROBLEM"}, {"difficulty": "hard", "text": "A PATIENT TEAM CAN CHANGE CONFUSION INTO PROGRESS BY SORTING THE CLUES ESPECIALLY WHEN THE EASY OPTION IS NOT THE WISEST ONE"}, {"difficulty": "hard", "text": "A DIFFICULT PUZZLE CAN CHANGE CONFUSION INTO PROGRESS BY SORTING THE CLUES ESPECIALLY WHEN THE EASY OPTION IS NOT THE WISEST ONE"}, {"difficulty": "hard", "text": "A PATIENT TEAM CAN MAKE A BIG PROBLEM SMALLER BY NAMING THE FIRST STEP ESPECIALLY WHEN THE EASY OPTION IS NOT THE WISEST ONE"}, {"difficulty": "hard", "text": "A PATIENT TEAM CAN TURN A SETBACK INTO A USEFUL LESSON WITH HONEST REFLECTION ESPECIALLY WHEN THE EASY OPTION IS NOT THE WISEST ONE"}, {"difficulty": "hard", "text": "A BRAVE LEADER CAN FIND THE HIDDEN PATTERN BY COMPARING WHAT SEEMS UNRELATED EVEN WHEN THE SOLUTION TAKES LONGER THAN EXPECTED"}, {"difficulty": "hard", "text": "A CURIOUS SCIENTIST CAN TURN A SETBACK INTO A USEFUL LESSON WITH HONEST REFLECTION WHEN THE GROUP VALUES LISTENING AS MUCH AS SPEAKING"}];
+
+    const DIFFICULTY_INFO = {
+      very_easy: { label: "Very Easy", code: "VE", clues: 3, revealLimit: 1 },
+      easy: { label: "Easy", code: "E", clues: 2, revealLimit: 1 },
+      medium: { label: "Medium", code: "M", clues: 1, revealLimit: 1 },
+      hard: { label: "Hard", code: "H", clues: 0, revealLimit: 1 }
+    };
+
+    const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const state = {
+      started: false,
+      puzzle: null,
+      puzzleId: -1,
+      difficulty: null,
+      cipherText: "",
+      cipherMap: {},
+      decodeMap: {},
+      guesses: {},
+      locked: new Set(),
+      initialClues: [],
+      revealedClues: [],
+      seedCore: "",
+      shareCode: "",
+      showMistakes: false,
+      revealsUsed: 0
+    };
+
+    const els = {
+      startScreen: document.getElementById("startScreen"),
+      gameScreen: document.getElementById("gameScreen"),
+      board: document.getElementById("puzzleBoard"),
+      message: document.getElementById("message"),
+      alphabetMap: document.getElementById("alphabetMap"),
+      clueList: document.getElementById("clueList"),
+      clueDisplay: document.getElementById("clueDisplay"),
+      progressDisplay: document.getElementById("progressDisplay"),
+      puzzleNumber: document.getElementById("puzzleNumber"),
+      difficultyDisplay: document.getElementById("difficultyDisplay"),
+      seedBox: document.getElementById("seedBox"),
+      startSeedBox: document.getElementById("startSeedBox"),
+      pdfCount: document.getElementById("pdfCount"),
+      includeAnswers: document.getElementById("includeAnswers"),
+      checkBtn: document.getElementById("checkBtn"),
+      showMistakesBtn: document.getElementById("showMistakesBtn"),
+      revealBtn: document.getElementById("revealBtn"),
+      clearBtn: document.getElementById("clearBtn"),
+      newBtn: document.getElementById("newBtn"),
+      giveUpBtn: document.getElementById("giveUpBtn"),
+      printBtn: document.getElementById("printBtn"),
+      pdfDialog: document.getElementById("pdfDialog"),
+      cancelPdfBtn: document.getElementById("cancelPdfBtn"),
+      exportPdfConfirmBtn: document.getElementById("exportPdfConfirmBtn"),
+      copySeedBtn: document.getElementById("copySeedBtn"),
+      loadSeedBtn: document.getElementById("loadSeedBtn"),
+      startLoadSeedBtn: document.getElementById("startLoadSeedBtn"),
+      themeBtn: document.getElementById("themeBtn"),
+      dialog: document.getElementById("answerDialog"),
+      dialogTitle: document.getElementById("dialogTitle"),
+      dialogText: document.getElementById("dialogText"),
+      answerBox: document.getElementById("answerBox"),
+      closeDialogBtn: document.getElementById("closeDialogBtn"),
+      newFromDialogBtn: document.getElementById("newFromDialogBtn"),
+      printInfo: document.getElementById("printInfo"),
+      printClues: document.getElementById("printClues")
+    };
+
+    function xmur3(str) {
+      let h = 1779033703 ^ str.length;
+      for (let i = 0; i < str.length; i++) {
+        h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+        h = h << 13 | h >>> 19;
+      }
+      return function() {
+        h = Math.imul(h ^ (h >>> 16), 2246822507);
+        h = Math.imul(h ^ (h >>> 13), 3266489909);
+        return (h ^= h >>> 16) >>> 0;
+      };
+    }
+
+    function mulberry32(a) {
+      return function() {
+        let t = a += 0x6D2B79F5;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function rngFromSeed(seed) {
+      return mulberry32(xmur3(seed)());
+    }
+
+    function randomCore() {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let out = "";
+      for (let i = 0; i < 6; i++) out += chars[Math.floor(Math.random() * chars.length)];
+      return out;
+    }
+
+    function shuffle(arr, rng) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function makeSubstitution(rng) {
+      let shuffled = shuffle(ALPHABET.split(""), rng);
+
+      // Avoid letters encrypting to themselves.
+      for (let i = 0; i < ALPHABET.length; i++) {
+        if (shuffled[i] === ALPHABET[i]) {
+          const swapWith = (i + 1) % ALPHABET.length;
+          [shuffled[i], shuffled[swapWith]] = [shuffled[swapWith], shuffled[i]];
+        }
+      }
+
+      const cipherMap = {};
+      const decodeMap = {};
+      for (let i = 0; i < ALPHABET.length; i++) {
+        cipherMap[ALPHABET[i]] = shuffled[i];
+        decodeMap[shuffled[i]] = ALPHABET[i];
+      }
+      return { cipherMap, decodeMap };
+    }
+
+    function encode(text, cipherMap) {
+      return text.split("").map(ch => {
+        const up = ch.toUpperCase();
+        return ALPHABET.includes(up) ? cipherMap[up] : ch;
+      }).join("");
+    }
+
+    function poolForDifficulty(difficulty) {
+      return PUZZLES
+        .map((p, index) => ({ ...p, id: index }))
+        .filter(p => p.difficulty === difficulty);
+    }
+
+    function createShareCode(difficulty, seedCore, puzzleId) {
+      return "CQ2:" + difficulty + ":" + seedCore + ":" + String(puzzleId).padStart(4, "0");
+    }
+
+    function parseShareCode(raw) {
+      const text = (raw || "").trim();
+      const match = text.match(/^CQ2:(very_easy|easy|medium|hard):([A-Z0-9]{4,12}):(\d{1,4})$/i);
+      if (!match) return null;
+      return {
+        difficulty: match[1].toLowerCase(),
+        seedCore: match[2].toUpperCase(),
+        puzzleId: Number(match[3])
+      };
+    }
+
+    function pickPuzzleId(difficulty, rng) {
+      const pool = poolForDifficulty(difficulty);
+      return pool[Math.floor(rng() * pool.length)].id;
+    }
+
+    function startRandomDifficulty(difficulty) {
+      const seedCore = randomCore();
+      const rng = rngFromSeed("pick|" + difficulty + "|" + seedCore);
+      const puzzleId = pickPuzzleId(difficulty, rng);
+      startPuzzle({ difficulty, seedCore, puzzleId });
+    }
+
+    function startPuzzle(config) {
+      const difficulty = config.difficulty;
+      const seedCore = config.seedCore;
+      const puzzleId = Number(config.puzzleId);
+      const puzzle = PUZZLES[puzzleId];
+
+      if (!DIFFICULTY_INFO[difficulty] || !puzzle || puzzle.difficulty !== difficulty) {
+        showStart();
+        setStartLoadError("That share code did not match a valid puzzle.");
+        return;
+      }
+
+      state.started = true;
+      state.difficulty = difficulty;
+      state.seedCore = seedCore;
+      state.puzzleId = puzzleId;
+      state.puzzle = puzzle;
+      state.shareCode = createShareCode(difficulty, seedCore, puzzleId);
+
+      const rng = rngFromSeed("cipher|" + state.shareCode);
+      const maps = makeSubstitution(rng);
+      state.cipherMap = maps.cipherMap;
+      state.decodeMap = maps.decodeMap;
+      state.cipherText = encode(puzzle.text, state.cipherMap);
+      state.guesses = {};
+      state.locked = new Set();
+      state.initialClues = [];
+      state.revealedClues = [];
+      state.showMistakes = false;
+      state.revealsUsed = 0;
+
+      const clueCount = DIFFICULTY_INFO[difficulty].clues;
+      addRandomClues(clueCount, rng, "initial");
+
+      els.startScreen.classList.add("hidden");
+      els.gameScreen.classList.remove("hidden");
+      els.seedBox.value = state.shareCode;
+      els.startSeedBox.value = state.shareCode;
+
+      els.difficultyDisplay.textContent = DIFFICULTY_INFO[difficulty].label;
+      els.puzzleNumber.textContent = String(puzzleId + 1).padStart(3, "0");
+      setMessage(clueCount ? "Starting clues are filled in. Click a box and type your guesses." : "No starting clues this time. Click a box and start testing ideas.", "neutral");
+      render();
+    }
+
+    function showStart() {
+      state.started = false;
+      els.startScreen.classList.remove("hidden");
+      els.gameScreen.classList.add("hidden");
+      els.alphabetMap.innerHTML = "";
+      els.clueList.innerHTML = "";
+      els.seedBox.value = "";
+      setButtonStates();
+    }
+
+    function setStartLoadError(text) {
+      // Use a small temporary alert-style message without blocking the menu.
+      const old = document.getElementById("startError");
+      if (old) old.remove();
+      const p = document.createElement("p");
+      p.id = "startError";
+      p.className = "message error";
+      p.style.marginTop = "14px";
+      p.textContent = text;
+      els.startScreen.appendChild(p);
+      setTimeout(() => p.remove(), 3500);
+    }
+
+    function uniqueLetters(text) {
+      return [...new Set(text.split("").filter(ch => ALPHABET.includes(ch)))];
+    }
+
+    function addRandomClues(count, rng, source) {
+      const available = uniqueLetters(state.cipherText).filter(ch => !state.locked.has(ch));
+      const shuffled = shuffle(available, rng);
+      for (let i = 0; i < Math.min(count, shuffled.length); i++) {
+        lockLetter(shuffled[i], source);
+      }
+    }
+
+    function lockLetter(cipher, source) {
+      const plain = state.decodeMap[cipher];
+      state.guesses[cipher] = plain;
+      state.locked.add(cipher);
+      const item = { cipher, plain, source };
+      if (source === "initial") state.initialClues.push(item);
+      else state.revealedClues.push(item);
+    }
+
+    function setMessage(text, type = "neutral") {
+      els.message.textContent = text;
+      els.message.className = "message " + type + " screen-only";
+    }
+
+    function render() {
+      renderPuzzle();
+      renderMap();
+      renderClues();
+      updateProgress();
+      updatePrintInfo();
+      setButtonStates();
+    }
+
+    function renderPuzzle() {
+      els.board.innerHTML = "";
+      const words = state.cipherText.split(" ");
+
+      words.forEach((word, wordIndex) => {
+        const wordSpan = document.createElement("span");
+        wordSpan.className = "word";
+
+        for (const ch of word) {
+          if (ALPHABET.includes(ch)) {
+            wordSpan.appendChild(makeLetterCell(ch));
+          } else {
+            const punct = document.createElement("span");
+            punct.className = "punct";
+            punct.textContent = ch;
+            wordSpan.appendChild(punct);
+          }
+        }
+
+        els.board.appendChild(wordSpan);
+
+        if (wordIndex < words.length - 1) {
+          const space = document.createElement("span");
+          space.className = "space-break";
+          space.textContent = " ";
+          els.board.appendChild(space);
+        }
+      });
+    }
+
+    function makeLetterCell(cipherLetter) {
+      const cell = document.createElement("span");
+      cell.className = "letter-cell";
+      cell.dataset.cipher = cipherLetter;
+
+      const top = document.createElement("div");
+      top.className = "cipher-letter";
+      top.textContent = cipherLetter;
+
+      const input = document.createElement("input");
+      input.className = "guess-input";
+      input.maxLength = 1;
+      input.inputMode = "text";
+      input.autocomplete = "off";
+      input.spellcheck = false;
+      input.dataset.cipher = cipherLetter;
+      input.value = state.guesses[cipherLetter] || "";
+      input.setAttribute("aria-label", "Guess for cipher letter " + cipherLetter);
+
+      if (input.value) input.classList.add("filled");
+      if (state.locked.has(cipherLetter)) {
+        input.classList.add("locked");
+        input.title = "Locked clue letter";
+      }
+
+      if (state.showMistakes && input.value) {
+        const right = state.decodeMap[cipherLetter];
+        input.classList.add(input.value === right ? "correct" : "wrong");
+      }
+
+      input.addEventListener("input", handleInput);
+      input.addEventListener("keydown", handleKeydown);
+      input.addEventListener("focus", () => selectAllCipher(cipherLetter));
+      input.addEventListener("blur", clearSelectedCipher);
+
+      cell.appendChild(top);
+      cell.appendChild(input);
+      return cell;
+    }
+
+    function handleInput(e) {
+      const input = e.target;
+      const cipher = input.dataset.cipher;
+      let value = (input.value || "").toUpperCase().replace(/[^A-Z]/g, "");
+      value = value.slice(-1);
+
+      if (state.locked.has(cipher)) {
+        value = state.decodeMap[cipher];
+        setMessage("That letter is locked because it was given as a clue.", "neutral");
+      }
+
+      input.value = value;
+
+      if (value) {
+        state.guesses[cipher] = value;
+      } else {
+        delete state.guesses[cipher];
+      }
+
+      state.showMistakes = false;
+      syncInputs(cipher);
+      renderMap();
+      updateProgress();
+      setButtonStates();
+      focusNext(input);
+    }
+
+    function handleKeydown(e) {
+      const input = e.target;
+      const cipher = input.dataset.cipher;
+
+      if (e.key === "Backspace" || e.key === "Delete") {
+        if (state.locked.has(cipher)) {
+          e.preventDefault();
+          input.value = state.decodeMap[cipher];
+          state.guesses[cipher] = state.decodeMap[cipher];
+          syncInputs(cipher);
+          setMessage("Locked clue letters cannot be erased.", "neutral");
+          return;
+        }
+        if (!input.value) {
+          focusPrev(input);
+          return;
+        }
+        delete state.guesses[cipher];
+        input.value = "";
+        syncInputs(cipher);
+        renderMap();
+        updateProgress();
+        setButtonStates();
+        e.preventDefault();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        focusNext(input, false);
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        focusPrev(input);
+      }
+    }
+
+    function syncInputs(cipher) {
+      const val = state.guesses[cipher] || "";
+      document.querySelectorAll('.guess-input[data-cipher="' + cipher + '"]').forEach(inp => {
+        inp.value = val;
+        inp.classList.toggle("filled", !!val);
+        inp.classList.toggle("locked", state.locked.has(cipher));
+        inp.classList.remove("correct", "wrong");
+      });
+    }
+
+    function getInputs() {
+      return Array.from(document.querySelectorAll(".guess-input"));
+    }
+
+    function focusNext(input, skipSame = true) {
+      const inputs = getInputs();
+      const idx = inputs.indexOf(input);
+      for (let i = idx + 1; i < inputs.length; i++) {
+        if (!skipSame || inputs[i].dataset.cipher !== input.dataset.cipher) {
+          inputs[i].focus();
+          inputs[i].select();
+          return;
+        }
+      }
+    }
+
+    function focusPrev(input) {
+      const inputs = getInputs();
+      const idx = inputs.indexOf(input);
+      if (idx > 0) {
+        inputs[idx - 1].focus();
+        inputs[idx - 1].select();
+      }
+    }
+
+    function selectAllCipher(cipher) {
+      document.querySelectorAll('.letter-cell[data-cipher="' + cipher + '"] .guess-input').forEach(inp => {
+        inp.style.boxShadow = "0 0 0 4px var(--focus)";
+      });
+    }
+
+    function clearSelectedCipher() {
+      document.querySelectorAll(".guess-input").forEach(inp => {
+        inp.style.boxShadow = "";
+      });
+    }
+
+    function renderMap() {
+      els.alphabetMap.innerHTML = "";
+      if (!state.started) return;
+      uniqueLetters(state.cipherText).sort().forEach(cipher => {
+        const item = document.createElement("div");
+        item.className = "map-item" + (state.locked.has(cipher) ? " locked" : "");
+        item.innerHTML = `<span class="from">${cipher}</span><span class="arrow">→</span><span class="to">${state.guesses[cipher] || "?"}</span>`;
+        els.alphabetMap.appendChild(item);
+      });
+    }
+
+    function renderClues() {
+      els.clueList.innerHTML = "";
+      const clues = [...state.initialClues, ...state.revealedClues];
+      if (!clues.length) {
+        const p = document.createElement("p");
+        p.className = "hint-text small";
+        p.textContent = "No clues yet.";
+        els.clueList.appendChild(p);
+      } else {
+        clues.forEach(c => {
+          const pill = document.createElement("span");
+          pill.className = "clue-pill";
+          pill.textContent = c.cipher + " = " + c.plain + (c.source === "revealed" ? " ★" : "");
+          els.clueList.appendChild(pill);
+        });
+      }
+
+      els.clueDisplay.textContent = clues.length ? clues.map(c => c.cipher + "=" + c.plain).join(", ") : "None";
+    }
+
+    function decodedAttempt() {
+      return state.cipherText.split("").map(ch => {
+        if (ALPHABET.includes(ch)) return state.guesses[ch] || "_";
+        return ch;
+      }).join("");
+    }
+
+    function updateProgress() {
+      if (!state.started) {
+        els.progressDisplay.textContent = "0%";
+        return;
+      }
+      const used = uniqueLetters(state.cipherText);
+      const filled = used.filter(ch => !!state.guesses[ch]).length;
+      const percent = Math.round((filled / used.length) * 100);
+      els.progressDisplay.textContent = percent + "%";
+    }
+
+    function isComplete() {
+      return uniqueLetters(state.cipherText).every(ch => !!state.guesses[ch]);
+    }
+
+    function isCorrect() {
+      return decodedAttempt() === state.puzzle.text;
+    }
+
+    function checkPuzzle() {
+      if (!state.started) return;
+      if (!isComplete()) {
+        const remaining = uniqueLetters(state.cipherText).filter(ch => !state.guesses[ch]).length;
+        setMessage("Not finished yet. You still need " + remaining + " more letter" + (remaining === 1 ? "" : "s") + ".", "neutral");
+        return;
+      }
+
+      if (isCorrect()) {
+        setMessage("You solved it! Great work.", "success");
+        showAnswerDialog("Solved!", "You cracked the cryptoquip:");
+      } else {
+        setMessage("Some letters are not correct yet. Use Show Mistakes if you want a nudge.", "error");
+      }
+    }
+
+    function showMistakes() {
+      if (!state.started) return;
+      state.showMistakes = true;
+      document.querySelectorAll(".guess-input").forEach(inp => {
+        const cipher = inp.dataset.cipher;
+        inp.classList.remove("correct", "wrong");
+        if (inp.value) {
+          inp.classList.add(inp.value === state.decodeMap[cipher] ? "correct" : "wrong");
+        }
+      });
+      setMessage("Green letters are correct. Red letters need another try.", "neutral");
+    }
+
+    function clearGuesses() {
+      if (!state.started) return;
+      const keep = {};
+      state.locked.forEach(cipher => keep[cipher] = state.decodeMap[cipher]);
+      state.guesses = keep;
+      state.showMistakes = false;
+      setMessage("Guesses cleared. Clue and revealed letters stayed in place.", "neutral");
+      render();
+    }
+
+    function revealOneLetter() {
+      if (!state.started) return;
+      const limit = DIFFICULTY_INFO[state.difficulty].revealLimit;
+      if (state.revealsUsed >= limit) {
+        setMessage("You have already used your reveal for this puzzle.", "neutral");
+        return;
+      }
+
+      const missing = uniqueLetters(state.cipherText).filter(ch => !state.locked.has(ch) && state.guesses[ch] !== state.decodeMap[ch]);
+      if (!missing.length) {
+        setMessage("There are no useful letters left to reveal.", "success");
+        return;
+      }
+
+      const rng = rngFromSeed("reveal|" + state.shareCode + "|" + state.revealsUsed);
+      const cipher = missing[Math.floor(rng() * missing.length)];
+      lockLetter(cipher, "revealed");
+      state.revealsUsed++;
+      state.showMistakes = false;
+      setMessage("Revealed one letter: " + cipher + " = " + state.decodeMap[cipher] + ".", "success");
+      render();
+    }
+
+    function showAnswerDialog(title = "Puzzle Answer", text = "Here is the decoded message:") {
+      if (!state.started) return;
+      els.dialogTitle.textContent = title;
+      els.dialogText.textContent = text;
+      els.answerBox.textContent = state.puzzle.text;
+      els.dialog.showModal();
+    }
+
+    function copySeed() {
+      if (!state.started) return;
+      els.seedBox.select();
+      els.seedBox.setSelectionRange(0, 99999);
+      try {
+        navigator.clipboard.writeText(els.seedBox.value);
+        setMessage("Share code copied.", "success");
+      } catch (err) {
+        document.execCommand("copy");
+        setMessage("Share code copied.", "success");
+      }
+    }
+
+    function loadSeedFromBox(box) {
+      const parsed = parseShareCode(box.value);
+      if (!parsed) {
+        if (state.started) setMessage("That share code was not recognized.", "error");
+        else setStartLoadError("That share code was not recognized.");
+        return;
+      }
+      startPuzzle(parsed);
+    }
+
+    function updatePrintInfo() {
+      if (!state.started) return;
+      const clues = state.initialClues.map(c => c.cipher + " = " + c.plain).join(", ") || "None";
+      els.printInfo.textContent = "Difficulty: " + DIFFICULTY_INFO[state.difficulty].label + " | Starting clues: " + clues;
+      els.printClues.textContent = "Starting clues: " + clues;
+    }
+
+
+    function pdfTextEscape(text) {
+      return String(text)
+        .replace(/\\/g, "\\\\")
+        .replace(/\(/g, "\\(")
+        .replace(/\)/g, "\\)")
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/[\u2013\u2014]/g, "-")
+        .replace(/[^\x20-\x7E]/g, "");
+    }
+
+    function pdfText(cmds, text, x, y, size = 12, font = "F1") {
+      cmds.push("BT /" + font + " " + size + " Tf " + x.toFixed(1) + " " + y.toFixed(1) + " Td (" + pdfTextEscape(text) + ") Tj ET");
+    }
+
+    function pdfLine(cmds, x1, y1, x2, y2) {
+      cmds.push(x1.toFixed(1) + " " + y1.toFixed(1) + " m " + x2.toFixed(1) + " " + y2.toFixed(1) + " l S");
+    }
+
+    function makeExportPuzzle(config) {
+      const difficulty = config.difficulty;
+      const seedCore = config.seedCore;
+      const puzzleId = Number(config.puzzleId);
+      const puzzle = PUZZLES[puzzleId];
+      const shareCode = createShareCode(difficulty, seedCore, puzzleId);
+      const rng = rngFromSeed("cipher|" + shareCode);
+      const maps = makeSubstitution(rng);
+      const cipherText = encode(puzzle.text, maps.cipherMap);
+      const locked = new Set();
+      const guesses = {};
+      const clues = [];
+
+      const available = uniqueLetters(cipherText);
+      const clueCount = DIFFICULTY_INFO[difficulty].clues;
+      const shuffled = shuffle(available, rng);
+      for (let i = 0; i < Math.min(clueCount, shuffled.length); i++) {
+        const cipher = shuffled[i];
+        const plain = maps.decodeMap[cipher];
+        locked.add(cipher);
+        guesses[cipher] = plain;
+        clues.push({ cipher, plain, source: "initial" });
+      }
+
+      return {
+        difficulty,
+        seedCore,
+        puzzleId,
+        puzzle,
+        shareCode,
+        cipherText,
+        cipherMap: maps.cipherMap,
+        decodeMap: maps.decodeMap,
+        locked,
+        guesses,
+        clues
+      };
+    }
+
+    function randomExportConfig(difficulty, usedPuzzleIds) {
+      let seedCore = randomCore();
+      let rng = rngFromSeed("pick|" + difficulty + "|" + seedCore);
+      let puzzleId = pickPuzzleId(difficulty, rng);
+
+      let safety = 0;
+      while (usedPuzzleIds.has(puzzleId) && safety < 80) {
+        seedCore = randomCore();
+        rng = rngFromSeed("pick|" + difficulty + "|" + seedCore);
+        puzzleId = pickPuzzleId(difficulty, rng);
+        safety++;
+      }
+
+      usedPuzzleIds.add(puzzleId);
+      return { difficulty, seedCore, puzzleId };
+    }
+
+    function clampPdfCount() {
+      const countRaw = Number(els.pdfCount.value || 1);
+      const count = Math.max(1, Math.min(20, Number.isFinite(countRaw) ? Math.floor(countRaw) : 1));
+      els.pdfCount.value = count;
+      return count;
+    }
+
+    function getExportPuzzles() {
+      const count = clampPdfCount();
+
+      const configs = [];
+      const used = new Set();
+
+      configs.push({
+        difficulty: state.difficulty,
+        seedCore: state.seedCore,
+        puzzleId: state.puzzleId
+      });
+      used.add(state.puzzleId);
+
+      for (let i = 1; i < count; i++) {
+        configs.push(randomExportConfig(state.difficulty, used));
+      }
+
+      return configs.map(makeExportPuzzle);
+    }
+
+    function buildPuzzlePage(exportPuzzle, pageIndex, totalPuzzles) {
+      const pageW = 612;
+      const pageH = 792;
+      const margin = 42;
+      const cellW = 18;
+      const cellH = 18;
+      const gap = 3;
+      const wordGap = 10;
+      const lineH = 42;
+      const cmds = [];
+
+      cmds.push("1 w");
+      pdfText(cmds, "Cryptoquip Worksheet", margin, pageH - 48, 22);
+      pdfText(cmds, "Name: ________________________________    Date: __________________", margin, pageH - 78, 11);
+
+      const clueText = exportPuzzle.clues.length ? exportPuzzle.clues.map(c => c.cipher + " = " + c.plain).join(", ") : "None";
+      pdfText(cmds, "Puzzle " + pageIndex + " of " + totalPuzzles + "   |   Difficulty: " + DIFFICULTY_INFO[exportPuzzle.difficulty].label, margin, pageH - 102, 11);
+      pdfText(cmds, "Clues: " + clueText, margin, pageH - 120, 11);
+
+      pdfText(cmds, "Solve the message. Each encrypted letter always stands for the same real letter.", margin, pageH - 148, 10);
+
+      let x = margin;
+      let y = pageH - 190;
+      const maxX = pageW - margin;
+
+      function drawLetter(cipher, plainIfLocked) {
+        pdfText(cmds, cipher, x + 5.3, y + 20, 10);
+        cmds.push(x.toFixed(1) + " " + y.toFixed(1) + " " + cellW + " " + cellH + " re S");
+        if (plainIfLocked) {
+          pdfText(cmds, plainIfLocked, x + 5.1, y + 5.0, 11);
+        }
+        x += cellW + gap;
+      }
+
+      function drawPunct(ch) {
+        pdfText(cmds, ch, x + 2, y + 5, 13);
+        x += 10;
+      }
+
+      const words = exportPuzzle.cipherText.split(" ");
+      for (const word of words) {
+        let wordWidth = 0;
+        for (const ch of word) {
+          wordWidth += ALPHABET.includes(ch) ? cellW + gap : 10;
+        }
+        if (x > margin && x + wordWidth > maxX) {
+          x = margin;
+          y -= lineH;
+        }
+
+        if (y < 130) {
+          break;
+        }
+
+        for (const ch of word) {
+          if (ALPHABET.includes(ch)) {
+            const plainIfLocked = exportPuzzle.locked.has(ch) ? exportPuzzle.decodeMap[ch] : "";
+            drawLetter(ch, plainIfLocked);
+          } else {
+            drawPunct(ch);
+          }
+        }
+        x += wordGap;
+      }
+
+      y -= 54;
+      if (y > 90) {
+        pdfText(cmds, "Letter Key:", margin, y, 12);
+        y -= 24;
+        x = margin;
+        const used = uniqueLetters(exportPuzzle.cipherText).sort();
+        for (let i = 0; i < used.length; i++) {
+          const c = used[i];
+          const value = exportPuzzle.locked.has(c) ? exportPuzzle.decodeMap[c] : "___";
+          pdfText(cmds, c + " = " + value, x, y, 10);
+          x += 70;
+          if (x > maxX - 40) {
+            x = margin;
+            y -= 18;
+          }
+        }
+      }
+
+      pdfText(cmds, "Generated by Cryptoquip", margin, 28, 8);
+      return cmds.join("\n");
+    }
+
+    function wrapAnswerText(text, maxChars) {
+      const words = String(text).split(/\s+/);
+      const lines = [];
+      let line = "";
+      for (const word of words) {
+        const test = line ? line + " " + word : word;
+        if (test.length > maxChars && line) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = test;
+        }
+      }
+      if (line) lines.push(line);
+      return lines;
+    }
+
+    function buildAnswerPage(exportPuzzle, pageIndex, totalPuzzles) {
+      const pageH = 792;
+      const margin = 42;
+      const cmds = [];
+
+      cmds.push("1 w");
+      pdfText(cmds, "Cryptoquip Answer Key", margin, pageH - 48, 22);
+      pdfText(cmds, "Puzzle " + pageIndex + " of " + totalPuzzles + "   |   Difficulty: " + DIFFICULTY_INFO[exportPuzzle.difficulty].label, margin, pageH - 82, 11);
+
+      pdfText(cmds, "Encrypted message:", margin, pageH - 124, 12);
+      let y = pageH - 148;
+      for (const line of wrapAnswerText(exportPuzzle.cipherText, 70)) {
+        pdfText(cmds, line, margin, y, 11);
+        y -= 18;
+      }
+
+      y -= 14;
+      pdfLine(cmds, margin, y, 570, y);
+      y -= 36;
+
+      pdfText(cmds, "Answer:", margin, y, 14);
+      y -= 28;
+      for (const line of wrapAnswerText(exportPuzzle.puzzle.text, 58)) {
+        pdfText(cmds, line, margin, y, 16);
+        y -= 24;
+      }
+
+      y -= 12;
+      pdfText(cmds, "Full letter key:", margin, y, 12);
+      y -= 24;
+
+      let x = margin;
+      const used = uniqueLetters(exportPuzzle.cipherText).sort();
+      for (let i = 0; i < used.length; i++) {
+        const c = used[i];
+        pdfText(cmds, c + " = " + exportPuzzle.decodeMap[c], x, y, 10);
+        x += 70;
+        if (x > 530) {
+          x = margin;
+          y -= 18;
+        }
+      }
+
+      pdfText(cmds, "Generated by Cryptoquip", margin, 28, 8);
+      return cmds.join("\n");
+    }
+
+    function makePdfFromPageStreams(pageStreams) {
+      const pageW = 612;
+      const pageH = 792;
+      const objects = [];
+      const pageObjectNumbers = [];
+
+      objects.push("<< /Type /Catalog /Pages 2 0 R >>");
+      objects.push(null);
+
+      for (const stream of pageStreams) {
+        const pageObjNum = objects.length + 1;
+        const contentObjNum = pageObjNum + 1;
+        pageObjectNumbers.push(pageObjNum);
+        objects.push("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + pageW + " " + pageH + "] /Resources << /Font << /F1 " + (pageStreams.length * 2 + 3) + " 0 R >> >> /Contents " + contentObjNum + " 0 R >>");
+        objects.push("<< /Length " + stream.length + " >>\nstream\n" + stream + "\nendstream");
+      }
+
+      const fontObjNum = objects.length + 1;
+      objects.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+
+      // Now that the font object number is known, fix page objects that referenced the placeholder number.
+      for (let i = 2; i < objects.length - 1; i += 2) {
+        objects[i] = objects[i].replace(/\/F1 \d+ 0 R/, "/F1 " + fontObjNum + " 0 R");
+      }
+
+      objects[1] = "<< /Type /Pages /Kids [" + pageObjectNumbers.map(n => n + " 0 R").join(" ") + "] /Count " + pageObjectNumbers.length + " >>";
+
+      let pdf = "%PDF-1.4\n% Cryptoquip worksheet\n";
+      const offsets = [0];
+
+      for (let i = 0; i < objects.length; i++) {
+        offsets.push(pdf.length);
+        pdf += (i + 1) + " 0 obj\n" + objects[i] + "\nendobj\n";
+      }
+
+      const xrefStart = pdf.length;
+      pdf += "xref\n0 " + (objects.length + 1) + "\n";
+      pdf += "0000000000 65535 f \n";
+      for (let i = 1; i < offsets.length; i++) {
+        pdf += String(offsets[i]).padStart(10, "0") + " 00000 n \n";
+      }
+      pdf += "trailer\n<< /Size " + (objects.length + 1) + " /Root 1 0 R >>\n";
+      pdf += "startxref\n" + xrefStart + "\n%%EOF";
+      return pdf;
+    }
+
+    function buildWorksheetPDF() {
+      const exportPuzzles = getExportPuzzles();
+      const includeAnswers = !!els.includeAnswers.checked;
+      const streams = [];
+
+      exportPuzzles.forEach((exportPuzzle, index) => {
+        streams.push(buildPuzzlePage(exportPuzzle, index + 1, exportPuzzles.length));
+        if (includeAnswers) {
+          streams.push(buildAnswerPage(exportPuzzle, index + 1, exportPuzzles.length));
+        }
+      });
+
+      return makePdfFromPageStreams(streams);
+    }
+
+    function exportWorksheetPDF() {
+      const pdf = buildWorksheetPDF();
+      const blob = new Blob([pdf], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const safeDifficulty = DIFFICULTY_INFO[state.difficulty].label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+      const count = clampPdfCount();
+      a.href = url;
+      a.download = "cryptoquip-" + safeDifficulty + "-" + count + "-puzzle" + (count === 1 ? "" : "s") + ".pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setMessage("Worksheet PDF exported.", "success");
+    }
+
+    function setButtonStates() {
+      const active = state.started;
+      [els.checkBtn, els.showMistakesBtn, els.clearBtn, els.giveUpBtn, els.printBtn, els.copySeedBtn, els.loadSeedBtn].forEach(btn => btn.disabled = !active);
+      els.pdfCount.disabled = !active;
+      els.includeAnswers.disabled = !active;
+      els.newBtn.disabled = false;
+      const revealLimit = active ? DIFFICULTY_INFO[state.difficulty].revealLimit : 0;
+      els.revealBtn.disabled = !active || state.revealsUsed >= revealLimit;
+      if (active) {
+        const left = revealLimit - state.revealsUsed;
+        els.revealBtn.textContent = left > 0 ? "Reveal Letter · " + left + " left" : "Reveal Used";
+      } else {
+        els.revealBtn.textContent = "Reveal Letter";
+      }
+    }
+
+    function applyTheme(theme) {
+      const safe = theme === "light" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", safe);
+      localStorage.setItem("cryptoquipTheme", safe);
+      els.themeBtn.textContent = safe === "dark" ? "Light Mode" : "Dark Mode";
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute("data-theme") || "dark";
+      applyTheme(current === "dark" ? "light" : "dark");
+    }
+
+    document.querySelectorAll(".difficulty-card").forEach(btn => {
+      btn.addEventListener("click", () => startRandomDifficulty(btn.dataset.difficulty));
+    });
+
+    els.checkBtn.addEventListener("click", checkPuzzle);
+    els.showMistakesBtn.addEventListener("click", showMistakes);
+    els.revealBtn.addEventListener("click", revealOneLetter);
+    els.clearBtn.addEventListener("click", clearGuesses);
+    els.newBtn.addEventListener("click", () => {
+      showStart();
+    });
+    els.giveUpBtn.addEventListener("click", () => showAnswerDialog());
+    els.printBtn.addEventListener("click", () => {
+      if (state.started) els.pdfDialog.showModal();
+    });
+    els.cancelPdfBtn.addEventListener("click", () => els.pdfDialog.close());
+    els.pdfCount.addEventListener("change", clampPdfCount);
+    els.pdfCount.addEventListener("blur", clampPdfCount);
+    els.exportPdfConfirmBtn.addEventListener("click", () => {
+      if (!state.started) return;
+      els.pdfDialog.close();
+      exportWorksheetPDF();
+    });
+    els.copySeedBtn.addEventListener("click", copySeed);
+    els.loadSeedBtn.addEventListener("click", () => loadSeedFromBox(els.seedBox));
+    els.startLoadSeedBtn.addEventListener("click", () => loadSeedFromBox(els.startSeedBox));
+    els.themeBtn.addEventListener("click", toggleTheme);
+    els.closeDialogBtn.addEventListener("click", () => els.dialog.close());
+    els.newFromDialogBtn.addEventListener("click", () => {
+      els.dialog.close();
+      showStart();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && els.dialog.open) els.dialog.close();
+      if (e.key === "Escape" && els.pdfDialog.open) els.pdfDialog.close();
+    });
+
+    applyTheme(localStorage.getItem("cryptoquipTheme") || "dark");
+    showStart();
+  </script>
+</body>
+</html>
