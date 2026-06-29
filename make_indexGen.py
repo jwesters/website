@@ -142,6 +142,10 @@ CUSTOM_ICONS = {'BillboardNumberOne.html': '🎵',
  'Music': '🎵',
  'Ear_Training': '👂',
  'ArcadeGames': '🕹️',
+ 'CardGames': '🃏',
+ 'Card_Games': '🃏',
+ 'cardgames': '🃏',
+ 'card_games': '🃏',
  'ChessGames': '♟️',
  'Strategy_Games': '♟️',
  'WordGames': '🔤',
@@ -364,6 +368,10 @@ ICON_RULES = [('multiplication', '✖️'),
  ('tic-tac-toe', '❌'),
  ('chess', '♔'),
  ('knight', '♞'),
+ ('cardgames', '🃏'),
+ ('card_games', '🃏'),
+ ('card-games', '🃏'),
+ ('solitaire', '🃏'),
  ('card', '🃏'),
  ('deck', '🃏'),
  ('game', '🎮'),
@@ -458,6 +466,7 @@ SUBCATEGORY_ICONS = {
     "Guitar, Chords & Theory": "🎸",
     "Music & Practice Tools": "🎵",
     "Chess & Knight Games": "♟️",
+    "Card & Solitaire Games": "🃏",
     "Connect Four Variants": "🔴",
     "Strategy & Logic Games": "♟️",
     "Tic-Tac-Toe Variants": "❌",
@@ -608,6 +617,7 @@ CATEGORY_RULES: List[Tuple[Tuple[str, ...], str, str]] = [
     (("arrow_escape", "paint_maze"), "Arcade & Action Games", "Action Challenges"),
 
     # Strategy/board/logic
+    (("cardgames/", "card_games/", "card-games/", "cardgames", "card_games", "card-games", "solitaire"), "Strategy, Board & Logic Games", "Card & Solitaire Games"),
     (("chessgames/", "chess", "knight-tour", "knights-tour"), "Strategy, Board & Logic Games", "Chess & Knight Games"),
     (("connectfour/", "connect4", "connect_4"), "Strategy, Board & Logic Games", "Connect Four Variants"),
     (("strategy_games/", "shikaku", "go_local", "go.html", "hex", "nim", "ataxx", "minesweeper", "dots-and-boxes", "bridgit", "obstruction", "battleship", "checkers", "snakes_and_ladders", "snakes-and-ladders", "sim.html", "hold-the-line", "black-hole", "rabbit_hunt"), "Strategy, Board & Logic Games", "Strategy & Logic Games"),
@@ -795,6 +805,10 @@ def icon_for_file(rel_path: str, category: str, subcategory: str) -> str:
 
     if base in CUSTOM_ICONS:
         return safe_icon(CUSTOM_ICONS[base])
+
+    full_low = normalize_path(rel_path).casefold()
+    if any(token in full_low for token in ("cardgames", "card_games", "card-games", "solitaire")):
+        return safe_icon("🃏")
 
     low = base.casefold()
     matches = [(key, icon) for key, icon in ICON_RULES if key.casefold() in low]
