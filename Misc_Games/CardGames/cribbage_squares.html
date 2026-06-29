@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cribbage Squares</title>
+  <style>
+    :root{
+      --felt:#075f19;
+      --felt-dark:#034411;
+      --felt-soft:#0f7b2b;
+      --panel:#fffaf0;
+      --ink:#0f1a14;
+      --muted:#5c695f;
+      --gold:#f6ca55;
+      --gold2:#e1a82f;
+      --red:#c3153d;
+      --black:#141414;
+      --line:rgba(255,255,255,.18);
+      --shadow:0 12px 30px rgba(0,0,0,.25);
+      --card-w:70px;
+      --card-h:98px;
+      --gap:12px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      min-height:100vh;
+      color:white;
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,.08), transparent 34rem),
+        radial-gradient(circle at bottom right, rgba(0,0,0,.25), transparent 34rem),
+        linear-gradient(135deg, var(--felt), var(--felt-dark));
+      overflow-x:hidden;
+    }
+
+    button, select{font:inherit;}
+    button{
+      border:0;
+      border-radius:12px;
+      padding:10px 14px;
+      font-weight:850;
+      cursor:pointer;
+      color:#062514;
+      background:linear-gradient(#ffe58d,#f4be42);
+      box-shadow:0 4px 0 #9e6d13, 0 8px 14px rgba(0,0,0,.22);
+      transition:transform .08s ease, filter .15s ease, opacity .15s ease;
+    }
+    button:hover{filter:brightness(1.04);}
+    button:active{transform:translateY(2px); box-shadow:0 2px 0 #9e6d13, 0 5px 10px rgba(0,0,0,.2);}
+    button.secondary{
+      color:white;
+      background:linear-gradient(#13824a,#09633b);
+      box-shadow:0 4px 0 #043722, 0 8px 14px rgba(0,0,0,.2);
+    }
+    button.ghost{
+      color:white;
+      background:rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.25);
+      box-shadow:none;
+    }
+    button:disabled{opacity:.45; cursor:not-allowed; transform:none; filter:none;}
+
+    .app{
+      width:min(1180px, calc(100vw - 24px));
+      margin:0 auto;
+      padding:14px 0 18px;
+    }
+
+    header{
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap:16px;
+      align-items:center;
+      margin-bottom:12px;
+    }
+    h1{
+      margin:0;
+      font-size:clamp(2rem, 4vw, 3.2rem);
+      letter-spacing:-.07em;
+      line-height:.95;
+      text-shadow:0 2px 0 rgba(0,0,0,.22);
+    }
+    .subtitle{
+      margin:6px 0 0;
+      font-weight:750;
+      opacity:.92;
+      font-size:.98rem;
+    }
+    .top-actions{display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;}
+
+    .stats{
+      display:grid;
+      grid-template-columns: repeat(5, minmax(110px, 1fr));
+      gap:10px;
+      margin-bottom:12px;
+    }
+    .stat{
+      background:var(--panel);
+      color:var(--ink);
+      border-radius:14px;
+      padding:10px 12px;
+      min-height:66px;
+      min-width:0;
+      overflow:hidden;
+      box-shadow:0 8px 16px rgba(0,0,0,.15);
+    }
+    .stat.best-stat,
+    .summary-box.best-box{
+      background:linear-gradient(180deg, #ffe58d, #f4be42);
+      color:#062514;
+      border:1px solid rgba(158,109,19,.45);
+      box-shadow:0 8px 16px rgba(0,0,0,.18);
+    }
+    .stat.best-stat .label,
+    .summary-box.best-box .summary-label{color:#5b4205;}
+    .stat .label{
+      color:#526056;
+      font-size:.68rem;
+      font-weight:950;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+    }
+    .stat .value{
+      margin-top:2px;
+      font-size:1.7rem;
+      font-weight:950;
+      letter-spacing:-.04em;
+    }
+
+    .table-layout{
+      display:grid;
+      grid-template-columns: 178px minmax(390px, 1fr) 265px;
+      gap:14px;
+      align-items:start;
+    }
+
+    .felt-panel{
+      background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.05));
+      border:1px solid rgba(255,255,255,.20);
+      border-radius:20px;
+      box-shadow:var(--shadow);
+    }
+
+    .left-panel{
+      padding:14px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:12px;
+      min-height:454px;
+    }
+    .pile-wrap{text-align:center; width:100%;}
+    .small-title{
+      text-transform:uppercase;
+      font-size:.72rem;
+      font-weight:950;
+      letter-spacing:.12em;
+      opacity:.9;
+      margin-bottom:6px;
+    }
+    .deck{
+      width:76px; height:108px;
+      margin:0 auto;
+      position:relative;
+      border-radius:9px;
+      filter:drop-shadow(0 7px 10px rgba(0,0,0,.28));
+    }
+    .deck::before,.deck::after{
+      content:"";
+      position:absolute;
+      width:70px; height:98px;
+      background:#f5f2e8;
+      border-radius:8px;
+      border:2px solid white;
+      left:3px; top:6px;
+      box-shadow:0 0 0 1px rgba(0,0,0,.2);
+    }
+    .deck::before{left:0; top:3px;}
+    .deck::after{
+      background:
+        linear-gradient(45deg, rgba(255,255,255,.14) 25%, transparent 25% 50%, rgba(255,255,255,.14) 50% 75%, transparent 75%),
+        linear-gradient(135deg, #b91639, #cf3854);
+      background-size:8px 8px, auto;
+      left:6px; top:9px;
+    }
+    .deck-count{margin-top:6px; font-weight:850; opacity:.9;}
+    .slot{
+      width:78px; height:108px;
+      margin:0 auto;
+      border:2px dashed rgba(255,255,255,.36);
+      border-radius:10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:rgba(0,0,0,.18);
+      box-shadow:inset 0 0 20px rgba(0,0,0,.25);
+    }
+    .slot.active{border-color:rgba(255,226,118,.85); background:rgba(255,226,118,.08);}
+    .current-card-box{
+      width:100%;
+      border-radius:15px;
+      padding:10px;
+      background:rgba(0,0,0,.17);
+      border:1px solid rgba(255,255,255,.16);
+      text-align:center;
+    }
+    .message{
+      width:100%;
+      min-height:50px;
+      border-radius:14px;
+      padding:10px;
+      background:rgba(255,255,255,.10);
+      border:1px solid rgba(255,255,255,.15);
+      font-weight:750;
+      line-height:1.25;
+      text-align:center;
+    }
+
+    .grid-panel{
+      padding:14px;
+    }
+    .grid-top{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:center;
+      margin-bottom:12px;
+    }
+    .grid-top h2{margin:0; font-size:1.2rem; letter-spacing:-.03em;}
+    .grid-help{font-size:.88rem; opacity:.88; font-weight:650; text-align:right;}
+    .grid-shell{
+      display:grid;
+      grid-template-columns:auto 1fr auto;
+      grid-template-rows:auto 1fr auto;
+      gap:8px;
+      justify-content:center;
+      align-items:center;
+    }
+    .col-scores{
+      grid-column:2;
+      display:grid;
+      grid-template-columns: repeat(4, var(--card-w));
+      grid-column:2;
+      grid-row:1;
+      gap:var(--gap);
+      justify-content:center;
+    }
+    .row-score-side{
+      grid-column:1;
+      grid-row:2;
+      display:grid;
+      grid-template-rows: repeat(4, var(--card-h));
+      gap:var(--gap);
+      align-items:center;
+    }
+    .line-score{
+      min-width:44px;
+      height:28px;
+      border-radius:999px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:rgba(255,255,255,.14);
+      border:1px solid rgba(255,255,255,.18);
+      font-size:.85rem;
+      font-weight:950;
+    }
+    .line-score.ready{background:rgba(246,202,85,.22); border-color:rgba(246,202,85,.45); color:#ffe27a;}
+    .grid{
+      grid-column:2;
+      grid-row:2;
+      display:grid;
+      grid-template-columns: repeat(4, var(--card-w));
+      grid-template-rows: repeat(4, var(--card-h));
+      gap:var(--gap);
+      justify-content:center;
+      padding:12px;
+      border-radius:18px;
+      background:rgba(0,0,0,.14);
+      border:1px solid rgba(255,255,255,.14);
+      box-shadow:inset 0 0 24px rgba(0,0,0,.16);
+    }
+    .cell{
+      width:var(--card-w); height:var(--card-h);
+      border-radius:10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border:2px dashed rgba(255,255,255,.34);
+      background:rgba(0,0,0,.18);
+      cursor:pointer;
+      transition:.12s ease;
+      position:relative;
+    }
+    .cell::after{
+      content:"";
+      width:13px; height:13px;
+      border-radius:50%;
+      background:rgba(255,255,255,.16);
+      opacity:.45;
+    }
+    .cell:hover:not(.filled){
+      transform:translateY(-2px);
+      border-color:#ffe27a;
+      background:rgba(255,226,122,.12);
+    }
+    .cell.filled{border:0; background:transparent; cursor:default;}
+    .cell.filled::after{display:none;}
+    .cell.recent .card{outline:3px solid #ffe27a; outline-offset:2px;}
+    .grid-actions{
+      grid-column:2;
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      justify-content:center;
+      margin-top:2px;
+    }
+
+    .card{
+      width:var(--card-w);
+      height:var(--card-h);
+      border-radius:9px;
+      background:#fffdf7;
+      color:#111;
+      position:relative;
+      box-shadow:0 4px 8px rgba(0,0,0,.25), inset 0 0 0 1px rgba(0,0,0,.10);
+      user-select:none;
+      flex:0 0 auto;
+    }
+    .card.red{color:var(--red);}
+    .corner{
+      position:absolute;
+      left:6px; top:5px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      line-height:.86;
+      font-weight:950;
+      font-size:1rem;
+    }
+    .corner.bottom{
+      left:auto; top:auto; right:6px; bottom:5px;
+      transform:rotate(180deg);
+    }
+    .rank{font-size:1rem; letter-spacing:-.04em;}
+    .mini-suit{font-size:1rem;}
+    .big-suit{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:2.25rem;
+      font-weight:900;
+      opacity:.96;
+    }
+    .face .big-suit{font-size:1.7rem; top:8px;}
+    .face-label{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:950;
+      font-size:1.8rem;
+      opacity:.24;
+    }
+
+    .right-panel{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+    .tool-card{
+      background:var(--panel);
+      color:var(--ink);
+      border-radius:18px;
+      padding:13px;
+      box-shadow:var(--shadow);
+    }
+    .tool-card h3{margin:0 0 10px; font-size:1.08rem; letter-spacing:-.03em;}
+    .result-text{
+      color:var(--muted);
+      line-height:1.3;
+      font-weight:650;
+      font-size:.9rem;
+    }
+
+    .crib-board{
+      background:linear-gradient(180deg, #d69441, #bd7b2b);
+      border:3px solid #6e3d12;
+      color:#281000;
+      padding:10px;
+      border-radius:12px;
+      box-shadow:inset 0 0 0 2px rgba(255,255,255,.22), var(--shadow);
+    }
+    .board-title{
+      font-weight:950;
+      text-align:center;
+      font-size:.82rem;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      margin-bottom:6px;
+    }
+    .board-score{
+      text-align:center;
+      font-size:1.9rem;
+      font-weight:1000;
+      letter-spacing:-.06em;
+      line-height:.95;
+      margin:4px 0 8px;
+    }
+    .board-score span{font-size:.9rem; letter-spacing:0; opacity:.75;}
+    .track{
+      display:grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap:5px;
+      padding:10px;
+      border-radius:24px;
+      background:rgba(80,20,0,.22);
+      border:2px solid rgba(90,40,15,.45);
+    }
+    .hole{
+      width:13px; height:13px;
+      border-radius:50%;
+      margin:auto;
+      background:#54260f;
+      box-shadow:inset 0 1px 2px rgba(0,0,0,.6), 0 1px rgba(255,255,255,.2);
+      position:relative;
+    }
+    .hole.lit{background:#1b5bba;}
+    .hole.peg{background:#111; box-shadow:0 0 0 3px #f7e37d, 0 0 12px rgba(0,0,0,.4);}
+    .hole.finish{background:#b81731;}
+    .board-labels{display:flex; justify-content:space-between; font-size:.68rem; font-weight:950; margin-top:5px; opacity:.8;}
+
+    .history-list{display:flex; flex-direction:column; gap:8px; max-height:214px; overflow:auto; padding-right:2px;}
+    .history-item{
+      border:1px solid #e4ddd0;
+      border-radius:12px;
+      padding:8px;
+      background:white;
+    }
+    .history-row{display:flex; justify-content:space-between; gap:8px; font-weight:900;}
+    .history-detail{font-size:.78rem; color:#667167; margin-top:3px; line-height:1.25;}
+
+    dialog{
+      border:0;
+      padding:0;
+      border-radius:22px;
+      max-width:min(940px, calc(100vw - 24px));
+      width:940px;
+      color:var(--ink);
+      box-shadow:0 24px 80px rgba(0,0,0,.45);
+      overflow:hidden;
+    }
+    dialog::backdrop{background:rgba(0,0,0,.62); backdrop-filter:blur(3px);}
+    .modal-head{
+      background:linear-gradient(135deg,#116b3e,#084928);
+      color:white;
+      padding:16px 18px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+    }
+    .modal-head h2{margin:0; font-size:1.35rem; letter-spacing:-.04em;}
+    .modal-body{padding:16px; background:#fffaf0; max-height:75vh; overflow:auto;}
+    .break-summary{
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap:10px;
+      margin-bottom:14px;
+    }
+    .summary-box{
+      background:white;
+      border:1px solid #e6decf;
+      border-radius:14px;
+      padding:10px;
+      min-width:0;
+      overflow:hidden;
+    }
+    .summary-label{font-size:.72rem; font-weight:950; color:#667167; text-transform:uppercase; letter-spacing:.12em;}
+    .summary-value{font-size:1.6rem; font-weight:1000; letter-spacing:-.05em;}
+    .break-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+    .break-card{
+      background:white;
+      border:1px solid #e6decf;
+      border-radius:15px;
+      padding:11px;
+    }
+    .break-card h4{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin:0 0 8px;
+      font-size:1rem;
+    }
+    .tiny-cards{display:flex; gap:4px; flex-wrap:wrap; margin:5px 0 8px;}
+    .tiny-card{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:28px;
+      height:22px;
+      padding:0 5px;
+      border:1px solid #d8d1c5;
+      border-radius:6px;
+      background:#fffdf8;
+      font-size:.78rem;
+      font-weight:900;
+      color:#111;
+    }
+    .tiny-card.red{color:var(--red);}
+    .score-lines{display:grid; gap:5px;}
+    .score-line{
+      display:grid;
+      grid-template-columns:86px 38px 1fr;
+      gap:8px;
+      align-items:start;
+      border-top:1px dashed #eadfce;
+      padding-top:5px;
+      font-size:.86rem;
+      line-height:1.25;
+    }
+    .score-line:first-child{border-top:0; padding-top:0;}
+    .score-line strong{font-weight:950;}
+    .score-points{font-weight:1000; color:#0f7b2b; text-align:right;}
+    .none{color:#81877f; font-style:italic;}
+
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:18px;
+      transform:translateX(-50%) translateY(20px);
+      opacity:0;
+      pointer-events:none;
+      background:#fffaf0;
+      color:var(--ink);
+      border-radius:999px;
+      padding:10px 16px;
+      font-weight:900;
+      box-shadow:0 10px 28px rgba(0,0,0,.3);
+      transition:.2s ease;
+      z-index:50;
+    }
+    .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+    @media (max-width:1050px){
+      :root{--card-w:62px; --card-h:88px; --gap:9px;}
+      .table-layout{grid-template-columns:156px minmax(330px,1fr) 230px; gap:10px;}
+      .stats{grid-template-columns: repeat(5, minmax(92px,1fr));}
+      .stat{min-height:58px; padding:8px 10px;}
+      .stat .value{font-size:1.45rem;}
+      .tool-card{padding:11px;}
+      .hole{width:11px; height:11px;}
+      .track{gap:4px; padding:8px;}
+      .big-suit{font-size:2rem;}
+      .rank{font-size:.9rem;}
+    }
+
+    @media (max-width:850px){
+      .app{width:min(680px, calc(100vw - 14px)); padding-top:10px;}
+      header{grid-template-columns:1fr; gap:8px;}
+      .top-actions{justify-content:flex-start;}
+      .stats{grid-template-columns:repeat(2,1fr);}
+      .table-layout{grid-template-columns:1fr;}
+      .left-panel{min-height:auto; display:grid; grid-template-columns:1fr 1fr; align-items:start;}
+      .current-card-box,.message{grid-column:1 / -1;}
+      .right-panel{display:grid; grid-template-columns:1fr;}
+      .crib-board{max-width:320px; margin:0 auto; width:100%;}
+      dialog{width:calc(100vw - 18px);}
+      .break-summary{grid-template-columns:repeat(2,1fr);}
+      .break-grid{grid-template-columns:1fr;}
+    }
+
+    @media (max-width:520px){
+      :root{--card-w:54px; --card-h:76px; --gap:7px;}
+      .grid{padding:8px;}
+      .col-scores{gap:var(--gap);}
+      .line-score{min-width:38px; font-size:.76rem;}
+      .grid-shell{gap:5px;}
+      .grid-help{text-align:left;}
+      .grid-top{display:block;}
+      .left-panel{grid-template-columns:1fr;}
+      .score-line{grid-template-columns:72px 32px 1fr; font-size:.8rem;}
+      .break-summary{grid-template-columns:1fr;}
+      .big-suit{font-size:1.65rem;}
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div>
+        <h1>Cribbage Squares</h1>
+        <p class="subtitle">Place sixteen cards in a 4×4 grid. The seventeenth card is the starter. Score every row and column.</p>
+      </div>
+      <div class="top-actions">
+        <button id="viewBreakTop" class="secondary" disabled>View Scoring</button>
+        <button id="newGameTop" class="secondary">New Game</button>
+      </div>
+    </header>
+
+    <section class="stats" aria-label="Game stats">
+      <div class="stat"><div class="label">Score</div><div id="scoreStat" class="value">0</div></div>
+      <div class="stat"><div class="label">Target</div><div class="value">61</div></div>
+      <div class="stat"><div class="label">Placed</div><div id="placedStat" class="value">0/16</div></div>
+      <div class="stat"><div class="label">Deck Left</div><div id="deckStat" class="value">52</div></div>
+      <div class="stat best-stat"><div class="label">Best Saved</div><div id="bestStat" class="value">0</div></div>
+    </section>
+
+    <section class="table-layout">
+      <aside class="left-panel felt-panel">
+        <div class="pile-wrap">
+          <div class="small-title">Deck</div>
+          <div class="deck" aria-label="deck of cards"></div>
+          <div id="deckCount" class="deck-count">52 cards</div>
+        </div>
+
+        <div class="pile-wrap">
+          <div class="small-title">Starter</div>
+          <div id="starterSlot" class="slot"></div>
+        </div>
+
+        <div class="current-card-box">
+          <div class="small-title">Card to Place</div>
+          <div id="currentSlot" class="slot active"></div>
+        </div>
+
+        <div id="message" class="message">Click an empty square to place the current card.</div>
+      </aside>
+
+      <section class="grid-panel felt-panel">
+        <div class="grid-top">
+          <h2>Playing Grid</h2>
+          <div id="gridHelp" class="grid-help">Rows and columns are scored after the starter is revealed.</div>
+        </div>
+
+        <div class="grid-shell">
+          <div id="colScores" class="col-scores"></div>
+          <div class="row-score-side" id="rowScores"></div>
+          <div id="grid" class="grid" aria-label="4 by 4 cribbage squares grid"></div>
+          <div class="grid-actions">
+            <button id="undoBtn" class="ghost">Undo Last</button>
+            <button id="scoreBtn" class="secondary" disabled>View Scoring Breakdown</button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="right-panel">
+        <section class="crib-board" aria-label="Cribbage board score tracker">
+          <div class="board-title">Score Board</div>
+          <div class="board-score"><span id="boardScore">0</span><span>/61</span></div>
+          <div id="track" class="track"></div>
+          <div class="board-labels"><span>START</span><span>FINISH</span></div>
+        </section>
+
+        <section class="tool-card">
+          <h3>Game Tools</h3>
+          <button id="viewBreakSide" class="secondary" disabled style="width:100%;">View Scoring Breakdown</button>
+          <p id="resultText" class="result-text">Build the grid one card at a time. Try for 61 or higher.</p>
+        </section>
+
+
+      </aside>
+    </section>
+  </main>
+
+  <dialog id="scoreDialog">
+    <div class="modal-head">
+      <h2>Scoring Breakdown</h2>
+      <button id="closeDialog" class="ghost">Close</button>
+    </div>
+    <div id="modalBody" class="modal-body"></div>
+  </dialog>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+    const SUITS = ["♠","♥","♦","♣"];
+    const SUIT_NAMES = {"♠":"Spades", "♥":"Hearts", "♦":"Diamonds", "♣":"Clubs"};
+    const TARGET = 61;
+    const STORAGE_KEY = "cribbageSquaresBestScore_v1";
+
+    let deck = [];
+    let gridCards = Array(16).fill(null);
+    let currentCard = null;
+    let starter = null;
+    let score = 0;
+    let finished = false;
+    let lastPlacedIndex = null;
+    let lineResults = [];
+    let globalDetails = [];
+
+    const el = {
+      scoreStat: document.getElementById("scoreStat"),
+      bestStat: document.getElementById("bestStat"),
+      placedStat: document.getElementById("placedStat"),
+      deckStat: document.getElementById("deckStat"),
+      deckCount: document.getElementById("deckCount"),
+      starterSlot: document.getElementById("starterSlot"),
+      currentSlot: document.getElementById("currentSlot"),
+      message: document.getElementById("message"),
+      grid: document.getElementById("grid"),
+      rowScores: document.getElementById("rowScores"),
+      colScores: document.getElementById("colScores"),
+      scoreBtn: document.getElementById("scoreBtn"),
+      viewBreakTop: document.getElementById("viewBreakTop"),
+      viewBreakSide: document.getElementById("viewBreakSide"),
+      newGameTop: document.getElementById("newGameTop"),
+      undoBtn: document.getElementById("undoBtn"),
+      resultText: document.getElementById("resultText"),
+      history: document.getElementById("history"),
+      track: document.getElementById("track"),
+      boardScore: document.getElementById("boardScore"),
+      dialog: document.getElementById("scoreDialog"),
+      closeDialog: document.getElementById("closeDialog"),
+      modalBody: document.getElementById("modalBody"),
+      toast: document.getElementById("toast")
+    };
+
+    function buildDeck(){
+      const cards = [];
+      for(const suit of SUITS){
+        for(let r = 0; r < RANKS.length; r++){
+          const rank = RANKS[r];
+          cards.push({ rank, suit, order:r + 1, id:`${rank}${suit}` });
+        }
+      }
+      return shuffle(cards);
+    }
+
+    function shuffle(cards){
+      const arr = cards.slice();
+      for(let i = arr.length - 1; i > 0; i--){
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function cardValue(card){ return Math.min(card.order, 10); }
+    function isRed(card){ return card.suit === "♥" || card.suit === "♦"; }
+    function cardText(card){ return `${card.rank}${card.suit}`; }
+
+    function cardHTML(card, tiny=false){
+      if(!card) return "";
+      if(tiny){
+        return `<span class="tiny-card ${isRed(card) ? "red" : ""}">${card.rank}${card.suit}</span>`;
+      }
+      const face = ["J","Q","K"].includes(card.rank);
+      return `
+        <div class="card ${isRed(card) ? "red" : ""} ${face ? "face" : ""}" aria-label="${card.rank} of ${SUIT_NAMES[card.suit]}">
+          <div class="corner"><span class="rank">${card.rank}</span><span class="mini-suit">${card.suit}</span></div>
+          ${face ? `<div class="face-label">${card.rank}</div>` : ""}
+          <div class="big-suit">${card.suit}</div>
+          <div class="corner bottom"><span class="rank">${card.rank}</span><span class="mini-suit">${card.suit}</span></div>
+        </div>`;
+    }
+
+    function comboText(cards){ return cards.map(cardText).join(" + "); }
+
+    function combinations(arr, minSize, maxSize = arr.length){
+      const results = [];
+      const combo = [];
+      function walk(start){
+        if(combo.length >= minSize && combo.length <= maxSize) results.push(combo.slice());
+        if(combo.length === maxSize) return;
+        for(let i=start; i<arr.length; i++){
+          combo.push(arr[i]);
+          walk(i+1);
+          combo.pop();
+        }
+      }
+      walk(0);
+      return results;
+    }
+
+    function isRun(cards){
+      const orders = cards.map(c => c.order).sort((a,b)=>a-b);
+      const unique = new Set(orders);
+      if(unique.size !== orders.length) return false;
+      for(let i=1; i<orders.length; i++){
+        if(orders[i] !== orders[i-1] + 1) return false;
+      }
+      return true;
+    }
+
+    function scoreLine(lineCards, lineName){
+      const cards = [...lineCards, starter];
+      const details = [];
+      let total = 0;
+
+      const fifteenCombos = combinations(cards, 2).filter(combo => combo.reduce((sum,c)=>sum + cardValue(c), 0) === 15);
+      if(fifteenCombos.length){
+        const pts = fifteenCombos.length * 2;
+        total += pts;
+        details.push({ name:"Fifteens", points:pts, text:fifteenCombos.map(comboText).join("; ") });
+      } else {
+        details.push({ name:"Fifteens", points:0, text:"None" });
+      }
+
+      const pairCombos = combinations(cards, 2, 2).filter(combo => combo[0].rank === combo[1].rank);
+      if(pairCombos.length){
+        const pts = pairCombos.length * 2;
+        total += pts;
+        details.push({ name:"Pairs", points:pts, text:pairCombos.map(comboText).join("; ") });
+      } else {
+        details.push({ name:"Pairs", points:0, text:"None" });
+      }
+
+      const runCombos = combinations(cards, 3).filter(isRun);
+      if(runCombos.length){
+        const maxLen = Math.max(...runCombos.map(c => c.length));
+        const longestRuns = runCombos.filter(c => c.length === maxLen);
+        const pts = longestRuns.length * maxLen;
+        total += pts;
+        details.push({ name:"Runs", points:pts, text:longestRuns.map(comboText).join("; ") });
+      } else {
+        details.push({ name:"Runs", points:0, text:"None" });
+      }
+
+      const lineSuit = lineCards[0].suit;
+      const fourFlush = lineCards.every(c => c.suit === lineSuit);
+      if(fourFlush){
+        const pts = starter.suit === lineSuit ? 5 : 4;
+        total += pts;
+        details.push({ name:"Flush", points:pts, text:starter.suit === lineSuit ? `All five cards are ${SUIT_NAMES[lineSuit]}` : `Four grid cards are ${SUIT_NAMES[lineSuit]}` });
+      } else {
+        details.push({ name:"Flush", points:0, text:"None" });
+      }
+
+      const knobs = lineCards.filter(c => c.rank === "J" && c.suit === starter.suit);
+      if(knobs.length){
+        const pts = knobs.length;
+        total += pts;
+        details.push({ name:"Nobs", points:pts, text:knobs.map(c => `${cardText(c)} matches the starter suit`).join("; ") });
+      } else {
+        details.push({ name:"Nobs", points:0, text:"None" });
+      }
+
+      return { name:lineName, lineCards, cards, total, details };
+    }
+
+    function scoreGame(){
+      lineResults = [];
+      globalDetails = [];
+      score = 0;
+
+      for(let r=0; r<4; r++){
+        const cards = [0,1,2,3].map(c => gridCards[r*4+c]);
+        lineResults.push(scoreLine(cards, `Row ${r+1}`));
+      }
+      for(let c=0; c<4; c++){
+        const cards = [0,1,2,3].map(r => gridCards[r*4+c]);
+        lineResults.push(scoreLine(cards, `Column ${c+1}`));
+      }
+
+      score = lineResults.reduce((sum, line) => sum + line.total, 0);
+      if(starter.rank === "J"){
+        score += 2;
+        globalDetails.push({ name:"His heels", points:2, text:`Starter is ${cardText(starter)}.` });
+      }
+
+      const oldBest = Number(localStorage.getItem(STORAGE_KEY) || 0);
+      if(score > oldBest){
+        localStorage.setItem(STORAGE_KEY, String(score));
+        showToast(`New best score: ${score}!`);
+      }
+      finished = true;
+      render();
+      setTimeout(showBreakdown, 200);
+    }
+
+    function newGame(){
+      deck = buildDeck();
+      gridCards = Array(16).fill(null);
+      currentCard = deck.shift();
+      starter = null;
+      score = 0;
+      finished = false;
+      lastPlacedIndex = null;
+      lineResults = [];
+      globalDetails = [];
+      render();
+      showToast("New game started");
+    }
+
+    function placeCard(index){
+      if(finished || !currentCard || gridCards[index]) return;
+      gridCards[index] = currentCard;
+      lastPlacedIndex = index;
+
+      if(gridCards.filter(Boolean).length === 16){
+        currentCard = null;
+        starter = deck.shift();
+        scoreGame();
+      } else {
+        currentCard = deck.shift();
+        render();
+      }
+    }
+
+    function undoLast(){
+      if(finished || lastPlacedIndex === null || !gridCards[lastPlacedIndex]) return;
+      if(currentCard) deck.unshift(currentCard);
+      currentCard = gridCards[lastPlacedIndex];
+      gridCards[lastPlacedIndex] = null;
+      lastPlacedIndex = null;
+      render();
+      showToast("Last placement undone");
+    }
+
+    function render(){
+      const placed = gridCards.filter(Boolean).length;
+      const best = Number(localStorage.getItem(STORAGE_KEY) || 0);
+      el.scoreStat.textContent = String(score);
+      el.bestStat.textContent = String(best);
+      el.placedStat.textContent = `${placed}/16`;
+      el.deckStat.textContent = String(deck.length);
+      el.deckCount.textContent = `${deck.length} cards`;
+      el.boardScore.textContent = Math.min(score, TARGET);
+
+      el.currentSlot.innerHTML = currentCard ? cardHTML(currentCard) : "";
+      el.currentSlot.classList.toggle("active", !!currentCard && !finished);
+      el.starterSlot.innerHTML = starter ? cardHTML(starter) : "";
+      el.starterSlot.classList.toggle("active", !starter);
+
+      if(finished){
+        const won = score >= TARGET;
+        el.message.textContent = won ? `Nice! Final score ${score}. That beats the 61 target.` : `Final score ${score}. Try again for 61 or higher.`;
+        el.resultText.textContent = won ? `You scored ${score}, which is a win. Open the popup for the full row and column details.` : `You scored ${score}. Open the popup to see where the points came from.`;
+      } else {
+        el.message.textContent = placed === 0 ? "Click an empty square to place the current card." : `Placed ${placed} of 16 cards. Keep building rows and columns.`;
+        el.resultText.textContent = "Build the grid one card at a time. The starter is revealed after the 16th card is placed.";
+      }
+
+      renderGrid();
+      renderLineScores();
+      renderTrack();
+      renderHistory();
+
+      const canBreak = finished && lineResults.length > 0;
+      el.scoreBtn.disabled = !canBreak;
+      el.viewBreakTop.disabled = !canBreak;
+      el.viewBreakSide.disabled = !canBreak;
+      el.undoBtn.disabled = finished || lastPlacedIndex === null;
+    }
+
+    function renderGrid(){
+      el.grid.innerHTML = "";
+      gridCards.forEach((card, index) => {
+        const cell = document.createElement("button");
+        cell.className = `cell ${card ? "filled" : ""} ${index === lastPlacedIndex && !finished ? "recent" : ""}`;
+        cell.type = "button";
+        cell.setAttribute("aria-label", card ? `Placed ${card.rank} of ${SUIT_NAMES[card.suit]}` : `Empty square ${index+1}`);
+        if(card){
+          cell.innerHTML = cardHTML(card);
+        } else {
+          cell.addEventListener("click", () => placeCard(index));
+        }
+        el.grid.appendChild(cell);
+      });
+    }
+
+    function renderLineScores(){
+      el.rowScores.innerHTML = "";
+      el.colScores.innerHTML = "";
+      for(let r=0; r<4; r++){
+        const div = document.createElement("div");
+        div.className = `line-score ${finished ? "ready" : ""}`;
+        div.textContent = finished ? `${lineResults[r].total}` : "—";
+        el.rowScores.appendChild(div);
+      }
+      for(let c=0; c<4; c++){
+        const div = document.createElement("div");
+        div.className = `line-score ${finished ? "ready" : ""}`;
+        div.textContent = finished ? `${lineResults[4+c].total}` : "—";
+        el.colScores.appendChild(div);
+      }
+    }
+
+    function renderTrack(){
+      el.track.innerHTML = "";
+      const pegScore = Math.min(score, TARGET);
+      for(let i=1; i<=TARGET; i++){
+        const hole = document.createElement("span");
+        hole.className = "hole";
+        if(i <= pegScore) hole.classList.add("lit");
+        if(i === pegScore && score > 0) hole.classList.add("peg");
+        if(i === TARGET) hole.classList.add("finish");
+        hole.title = `${i}`;
+        el.track.appendChild(hole);
+      }
+    }
+
+    function renderHistory(){
+      return;
+    }
+
+    function showBreakdown(){
+      if(!finished) return;
+      const rowTotal = lineResults.slice(0,4).reduce((s,l)=>s+l.total,0);
+      const colTotal = lineResults.slice(4).reduce((s,l)=>s+l.total,0);
+      const bonusTotal = globalDetails.reduce((s,g)=>s+g.points,0);
+      const best = Number(localStorage.getItem(STORAGE_KEY) || 0);
+      el.modalBody.innerHTML = `
+        <div class="break-summary">
+          <div class="summary-box"><div class="summary-label">Total</div><div class="summary-value">${score}</div></div>
+          <div class="summary-box"><div class="summary-label">Rows</div><div class="summary-value">${rowTotal}</div></div>
+          <div class="summary-box"><div class="summary-label">Columns</div><div class="summary-value">${colTotal}</div></div>
+          <div class="summary-box best-box"><div class="summary-label">Best Saved</div><div class="summary-value">${best}</div></div>
+        </div>
+        <div class="summary-box" style="margin-bottom:14px;">
+          <div class="summary-label">Starter</div>
+          <div class="tiny-cards">${cardHTML(starter, true)}</div>
+          <div class="result-text">${score >= TARGET ? "Win!" : "Keep trying."} Target is ${TARGET}. ${bonusTotal ? `His heels added ${bonusTotal} points.` : "No his heels bonus this game."}</div>
+        </div>
+        ${globalDetails.length ? `<div class="summary-box" style="margin-bottom:14px;"><div class="score-line"><strong>${globalDetails[0].name}</strong><span class="score-points">${globalDetails[0].points}</span><span>${globalDetails[0].text}</span></div></div>` : ""}
+        <div class="break-grid">
+          ${lineResults.map(renderBreakCard).join("")}
+        </div>`;
+      el.dialog.showModal();
+    }
+
+    function renderBreakCard(line){
+      return `<section class="break-card">
+        <h4><span>${line.name}</span><span>${line.total} pts</span></h4>
+        <div class="tiny-cards">${line.lineCards.map(c => cardHTML(c, true)).join("")} <span style="align-self:center;font-weight:950;color:#667167;">+</span> ${cardHTML(starter, true)}</div>
+        <div class="score-lines">
+          ${line.details.map(d => `
+            <div class="score-line">
+              <strong>${d.name}</strong>
+              <span class="score-points">${d.points}</span>
+              <span class="${d.points ? "" : "none"}">${d.text}</span>
+            </div>`).join("")}
+        </div>
+      </section>`;
+    }
+
+    let toastTimer = null;
+    function showToast(text){
+      clearTimeout(toastTimer);
+      el.toast.textContent = text;
+      el.toast.classList.add("show");
+      toastTimer = setTimeout(() => el.toast.classList.remove("show"), 1400);
+    }
+
+    el.newGameTop.addEventListener("click", newGame);
+    el.undoBtn.addEventListener("click", undoLast);
+    el.scoreBtn.addEventListener("click", showBreakdown);
+    el.viewBreakTop.addEventListener("click", showBreakdown);
+    el.viewBreakSide.addEventListener("click", showBreakdown);
+    el.closeDialog.addEventListener("click", () => el.dialog.close());
+    el.dialog.addEventListener("click", (event) => {
+      const rect = el.dialog.getBoundingClientRect();
+      const outside = event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom;
+      if(outside) el.dialog.close();
+    });
+
+    newGame();
+  </script>
+</body>
+</html>
