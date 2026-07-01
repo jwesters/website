@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Simon Wheel</title>
+  <style>
+    :root {
+      --bg1: #141421;
+      --bg2: #23223a;
+      --panel: rgba(255, 255, 255, 0.09);
+      --panel-strong: rgba(255, 255, 255, 0.15);
+      --text: #f8f7ff;
+      --muted: #c9c5df;
+      --gold: #ffd166;
+      --danger: #ff5d73;
+      --good: #7ee787;
+      --shadow: 0 22px 70px rgba(0, 0, 0, 0.42);
+      --radius: 26px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(121, 85, 255, 0.28), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(0, 210, 255, 0.18), transparent 33%),
+        linear-gradient(135deg, var(--bg1), var(--bg2));
+    }
+
+    body {
+      min-height: 100svh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(10px, 2.2vw, 24px);
+    }
+
+    button, input { font: inherit; }
+
+    .app {
+      width: min(1220px, 100%);
+      height: min(760px, calc(100svh - 20px));
+      display: grid;
+      grid-template-columns: minmax(250px, 335px) minmax(360px, 1fr) minmax(250px, 315px);
+      gap: clamp(12px, 1.8vw, 22px);
+      align-items: stretch;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,0.13), rgba(255,255,255,0.075));
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+      padding: clamp(14px, 2vw, 22px);
+      min-height: 0;
+    }
+
+    .left-panel, .right-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .game-panel {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .title {
+      margin: 0;
+      font-size: clamp(2rem, 3.8vw, 3.4rem);
+      line-height: 0.92;
+      letter-spacing: -0.06em;
+    }
+
+    .subtitle {
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.35;
+      font-size: clamp(0.93rem, 1.5vw, 1.03rem);
+    }
+
+    .control-card, .score-card, .mini-card {
+      border-radius: 20px;
+      background: rgba(255,255,255,0.085);
+      border: 1px solid rgba(255,255,255,0.11);
+      padding: 14px;
+    }
+
+    .label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 0.92rem;
+    }
+
+    .big-value {
+      color: var(--gold);
+      font-size: 1.5rem;
+      font-weight: 900;
+      text-shadow: 0 0 22px rgba(255, 209, 102, 0.25);
+    }
+
+    .range-wrap {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--gold);
+      cursor: pointer;
+    }
+
+    input[type="range"]:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .primary-btn, .secondary-btn, .tiny-btn {
+      border: 0;
+      color: #161521;
+      background: linear-gradient(135deg, #ffd166, #ffb703);
+      border-radius: 17px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 12px 30px rgba(255, 183, 3, 0.24);
+      transition: transform 120ms ease, filter 120ms ease, opacity 120ms ease;
+    }
+
+    .primary-btn {
+      width: 100%;
+      min-height: 52px;
+      font-size: 1.08rem;
+      padding: 12px 14px;
+    }
+
+    .secondary-btn {
+      width: 100%;
+      min-height: 45px;
+      padding: 10px 12px;
+      color: var(--text);
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.16);
+      box-shadow: none;
+    }
+
+    .tiny-btn {
+      min-height: 36px;
+      padding: 8px 10px;
+      border-radius: 13px;
+      font-size: 0.88rem;
+      color: var(--text);
+      background: rgba(255,255,255,0.13);
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow: none;
+    }
+
+    button:hover { filter: brightness(1.07); transform: translateY(-1px); }
+    button:active { transform: translateY(1px) scale(0.99); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; filter: none; }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .stat {
+      border-radius: 18px;
+      background: rgba(255,255,255,0.075);
+      border: 1px solid rgba(255,255,255,0.11);
+      padding: 12px;
+      min-height: 72px;
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 5px;
+      font-size: clamp(1.3rem, 2.2vw, 1.75rem);
+      line-height: 1;
+    }
+
+    .wheel-stage {
+      width: min(66vmin, 585px);
+      height: min(66vmin, 585px);
+      max-width: 100%;
+      max-height: 100%;
+      position: relative;
+      display: grid;
+      place-items: center;
+      filter: drop-shadow(0 30px 45px rgba(0,0,0,0.46));
+    }
+
+    .wheel-svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      overflow: visible;
+      border-radius: 50%;
+    }
+
+    .segment {
+      cursor: pointer;
+      transform-box: fill-box;
+      transform-origin: center;
+      transition: transform 100ms ease, filter 120ms ease, opacity 120ms ease;
+      stroke: rgba(255,255,255,0.36);
+      stroke-width: 2.1;
+      paint-order: stroke fill;
+    }
+
+    .segment:hover { filter: brightness(1.12) saturate(1.04); }
+    .segment.active {
+      transform: scale(1.035);
+      filter: brightness(1.55) saturate(1.35) drop-shadow(0 0 22px rgba(255,255,255,0.42));
+    }
+    .segment.locked { cursor: default; opacity: 0.9; }
+
+    .center-hub {
+      position: absolute;
+      width: 34%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 18px;
+      background:
+        radial-gradient(circle at 35% 25%, rgba(255,255,255,0.2), transparent 32%),
+        linear-gradient(135deg, rgba(35,34,58,0.98), rgba(14,14,27,0.98));
+      border: 2px solid rgba(255,255,255,0.2);
+      box-shadow: inset 0 0 28px rgba(255,255,255,0.08), 0 18px 45px rgba(0,0,0,0.45);
+      pointer-events: none;
+    }
+
+    .hub-text {
+      font-weight: 950;
+      font-size: clamp(0.92rem, 1.9vw, 1.25rem);
+      line-height: 1.1;
+      letter-spacing: -0.035em;
+    }
+
+    .hub-subtext {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: clamp(0.68rem, 1.25vw, 0.88rem);
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
+    .scores-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .scores-title h2 {
+      margin: 0;
+      font-size: 1.15rem;
+      letter-spacing: -0.03em;
+    }
+
+    .score-list {
+      display: grid;
+      gap: 9px;
+      min-height: 182px;
+    }
+
+    .score-row {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+      align-items: center;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.11);
+      padding: 11px;
+    }
+
+    .place {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: rgba(255,209,102,0.18);
+      color: var(--gold);
+      font-weight: 950;
+    }
+
+    .score-main {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: baseline;
+      font-weight: 900;
+    }
+
+    .score-date {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .empty-scores {
+      min-height: 120px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--muted);
+      border-radius: 18px;
+      border: 1px dashed rgba(255,255,255,0.2);
+      padding: 18px;
+    }
+
+    .rules-list {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.42;
+      font-size: 0.92rem;
+    }
+
+    .rules-list li { margin: 5px 0; }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(5, 5, 12, 0.68);
+      z-index: 20;
+    }
+
+    .overlay.show { display: flex; }
+
+    .dialog {
+      width: min(460px, 94vw);
+      border-radius: 28px;
+      background: linear-gradient(160deg, #292744, #151522);
+      border: 1px solid rgba(255,255,255,0.18);
+      box-shadow: 0 28px 90px rgba(0,0,0,0.58);
+      padding: 24px;
+      text-align: center;
+    }
+
+    .dialog h2 {
+      margin: 0 0 8px;
+      font-size: clamp(1.7rem, 4vw, 2.4rem);
+      letter-spacing: -0.05em;
+    }
+
+    .dialog p {
+      margin: 8px 0 18px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .final-score {
+      display: inline-grid;
+      place-items: center;
+      min-width: 126px;
+      min-height: 74px;
+      margin: 6px auto 14px;
+      border-radius: 20px;
+      background: rgba(255,209,102,0.16);
+      color: var(--gold);
+      font-size: 2.25rem;
+      font-weight: 950;
+      border: 1px solid rgba(255,209,102,0.28);
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%) translateY(20px);
+      opacity: 0;
+      pointer-events: none;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.68);
+      border: 1px solid rgba(255,255,255,0.16);
+      color: var(--text);
+      font-weight: 800;
+      transition: opacity 180ms ease, transform 180ms ease;
+      z-index: 30;
+      white-space: nowrap;
+    }
+
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 980px) {
+      .app {
+        height: calc(100svh - 14px);
+        grid-template-columns: 275px 1fr;
+        grid-template-rows: 1fr auto;
+      }
+      .right-panel {
+        grid-column: 1 / -1;
+        flex-direction: row;
+        align-items: stretch;
+      }
+      .right-panel > * { flex: 1; }
+      .rules-card { display: none; }
+      .score-list { min-height: auto; }
+      .wheel-stage { width: min(59vmin, 530px); height: min(59vmin, 530px); }
+    }
+
+    @media (max-width: 720px) {
+      body { align-items: stretch; padding: 8px; }
+      .app {
+        height: calc(100svh - 16px);
+        display: grid;
+        grid-template-columns: 1fr;
+        grid-template-rows: auto minmax(280px, 1fr) auto;
+        gap: 8px;
+      }
+      .panel { border-radius: 20px; padding: 10px; }
+      .left-panel { gap: 8px; }
+      .title { font-size: 1.8rem; }
+      .subtitle, .mini-card { display: none; }
+      .control-card { padding: 10px; }
+      .stat-grid { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+      .stat { min-height: 54px; padding: 8px; border-radius: 14px; }
+      .stat span { font-size: 0.62rem; }
+      .stat strong { font-size: 1.06rem; }
+      .primary-btn { min-height: 42px; }
+      .secondary-btn, .tiny-btn { min-height: 37px; }
+      .right-panel { display: block; }
+      .score-card { padding: 10px; }
+      .scores-title { margin-bottom: 6px; }
+      .score-list { grid-template-columns: repeat(3, 1fr); gap: 6px; min-height: 0; }
+      .score-row { display: block; padding: 8px; border-radius: 14px; }
+      .place { width: 28px; height: 28px; border-radius: 10px; margin-bottom: 6px; }
+      .score-main { display: block; font-size: 0.9rem; }
+      .score-date { font-size: 0.68rem; white-space: normal; }
+      .empty-scores { min-height: 54px; padding: 10px; font-size: 0.85rem; }
+      .wheel-stage { width: min(88vw, 62svh); height: min(88vw, 62svh); }
+    }
+
+    @media (max-width: 430px) {
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .wheel-stage { width: min(91vw, 50svh); height: min(91vw, 50svh); }
+      .button-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" aria-label="Simon Wheel game">
+    <section class="panel left-panel">
+      <header>
+        <h1 class="title">Simon<br>Wheel</h1>
+        <p class="subtitle">Watch the flashes, listen to the tones, then repeat the full growing pattern.</p>
+      </header>
+
+      <div class="control-card">
+        <div class="label-row">
+          <label for="colourCount">Colours</label>
+          <strong class="big-value" id="colourCountValue">4</strong>
+        </div>
+        <div class="range-wrap">
+          <input id="colourCount" type="range" min="3" max="9" value="4" step="1" />
+          <span id="levelLabel" aria-live="polite">4-colour</span>
+        </div>
+      </div>
+
+      <button class="primary-btn" id="startBtn">Start Game</button>
+
+      <div class="button-row">
+        <button class="secondary-btn" id="muteBtn" type="button">Sound On</button>
+        <button class="secondary-btn" id="rulesBtn" type="button">Rules</button>
+      </div>
+
+      <div class="stat-grid" aria-live="polite">
+        <div class="stat"><span>Round</span><strong id="roundStat">0</strong></div>
+        <div class="stat"><span>Score</span><strong id="scoreStat">0</strong></div>
+        <div class="stat"><span>Best</span><strong id="bestStat">0</strong></div>
+        <div class="stat"><span>Speed</span><strong id="speedStat">1x</strong></div>
+      </div>
+    </section>
+
+    <section class="panel game-panel">
+      <div class="wheel-stage" id="wheelStage">
+        <svg class="wheel-svg" id="wheelSvg" viewBox="0 0 500 500" role="img" aria-label="Clickable Simon colour wheel"></svg>
+        <div class="center-hub" aria-hidden="true">
+          <div>
+            <div class="hub-text" id="hubText">Choose<br>colours</div>
+            <div class="hub-subtext" id="hubSubtext">Press Start</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel right-panel">
+      <div class="score-card">
+        <div class="scores-title">
+          <h2>Top 3 Saved</h2>
+          <button class="tiny-btn" id="resetBtn" type="button">Reset</button>
+        </div>
+        <div id="scoreList" class="score-list" aria-live="polite"></div>
+      </div>
+
+      <div class="mini-card rules-card">
+        <strong>How it works</strong>
+        <ul class="rules-list">
+          <li>Each round adds one new colour.</li>
+          <li>Repeat the whole sequence.</li>
+          <li>One wrong tap ends the game.</li>
+          <li>Scores save separately for 3–9 colours.</li>
+        </ul>
+      </div>
+    </aside>
+  </main>
+
+  <div class="overlay" id="gameOverOverlay" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
+    <div class="dialog">
+      <h2 id="gameOverTitle">Game Over</h2>
+      <p id="gameOverMessage">Nice run!</p>
+      <div class="final-score" id="finalScore">0</div>
+      <div class="button-row">
+        <button class="primary-btn" id="playAgainBtn" type="button">Play Again</button>
+        <button class="secondary-btn" id="menuBtn" type="button">Main Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="rulesOverlay" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+    <div class="dialog">
+      <h2 id="rulesTitle">Rules</h2>
+      <p>Watch the wheel play a pattern. When it says <strong>Your turn</strong>, click or tap the colours in the exact same order. Every completed round adds one more step and makes the playback a little faster.</p>
+      <button class="primary-btn" id="closeRulesBtn" type="button">Got It</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const STORAGE_KEY = 'simonWheelTopScoresV1';
+      const colours = [
+        '#ff5252', '#22c55e', '#3b82f6', '#facc15', '#a855f7',
+        '#fb923c', '#14b8a6', '#ec4899', '#94a3b8'
+      ];
+      const frequencies = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99, 987.77, 1174.66, 1396.91];
+
+      const elements = {
+        colourCount: document.getElementById('colourCount'),
+        colourCountValue: document.getElementById('colourCountValue'),
+        levelLabel: document.getElementById('levelLabel'),
+        startBtn: document.getElementById('startBtn'),
+        muteBtn: document.getElementById('muteBtn'),
+        rulesBtn: document.getElementById('rulesBtn'),
+        resetBtn: document.getElementById('resetBtn'),
+        roundStat: document.getElementById('roundStat'),
+        scoreStat: document.getElementById('scoreStat'),
+        bestStat: document.getElementById('bestStat'),
+        speedStat: document.getElementById('speedStat'),
+        scoreList: document.getElementById('scoreList'),
+        wheelSvg: document.getElementById('wheelSvg'),
+        hubText: document.getElementById('hubText'),
+        hubSubtext: document.getElementById('hubSubtext'),
+        gameOverOverlay: document.getElementById('gameOverOverlay'),
+        gameOverMessage: document.getElementById('gameOverMessage'),
+        finalScore: document.getElementById('finalScore'),
+        playAgainBtn: document.getElementById('playAgainBtn'),
+        menuBtn: document.getElementById('menuBtn'),
+        rulesOverlay: document.getElementById('rulesOverlay'),
+        closeRulesBtn: document.getElementById('closeRulesBtn'),
+        toast: document.getElementById('toast')
+      };
+
+      const state = {
+        colourCount: 4,
+        sequence: [],
+        playerIndex: 0,
+        score: 0,
+        acceptingInput: false,
+        inGame: false,
+        muted: false,
+        audioContext: null,
+        roundToken: 0,
+        segments: []
+      };
+
+      function loadScores() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          const parsed = raw ? JSON.parse(raw) : {};
+          return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (error) {
+          return {};
+        }
+      }
+
+      function saveScores(allScores) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(allScores));
+      }
+
+      function scoresForCurrentLevel() {
+        const all = loadScores();
+        const list = Array.isArray(all[state.colourCount]) ? all[state.colourCount] : [];
+        return list.slice(0, 3);
+      }
+
+      function bestForCurrentLevel() {
+        const scores = scoresForCurrentLevel();
+        return scores.length ? scores[0].score : 0;
+      }
+
+      function recordScore(score) {
+        if (score <= 0) return false;
+        const all = loadScores();
+        const key = String(state.colourCount);
+        const list = Array.isArray(all[key]) ? all[key] : [];
+        const entry = { score, iso: new Date().toISOString() };
+        list.push(entry);
+        list.sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          return new Date(b.iso).getTime() - new Date(a.iso).getTime();
+        });
+        all[key] = list.slice(0, 3);
+        saveScores(all);
+        return all[key].some(item => item.iso === entry.iso && item.score === entry.score);
+      }
+
+      function formatDateTime(iso) {
+        try {
+          return new Date(iso).toLocaleString([], {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit'
+          });
+        } catch (error) {
+          return iso;
+        }
+      }
+
+      function updateScoresDisplay() {
+        const scores = scoresForCurrentLevel();
+        elements.bestStat.textContent = scores.length ? scores[0].score : '0';
+        if (!scores.length) {
+          elements.scoreList.innerHTML = '<div class="empty-scores">No saved scores for this colour count yet.</div>';
+          return;
+        }
+        elements.scoreList.innerHTML = scores.map((entry, index) => `
+          <div class="score-row">
+            <div class="place">${index + 1}</div>
+            <div>
+              <div class="score-main"><span>${entry.score} rounds</span><span>${state.colourCount} colours</span></div>
+              <div class="score-date">${formatDateTime(entry.iso)}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      function updateStats() {
+        elements.roundStat.textContent = state.inGame ? String(state.sequence.length) : '0';
+        elements.scoreStat.textContent = String(state.score);
+        elements.speedStat.textContent = getSpeedLabel();
+        elements.bestStat.textContent = String(Math.max(bestForCurrentLevel(), state.score));
+      }
+
+      function setHub(main, sub = '') {
+        elements.hubText.innerHTML = main;
+        elements.hubSubtext.textContent = sub;
+      }
+
+      function polarToCartesian(cx, cy, radius, angleInDegrees) {
+        const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
+        return {
+          x: cx + (radius * Math.cos(angleInRadians)),
+          y: cy + (radius * Math.sin(angleInRadians))
+        };
+      }
+
+      function describeSector(cx, cy, radius, startAngle, endAngle) {
+        const start = polarToCartesian(cx, cy, radius, endAngle);
+        const end = polarToCartesian(cx, cy, radius, startAngle);
+        const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1';
+        return [
+          'M', cx, cy,
+          'L', start.x.toFixed(3), start.y.toFixed(3),
+          'A', radius, radius, 0, largeArcFlag, 0, end.x.toFixed(3), end.y.toFixed(3),
+          'Z'
+        ].join(' ');
+      }
+
+      function renderWheel() {
+        const count = state.colourCount;
+        const gap = Math.min(3.6, 16 / count);
+        const slice = 360 / count;
+        const radius = 236;
+        const cx = 250;
+        const cy = 250;
+        elements.wheelSvg.innerHTML = '';
+        state.segments = [];
+
+        for (let i = 0; i < count; i++) {
+          const start = i * slice + gap / 2;
+          const end = (i + 1) * slice - gap / 2;
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.setAttribute('d', describeSector(cx, cy, radius, start, end));
+          path.setAttribute('fill', colours[i]);
+          path.setAttribute('class', 'segment');
+          path.setAttribute('data-index', String(i));
+          path.setAttribute('tabindex', '0');
+          path.setAttribute('role', 'button');
+          path.setAttribute('aria-label', `Colour ${i + 1}`);
+          path.addEventListener('pointerdown', event => {
+            event.preventDefault();
+            handleSegmentInput(i);
+          });
+          path.addEventListener('keydown', event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              handleSegmentInput(i);
+            }
+          });
+          elements.wheelSvg.appendChild(path);
+          state.segments.push(path);
+        }
+        updateSegmentLockState();
+      }
+
+      function updateSegmentLockState() {
+        state.segments.forEach(segment => {
+          segment.classList.toggle('locked', !state.acceptingInput);
+        });
+      }
+
+      function ensureAudio() {
+        if (state.audioContext) return;
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) {
+          state.muted = true;
+          elements.muteBtn.textContent = 'No Audio';
+          elements.muteBtn.disabled = true;
+          return;
+        }
+        state.audioContext = new AudioContext();
+      }
+
+      async function playTone(index, durationMs) {
+        if (state.muted) return;
+        ensureAudio();
+        const ctx = state.audioContext;
+        if (!ctx) return;
+        if (ctx.state === 'suspended') {
+          try { await ctx.resume(); } catch (error) {}
+        }
+
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(frequencies[index] || 440, now);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.22, now + 0.018);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + Math.max(0.06, durationMs / 1000));
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + Math.max(0.07, durationMs / 1000) + 0.025);
+      }
+
+      function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+      }
+
+      function getPlaybackTiming() {
+        const completed = state.score;
+        const flash = Math.max(220, 540 - completed * 18);
+        const gap = Math.max(85, 215 - completed * 7);
+        const intro = Math.max(320, 720 - completed * 20);
+        return { flash, gap, intro };
+      }
+
+      function getSpeedLabel() {
+        const base = 540 + 215;
+        const now = getPlaybackTiming().flash + getPlaybackTiming().gap;
+        const speed = Math.min(2.8, base / now);
+        return `${speed.toFixed(1)}x`;
+      }
+
+      async function flashSegment(index, durationMs = 320, withTone = true) {
+        const segment = state.segments[index];
+        if (!segment) return;
+        segment.classList.add('active');
+        if (withTone) playTone(index, durationMs);
+        await sleep(durationMs);
+        segment.classList.remove('active');
+      }
+
+      function setPlayingControls(isPlaying) {
+        elements.colourCount.disabled = isPlaying;
+        elements.startBtn.disabled = isPlaying;
+        elements.resetBtn.disabled = isPlaying;
+      }
+
+      async function startGame() {
+        ensureAudio();
+        state.roundToken += 1;
+        state.sequence = [];
+        state.playerIndex = 0;
+        state.score = 0;
+        state.inGame = true;
+        state.acceptingInput = false;
+        elements.gameOverOverlay.classList.remove('show');
+        setPlayingControls(true);
+        setHub('Ready?', `${state.colourCount} colours`);
+        updateStats();
+        updateSegmentLockState();
+        await sleep(420);
+        addRound(state.roundToken);
+      }
+
+      async function addRound(token) {
+        if (!state.inGame || token !== state.roundToken) return;
+        state.acceptingInput = false;
+        updateSegmentLockState();
+        state.playerIndex = 0;
+        const next = Math.floor(Math.random() * state.colourCount);
+        state.sequence.push(next);
+        updateStats();
+        setHub('Watch', `Round ${state.sequence.length}`);
+        const timing = getPlaybackTiming();
+        await sleep(timing.intro);
+        await playSequence(token);
+      }
+
+      async function playSequence(token) {
+        const timing = getPlaybackTiming();
+        for (const index of state.sequence) {
+          if (!state.inGame || token !== state.roundToken) return;
+          await flashSegment(index, timing.flash, true);
+          await sleep(timing.gap);
+        }
+        if (!state.inGame || token !== state.roundToken) return;
+        state.acceptingInput = true;
+        updateSegmentLockState();
+        setHub('Your turn', `Tap ${state.sequence.length} colours`);
+      }
+
+      async function handleSegmentInput(index) {
+        if (!state.inGame || !state.acceptingInput) return;
+        state.acceptingInput = false;
+        updateSegmentLockState();
+
+        await flashSegment(index, 170, true);
+        const expected = state.sequence[state.playerIndex];
+        if (index !== expected) {
+          endGame();
+          return;
+        }
+
+        state.playerIndex += 1;
+        if (state.playerIndex >= state.sequence.length) {
+          state.score = state.sequence.length;
+          updateStats();
+          setHub('Nice!', `${state.score} complete`);
+          await sleep(Math.max(360, 720 - state.score * 12));
+          addRound(state.roundToken);
+        } else {
+          state.acceptingInput = true;
+          updateSegmentLockState();
+          setHub('Keep going', `${state.playerIndex}/${state.sequence.length}`);
+        }
+      }
+
+      function endGame() {
+        state.inGame = false;
+        state.acceptingInput = false;
+        state.roundToken += 1;
+        updateSegmentLockState();
+        setPlayingControls(false);
+        setHub('Game<br>Over', `${state.score} complete`);
+        const saved = recordScore(state.score);
+        updateScoresDisplay();
+        updateStats();
+        elements.finalScore.textContent = state.score;
+        elements.gameOverMessage.textContent = saved
+          ? `Saved to the ${state.colourCount}-colour top scores.`
+          : state.score > 0
+            ? `Score: ${state.score}. It did not crack the top 3 for ${state.colourCount} colours.`
+            : 'Try again and complete at least one round to save a score.';
+        elements.gameOverOverlay.classList.add('show');
+      }
+
+      function updateLevelFromSlider() {
+        state.colourCount = Number(elements.colourCount.value);
+        elements.colourCountValue.textContent = String(state.colourCount);
+        elements.levelLabel.textContent = `${state.colourCount}-colour`;
+        renderWheel();
+        updateScoresDisplay();
+        updateStats();
+        setHub('Choose<br>colours', 'Press Start');
+      }
+
+      function resetCurrentScores() {
+        const all = loadScores();
+        delete all[String(state.colourCount)];
+        saveScores(all);
+        updateScoresDisplay();
+        updateStats();
+        showToast(`Reset ${state.colourCount}-colour scores`);
+      }
+
+      let toastTimer = null;
+      function showToast(message) {
+        elements.toast.textContent = message;
+        elements.toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => elements.toast.classList.remove('show'), 1550);
+      }
+
+      function setMuted(muted) {
+        state.muted = muted;
+        elements.muteBtn.textContent = state.muted ? 'Sound Off' : 'Sound On';
+        showToast(state.muted ? 'Sound off' : 'Sound on');
+      }
+
+      elements.colourCount.addEventListener('input', updateLevelFromSlider);
+      elements.startBtn.addEventListener('click', startGame);
+      elements.playAgainBtn.addEventListener('click', startGame);
+      elements.menuBtn.addEventListener('click', () => {
+        elements.gameOverOverlay.classList.remove('show');
+        setHub('Choose<br>colours', 'Press Start');
+      });
+      elements.muteBtn.addEventListener('click', () => setMuted(!state.muted));
+      elements.rulesBtn.addEventListener('click', () => elements.rulesOverlay.classList.add('show'));
+      elements.closeRulesBtn.addEventListener('click', () => elements.rulesOverlay.classList.remove('show'));
+      elements.rulesOverlay.addEventListener('click', event => {
+        if (event.target === elements.rulesOverlay) elements.rulesOverlay.classList.remove('show');
+      });
+      elements.gameOverOverlay.addEventListener('click', event => {
+        if (event.target === elements.gameOverOverlay) elements.gameOverOverlay.classList.remove('show');
+      });
+      elements.resetBtn.addEventListener('click', resetCurrentScores);
+
+      window.addEventListener('keydown', event => {
+        if (event.key === 'Escape') {
+          elements.rulesOverlay.classList.remove('show');
+          if (!state.inGame) elements.gameOverOverlay.classList.remove('show');
+        }
+      });
+
+      updateLevelFromSlider();
+    })();
+  </script>
+</body>
+</html>

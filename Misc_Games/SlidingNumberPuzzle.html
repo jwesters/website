@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Sliding Number Puzzle</title>
+  <style>
+    :root {
+      --bg1: #eef5ff;
+      --bg2: #fdf7ee;
+      --ink: #1d2733;
+      --muted: #64748b;
+      --card: rgba(255, 255, 255, 0.88);
+      --card-solid: #ffffff;
+      --line: rgba(75, 85, 99, 0.18);
+      --accent: #2f6fed;
+      --accent2: #11a683;
+      --tile1: #ffffff;
+      --tile2: #eaf2ff;
+      --shadow: 0 18px 50px rgba(31, 41, 55, 0.15);
+      --soft-shadow: 0 8px 20px rgba(31, 41, 55, 0.12);
+      --radius: 22px;
+      --board-size: min(72vh, 68vw, 760px);
+      --n: 4;
+      --gap: 8px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 15% 0%, rgba(47, 111, 237, 0.20), transparent 30%),
+        radial-gradient(circle at 100% 18%, rgba(17, 166, 131, 0.20), transparent 34%),
+        linear-gradient(135deg, var(--bg1), var(--bg2));
+      overflow-x: hidden;
+    }
+
+    body {
+      min-height: 100%;
+      padding: clamp(10px, 2vw, 24px);
+    }
+
+    .app {
+      width: min(1500px, 100%);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: var(--soft-shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: clamp(1.05rem, 2vw, 1.65rem);
+      letter-spacing: -0.04em;
+      line-height: 1;
+    }
+
+    .title p {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: clamp(0.72rem, 1vw, 0.84rem);
+    }
+
+    .top-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    button, select {
+      font: inherit;
+    }
+
+    .control {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 9px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--card-solid);
+      box-shadow: 0 3px 10px rgba(31, 41, 55, 0.06);
+      color: var(--ink);
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .control label {
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    select {
+      border: 0;
+      background: transparent;
+      font-weight: 900;
+      color: var(--ink);
+      outline: none;
+      cursor: pointer;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 12px;
+      padding: 8px 11px;
+      font-weight: 900;
+      color: white;
+      background: linear-gradient(135deg, var(--accent), #1f55c9);
+      box-shadow: 0 10px 22px rgba(47, 111, 237, 0.25);
+      cursor: pointer;
+      transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+      white-space: nowrap;
+    }
+
+    .btn:hover { transform: translateY(-1px); filter: brightness(1.03); }
+    .btn:active { transform: translateY(1px) scale(0.99); }
+    .btn.secondary {
+      background: linear-gradient(135deg, #0f172a, #334155);
+      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.18);
+    }
+    .btn.ghost {
+      color: var(--ink);
+      background: var(--card-solid);
+      border: 1px solid var(--line);
+      box-shadow: 0 5px 14px rgba(31, 41, 55, 0.08);
+    }
+
+    .game-layout {
+      display: grid;
+      grid-template-columns: minmax(320px, 1fr) minmax(280px, 350px);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .left {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .stats-bar {
+      width: min(var(--board-size), 100%);
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+
+    .stat {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 5px 7px;
+      box-shadow: 0 5px 13px rgba(31, 41, 55, 0.07);
+      text-align: center;
+      backdrop-filter: blur(10px);
+      min-width: 0;
+    }
+
+    .stat .label {
+      display: block;
+      color: var(--muted);
+      font-size: 0.62rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+
+    .stat .value {
+      display: block;
+      margin-top: 1px;
+      font-size: clamp(0.82rem, 1.45vw, 1.08rem);
+      font-weight: 950;
+      font-variant-numeric: tabular-nums;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .board-wrap {
+      width: min(var(--board-size), 100%);
+      aspect-ratio: 1 / 1;
+      padding: clamp(7px, 1.2vw, 14px);
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.10), rgba(255, 255, 255, 0.72));
+      border: 1px solid rgba(15, 23, 42, 0.16);
+      border-radius: clamp(16px, 2vw, 28px);
+      box-shadow: var(--shadow);
+    }
+
+    #board {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: repeat(var(--n), 1fr);
+      grid-template-rows: repeat(var(--n), 1fr);
+      gap: var(--gap);
+      touch-action: manipulation;
+      user-select: none;
+    }
+
+    .tile {
+      position: relative;
+      display: grid;
+      place-items: center;
+      min-width: 0;
+      min-height: 0;
+      border: 1px solid rgba(47, 111, 237, 0.20);
+      border-radius: clamp(5px, calc(20px - var(--n) * 1px), 15px);
+      color: #16233a;
+      background:
+        linear-gradient(145deg, rgba(255,255,255,0.98), rgba(231,240,255,0.98));
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.78),
+        0 6px 12px rgba(15, 23, 42, 0.12);
+      font-size: clamp(0.46rem, calc(3.25rem / var(--n) + 0.25rem), 1.65rem);
+      font-weight: 950;
+      line-height: 1;
+      cursor: pointer;
+      transition: transform 105ms ease, box-shadow 105ms ease, background 105ms ease;
+    }
+
+    .tile::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(135deg, rgba(255,255,255,0.50), transparent 48%);
+      pointer-events: none;
+    }
+
+    .tile:hover {
+      transform: translateY(-1px);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.86),
+        0 9px 18px rgba(15, 23, 42, 0.15);
+    }
+
+    .tile.movable {
+      outline: 2px solid rgba(47, 111, 237, 0.18);
+      outline-offset: -2px;
+    }
+
+    .tile.empty {
+      cursor: default;
+      pointer-events: none;
+      background: rgba(15, 23, 42, 0.07);
+      border: 1px dashed rgba(15, 23, 42, 0.18);
+      box-shadow: inset 0 4px 14px rgba(15, 23, 42, 0.08);
+    }
+
+    .tile.empty::after { display: none; }
+
+    .side-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--soft-shadow);
+      backdrop-filter: blur(10px);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.55);
+    }
+
+    .panel-head h2 {
+      margin: 0;
+      font-size: 1rem;
+      letter-spacing: -0.02em;
+    }
+
+    .panel-body {
+      padding: 13px 14px;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 0.93rem;
+      line-height: 1.4;
+      margin: 0;
+    }
+
+    .selected-records {
+      display: grid;
+      gap: 8px;
+    }
+
+    .record-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 9px;
+      align-items: center;
+      padding: 10px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.68);
+      border: 1px solid rgba(100,116,139,0.14);
+    }
+
+    .rank {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      color: white;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      font-weight: 950;
+      font-size: 0.85rem;
+    }
+
+    .record-main {
+      min-width: 0;
+    }
+
+    .record-time {
+      display: block;
+      font-weight: 950;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .record-date {
+      display: block;
+      margin-top: 1px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .record-moves {
+      color: #0f766e;
+      font-weight: 950;
+      font-size: 0.86rem;
+      white-space: nowrap;
+    }
+
+    .all-records {
+      max-height: min(55vh, 520px);
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .size-record-block {
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(100,116,139,0.16);
+    }
+
+    .size-record-block:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: 0; }
+
+    .size-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 7px;
+      font-weight: 950;
+      color: #0f172a;
+    }
+
+    .mini-record {
+      display: grid;
+      grid-template-columns: 25px 1fr auto;
+      gap: 7px;
+      align-items: center;
+      padding: 7px 0;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .mini-record strong {
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .mini-record .mini-date {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 74px;
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: rgba(17, 166, 131, 0.11);
+      color: #0f766e;
+      font-weight: 950;
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+
+    .empty-records {
+      padding: 13px;
+      color: var(--muted);
+      text-align: center;
+      border: 1px dashed rgba(100,116,139,0.26);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.52);
+    }
+
+    .small-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .small-actions:empty {
+      display: none;
+    }
+
+    .small-actions .btn {
+      padding: 9px 11px;
+      font-size: 0.9rem;
+    }
+
+    .panel-note {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    dialog {
+      border: 0;
+      border-radius: 26px;
+      padding: 0;
+      background: transparent;
+      width: min(520px, calc(100vw - 30px));
+      color: var(--ink);
+    }
+
+    dialog::backdrop {
+      background: rgba(15, 23, 42, 0.48);
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-card {
+      background: #ffffff;
+      border: 1px solid rgba(255,255,255,0.6);
+      border-radius: 26px;
+      box-shadow: 0 28px 80px rgba(15, 23, 42, 0.32);
+      overflow: hidden;
+    }
+
+    .modal-hero {
+      padding: 22px;
+      color: white;
+      background:
+        radial-gradient(circle at 18% 10%, rgba(255,255,255,0.35), transparent 25%),
+        linear-gradient(135deg, var(--accent), var(--accent2));
+    }
+
+    .modal-hero h2 {
+      margin: 0;
+      font-size: clamp(1.45rem, 3vw, 2rem);
+      letter-spacing: -0.04em;
+    }
+
+    .modal-hero p {
+      margin: 6px 0 0;
+      opacity: 0.92;
+    }
+
+    .modal-body {
+      padding: 18px 22px 22px;
+    }
+
+    .win-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 9px;
+      margin-bottom: 14px;
+    }
+
+    .win-stat {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 11px 9px;
+      text-align: center;
+    }
+
+    .win-stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.73rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .win-stat strong {
+      display: block;
+      margin-top: 3px;
+      font-size: 1.15rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .win-message {
+      margin: 0 0 15px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 9px;
+      flex-wrap: wrap;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%) translateY(20px);
+      opacity: 0;
+      pointer-events: none;
+      padding: 11px 14px;
+      border-radius: 999px;
+      color: white;
+      background: rgba(15, 23, 42, 0.90);
+      box-shadow: 0 18px 42px rgba(15, 23, 42, 0.25);
+      font-weight: 850;
+      transition: opacity 180ms ease, transform 180ms ease;
+      z-index: 10;
+      text-align: center;
+      max-width: min(620px, calc(100vw - 24px));
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 980px) {
+      :root { --board-size: min(76vh, 96vw, 760px); }
+      body { padding: 10px; }
+      header { align-items: flex-start; flex-direction: column; }
+      .top-actions { justify-content: flex-start; width: 100%; }
+      .game-layout { grid-template-columns: 1fr; }
+      .side-panel { width: 100%; }
+      .all-records { max-height: 50vh; }
+    }
+
+    @media (max-width: 680px) {
+      :root { --board-size: min(66vh, 96vw); }
+      .stats-bar { grid-template-columns: repeat(2, 1fr); gap: 4px; }
+      .stat { padding: 4px 5px; border-radius: 10px; }
+      .stat .label { font-size: 0.54rem; }
+      .stat .value { font-size: clamp(0.66rem, 3.4vw, 0.9rem); }
+      .side-panel { display: flex; }
+      .control, .btn { flex: 1 1 auto; justify-content: center; }
+      .top-actions { display: grid; grid-template-columns: 1fr 1fr; }
+      .top-actions .control { grid-column: 1 / -1; }
+      .win-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-height: 740px) and (min-width: 981px) {
+      :root { --board-size: min(68vh, 68vw, 700px); }
+      .all-records { max-height: 39vh; }
+      .panel-body { padding-top: 10px; padding-bottom: 10px; }
+      header { padding-top: 10px; padding-bottom: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="title">
+        <h1>Sliding Number Puzzle</h1>
+        <p>Pick a size, slide the numbers into order, and try to beat your best times.</p>
+      </div>
+      <div class="top-actions">
+        <div class="control" id="boardSizeControl" role="button" tabindex="0" aria-label="Choose board size">
+          <label for="sizeSelect">Board</label>
+          <select id="sizeSelect" aria-label="Choose board size"></select>
+        </div>
+        <button class="btn" id="newPuzzleBtn" type="button">New Puzzle</button>
+        <button class="btn ghost" id="helpBtn" type="button">How to Play</button>
+      </div>
+    </header>
+
+    <main class="game-layout">
+      <section class="left" aria-label="Puzzle area">
+        <div class="stats-bar" aria-live="polite">
+          <div class="stat"><span class="label">Time</span><span class="value" id="timeStat">0:00.0</span></div>
+          <div class="stat"><span class="label">Moves</span><span class="value" id="movesStat">0</span></div>
+        </div>
+        <div class="board-wrap">
+          <div id="board" aria-label="Sliding puzzle board"></div>
+        </div>
+      </section>
+
+      <aside class="side-panel">
+        <section class="panel">
+          <div class="panel-head">
+            <h2 id="selectedRecordsTitle">Best for 3×3</h2>
+            <span class="pill">Top 3</span>
+          </div>
+          <div class="panel-body">
+            <div id="selectedRecords" class="selected-records"></div>
+            <div class="small-actions">
+              <button class="btn ghost" id="viewAllRecordsBtn" type="button">View All Records</button>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <dialog id="winDialog">
+    <div class="modal-card">
+      <div class="modal-hero">
+        <h2>Puzzle Solved!</h2>
+        <p id="winSubtitle">Nice work.</p>
+      </div>
+      <div class="modal-body">
+        <div class="win-grid">
+          <div class="win-stat"><span>Board</span><strong id="winSize">3×3</strong></div>
+          <div class="win-stat"><span>Time</span><strong id="winTime">0:00.0</strong></div>
+          <div class="win-stat"><span>Moves</span><strong id="winMoves">0</strong></div>
+        </div>
+        <p class="win-message" id="winRecordMessage">Checking your records...</p>
+        <div class="modal-actions">
+          <button class="btn ghost" id="closeWinBtn" type="button">Close</button>
+          <button class="btn" id="winNewPuzzleBtn" type="button">New Puzzle</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="helpDialog">
+    <div class="modal-card">
+      <div class="modal-hero">
+        <h2>How to Play</h2>
+        <p>Put every number back into order with the empty space at the end.</p>
+      </div>
+      <div class="modal-body">
+        <p class="win-message">Choose any size from 3×3 to 10×10. Click or tap a tile touching the empty space to slide it. Your timer begins after the first successful move, and the game saves your best three times for each board size with the date, time, and move count.</p>
+        <div class="modal-actions">
+          <button class="btn" id="closeHelpBtn" type="button">Got it</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="recordsDialog">
+    <div class="modal-card">
+      <div class="modal-hero">
+        <h2>All Best Times</h2>
+        <p>Top 3 records for every board size from 3×3 to 10×10.</p>
+      </div>
+      <div class="modal-body">
+        <div id="allRecords" class="all-records"></div>
+        <div class="modal-actions">
+          <button class="btn" id="closeRecordsBtn" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const MIN_SIZE = 3;
+      const MAX_SIZE = 10;
+      const STORAGE_KEY = 'slidingNumberPuzzle.records.v1';
+      const SETTINGS_KEY = 'slidingNumberPuzzle.settings.v1';
+
+      const board = document.getElementById('board');
+      const sizeSelect = document.getElementById('sizeSelect');
+      const boardSizeControl = document.getElementById('boardSizeControl');
+      const newPuzzleBtn = document.getElementById('newPuzzleBtn');
+      const helpBtn = document.getElementById('helpBtn');
+      const viewAllRecordsBtn = document.getElementById('viewAllRecordsBtn');
+      const timeStat = document.getElementById('timeStat');
+      const movesStat = document.getElementById('movesStat');
+      const selectedRecordsTitle = document.getElementById('selectedRecordsTitle');
+      const selectedRecords = document.getElementById('selectedRecords');
+      const allRecords = document.getElementById('allRecords');
+      const winDialog = document.getElementById('winDialog');
+      const helpDialog = document.getElementById('helpDialog');
+      const recordsDialog = document.getElementById('recordsDialog');
+      const winSubtitle = document.getElementById('winSubtitle');
+      const winSize = document.getElementById('winSize');
+      const winTime = document.getElementById('winTime');
+      const winMoves = document.getElementById('winMoves');
+      const winRecordMessage = document.getElementById('winRecordMessage');
+      const closeWinBtn = document.getElementById('closeWinBtn');
+      const winNewPuzzleBtn = document.getElementById('winNewPuzzleBtn');
+      const closeHelpBtn = document.getElementById('closeHelpBtn');
+      const closeRecordsBtn = document.getElementById('closeRecordsBtn');
+      const toast = document.getElementById('toast');
+
+      let size = 3;
+      let tiles = [];
+      let moves = 0;
+      let startTime = 0;
+      let elapsedBeforeStop = 0;
+      let timerId = null;
+      let started = false;
+      let solved = false;
+      let records = loadRecords();
+      let toastTimer = null;
+
+      function init() {
+        buildSizeOptions();
+        const settings = loadSettings();
+        size = clampNumber(settings.size || 3, MIN_SIZE, MAX_SIZE);
+        sizeSelect.value = String(size);
+        newPuzzle();
+        wireEvents();
+        renderRecords();
+      }
+
+      function wireEvents() {
+        sizeSelect.addEventListener('change', () => {
+          size = Number(sizeSelect.value);
+          saveSettings();
+          newPuzzle();
+        });
+
+        boardSizeControl.addEventListener('click', (event) => {
+          if (event.target === sizeSelect) return;
+          if (typeof sizeSelect.showPicker === 'function') sizeSelect.showPicker();
+          else sizeSelect.focus();
+        });
+
+        boardSizeControl.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            if (typeof sizeSelect.showPicker === 'function') sizeSelect.showPicker();
+            else sizeSelect.focus();
+          }
+        });
+
+        newPuzzleBtn.addEventListener('click', newPuzzle);
+        winNewPuzzleBtn.addEventListener('click', () => {
+          safeCloseDialog(winDialog);
+          newPuzzle();
+        });
+        closeWinBtn.addEventListener('click', () => safeCloseDialog(winDialog));
+
+        helpBtn.addEventListener('click', () => showDialog(helpDialog));
+        closeHelpBtn.addEventListener('click', () => safeCloseDialog(helpDialog));
+        if (viewAllRecordsBtn) viewAllRecordsBtn.addEventListener('click', () => showDialog(recordsDialog));
+        closeRecordsBtn.addEventListener('click', () => safeCloseDialog(recordsDialog));
+
+
+        board.addEventListener('click', (event) => {
+          const tile = event.target.closest('.tile:not(.empty)');
+          if (!tile || solved) return;
+          moveTile(Number(tile.dataset.index));
+        });
+
+        document.addEventListener('keydown', (event) => {
+          if (event.target && ['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(event.target.tagName)) return;
+          if (solved) return;
+          const blankIndex = tiles.indexOf(0);
+          const blankRow = Math.floor(blankIndex / size);
+          const blankCol = blankIndex % size;
+          let target = -1;
+
+          if (event.key === 'ArrowUp' && blankRow < size - 1) target = blankIndex + size;
+          if (event.key === 'ArrowDown' && blankRow > 0) target = blankIndex - size;
+          if (event.key === 'ArrowLeft' && blankCol < size - 1) target = blankIndex + 1;
+          if (event.key === 'ArrowRight' && blankCol > 0) target = blankIndex - 1;
+
+          if (target >= 0) {
+            event.preventDefault();
+            moveTile(target);
+          }
+        });
+      }
+
+      function buildSizeOptions() {
+        sizeSelect.innerHTML = '';
+        for (let n = MIN_SIZE; n <= MAX_SIZE; n++) {
+          const option = document.createElement('option');
+          option.value = String(n);
+          option.textContent = `${n}×${n}`;
+          sizeSelect.appendChild(option);
+        }
+      }
+
+      function newPuzzle() {
+        stopTimer();
+        moves = 0;
+        started = false;
+        solved = false;
+        elapsedBeforeStop = 0;
+        tiles = generateSolvableTiles(size);
+        updateBoardSizing();
+        renderBoard();
+        updateStats();
+        renderRecords();
+      }
+
+      function updateBoardSizing() {
+        document.documentElement.style.setProperty('--n', size);
+        const gap = Math.max(1, Math.round(10 - size * 0.72));
+        document.documentElement.style.setProperty('--gap', `${gap}px`);
+      }
+
+      function renderBoard() {
+        const emptyIndex = tiles.indexOf(0);
+        board.innerHTML = '';
+        const fragment = document.createDocumentFragment();
+
+        for (let i = 0; i < tiles.length; i++) {
+          const value = tiles[i];
+          const tile = document.createElement('button');
+          tile.type = 'button';
+          tile.className = value === 0 ? 'tile empty' : 'tile';
+          tile.dataset.index = String(i);
+          tile.setAttribute('aria-label', value === 0 ? 'Empty space' : `Tile ${value}`);
+          if (value !== 0) {
+            tile.textContent = String(value);
+            if (isAdjacent(i, emptyIndex)) tile.classList.add('movable');
+          }
+          fragment.appendChild(tile);
+        }
+        board.appendChild(fragment);
+      }
+
+      function moveTile(index) {
+        const emptyIndex = tiles.indexOf(0);
+        if (!isAdjacent(index, emptyIndex)) return;
+
+        if (!started) {
+          startTimer();
+          started = true;
+        }
+
+        [tiles[index], tiles[emptyIndex]] = [tiles[emptyIndex], tiles[index]];
+        moves++;
+        renderBoard();
+        updateStats();
+
+        if (isSolved()) {
+          finishPuzzle();
+        }
+      }
+
+      function isAdjacent(a, b) {
+        const ar = Math.floor(a / size);
+        const ac = a % size;
+        const br = Math.floor(b / size);
+        const bc = b % size;
+        return Math.abs(ar - br) + Math.abs(ac - bc) === 1;
+      }
+
+      function isSolved() {
+        for (let i = 0; i < tiles.length - 1; i++) {
+          if (tiles[i] !== i + 1) return false;
+        }
+        return tiles[tiles.length - 1] === 0;
+      }
+
+      function finishPuzzle() {
+        solved = true;
+        elapsedBeforeStop = getElapsedMs();
+        stopTimer();
+        updateStats();
+        const result = addRecord(size, elapsedBeforeStop, moves);
+        renderRecords();
+        showWin(result);
+      }
+
+      function generateSolvableTiles(n) {
+        const total = n * n;
+        let puzzle;
+        do {
+          puzzle = Array.from({ length: total }, (_, i) => i);
+          fisherYates(puzzle);
+          if (!isSolvable(puzzle, n)) makeSolvable(puzzle);
+        } while (isSolvedArray(puzzle));
+        return puzzle;
+      }
+
+      function fisherYates(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+        }
+      }
+
+      function countInversions(array) {
+        let inversions = 0;
+        for (let i = 0; i < array.length; i++) {
+          if (array[i] === 0) continue;
+          for (let j = i + 1; j < array.length; j++) {
+            if (array[j] !== 0 && array[i] > array[j]) inversions++;
+          }
+        }
+        return inversions;
+      }
+
+      function isSolvable(array, n) {
+        const inversions = countInversions(array);
+        if (n % 2 === 1) return inversions % 2 === 0;
+        const blankIndex = array.indexOf(0);
+        const blankRowFromBottom = n - Math.floor(blankIndex / n);
+        return (blankRowFromBottom + inversions) % 2 === 1;
+      }
+
+      function makeSolvable(array) {
+        let first = -1;
+        let second = -1;
+        for (let i = 0; i < array.length; i++) {
+          if (array[i] !== 0) {
+            if (first === -1) first = i;
+            else { second = i; break; }
+          }
+        }
+        if (first !== -1 && second !== -1) {
+          [array[first], array[second]] = [array[second], array[first]];
+        }
+      }
+
+      function isSolvedArray(array) {
+        for (let i = 0; i < array.length - 1; i++) {
+          if (array[i] !== i + 1) return false;
+        }
+        return array[array.length - 1] === 0;
+      }
+
+      function startTimer() {
+        startTime = performance.now();
+        if (timerId) cancelAnimationFrame(timerId);
+        tickTimer();
+      }
+
+      function tickTimer() {
+        timeStat.textContent = formatTime(getElapsedMs());
+        timerId = requestAnimationFrame(tickTimer);
+      }
+
+      function stopTimer() {
+        if (timerId) cancelAnimationFrame(timerId);
+        timerId = null;
+      }
+
+      function getElapsedMs() {
+        if (!started || !startTime) return elapsedBeforeStop;
+        return performance.now() - startTime;
+      }
+
+      function updateStats() {
+        movesStat.textContent = String(moves);
+        timeStat.textContent = formatTime(solved ? elapsedBeforeStop : getElapsedMs());
+      }
+
+      function formatTime(ms) {
+        const safeMs = Math.max(0, Math.floor(ms));
+        const tenths = Math.floor((safeMs % 1000) / 100);
+        const totalSeconds = Math.floor(safeMs / 1000);
+        const seconds = totalSeconds % 60;
+        const minutes = Math.floor(totalSeconds / 60) % 60;
+        const hours = Math.floor(totalSeconds / 3600);
+        if (hours > 0) {
+          return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${tenths}`;
+        }
+        return `${minutes}:${String(seconds).padStart(2, '0')}.${tenths}`;
+      }
+
+      function formatDate(iso) {
+        const date = new Date(iso);
+        if (Number.isNaN(date.getTime())) return 'Unknown date';
+        return date.toLocaleString([], {
+          year: 'numeric', month: 'short', day: 'numeric',
+          hour: 'numeric', minute: '2-digit'
+        });
+      }
+
+      function loadRecords() {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+          if (parsed && typeof parsed === 'object') return parsed;
+        } catch (error) {}
+        return {};
+      }
+
+      function saveRecords() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      }
+
+      function loadSettings() {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+          if (parsed && typeof parsed === 'object') return parsed;
+        } catch (error) {}
+        return {};
+      }
+
+      function saveSettings() {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify({ size }));
+      }
+
+      function addRecord(boardSize, ms, moveCount) {
+        const key = String(boardSize);
+        const before = Array.isArray(records[key]) ? records[key].slice() : [];
+        const newEntry = {
+          ms: Math.round(ms),
+          moves: moveCount,
+          date: new Date().toISOString()
+        };
+        const combined = [...before, newEntry]
+          .filter(isValidRecord)
+          .sort(compareRecords)
+          .slice(0, 3);
+        records[key] = combined;
+        saveRecords();
+
+        const place = combined.findIndex(entry => entry.date === newEntry.date && entry.ms === newEntry.ms && entry.moves === newEntry.moves) + 1;
+        return { entry: newEntry, place, madeTopThree: place > 0 };
+      }
+
+      function isValidRecord(entry) {
+        return entry && Number.isFinite(entry.ms) && Number.isFinite(entry.moves) && typeof entry.date === 'string';
+      }
+
+      function compareRecords(a, b) {
+        if (a.ms !== b.ms) return a.ms - b.ms;
+        if (a.moves !== b.moves) return a.moves - b.moves;
+        return new Date(a.date) - new Date(b.date);
+      }
+
+      function renderRecords() {
+        selectedRecordsTitle.textContent = `Best for ${size}×${size}`;
+        renderSelectedRecords();
+        renderAllRecords();
+      }
+
+      function renderSelectedRecords() {
+        const list = getRecordsForSize(size);
+        selectedRecords.innerHTML = '';
+        if (list.length === 0) {
+          selectedRecords.innerHTML = '<div class="empty-records">No saved times for this size yet.</div>';
+          return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        list.forEach((entry, index) => {
+          const row = document.createElement('div');
+          row.className = 'record-row';
+          row.innerHTML = `
+            <div class="rank">${index + 1}</div>
+            <div class="record-main">
+              <span class="record-time">${escapeHtml(formatTime(entry.ms))}</span>
+              <span class="record-date">${escapeHtml(formatDate(entry.date))}</span>
+            </div>
+            <div class="record-moves">${escapeHtml(String(entry.moves))} moves</div>
+          `;
+          fragment.appendChild(row);
+        });
+        selectedRecords.appendChild(fragment);
+      }
+
+      function renderAllRecords() {
+        allRecords.innerHTML = '';
+        const fragment = document.createDocumentFragment();
+        for (let n = MIN_SIZE; n <= MAX_SIZE; n++) {
+          const block = document.createElement('div');
+          block.className = 'size-record-block';
+          const list = getRecordsForSize(n);
+          const rows = list.length
+            ? list.map((entry, index) => `
+                <div class="mini-record">
+                  <span>#${index + 1}</span>
+                  <span><strong>${escapeHtml(formatTime(entry.ms))}</strong><span class="mini-date">${escapeHtml(formatDate(entry.date))}</span></span>
+                  <span class="pill">${escapeHtml(String(entry.moves))} moves</span>
+                </div>
+              `).join('')
+            : '<div class="empty-records">No saved times yet.</div>';
+          block.innerHTML = `
+            <div class="size-title"><span>${n}×${n}</span><span>${list.length}/3</span></div>
+            ${rows}
+          `;
+          fragment.appendChild(block);
+        }
+        allRecords.appendChild(fragment);
+      }
+
+      function getRecordsForSize(n) {
+        const key = String(n);
+        return Array.isArray(records[key]) ? records[key].filter(isValidRecord).sort(compareRecords).slice(0, 3) : [];
+      }
+
+      function showWin(result) {
+        winSize.textContent = `${size}×${size}`;
+        winTime.textContent = formatTime(elapsedBeforeStop);
+        winMoves.textContent = String(moves);
+        winSubtitle.textContent = moves === 1 ? 'Solved in one move!' : `Solved in ${moves} moves.`;
+        if (result.madeTopThree) {
+          winRecordMessage.textContent = `New top-${result.place} record for ${size}×${size}! It was saved with today's date and time.`;
+        } else {
+          winRecordMessage.textContent = `Good solve! It did not beat the current top 3 for ${size}×${size}, but you can try again with a new puzzle.`;
+        }
+        showDialog(winDialog);
+      }
+
+      function showDialog(dialog) {
+        if (typeof dialog.showModal === 'function') {
+          dialog.showModal();
+        } else {
+          dialog.setAttribute('open', '');
+        }
+      }
+
+      function safeCloseDialog(dialog) {
+        if (dialog.open && typeof dialog.close === 'function') dialog.close();
+        else dialog.removeAttribute('open');
+      }
+
+      function resetRecordsForCurrentSize() {
+        const list = getRecordsForSize(size);
+        if (list.length === 0) {
+          showToast(`No records to reset for ${size}×${size}.`);
+          return;
+        }
+        const ok = confirm(`Reset the top 3 records for ${size}×${size}?`);
+        if (!ok) return;
+        delete records[String(size)];
+        saveRecords();
+        renderRecords();
+        showToast(`Records reset for ${size}×${size}.`);
+      }
+
+      async function copyBestSummary() {
+        const lines = ['Sliding Number Puzzle - Best Times'];
+        for (let n = MIN_SIZE; n <= MAX_SIZE; n++) {
+          const list = getRecordsForSize(n);
+          lines.push('', `${n}×${n}`);
+          if (list.length === 0) {
+            lines.push('  No saved times yet.');
+          } else {
+            list.forEach((entry, index) => {
+              lines.push(`  #${index + 1}: ${formatTime(entry.ms)} | ${entry.moves} moves | ${formatDate(entry.date)}`);
+            });
+          }
+        }
+        const text = lines.join('\n');
+        try {
+          await navigator.clipboard.writeText(text);
+          showToast('Best summary copied.');
+        } catch (error) {
+          showToast('Copy failed. Your browser may block clipboard access.');
+        }
+      }
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 2300);
+      }
+
+      function clampNumber(value, min, max) {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return min;
+        return Math.min(max, Math.max(min, Math.round(number)));
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", '&#039;');
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
