@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WTW Spelling Inventory Analyzer</title>
+  <style>
+    :root{
+      --bg:#f3f6fb; --panel:#ffffff; --ink:#192131; --muted:#607087; --line:#d9e1ef;
+      --primary:#274c77; --primary2:#1b365d; --accent:#2a9d8f; --gold:#f4a261;
+      --good:#16794c; --good-bg:#dcfce7; --warn:#935f00; --warn-bg:#fff4cc; --bad:#b42318; --bad-bg:#fee4e2;
+      --shadow:0 18px 50px rgba(25,33,49,.12); --radius:22px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(135deg,#eaf1fb 0%,#f8fbff 55%,#eef7f5 100%);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
+    button,input,select,textarea{font:inherit}
+    button{border:0;cursor:pointer;border-radius:999px;font-weight:750;transition:transform .12s ease, box-shadow .12s ease, background .12s ease;}
+    button:active{transform:translateY(1px)}
+    .app{min-height:100%;padding:22px;display:flex;justify-content:center;}
+    .shell{width:min(1180px,100%);}
+    .hero{display:grid;grid-template-columns:1fr;gap:18px;align-items:center;margin-bottom:18px;}
+    .titleBox{background:rgba(255,255,255,.75);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.9);box-shadow:var(--shadow);border-radius:28px;padding:22px 24px;}
+    h1{font-size:clamp(1.8rem,4vw,3rem);line-height:1.02;margin:0 0 8px;color:var(--primary2);letter-spacing:-.04em;}
+    .subtitle{margin:0;color:var(--muted);font-size:1.05rem;max-width:850px;}
+    .pill{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:9px 13px;color:var(--muted);font-weight:700;box-shadow:0 10px 25px rgba(25,33,49,.06);}
+    .nav{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+    .tab{background:#fff;color:var(--primary);border:1px solid var(--line);padding:11px 16px;box-shadow:0 8px 20px rgba(25,33,49,.06)}
+    .tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+    .panel{background:rgba(255,255,255,.92);border:1px solid rgba(255,255,255,.95);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;}
+    .grid{display:grid;grid-template-columns:1.05fr .95fr;gap:18px;align-items:start;}
+    .card{border:1px solid var(--line);background:#fff;border-radius:20px;padding:18px;box-shadow:0 9px 30px rgba(25,33,49,.06);}
+    .card h2,.card h3{margin:0 0 10px;color:var(--primary2);letter-spacing:-.02em;}
+    .card p{color:var(--muted);line-height:1.45;margin:8px 0;}
+    label{display:block;font-weight:800;color:#334155;margin:12px 0 7px;}
+    input[type="text"], select, textarea{width:100%;border:1px solid var(--line);border-radius:16px;padding:13px 14px;background:#fff;color:var(--ink);outline:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.7);}
+    textarea{min-height:150px;resize:vertical;line-height:1.35;tab-size:4;}
+    input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(42,157,143,.14)}
+    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+    .two{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    .btn{background:var(--primary);color:#fff;padding:13px 18px;box-shadow:0 10px 20px rgba(39,76,119,.22)}
+    .btn:hover{background:var(--primary2)}
+    .btn.secondary{background:#e8eef6;color:var(--primary2);box-shadow:none;border:1px solid var(--line)}
+    .btn.green{background:var(--accent);color:#fff;box-shadow:0 10px 20px rgba(42,157,143,.18)}
+    .btn.gold{background:#fff2db;color:#7a4b00;border:1px solid #f8d79a;box-shadow:none}
+    .btn.danger{background:#fee4e2;color:#8a1f16;border:1px solid #ffcbc6;box-shadow:none}
+    .btn.small{padding:9px 12px;font-size:.93rem}
+    .hidden{display:none !important}
+    .testHeader{display:grid;grid-template-columns:1fr 260px;gap:12px;margin-bottom:16px;align-items:end;}
+    .progressBar{height:14px;border-radius:999px;background:#e6edf7;overflow:hidden;border:1px solid var(--line);margin-top:10px;}
+    .progressFill{height:100%;background:linear-gradient(90deg,var(--accent),var(--primary));width:0%;transition:width .25s ease;}
+    .bigNumber{font-size:clamp(3rem,10vw,7rem);font-weight:900;color:var(--primary);line-height:1;text-align:center;letter-spacing:-.08em;}
+    .testPrompt{text-align:center;padding:24px 18px;border:2px dashed #cbd8ea;background:#f8fbff;border-radius:24px;margin-bottom:14px;}
+    .testPrompt .muted{color:var(--muted);font-weight:700}
+    .answerInput{font-size:1.7rem;text-align:center;font-weight:800;letter-spacing:.02em;padding:18px !important;border-radius:20px !important;}
+    .teacherScript{margin-top:12px;border-radius:18px;background:#fff7ed;border:1px solid #fed7aa;padding:14px;color:#7c2d12;}
+    .teacherScript summary{font-weight:850;cursor:pointer;}
+    .teacherScript p{color:#7c2d12;margin:8px 0 0;}
+    .tableWrap{overflow:auto;border:1px solid var(--line);border-radius:18px;background:#fff;}
+    table{border-collapse:separate;border-spacing:0;width:100%;font-size:.96rem;}
+    th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top;}
+    th{background:#f2f6fb;color:#334155;font-size:.9rem;position:sticky;top:0;z-index:1;}
+    tr:last-child td{border-bottom:0}
+    .num{text-align:right;white-space:nowrap;}
+    .status{display:inline-flex;padding:5px 9px;border-radius:999px;font-weight:850;font-size:.84rem;white-space:nowrap;}
+    .status.good{color:var(--good);background:var(--good-bg)}
+    .status.warn{color:var(--warn);background:var(--warn-bg)}
+    .status.bad{color:var(--bad);background:var(--bad-bg)}
+    .metricGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:14px 0;}
+    .metric{background:#f8fbff;border:1px solid var(--line);border-radius:18px;padding:14px;}
+    .metric b{display:block;font-size:1.75rem;color:var(--primary2);line-height:1.05;}
+    .metric span{color:var(--muted);font-weight:750;font-size:.9rem;}
+    .chips{display:flex;gap:7px;flex-wrap:wrap;}
+    .chip{display:inline-flex;background:#eef6ff;border:1px solid #d6e8ff;color:#1d4e89;border-radius:999px;padding:5px 9px;font-weight:750;font-size:.84rem;}
+    .chip.miss{background:#fff1f0;border-color:#ffd2ce;color:#9f2118;}
+    .notice{border-radius:16px;padding:12px 14px;background:#f0fdf4;border:1px solid #bbf7d0;color:#14532d;font-weight:720;}
+    .warning{border-radius:16px;padding:12px 14px;background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12;font-weight:720;}
+    .reportTitle{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:8px;}
+    .footerNote{font-size:.88rem;color:var(--muted);margin-top:10px;}
+    @media (max-width: 850px){
+      .app{padding:12px}.hero{grid-template-columns:1fr}.grid{grid-template-columns:1fr}.testHeader{grid-template-columns:1fr}.two{grid-template-columns:1fr}.metricGrid{grid-template-columns:repeat(2,1fr)}
+      .panel{padding:14px}.card{padding:15px}.answerInput{font-size:1.35rem}.row .btn{flex:1 1 auto}.pill{justify-content:center}
+    }
+    @media print{
+      body{background:#fff}.app{padding:0}.hero,.nav,#setupPanel,#testPanel,#pastePanel,.noPrint{display:none!important}.panel,.card{box-shadow:none;border:0;padding:0}.shell{width:100%}#reportPanel{display:block!important}.tableWrap{overflow:visible;border:1px solid #bbb}th{position:static;background:#eee}.btn{display:none}.metricGrid{grid-template-columns:repeat(4,1fr)}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <main class="shell">
+    <section class="hero">
+      <div class="titleBox">
+        <h1>WTW Spelling Inventory Analyzer</h1>
+        <p class="subtitle">Run a spoken spelling inventory, collect one student’s responses, and get a teacher-style feature report by category.</p>
+      </div>
+    </section>
+
+
+    <section id="setupPanel" class="panel">
+      <div class="grid">
+        <div class="card">
+          <h2>Test setup</h2>
+          <label for="inventorySelect">Inventory</label>
+          <select id="inventorySelect"></select>
+          <label for="voiceSelect">Voice</label>
+          <select id="voiceSelect"></select>
+          <div class="row" style="margin-top:16px">
+            <button id="startBtn" class="btn green">Start spelling test</button>
+            <button id="testVoiceBtn" class="btn secondary">Test voice</button>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Teacher notes</h2>
+          <p>The final report scores the spelling features from the matching inventory only. A misspelled word can still earn points for features the student represented correctly.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="testPanel" class="panel hidden">
+      <div class="testHeader">
+        <div class="card">
+          <div class="row" style="justify-content:space-between">
+            <div>
+              <h2 id="testTitle">Spelling test</h2>
+              <p id="testSub" style="margin:3px 0 0"></p>
+            </div>
+            <button id="quitBtn" class="btn small danger">Quit</button>
+          </div>
+          <div class="progressBar"><div id="progressFill" class="progressFill"></div></div>
+        </div>
+        <div class="card">
+          <label for="voiceSelectTest" style="margin-top:0">Voice during test</label>
+          <select id="voiceSelectTest"></select>
+        </div>
+      </div>
+      <div class="card">
+        <div class="testPrompt">
+          <div id="wordNumber" class="bigNumber">1</div>
+          <div id="promptText" class="muted">Listen, then type the word.</div>
+          <div class="row" style="justify-content:center;margin-top:16px">
+            <button id="speakBothBtn" class="btn">▶ Read word + sentence</button>
+            <button id="speakWordBtn" class="btn secondary">Word only</button>
+            <button id="speakSentenceBtn" class="btn secondary">Sentence only</button>
+          </div>
+        </div>
+        <label for="answerInput">Student spelling</label>
+        <input id="answerInput" class="answerInput" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="type the word here" />
+        <div class="row" style="margin-top:16px;justify-content:space-between">
+          <button id="backBtn" class="btn secondary">← Back</button>
+          <div class="row">
+            <button id="clearAnswerBtn" class="btn secondary">Clear</button>
+            <button id="nextBtn" class="btn green">Next →</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="pastePanel" class="panel hidden">
+      <div class="grid">
+        <div class="card">
+          <h2>Paste analyzer</h2>
+          <p>Paste one row of data. The first item should be the student name; the remaining items should be the responses in order.</p>
+          <label for="pasteInventory">Inventory</label>
+          <select id="pasteInventory"></select>
+          <label for="pasteData">Responses</label>
+          <textarea id="pasteData" placeholder="Saki	fan	pat	dige	rob	hop	..."></textarea>
+          <div class="row" style="margin-top:14px">
+            <button id="analyzePasteBtn" class="btn green">Analyze pasted responses</button>
+            <button id="loadSampleBtn" class="btn secondary">Load Primary sample</button>
+            <button id="clearPasteBtn" class="btn secondary">Clear</button>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Paste format</h2>
+          <p>Best format:</p>
+          <pre style="white-space:pre-wrap;background:#f8fbff;border:1px solid var(--line);border-radius:14px;padding:12px;overflow:auto">StudentName    word1    word2    word3 ...</pre>
+          <p>The analyzer accepts tabs, commas, or spaces. It trims punctuation around tokens.</p>
+          <div class="warning">The selected inventory controls both the word list and the feature categories in the report.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="reportPanel" class="panel hidden">
+      <div class="card">
+        <div class="reportTitle">
+          <div>
+            <h2 id="reportHeading">Teacher Report</h2>
+            <p id="reportMeta" style="margin:3px 0 0;color:var(--muted)"></p>
+          </div>
+          <div class="row noPrint">
+            <button id="copyReportBtn" class="btn secondary">Copy report</button>
+            <button id="printReportBtn" class="btn secondary">Print</button>
+            <button id="savePdfBtn" class="btn secondary">Save as PDF</button>
+            <button id="newTestBtn" class="btn green">New test</button>
+          </div>
+        </div>
+        <div id="metricGrid" class="metricGrid"></div>
+        <h3>Category Summary</h3>
+        <div class="tableWrap"><table id="categoryTable"></table></div>
+        <div id="instructionBox" style="margin-top:14px"></div>
+        <h3 style="margin-top:18px">Word-by-Word Results</h3>
+        <div class="tableWrap"><table id="wordTable"></table></div>
+      </div>
+    </section>
+  </main>
+</div>
+<script>
+const INVENTORIES = {
+  "primary": {
+    "key": "primary",
+    "title": "Primary Spelling Inventory",
+    "categories": [
+      {
+        "key": "beginning",
+        "label": "Beginning"
+      },
+      {
+        "key": "final",
+        "label": "Final"
+      },
+      {
+        "key": "shortVowels",
+        "label": "Short Vowels"
+      },
+      {
+        "key": "diagraphs",
+        "label": "Diagraphs"
+      },
+      {
+        "key": "blends",
+        "label": "Blends"
+      },
+      {
+        "key": "longVowelPatterns",
+        "label": "Long Vowel Patterns"
+      },
+      {
+        "key": "otherVowels",
+        "label": "Other Vowels"
+      },
+      {
+        "key": "inflectedEndings",
+        "label": "Inflected Endings"
+      }
+    ],
+    "words": [
+      {
+        "word": "fan",
+        "sentence": "I could use a fan on a hot day.",
+        "features": {
+          "beginning": "f",
+          "final": "n",
+          "shortVowels": "a"
+        }
+      },
+      {
+        "word": "pet",
+        "sentence": "I have a pet cat who likes to play.",
+        "features": {
+          "beginning": "p",
+          "final": "t",
+          "shortVowels": "e"
+        }
+      },
+      {
+        "word": "dig",
+        "sentence": "He will dig a hole in the sand.",
+        "features": {
+          "beginning": "d",
+          "final": "g",
+          "shortVowels": "i"
+        }
+      },
+      {
+        "word": "rob",
+        "sentence": "A raccoon will rob a bird’s nest for eggs.",
+        "features": {
+          "beginning": "r",
+          "final": "b",
+          "shortVowels": "o"
+        }
+      },
+      {
+        "word": "hope",
+        "sentence": "I hope you will do well on this test.",
+        "features": {
+          "beginning": "h",
+          "final": "p",
+          "longVowelPatterns": "ope"
+        }
+      },
+      {
+        "word": "wait",
+        "sentence": "You will need to wait for the letter.",
+        "features": {
+          "beginning": "w",
+          "final": "t",
+          "longVowelPatterns": "ai"
+        }
+      },
+      {
+        "word": "gum",
+        "sentence": "I stepped on some bubble gum.",
+        "features": {
+          "beginning": "g",
+          "final": "m",
+          "shortVowels": "u"
+        }
+      },
+      {
+        "word": "sled",
+        "sentence": "The dog sled was pulled by huskies.",
+        "features": {
+          "shortVowels": "e",
+          "blends": "sl"
+        }
+      },
+      {
+        "word": "stick",
+        "sentence": "I used a stick to poke in the hole.",
+        "features": {
+          "shortVowels": "i",
+          "blends": "st"
+        }
+      },
+      {
+        "word": "shine",
+        "sentence": "He rubbed the coin to make it shine.",
+        "features": {
+          "diagraphs": "sh",
+          "longVowelPatterns": "ine"
+        }
+      },
+      {
+        "word": "dream",
+        "sentence": "I had a funny dream last night.",
+        "features": {
+          "blends": "dr",
+          "longVowelPatterns": "ea"
+        }
+      },
+      {
+        "word": "blade",
+        "sentence": "The blade of the knife was very sharp.",
+        "features": {
+          "blends": "bl",
+          "longVowelPatterns": "ade"
+        }
+      },
+      {
+        "word": "coach",
+        "sentence": "The coach called the team off the field.",
+        "features": {
+          "diagraphs": "ch",
+          "longVowelPatterns": "oa"
+        }
+      },
+      {
+        "word": "fright",
+        "sentence": "She was a fright in her Halloween costume.",
+        "features": {
+          "blends": "fr",
+          "longVowelPatterns": "igh"
+        }
+      },
+      {
+        "word": "chewed",
+        "sentence": "The dog chewed on the bone until it was gone.",
+        "features": {
+          "diagraphs": "ch",
+          "otherVowels": "ew",
+          "inflectedEndings": "ed"
+        }
+      },
+      {
+        "word": "crawl",
+        "sentence": "You will get dirty if you crawl under the bed.",
+        "features": {
+          "blends": "cr",
+          "otherVowels": "aw"
+        }
+      },
+      {
+        "word": "wishes",
+        "sentence": "In fairy tales wishes often come true.",
+        "features": {
+          "diagraphs": "sh",
+          "inflectedEndings": "es"
+        }
+      },
+      {
+        "word": "thorn",
+        "sentence": "The thorn from the rosebush stuck me.",
+        "features": {
+          "diagraphs": "th",
+          "otherVowels": "or"
+        }
+      },
+      {
+        "word": "shouted",
+        "sentence": "They shouted at the barking dog.",
+        "features": {
+          "diagraphs": "sh",
+          "otherVowels": "ou",
+          "inflectedEndings": "ed"
+        }
+      },
+      {
+        "word": "spoil",
+        "sentence": "The food will spoil if it sits out too long.",
+        "features": {
+          "otherVowels": "oi"
+        }
+      },
+      {
+        "word": "growl",
+        "sentence": "The dog will growl if you bother him.",
+        "features": {
+          "otherVowels": "ow"
+        }
+      },
+      {
+        "word": "third",
+        "sentence": "I was the third person in line.",
+        "features": {
+          "diagraphs": "th",
+          "otherVowels": "ir"
+        }
+      },
+      {
+        "word": "camped",
+        "sentence": "We camped down by the river last weekend.",
+        "features": {
+          "inflectedEndings": "ed"
+        }
+      },
+      {
+        "word": "tries",
+        "sentence": "He tries hard every day to finish his work.",
+        "features": {
+          "blends": "tr",
+          "inflectedEndings": "ies"
+        }
+      },
+      {
+        "word": "clapping",
+        "sentence": "The audience was clapping after the program.",
+        "features": {
+          "inflectedEndings": "pping"
+        }
+      },
+      {
+        "word": "riding",
+        "sentence": "They are riding their bikes to the park today.",
+        "features": {
+          "inflectedEndings": "ding"
+        }
+      }
+    ]
+  },
+  "elementary": {
+    "key": "elementary",
+    "title": "Elementary Spelling Inventory",
+    "categories": [
+      {
+        "key": "beginning",
+        "label": "Beginning"
+      },
+      {
+        "key": "final",
+        "label": "Final"
+      },
+      {
+        "key": "shortVowels",
+        "label": "Short Vowels"
+      },
+      {
+        "key": "diagraphs",
+        "label": "Diagraphs"
+      },
+      {
+        "key": "blends",
+        "label": "Blends"
+      },
+      {
+        "key": "longVowelPatterns",
+        "label": "Long Vowel Patterns"
+      },
+      {
+        "key": "otherVowels",
+        "label": "Other Vowels"
+      },
+      {
+        "key": "inflectedEndings",
+        "label": "Inflected Endings"
+      }
+    ],
+    "words": [
+      {
+        "word": "bed",
+        "sentence": "I hopped out of bed this morning.",
+        "features": {
+          "beginning": "b",
+          "final": "d",
+          "shortVowels": "e"
+        }
+      },
+      {
+        "word": "ship",
+        "sentence": "The ship sailed around the island.",
+        "features": {
+          "final": "p",
+          "shortVowels": "i",
+          "diagraphs": "sh"
+        }
+      },
+      {
+        "word": "when",
+        "sentence": "When will you come back?",
+        "features": {
+          "shortVowels": "e",
+          "diagraphs": "wh"
+        }
+      },
+      {
+        "word": "lump",
+        "sentence": "He had a lump on his head after he fell.",
+        "features": {
+          "beginning": "l",
+          "shortVowels": "u",
+          "blends": "mp"
+        }
+      },
+      {
+        "word": "float",
+        "sentence": "I can float on the water with my new raft.",
+        "features": {
+          "final": "t",
+          "blends": "fl",
+          "longVowelPatterns": "oa"
+        }
+      },
+      {
+        "word": "train",
+        "sentence": "I rode the train to the next town.",
+        "features": {
+          "final": "n",
+          "blends": "tr",
+          "longVowelPatterns": "ai"
+        }
+      },
+      {
+        "word": "place",
+        "sentence": "I found a new place to put my books.",
+        "features": {
+          "blends": "pl",
+          "longVowelPatterns": "ace"
+        }
+      },
+      {
+        "word": "drive",
+        "sentence": "I learned to drive a car.",
+        "features": {
+          "final": "v",
+          "blends": "dr",
+          "longVowelPatterns": "ive"
+        }
+      },
+      {
+        "word": "bright",
+        "sentence": "The light is very bright.",
+        "features": {
+          "blends": "br",
+          "longVowelPatterns": "igh"
+        }
+      },
+      {
+        "word": "shopping",
+        "sentence": "She went shopping for new shoes.",
+        "features": {
+          "shortVowels": "o",
+          "diagraphs": "sh",
+          "inflectedEndings": "pping"
+        }
+      },
+      {
+        "word": "spoil",
+        "sentence": "The food will spoil if it is not kept cool.",
+        "features": {
+          "blends": "sp",
+          "otherVowels": "oi"
+        }
+      },
+      {
+        "word": "serving",
+        "sentence": "The restaurant is serving dinner tonight.",
+        "features": {
+          "otherVowels": "er",
+          "inflectedEndings": "ving"
+        }
+      },
+      {
+        "word": "chewed",
+        "sentence": "The dog chewed up my favorite sweater yesterday.",
+        "features": {
+          "diagraphs": "ch",
+          "otherVowels": "ew",
+          "inflectedEndings": "ed"
+        }
+      },
+      {
+        "word": "carries",
+        "sentence": "She carries apples in her basket.",
+        "features": {
+          "otherVowels": "ar",
+          "inflectedEndings": "ies"
+        }
+      },
+      {
+        "word": "marched",
+        "sentence": "We marched in the parade.",
+        "features": {
+          "diagraphs": "ch",
+          "otherVowels": "ar",
+          "inflectedEndings": "ed"
+        }
+      },
+      {
+        "word": "shower",
+        "sentence": "The shower in the bathroom was very hot.",
+        "features": {
+          "diagraphs": "sh",
+          "otherVowels": "ow"
+        }
+      },
+      {
+        "word": "bottle",
+        "sentence": "The bottle broke into pieces on the tile floor.",
+        "features": {}
+      },
+      {
+        "word": "favor",
+        "sentence": "He did his brother a favor by taking out the trash.",
+        "features": {}
+      },
+      {
+        "word": "ripen",
+        "sentence": "The fruit will ripen over the next few days.",
+        "features": {}
+      },
+      {
+        "word": "cellar",
+        "sentence": "I went down to the cellar for the can of paint.",
+        "features": {}
+      },
+      {
+        "word": "pleasure",
+        "sentence": "It was a pleasure to listen to the choir sing.",
+        "features": {}
+      },
+      {
+        "word": "fortunate",
+        "sentence": "It was fortunate that the driver had snow tires.",
+        "features": {
+          "otherVowels": "or"
+        }
+      },
+      {
+        "word": "confident",
+        "sentence": "I am confident that we can win the game.",
+        "features": {}
+      },
+      {
+        "word": "civilize",
+        "sentence": "The people tried to civilize the new settlement by building roads, schools, and places to meet.",
+        "features": {}
+      },
+      {
+        "word": "opposition",
+        "sentence": "The coach said the opposition would be tough.",
+        "features": {}
+      }
+    ]
+  },
+  "upper": {
+    "key": "upper",
+    "title": "Upper-Level Spelling Inventory",
+    "categories": [
+      {
+        "key": "digraphsBlends",
+        "label": "Digraphs & Blends"
+      },
+      {
+        "key": "vowelsFinal",
+        "label": "Vowels Final"
+      },
+      {
+        "key": "complexConsonants",
+        "label": "Complex Consonants"
+      },
+      {
+        "key": "inflectedEndingsSyllableJuncture",
+        "label": "Inflected Endings & Syllable Juncture"
+      },
+      {
+        "key": "unaccentedFinalSyllables",
+        "label": "Unaccented Final Syllables"
+      },
+      {
+        "key": "affixes",
+        "label": "Affixes"
+      },
+      {
+        "key": "reducedVowels",
+        "label": "Reduced Vowels in Unaccented Syllables"
+      },
+      {
+        "key": "greekLatinElements",
+        "label": "Greek and Latin Elements"
+      },
+      {
+        "key": "assimilatedPrefixes",
+        "label": "Assimilated Prefixes"
+      }
+    ],
+    "words": [
+      {
+        "word": "switch",
+        "sentence": "We can switch television channels with a remote control.",
+        "features": {
+          "digraphsBlends": "sw",
+          "vowelsFinal": "i",
+          "complexConsonants": "tch"
+        }
+      },
+      {
+        "word": "smudge",
+        "sentence": "There was a smudge on the mirror from her fingertips.",
+        "features": {
+          "digraphsBlends": "sm",
+          "vowelsFinal": "u",
+          "complexConsonants": "dge"
+        }
+      },
+      {
+        "word": "trapped",
+        "sentence": "He was trapped in the elevator when the electricity went off.",
+        "features": {
+          "digraphsBlends": "tr",
+          "inflectedEndingsSyllableJuncture": "pp"
+        }
+      },
+      {
+        "word": "scrape",
+        "sentence": "The fall caused her to scrape her knee.",
+        "features": {
+          "vowelsFinal": "ape",
+          "complexConsonants": "scr"
+        }
+      },
+      {
+        "word": "knotted",
+        "sentence": "The knotted rope would not come undone.",
+        "features": {
+          "vowelsFinal": "o",
+          "complexConsonants": "kn",
+          "inflectedEndingsSyllableJuncture": "tt"
+        }
+      },
+      {
+        "word": "shaving",
+        "sentence": "He didn’t start shaving with a razor until 11th grade.",
+        "features": {
+          "digraphsBlends": "sh",
+          "inflectedEndingsSyllableJuncture": "vi"
+        }
+      },
+      {
+        "word": "squirt",
+        "sentence": "Don’t let the ketchup squirt out of the bottle too fast.",
+        "features": {
+          "vowelsFinal": "ir",
+          "complexConsonants": "squ"
+        }
+      },
+      {
+        "word": "pounce",
+        "sentence": "My cat likes to pounce on her toy mouse.",
+        "features": {
+          "vowelsFinal": "ou",
+          "complexConsonants": "ce"
+        }
+      },
+      {
+        "word": "scratches",
+        "sentence": "We had to paint over the scratches on the car.",
+        "features": {
+          "vowelsFinal": "a",
+          "complexConsonants": "tch",
+          "inflectedEndingsSyllableJuncture": "es"
+        }
+      },
+      {
+        "word": "crater",
+        "sentence": "The crater of the volcano was filled with bubbling lava.",
+        "features": {
+          "digraphsBlends": "cr",
+          "inflectedEndingsSyllableJuncture": "t",
+          "unaccentedFinalSyllables": "er"
+        }
+      },
+      {
+        "word": "sailor",
+        "sentence": "When he was young, he wanted to go to sea as a sailor.",
+        "features": {
+          "vowelsFinal": "ai",
+          "unaccentedFinalSyllables": "or"
+        }
+      },
+      {
+        "word": "village",
+        "sentence": "My Granddad lived in a small seaside village.",
+        "features": {
+          "inflectedEndingsSyllableJuncture": "ll",
+          "unaccentedFinalSyllables": "age"
+        }
+      },
+      {
+        "word": "disloyal",
+        "sentence": "Traitors are disloyal to their country.",
+        "features": {
+          "vowelsFinal": "oy",
+          "unaccentedFinalSyllables": "al",
+          "affixes": "dis"
+        }
+      },
+      {
+        "word": "tunnel",
+        "sentence": "The rockslide closed the tunnel through the mountain.",
+        "features": {
+          "inflectedEndingsSyllableJuncture": "nn",
+          "unaccentedFinalSyllables": "el"
+        }
+      },
+      {
+        "word": "humor",
+        "sentence": "You need a sense of humor to understand his jokes.",
+        "features": {
+          "inflectedEndingsSyllableJuncture": "m",
+          "unaccentedFinalSyllables": "or"
+        }
+      },
+      {
+        "word": "confidence",
+        "sentence": "With each winning game, the team’s confidence grew.",
+        "features": {
+          "affixes": "con",
+          "reducedVowels": "fid"
+        }
+      },
+      {
+        "word": "fortunate",
+        "sentence": "The driver was fortunate to have snow tires on that winter day.",
+        "features": {
+          "unaccentedFinalSyllables": "ate",
+          "greekLatinElements": "fortun"
+        }
+      },
+      {
+        "word": "visible",
+        "sentence": "The singer on the stage was visible to everyone.",
+        "features": {
+          "affixes": "ible",
+          "greekLatinElements": "vis"
+        }
+      },
+      {
+        "word": "circumference",
+        "sentence": "The length of the equator is equal to the circumference of the earth.",
+        "features": {
+          "affixes": "ence",
+          "greekLatinElements": "circum"
+        }
+      },
+      {
+        "word": "civilization",
+        "sentence": "We studied the ancient Mayan civilization last year.",
+        "features": {
+          "reducedVowels": "liz",
+          "greekLatinElements": "civil"
+        }
+      },
+      {
+        "word": "monarchy",
+        "sentence": "A monarchy is headed by a king or a queen.",
+        "features": {
+          "greekLatinElements": "arch"
+        }
+      },
+      {
+        "word": "dominance",
+        "sentence": "The dominance of the Yankees’ baseball team lasted for several years.",
+        "features": {
+          "affixes": "ance",
+          "reducedVowels": "min"
+        }
+      },
+      {
+        "word": "correspond",
+        "sentence": "Many students correspond through e-mail.",
+        "features": {
+          "reducedVowels": "res",
+          "assimilatedPrefixes": "rr"
+        }
+      },
+      {
+        "word": "illiterate",
+        "sentence": "It is hard to get a job if you are illiterate.",
+        "features": {
+          "unaccentedFinalSyllables": "ate",
+          "assimilatedPrefixes": "ll"
+        }
+      },
+      {
+        "word": "emphasize",
+        "sentence": "I want to emphasize the importance of trying your best.",
+        "features": {
+          "affixes": "size",
+          "reducedVowels": "pha"
+        }
+      },
+      {
+        "word": "opposition",
+        "sentence": "The coach said the opposition would give us a tough game.",
+        "features": {
+          "reducedVowels": "pos",
+          "assimilatedPrefixes": "pp"
+        }
+      },
+      {
+        "word": "chlorine",
+        "sentence": "My eyes were burning from the chlorine in the swimming pool.",
+        "features": {
+          "affixes": "ine",
+          "greekLatinElements": "chlor"
+        }
+      },
+      {
+        "word": "commotion",
+        "sentence": "The audience heard the commotion backstage.",
+        "features": {
+          "affixes": "tion",
+          "assimilatedPrefixes": "mm"
+        }
+      },
+      {
+        "word": "medicinal",
+        "sentence": "Cough drops are to be taken for medicinal purposes only.",
+        "features": {
+          "unaccentedFinalSyllables": "al",
+          "greekLatinElements": "medic"
+        }
+      },
+      {
+        "word": "irresponsible",
+        "sentence": "It is irresponsible not to wear a seat belt.",
+        "features": {
+          "affixes": "ible",
+          "reducedVowels": "res",
+          "assimilatedPrefixes": "rr"
+        }
+      },
+      {
+        "word": "succession",
+        "sentence": "The firecrackers went off in rapid succession.",
+        "features": {
+          "affixes": "sion",
+          "assimilatedPrefixes": "cc"
+        }
+      }
+    ]
+  }
+};
+const SAMPLE_PRIMARY = "Saki\tfan\tpat\tdige\trob\thop\twit\tgum\tslid\tstick\tshin\tdrim\tblid\tcoch\tfrit\tchood\tcrol\twishis\tthrin\tshoutid\tsboyl\tgrowl\tthreed\tcabd\tchris\tclapin\triding";
+
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+let voices = [];
+let state = {
+  screen: 'setup', inventoryKey: 'primary', student: '', index: 0, responses: [], lastReport: null
+};
+
+function normalizeText(value){
+  return String(value || '').trim().toLowerCase()
+    .replace(/[’']/g,'')
+    .replace(/[^a-z#]/g,'');
+}
+function displayResponse(value){ return String(value || '').trim(); }
+function getInventory(key){ return INVENTORIES[key] || INVENTORIES.primary; }
+function possibleFeatureCount(inv){
+  return inv.words.reduce((sum, w) => sum + inv.categories.filter(c => w.features && w.features[c.key]).length, 0);
+}
+function statusFor(percent){
+  if (percent >= 100) return {text:'Mastered', cls:'good'};
+  if (percent >= 90) return {text:'Developing', cls:'warn'};
+  return {text:'Target for instruction', cls:'bad'};
+}
+function escapeHtml(s){
+  return String(s ?? '').replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+}
+function scoreInventory(inventoryKey, studentName, responses){
+  const inv = getInventory(inventoryKey);
+  const summary = {};
+  inv.categories.forEach(c => summary[c.key] = {key:c.key, label:c.label, correct:0, possible:0, percent:0});
+  let wholeCorrect = 0, featureCorrect = 0, featurePossible = 0;
+  const wordResults = inv.words.map((item, idx) => {
+    const rawResponse = displayResponse(responses[idx] || '');
+    const rNorm = normalizeText(rawResponse);
+    const wNorm = normalizeText(item.word);
+    const markedCorrect = rNorm === '#';
+    const exact = markedCorrect || (rNorm !== '' && rNorm === wNorm);
+    if (exact) wholeCorrect++;
+    const correctFeatures = [];
+    const missedFeatures = [];
+    let wordFeatureCorrect = 0;
+    let wordFeaturePossible = 0;
+    inv.categories.forEach(cat => {
+      const pattern = item.features ? item.features[cat.key] : null;
+      if (!pattern) return;
+      wordFeaturePossible++;
+      featurePossible++;
+      summary[cat.key].possible++;
+      const pNorm = normalizeText(pattern);
+      const gotIt = markedCorrect || exact || (pNorm && rNorm.includes(pNorm));
+      if (gotIt){
+        wordFeatureCorrect++;
+        featureCorrect++;
+        summary[cat.key].correct++;
+        correctFeatures.push(`${cat.label}: ${pattern}`);
+      } else {
+        missedFeatures.push(`${cat.label}: ${pattern}`);
+      }
+    });
+    return {
+      number: idx+1, word:item.word, sentence:item.sentence, response: rawResponse,
+      wholeCorrect: exact, featureCorrect: wordFeatureCorrect, featurePossible: wordFeaturePossible,
+      correctFeatures, missedFeatures
+    };
+  });
+  inv.categories.forEach(c => {
+    const row = summary[c.key];
+    row.percent = row.possible ? Math.round((row.correct / row.possible) * 1000) / 10 : null;
+    row.status = row.possible ? statusFor(row.percent) : {text:'Not used', cls:'warn'};
+  });
+  const featurePercent = featurePossible ? Math.round((featureCorrect / featurePossible) * 1000) / 10 : 0;
+  return {
+    student: studentName || '', inventoryKey, inventoryTitle: inv.title,
+    date: new Date().toLocaleString(), categorySummary: inv.categories.map(c => summary[c.key]),
+    wordResults, wholeCorrect, totalWords: inv.words.length, featureCorrect, featurePossible, featurePercent
+  };
+}
+function makePlainReport(report){
+  const lines = [];
+  lines.push(report.student ? `Teacher Report: ${report.student}` : 'Teacher Report');
+  lines.push(`${report.inventoryTitle} | ${report.date}`);
+  lines.push(`Feature Points: ${report.featureCorrect} / ${report.featurePossible} (${report.featurePercent}%)`);
+  lines.push(`Whole Words Correct: ${report.wholeCorrect} / ${report.totalWords}`);
+  lines.push('');
+  lines.push('Category Summary');
+  report.categorySummary.forEach(r => lines.push(`${r.label}: ${r.correct}/${r.possible} (${r.percent ?? '-'}%) - ${r.status.text}`));
+  const strong = report.categorySummary.filter(r => r.possible && r.percent >= 90).map(r => r.label);
+  const target = report.categorySummary.filter(r => r.possible && r.percent < 90).map(r => r.label);
+  lines.push('');
+  lines.push(`Strongest areas: ${strong.length ? strong.join(', ') : 'None yet'}`);
+  lines.push(`Instructional targets: ${target.length ? target.join(', ') : 'None'}`);
+  lines.push('');
+  lines.push('Word-by-Word Results');
+  report.wordResults.forEach(w => {
+    lines.push(`${w.number}. ${w.word} = ${w.response || '(blank)'} | Word: ${w.wholeCorrect ? 'correct' : 'incorrect'} | Features: ${w.featureCorrect}/${w.featurePossible}`);
+    if (w.missedFeatures.length) lines.push(`   Missed: ${w.missedFeatures.join('; ')}`);
+  });
+  return lines.join('\n');
+}
+
+function sanitizePdfText(text){
+  return String(text ?? '')
+    .replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+    .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
+    .replace(/[\u2013\u2014]/g, '-')
+    .replace(/\u2026/g, '...')
+    .replace(/\u2022/g, '*')
+    .replace(/\u00A0/g, ' ')
+    .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, '');
+}
+function wrapPdfLine(line, maxChars=88){
+  const clean = sanitizePdfText(line).replace(/\t/g, '    ');
+  if (clean.length <= maxChars) return [clean];
+  const words = clean.split(/\s+/);
+  const wrapped = [];
+  let current = '';
+  words.forEach(word => {
+    if (!current){ current = word; return; }
+    if ((current + ' ' + word).length <= maxChars) current += ' ' + word;
+    else { wrapped.push(current); current = word; }
+  });
+  if (current) wrapped.push(current);
+  return wrapped.length ? wrapped : [''];
+}
+function pdfEscape(text){
+  return sanitizePdfText(text).replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+}
+function splitPdfPages(lines){
+  const pages = [[]];
+  const maxLines = 54;
+  lines.forEach(line => {
+    const wrapped = line === '' ? [''] : wrapPdfLine(line);
+    wrapped.forEach(part => {
+      if (pages[pages.length - 1].length >= maxLines) pages.push([]);
+      pages[pages.length - 1].push(part);
+    });
+  });
+  return pages;
+}
+function buildPdfDocument(lines){
+  const pages = splitPdfPages(lines);
+  const objects = [];
+  objects.push('<< /Type /Catalog /Pages 2 0 R >>');
+  objects.push('');
+  objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>');
+  const kids = [];
+  pages.forEach(pageLines => {
+    const pageObj = objects.length + 1;
+    const contentObj = pageObj + 1;
+    kids.push(`${pageObj} 0 R`);
+    const content = ['BT','/F1 10 Tf','50 760 Td','13 TL']
+      .concat(pageLines.map(line => `(${pdfEscape(line)}) Tj T*`))
+      .concat(['ET']).join('\n');
+    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents ${contentObj} 0 R >>`);
+    objects.push(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+  });
+  objects[1] = `<< /Type /Pages /Kids [${kids.join(' ')}] /Count ${pages.length} >>`;
+  let pdf = '%PDF-1.4\n';
+  const offsets = [0];
+  objects.forEach((obj, i) => {
+    offsets.push(pdf.length);
+    pdf += `${i + 1} 0 obj\n${obj}\nendobj\n`;
+  });
+  const xref = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (let i = 1; i <= objects.length; i++) pdf += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`;
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  return pdf;
+}
+function saveReportAsPdf(report){
+  if (!report) return;
+  const reportText = makePlainReport(report);
+  const lines = reportText.split('\n');
+  const pdf = buildPdfDocument(lines);
+  const blob = new Blob([pdf], {type:'application/pdf'});
+  const url = URL.createObjectURL(blob);
+  const safeTitle = sanitizePdfText(report.inventoryTitle).replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '') || 'WTW_Report';
+  const datePart = new Date().toISOString().slice(0,10);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${safeTitle}_${datePart}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+function renderReport(report){
+  state.lastReport = report;
+  $('#reportHeading').textContent = report.student ? `Teacher Report: ${report.student}` : 'Teacher Report';
+  $('#reportMeta').textContent = `${report.inventoryTitle} • ${report.date}`;
+  $('#metricGrid').innerHTML = `
+    <div class="metric"><b>${report.featureCorrect}/${report.featurePossible}</b><span>Feature points</span></div>
+    <div class="metric"><b>${report.featurePercent}%</b><span>Feature percent</span></div>
+    <div class="metric"><b>${report.wholeCorrect}/${report.totalWords}</b><span>Whole words correct</span></div>
+    <div class="metric"><b>${report.categorySummary.filter(r=>r.possible && r.percent>=90).length}</b><span>Areas 90%+</span></div>`;
+  $('#categoryTable').innerHTML = `<thead><tr><th>Category</th><th class="num">Correct</th><th class="num">Possible</th><th class="num">Percent</th><th>Status</th></tr></thead><tbody>` +
+    report.categorySummary.map(r => `<tr><td>${escapeHtml(r.label)}</td><td class="num">${r.correct}</td><td class="num">${r.possible}</td><td class="num">${r.percent ?? '-' }%</td><td><span class="status ${r.status.cls}">${r.status.text}</span></td></tr>`).join('') +
+    `</tbody>`;
+  const strong = report.categorySummary.filter(r => r.possible && r.percent >= 90).map(r => r.label);
+  const target = report.categorySummary.filter(r => r.possible && r.percent < 90).sort((a,b)=>a.percent-b.percent).map(r => r.label);
+  $('#instructionBox').innerHTML = `<div class="notice"><b>Strongest areas:</b> ${strong.length ? escapeHtml(strong.join(', ')) : 'None yet'}<br><b>Main instructional targets:</b> ${target.length ? escapeHtml(target.join(', ')) : 'None'}</div>`;
+  $('#wordTable').innerHTML = `<thead><tr><th>#</th><th>Word</th><th>Response</th><th>Whole Word</th><th class="num">Features</th><th>Missed Features</th></tr></thead><tbody>` +
+    report.wordResults.map(w => `<tr>
+      <td class="num">${w.number}</td><td><b>${escapeHtml(w.word)}</b></td><td>${escapeHtml(w.response || '(blank)')}</td>
+      <td><span class="status ${w.wholeCorrect?'good':'bad'}">${w.wholeCorrect?'Correct':'Incorrect'}</span></td>
+      <td class="num">${w.featureCorrect}/${w.featurePossible}</td>
+      <td>${w.missedFeatures.length ? `<div class="chips">${w.missedFeatures.map(m => `<span class="chip miss">${escapeHtml(m)}</span>`).join('')}</div>` : `<span class="status good">No missed features</span>`}</td>
+    </tr>`).join('') + `</tbody>`;
+  showScreen('report');
+}
+function updateInventoryInfo(){
+  const key = $('#inventorySelect') ? $('#inventorySelect').value : state.inventoryKey;
+  state.inventoryKey = key || state.inventoryKey;
+}
+function populateInventories(){
+  const options = Object.values(INVENTORIES).map(inv => `<option value="${inv.key}">${inv.title}</option>`).join('');
+  $('#inventorySelect').innerHTML = options;
+  $('#pasteInventory').innerHTML = options;
+  const params = new URLSearchParams(location.search);
+  const fromUrl = params.get('inventory') || params.get('test');
+  if (fromUrl && INVENTORIES[fromUrl]) state.inventoryKey = fromUrl;
+  $('#inventorySelect').value = state.inventoryKey;
+  $('#pasteInventory').value = state.inventoryKey;
+  updateInventoryInfo();
+}
+function loadVoices(){
+  voices = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+  const voiceOptions = voices.length
+    ? voices.map((v, i) => `<option value="${i}">${v.name} (${v.lang})</option>`).join('')
+    : `<option value="">Default browser voice</option>`;
+  $('#voiceSelect').innerHTML = voiceOptions;
+  $('#voiceSelectTest').innerHTML = voiceOptions;
+  const english = voices.findIndex(v => /en/i.test(v.lang));
+  if (english >= 0){ $('#voiceSelect').value = String(english); $('#voiceSelectTest').value = String(english); }
+}
+function speak(text){
+  if (!('speechSynthesis' in window)) { alert('Speech synthesis is not available in this browser.'); return; }
+  speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  const voiceTest = $('#voiceSelectTest');
+  const voiceSetup = $('#voiceSelect');
+  const selected = (voiceTest && voiceTest.value) || (voiceSetup && voiceSetup.value) || '';
+  if (selected !== '' && voices[Number(selected)]) utter.voice = voices[Number(selected)];
+  utter.rate = 0.9;
+  utter.pitch = 1;
+  speechSynthesis.speak(utter);
+}
+function currentItem(){ return getInventory(state.inventoryKey).words[state.index]; }
+function readCurrent(mode='both'){
+  const item = currentItem();
+  if (!item) return;
+  if (mode === 'word') speak(item.word);
+  else if (mode === 'sentence') speak(item.sentence);
+  else speak(`${item.word}. ${item.sentence}. ${item.word}.`);
+}
+function beginTest(){
+  state.inventoryKey = $('#inventorySelect').value;
+  state.student = '';
+  state.index = 0;
+  state.responses = Array(getInventory(state.inventoryKey).words.length).fill('');
+  $('#voiceSelectTest').value = $('#voiceSelect').value;
+  showTestItem();
+  showScreen('test');
+  setTimeout(()=>{ $('#answerInput').focus(); readCurrent('both'); }, 250);
+}
+function showTestItem(){
+  const inv = getInventory(state.inventoryKey);
+  const item = currentItem();
+  $('#testTitle').textContent = inv.title;
+  $('#testSub').textContent = `Word ${state.index+1} of ${inv.words.length}`;
+  $('#progressFill').style.width = `${(state.index / inv.words.length) * 100}%`;
+  $('#wordNumber').textContent = state.index + 1;
+  $('#promptText').textContent = `Word ${state.index+1} of ${inv.words.length}. Listen, then type the word.`;
+  $('#answerInput').value = state.responses[state.index] || '';
+  const revealWord = $('#revealWord');
+  const revealSentence = $('#revealSentence');
+  if (revealWord) revealWord.textContent = item.word;
+  if (revealSentence) revealSentence.textContent = item.sentence;
+  $('#backBtn').disabled = state.index === 0;
+  $('#nextBtn').textContent = state.index === inv.words.length - 1 ? 'Finish + Report' : 'Next →';
+}
+function saveCurrentAnswer(){ state.responses[state.index] = $('#answerInput').value.trim(); }
+function requireCurrentAnswer(){
+  const input = $('#answerInput');
+  const value = input.value.trim();
+  if (!value){
+    alert('Please enter a spelling attempt before moving on.');
+    input.focus();
+    return false;
+  }
+  return true;
+}
+function nextItem(){
+  if (!requireCurrentAnswer()) return;
+  saveCurrentAnswer();
+  const inv = getInventory(state.inventoryKey);
+  if (state.index >= inv.words.length - 1){
+    $('#progressFill').style.width = '100%';
+    const report = scoreInventory(state.inventoryKey, state.student, state.responses);
+    renderReport(report);
+    return;
+  }
+  state.index++;
+  showTestItem();
+  setTimeout(()=>{ $('#answerInput').focus(); readCurrent('both'); }, 120);
+}
+function prevItem(){
+  saveCurrentAnswer();
+  if (state.index > 0){ state.index--; showTestItem(); setTimeout(()=>$('#answerInput').focus(), 50); }
+}
+function parsePastedResponses(text){
+  const clean = String(text || '').trim();
+  if (!clean) return {name:'', responses:[]};
+  let parts;
+  if (clean.includes('\t')) parts = clean.split(/\t+/);
+  else if (clean.includes(',')) parts = clean.split(/,+/);
+  else parts = clean.split(/\s+/);
+  parts = parts.map(p => p.trim()).filter(Boolean).map(p => p.replace(/^\d+\.?\s*/,'').replace(/^=/,''));
+  return {name: parts[0] || 'Unnamed student', responses: parts.slice(1)};
+}
+function analyzePaste(){
+  const invKey = $('#pasteInventory').value;
+  const parsed = parsePastedResponses($('#pasteData').value);
+  if (!parsed.name || parsed.responses.length === 0){ alert('Paste a student name followed by responses first.'); return; }
+  const inv = getInventory(invKey);
+  if (parsed.responses.length < inv.words.length){
+    alert(`I found ${parsed.responses.length} responses, but ${inv.title} has ${inv.words.length} words. Please enter a response for every word before analyzing.`);
+    return;
+  }
+  const blankIndex = parsed.responses.slice(0, inv.words.length).findIndex(r => !String(r || '').trim());
+  if (blankIndex >= 0){
+    alert(`Response ${blankIndex + 1} is blank. Please enter a response for every word before analyzing.`);
+    return;
+  }
+  const report = scoreInventory(invKey, parsed.name, parsed.responses);
+  renderReport(report);
+}
+function showScreen(screen){
+  state.screen = screen;
+  ['setup','test','paste','report'].forEach(s => {
+    const panel = $(`#${s}Panel`);
+    if (panel) panel.classList.toggle('hidden', s !== screen);
+  });
+  $$('.tab').forEach(btn => btn.classList.toggle('active', btn.dataset.screen === screen));
+  if (screen === 'setup') updateInventoryInfo();
+}
+function bindEvents(){
+  $$('.tab').forEach(btn => btn.addEventListener('click', () => {
+    if (btn.dataset.screen === 'report' && !state.lastReport){ alert('No report yet. Run a test or analyze pasted responses first.'); return; }
+    showScreen(btn.dataset.screen);
+  }));
+  $('#inventorySelect').addEventListener('change', () => { state.inventoryKey = $('#inventorySelect').value; if ($('#pasteInventory')) $('#pasteInventory').value = state.inventoryKey; updateInventoryInfo(); });
+  if ($('#pasteInventory')) $('#pasteInventory').addEventListener('change', () => { state.inventoryKey = $('#pasteInventory').value; $('#inventorySelect').value = state.inventoryKey; updateInventoryInfo(); });
+  $('#voiceSelect').addEventListener('change', () => { $('#voiceSelectTest').value = $('#voiceSelect').value; });
+  $('#voiceSelectTest').addEventListener('change', () => { $('#voiceSelect').value = $('#voiceSelectTest').value; });
+  $('#startBtn').addEventListener('click', beginTest);
+  $('#testVoiceBtn').addEventListener('click', () => speak('This is the selected spelling test voice.'));
+  $('#speakBothBtn').addEventListener('click', () => readCurrent('both'));
+  $('#speakWordBtn').addEventListener('click', () => readCurrent('word'));
+  $('#speakSentenceBtn').addEventListener('click', () => readCurrent('sentence'));
+  $('#nextBtn').addEventListener('click', nextItem);
+  $('#backBtn').addEventListener('click', prevItem);
+  $('#clearAnswerBtn').addEventListener('click', () => { $('#answerInput').value=''; $('#answerInput').focus(); });
+  $('#quitBtn').addEventListener('click', () => { if (confirm('Quit this test and return to setup?')) showScreen('setup'); });
+  $('#answerInput').addEventListener('keydown', e => { if (e.key === 'Enter') nextItem(); });
+  $('#analyzePasteBtn').addEventListener('click', analyzePaste);
+  $('#loadSampleBtn').addEventListener('click', () => { $('#pasteInventory').value='primary'; $('#pasteData').value=SAMPLE_PRIMARY; });
+  $('#clearPasteBtn').addEventListener('click', () => { $('#pasteData').value=''; $('#pasteData').focus(); });
+  $('#copyReportBtn').addEventListener('click', async () => { if (!state.lastReport) return; await navigator.clipboard.writeText(makePlainReport(state.lastReport)); $('#copyReportBtn').textContent='Copied!'; setTimeout(()=>$('#copyReportBtn').textContent='Copy report',900); });
+  $('#printReportBtn').addEventListener('click', () => window.print());
+  $('#savePdfBtn').addEventListener('click', () => saveReportAsPdf(state.lastReport));
+  $('#newTestBtn').addEventListener('click', () => showScreen('setup'));
+}
+function init(){
+  populateInventories();
+  loadVoices();
+  if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = loadVoices;
+  bindEvents();
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
