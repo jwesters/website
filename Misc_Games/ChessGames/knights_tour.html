@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Knight's Tour</title>
+  <style>
+    :root {
+      --bg: #101820;
+      --panel: #172433;
+      --panel-2: #203246;
+      --text: #f3f7fb;
+      --muted: #b9c7d6;
+      --accent: #ffcf5a;
+      --accent-2: #6fe3c1;
+      --danger: #ff7d7d;
+      --line: rgba(255,255,255,0.12);
+      --shadow: 0 18px 50px rgba(0,0,0,0.35);
+      --cell-size: 42px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at top left, rgba(255, 207, 90, 0.18), transparent 34rem),
+        radial-gradient(circle at bottom right, rgba(111, 227, 193, 0.12), transparent 32rem),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      padding: 18px;
+    }
+
+    button, input { font: inherit; }
+
+    .app {
+      width: min(1480px, 100%);
+      min-height: calc(100vh - 36px);
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 14px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: center;
+      padding: 16px 18px;
+      background: rgba(23, 36, 51, 0.92);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .titleBlock h1 {
+      margin: 0;
+      font-size: clamp(1.35rem, 3vw, 2.35rem);
+      letter-spacing: -0.045em;
+      line-height: 1;
+    }
+
+    .titleBlock p {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 0.98rem;
+    }
+
+    .main {
+      display: grid;
+      grid-template-columns: minmax(250px, 320px) minmax(0, 1fr) minmax(250px, 330px);
+      gap: 14px;
+      min-height: 0;
+    }
+
+    .panel {
+      background: rgba(23, 36, 51, 0.94);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+      min-height: 0;
+    }
+
+    .sidePanel {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow: auto;
+    }
+
+    .panel h2 {
+      margin: 0 0 11px;
+      font-size: 1.02rem;
+      letter-spacing: -0.02em;
+    }
+
+    .fieldGrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    label {
+      display: block;
+      color: var(--muted);
+      font-weight: 800;
+      font-size: 0.85rem;
+      margin-bottom: 6px;
+    }
+
+    .numberInput {
+      width: 100%;
+      background: #0f1a26;
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      padding: 12px 10px;
+      outline: none;
+      font-weight: 900;
+      text-align: center;
+      font-size: 1.05rem;
+    }
+
+    .numberInput:focus {
+      border-color: rgba(255, 207, 90, 0.8);
+      box-shadow: 0 0 0 4px rgba(255, 207, 90, 0.14);
+    }
+
+    .rangeRow { margin-top: 9px; }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .buttons {
+      display: grid;
+      gap: 9px;
+    }
+
+    .btn {
+      width: 100%;
+      border: 0;
+      border-radius: 16px;
+      padding: 12px 14px;
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+      font-weight: 950;
+      cursor: pointer;
+      transition: transform .12s ease, filter .12s ease, background .12s ease;
+      min-height: 46px;
+    }
+
+    .btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.08); }
+    .btn:active:not(:disabled) { transform: translateY(0); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn.primary { background: linear-gradient(135deg, #ffcf5a, #ff9f45); color: #17202b; }
+    .btn.red { background: rgba(255, 125, 125, 0.18); color: #ffdede; border: 1px solid rgba(255, 125, 125, 0.26); }
+    .btn.small { min-height: 38px; padding: 9px 10px; font-size: 0.9rem; }
+
+    .boardPanel {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 0;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .boardShell {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 460px;
+      position: relative;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(var(--cols), var(--cell-size));
+      grid-template-rows: repeat(var(--rows), var(--cell-size));
+      gap: max(1px, calc(var(--cell-size) * 0.035));
+      padding: max(4px, calc(var(--cell-size) * 0.12));
+      border-radius: max(12px, calc(var(--cell-size) * 0.35));
+      background: rgba(0,0,0,0.26);
+      border: 1px solid var(--line);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04), 0 24px 60px rgba(0,0,0,0.32);
+      user-select: none;
+      touch-action: manipulation;
+    }
+
+    .cell {
+      width: var(--cell-size);
+      height: var(--cell-size);
+      border: 0;
+      padding: 0;
+      border-radius: max(5px, calc(var(--cell-size) * 0.13));
+      background: #e9d7a7;
+      color: #14202d;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      font-weight: 950;
+      font-size: clamp(0.45rem, calc(var(--cell-size) * 0.34), 1.1rem);
+      box-shadow: inset 0 -2px 0 rgba(0,0,0,0.09);
+      transition: transform .1s ease, filter .12s ease, box-shadow .12s ease;
+    }
+
+    .cell.dark {
+      background: #7d5e3b;
+      color: #fff3da;
+    }
+
+    .cell:hover { filter: brightness(1.08); }
+
+    .cell.visited {
+      background: #52687e;
+      color: rgba(255,255,255,0.95);
+      cursor: default;
+    }
+
+    .cell.visited.dark { background: #3f5268; }
+
+    .cell.current {
+      background: var(--accent) !important;
+      color: #141414;
+      box-shadow: 0 0 0 max(2px, calc(var(--cell-size) * 0.05)) rgba(255,255,255,0.9), 0 0 20px rgba(255,207,90,0.45);
+      z-index: 2;
+      transform: scale(1.04);
+    }
+
+    .cell.legal {
+      background: var(--accent-2) !important;
+      color: #10312b;
+      cursor: pointer;
+      box-shadow: 0 0 0 max(2px, calc(var(--cell-size) * 0.05)) rgba(111,227,193,0.3), inset 0 -2px 0 rgba(0,0,0,0.13);
+      animation: legalPulse 1.2s infinite ease-in-out;
+    }
+
+    .cell.startable:not(.visited) { outline: 2px solid rgba(255,255,255,0.08); }
+
+    .cell.blocked {
+      cursor: default;
+      filter: grayscale(0.2) brightness(0.9);
+    }
+
+    .cell .knight {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-size: clamp(0.72rem, calc(var(--cell-size) * 0.62), 2rem);
+      line-height: 1;
+      pointer-events: none;
+      transform: translateY(-2%);
+    }
+
+    .cell .moveNumber {
+      position: absolute;
+      left: 50%;
+      bottom: 5%;
+      transform: translateX(-50%);
+      font-size: clamp(0.32rem, calc(var(--cell-size) * 0.22), 0.7rem);
+      opacity: 0.9;
+      line-height: 1;
+      pointer-events: none;
+    }
+
+    .cell.current .moveNumber { display: none; }
+
+    @keyframes legalPulse {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.17); }
+    }
+
+    .scoreList {
+      display: grid;
+      gap: 8px;
+    }
+
+    .scoreItem {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 10px;
+      align-items: center;
+    }
+
+    .rank {
+      width: 33px;
+      height: 33px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,207,90,0.18);
+      color: #ffeebc;
+      font-weight: 950;
+    }
+
+    .scoreItem strong {
+      display: block;
+      font-size: 0.98rem;
+      margin-bottom: 2px;
+    }
+
+    .scoreItem span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.81rem;
+      line-height: 1.3;
+    }
+
+    .emptyScore {
+      color: var(--muted);
+      background: rgba(255,255,255,0.05);
+      border: 1px dashed var(--line);
+      border-radius: 18px;
+      padding: 14px;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .howTo {
+      margin: 0;
+      padding-left: 19px;
+      color: var(--muted);
+      line-height: 1.48;
+      font-weight: 700;
+      font-size: 0.94rem;
+    }
+
+    .howTo li { margin: 6px 0; }
+
+    .tiny {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.35;
+      margin: 8px 0 0;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%) translateY(20px);
+      opacity: 0;
+      pointer-events: none;
+      background: #f9f1d1;
+      color: #172433;
+      border-radius: 16px;
+      padding: 12px 15px;
+      font-weight: 950;
+      box-shadow: 0 14px 40px rgba(0,0,0,0.35);
+      transition: opacity .18s ease, transform .18s ease;
+      z-index: 10;
+      max-width: min(520px, calc(100vw - 30px));
+      text-align: center;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 1120px) {
+      body { padding: 12px; }
+      .app { min-height: calc(100vh - 24px); }
+      .main {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto minmax(420px, 1fr) auto;
+      }
+      .sidePanel {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        overflow: visible;
+      }
+      .boardShell { min-height: 52vh; }
+    }
+
+    @media (max-width: 720px) {
+      body { padding: 8px; }
+      .app { gap: 8px; min-height: calc(100vh - 16px); }
+      .topbar { border-radius: 18px; padding: 13px; }
+      .main { gap: 8px; }
+      .panel { border-radius: 18px; padding: 12px; }
+      .sidePanel { grid-template-columns: 1fr; gap: 8px; }
+      .boardShell { min-height: 54vh; }
+      .fieldGrid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="titleBlock">
+        <h1>Knight's Tour</h1>
+        <p>Visit as many squares as possible. Each square can only be used once.</p>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="sidePanel">
+        <div class="panel">
+          <h2>Board Setup</h2>
+          <div class="fieldGrid">
+            <div>
+              <label for="rowsInput">Rows</label>
+              <input id="rowsInput" class="numberInput" type="number" min="4" max="25" value="8" inputmode="numeric" />
+              <div class="rangeRow"><input id="rowsRange" type="range" min="4" max="25" value="8" /></div>
+            </div>
+            <div>
+              <label for="colsInput">Columns</label>
+              <input id="colsInput" class="numberInput" type="number" min="4" max="25" value="8" inputmode="numeric" />
+              <div class="rangeRow"><input id="colsRange" type="range" min="4" max="25" value="8" /></div>
+            </div>
+          </div>
+          <p class="tiny">Changing the board size starts a new layout. Scores are saved separately for each exact layout.</p>
+        </div>
+
+        <div class="panel">
+          <h2>Game Controls</h2>
+          <div class="buttons">
+            <button id="newGameBtn" class="btn primary">New Game</button>
+            <button id="restartBtn" class="btn">Restart</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>How To Play</h2>
+          <ol class="howTo">
+            <li>Click any square to place your knight.</li>
+            <li>After that, only green squares are legal moves.</li>
+            <li>Try to visit every square once.</li>
+            <li>When no legal moves are left, your score saves automatically.</li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="panel boardPanel">
+        <div id="boardShell" class="boardShell">
+          <div id="board" class="board" aria-label="Knight's Tour board"></div>
+        </div>
+      </section>
+
+      <section class="sidePanel">
+        <div class="panel">
+          <h2>Top 3 For This Layout</h2>
+          <div id="scoreList" class="scoreList"></div>
+          <button id="clearScoresBtn" class="btn red small" style="margin-top:10px;">Clear This Layout's Scores</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    (() => {
+      const MIN_SIZE = 4;
+      const MAX_SIZE = 25;
+      const STORAGE_PREFIX = 'knightsTourScores_v2_';
+      const KNIGHT_MOVES = [
+        [-2, -1], [-2, 1], [-1, -2], [-1, 2],
+        [1, -2], [1, 2], [2, -1], [2, 1]
+      ];
+
+      const rowsInput = document.getElementById('rowsInput');
+      const colsInput = document.getElementById('colsInput');
+      const rowsRange = document.getElementById('rowsRange');
+      const colsRange = document.getElementById('colsRange');
+      const board = document.getElementById('board');
+      const boardShell = document.getElementById('boardShell');
+      const newGameBtn = document.getElementById('newGameBtn');
+      const restartBtn = document.getElementById('restartBtn');
+      const clearScoresBtn = document.getElementById('clearScoresBtn');
+      const scoreList = document.getElementById('scoreList');
+      const toast = document.getElementById('toast');
+
+      const state = {
+        rows: 8,
+        cols: 8,
+        visited: [],
+        visitOrder: [],
+        legalMoves: [],
+        started: false,
+        ended: false,
+        elapsedMs: 0,
+        timerStart: null,
+        timerId: null,
+        runId: makeRunId()
+      };
+
+      function makeRunId() {
+        return `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+      }
+
+      function clampSize(value) {
+        const n = Number.parseInt(value, 10);
+        if (Number.isNaN(n)) return MIN_SIZE;
+        return Math.max(MIN_SIZE, Math.min(MAX_SIZE, n));
+      }
+
+      function layoutKey(rows = state.rows, cols = state.cols) {
+        return `${rows}x${cols}`;
+      }
+
+      function storageKey() {
+        return STORAGE_PREFIX + layoutKey();
+      }
+
+      function totalSquares() {
+        return state.rows * state.cols;
+      }
+
+      function syncInputs(rows, cols) {
+        rowsInput.value = rows;
+        rowsRange.value = rows;
+        colsInput.value = cols;
+        colsRange.value = cols;
+      }
+
+      function startTimer() {
+        if (state.timerId) return;
+        state.timerStart = Date.now() - state.elapsedMs;
+        state.timerId = window.setInterval(() => {
+          state.elapsedMs = Date.now() - state.timerStart;
+        }, 250);
+      }
+
+      function stopTimer() {
+        if (state.timerId) {
+          window.clearInterval(state.timerId);
+          state.timerId = null;
+        }
+        if (state.timerStart) {
+          state.elapsedMs = Date.now() - state.timerStart;
+          state.timerStart = null;
+        }
+      }
+
+      function resetTimer() {
+        stopTimer();
+        state.elapsedMs = 0;
+      }
+
+      function formatTime(ms) {
+        const totalSeconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes}:${String(seconds).padStart(2, '0')}`;
+      }
+
+      function formatDate(iso) {
+        try {
+          return new Intl.DateTimeFormat(undefined, {
+            month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+          }).format(new Date(iso));
+        } catch (err) {
+          return 'Saved';
+        }
+      }
+
+      function createVisitOrder() {
+        state.visitOrder = Array.from({ length: state.rows }, () => Array(state.cols).fill(0));
+        state.visited.forEach((pos, index) => {
+          state.visitOrder[pos.r][pos.c] = index + 1;
+        });
+      }
+
+      function isInside(r, c) {
+        return r >= 0 && r < state.rows && c >= 0 && c < state.cols;
+      }
+
+      function isVisited(r, c) {
+        return Boolean(state.visitOrder[r] && state.visitOrder[r][c] > 0);
+      }
+
+      function currentPosition() {
+        return state.visited.length ? state.visited[state.visited.length - 1] : null;
+      }
+
+      function calculateLegalMoves() {
+        const current = currentPosition();
+        if (!current || state.ended) {
+          state.legalMoves = [];
+          return state.legalMoves;
+        }
+
+        state.legalMoves = KNIGHT_MOVES
+          .map(([dr, dc]) => ({ r: current.r + dr, c: current.c + dc }))
+          .filter(pos => isInside(pos.r, pos.c) && !isVisited(pos.r, pos.c));
+        return state.legalMoves;
+      }
+
+      function isLegalTarget(r, c) {
+        if (!state.started) return true;
+        return state.legalMoves.some(pos => pos.r === r && pos.c === c);
+      }
+
+      function newGame({ keepLayout = true } = {}) {
+        resetTimer();
+        if (!keepLayout) {
+          state.rows = clampSize(rowsInput.value);
+          state.cols = clampSize(colsInput.value);
+        }
+        state.visited = [];
+        state.visitOrder = [];
+        state.legalMoves = [];
+        state.started = false;
+        state.ended = false;
+        state.runId = makeRunId();
+        createVisitOrder();
+        renderBoard();
+        renderScores();
+        resizeBoard();
+      }
+
+      function renderBoard() {
+        board.style.setProperty('--rows', state.rows);
+        board.style.setProperty('--cols', state.cols);
+        board.innerHTML = '';
+
+        const current = currentPosition();
+        const legalSet = new Set(state.legalMoves.map(pos => `${pos.r},${pos.c}`));
+
+        for (let r = 0; r < state.rows; r++) {
+          for (let c = 0; c < state.cols; c++) {
+            const cell = document.createElement('button');
+            cell.type = 'button';
+            cell.className = 'cell';
+            if ((r + c) % 2 === 1) cell.classList.add('dark');
+            cell.dataset.r = String(r);
+            cell.dataset.c = String(c);
+            cell.setAttribute('aria-label', `Row ${r + 1}, column ${c + 1}`);
+
+            const order = state.visitOrder[r]?.[c] || 0;
+            if (order) {
+              cell.classList.add('visited');
+              const number = document.createElement('span');
+              number.className = 'moveNumber';
+              number.textContent = String(order);
+              cell.appendChild(number);
+              cell.setAttribute('aria-label', `Move ${order}. Row ${r + 1}, column ${c + 1}.`);
+            } else if (!state.started) {
+              cell.classList.add('startable');
+            }
+
+            if (current && current.r === r && current.c === c) {
+              cell.classList.add('current');
+              const knight = document.createElement('span');
+              knight.className = 'knight';
+              knight.textContent = '♞';
+              cell.appendChild(knight);
+              cell.setAttribute('aria-label', `Knight on move ${state.visited.length}. Row ${r + 1}, column ${c + 1}.`);
+            }
+
+            if (legalSet.has(`${r},${c}`)) {
+              cell.classList.add('legal');
+              cell.setAttribute('aria-label', `Legal move. Row ${r + 1}, column ${c + 1}.`);
+            }
+
+            if (state.ended && !legalSet.has(`${r},${c}`)) {
+              cell.classList.add('blocked');
+            }
+
+            cell.addEventListener('click', () => handleCellClick(r, c));
+            board.appendChild(cell);
+          }
+        }
+      }
+
+      function handleCellClick(r, c) {
+        if (state.ended) {
+          showToast('This run is finished. Start a new game to play again.');
+          return;
+        }
+
+        if (isVisited(r, c)) {
+          showToast('That square has already been visited.');
+          return;
+        }
+
+        if (!isLegalTarget(r, c)) {
+          showToast('That is not a knight move. Use a green square.');
+          return;
+        }
+
+        if (!state.started) {
+          state.started = true;
+          startTimer();
+        }
+
+        state.visited.push({ r, c });
+        createVisitOrder();
+        calculateLegalMoves();
+
+        if (state.visited.length === totalSquares()) {
+          finishRun('completed');
+          return;
+        }
+
+        if (state.legalMoves.length === 0) {
+          finishRun('stuck');
+          return;
+        }
+
+        renderBoard();
+      }
+
+      function finishRun(reason) {
+        state.ended = true;
+        stopTimer();
+        calculateLegalMoves();
+        const saved = saveScore(reason);
+        renderBoard();
+        if (reason === 'completed') {
+          showToast(saved ? `Full tour! Score saved: ${state.visited.length} / ${totalSquares()}.` : `Full tour! ${state.visited.length} / ${totalSquares()}.`);
+        } else {
+          showToast(saved ? `No legal moves left. Score saved: ${state.visited.length} / ${totalSquares()}.` : `No legal moves left. ${state.visited.length} / ${totalSquares()}.`);
+        }
+      }
+
+      function saveScore(reason) {
+        const score = state.visited.length;
+        if (score <= 0) return false;
+
+        const scores = getScores();
+        const entry = {
+          runId: state.runId,
+          score,
+          total: totalSquares(),
+          rows: state.rows,
+          cols: state.cols,
+          seconds: Math.floor(state.elapsedMs / 1000),
+          date: new Date().toISOString(),
+          completed: score === totalSquares(),
+          reason
+        };
+
+        scores.push(entry);
+        scores.sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          if (b.completed !== a.completed) return Number(b.completed) - Number(a.completed);
+          return a.seconds - b.seconds;
+        });
+
+        const topThree = scores.slice(0, 3);
+        try {
+          window.localStorage.setItem(storageKey(), JSON.stringify(topThree));
+        } catch (err) {
+          return false;
+        }
+        renderScores();
+        return topThree.some(item => item.runId === state.runId);
+      }
+
+      function getScores() {
+        try {
+          const raw = window.localStorage.getItem(storageKey());
+          const parsed = raw ? JSON.parse(raw) : [];
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (err) {
+          return [];
+        }
+      }
+
+      function renderScores() {
+        const scores = getScores();
+        scoreList.innerHTML = '';
+
+        if (!scores.length) {
+          const empty = document.createElement('div');
+          empty.className = 'emptyScore';
+          empty.textContent = 'No saved scores yet for this layout.';
+          scoreList.appendChild(empty);
+          return;
+        }
+
+        scores.forEach((entry, index) => {
+          const item = document.createElement('div');
+          item.className = 'scoreItem';
+
+          const rank = document.createElement('div');
+          rank.className = 'rank';
+          rank.textContent = String(index + 1);
+
+          const info = document.createElement('div');
+          const pct = Math.round((entry.score / entry.total) * 100);
+          const title = document.createElement('strong');
+          title.textContent = `${entry.score} / ${entry.total} squares (${pct}%)${entry.completed ? ' ✓' : ''}`;
+
+          const meta = document.createElement('span');
+          meta.textContent = `${formatTime(entry.seconds * 1000)} • ${formatDate(entry.date)}`;
+
+          info.appendChild(title);
+          info.appendChild(meta);
+          item.appendChild(rank);
+          item.appendChild(info);
+          scoreList.appendChild(item);
+        });
+      }
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add('show');
+        window.clearTimeout(showToast.timeoutId);
+        showToast.timeoutId = window.setTimeout(() => toast.classList.remove('show'), 2400);
+      }
+
+      function resizeBoard() {
+        const shellRect = boardShell.getBoundingClientRect();
+        const availableWidth = Math.max(220, shellRect.width - 20);
+        const availableHeight = Math.max(220, shellRect.height - 20);
+        const gapAllowance = 1.08;
+        let cellSize = Math.floor(Math.min(
+          availableWidth / (state.cols * gapAllowance),
+          availableHeight / (state.rows * gapAllowance),
+          58
+        ));
+        cellSize = Math.max(10, cellSize);
+        document.documentElement.style.setProperty('--cell-size', `${cellSize}px`);
+      }
+
+      function changeBoardSize(rows, cols) {
+        const clampedRows = clampSize(rows);
+        const clampedCols = clampSize(cols);
+        state.rows = clampedRows;
+        state.cols = clampedCols;
+        syncInputs(clampedRows, clampedCols);
+        newGame({ keepLayout: true });
+      }
+
+      function handleSizeInput(source, paired) {
+        const value = clampSize(source.value);
+        source.value = value;
+        paired.value = value;
+        if (source === rowsInput || source === rowsRange) {
+          changeBoardSize(value, state.cols);
+        } else {
+          changeBoardSize(state.rows, value);
+        }
+      }
+
+      rowsInput.addEventListener('change', () => handleSizeInput(rowsInput, rowsRange));
+      rowsRange.addEventListener('input', () => handleSizeInput(rowsRange, rowsInput));
+      colsInput.addEventListener('change', () => handleSizeInput(colsInput, colsRange));
+      colsRange.addEventListener('input', () => handleSizeInput(colsRange, colsInput));
+
+      newGameBtn.addEventListener('click', () => {
+        changeBoardSize(rowsInput.value, colsInput.value);
+        showToast('New game ready.');
+      });
+
+      restartBtn.addEventListener('click', () => {
+        newGame({ keepLayout: true });
+        showToast('Board restarted.');
+      });
+
+      clearScoresBtn.addEventListener('click', () => {
+        const ok = window.confirm(`Clear the top 3 scores for ${layoutKey()}?`);
+        if (!ok) return;
+        try { window.localStorage.removeItem(storageKey()); } catch (err) {}
+        renderScores();
+        showToast('Scores cleared for this layout.');
+      });
+
+      window.addEventListener('resize', resizeBoard);
+      window.addEventListener('orientationchange', () => setTimeout(resizeBoard, 150));
+
+      document.addEventListener('keydown', event => {
+        const key = event.key.toLowerCase();
+        const targetTag = (event.target && event.target.tagName || '').toLowerCase();
+        if (targetTag === 'input') return;
+        if (key === 'r') {
+          event.preventDefault();
+          newGame({ keepLayout: true });
+          showToast('Board restarted.');
+        }
+      });
+
+      syncInputs(state.rows, state.cols);
+      createVisitOrder();
+      calculateLegalMoves();
+      renderBoard();
+      renderScores();
+      requestAnimationFrame(resizeBoard);
+    })();
+  </script>
+</body>
+</html>
