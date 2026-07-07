@@ -43,6 +43,8 @@ from urllib.parse import quote
 
 # Exact file/folder icon overrides. These are used before keyword rules.
 CUSTOM_ICONS = {'BillboardNumberOne.html': '🎵',
+ 'Yahtzee.html': '🎲',
+ 'yahtzee.html': '🎲',
  'HockeyStats.html': '🏒',
  'RealCityOrNot.html': '🌆',
  'SoccerStats.html': '⚽',
@@ -246,7 +248,7 @@ CUSTOM_ICONS = {'BillboardNumberOne.html': '🎵',
  'Word_Maker_Game.html': '🔤',
  'word_memory_challenge.html': '🧠',
  'number_memory_challenge.html': '🧠',
- 'Canada_Click_Challenge.html': '🗺️',
+ 'Canada_Click_Challenge.html': '🇨🇦',
  'World_Click_Challenge.html': '🌍',
  'checkers_game.html': '🔴',
  'Snakes_And_Ladders.html': '🎲',
@@ -264,7 +266,10 @@ CUSTOM_ICONS = {'BillboardNumberOne.html': '🎵',
  'Grade6_Social.html': '🌎'}
 
 # Keyword rules. Longest keyword match wins.
-ICON_RULES = [('multiplication', '✖️'),
+ICON_RULES = [('canadian', '🇨🇦'),
+ ('canada', '🇨🇦'),
+ ('yahtzee', '🎲'),
+ ('multiplication', '✖️'),
  ('division', '➗'),
  ('bingo', '🎟️'),
  ('facts', '⏱️'),
@@ -736,6 +741,9 @@ BROAD_ICON_KEYWORDS = {
 
 BROAD_CATEGORY_TOKENS = {
     "go",
+    "go.html",
+    "sim.html",
+    "nim.html",
     "dle",
     "sim",
     "nim",
@@ -774,6 +782,21 @@ def keyword_matches(text: str, keyword: str, *, broad_keywords: set[str]) -> boo
     compact_key = normalized_key.replace(" ", "")
     return normalized_key in normalized_text or compact_key in compact_text
 
+
+
+
+def has_canada_term(text: str) -> bool:
+    """Return True for Canada/Canadian terms in filenames or folder paths."""
+    normalized = normalize_for_keyword_match(text)
+    return any(
+        re.search(rf"(?<![a-z0-9]){term}(?![a-z0-9])", normalized)
+        for term in ("canada", "canadian")
+    )
+
+
+def has_yahtzee_term(text: str) -> bool:
+    """Return True for Yahtzee filenames or paths."""
+    return keyword_matches(text, "yahtzee", broad_keywords=BROAD_ICON_KEYWORDS)
 
 def slugify(s: str) -> str:
     out = []
@@ -860,6 +883,12 @@ def should_include_file(
 
 def icon_for(name: str, is_dir: bool) -> str:
     base = Path(name).name
+
+    if has_canada_term(name):
+        return safe_icon("🇨🇦")
+    if has_yahtzee_term(name):
+        return safe_icon("🎲")
+
     if base in CUSTOM_ICONS:
         return safe_icon(CUSTOM_ICONS[base])
 
@@ -881,6 +910,11 @@ def icon_for_file(rel_path: str, category: str, subcategory: str) -> str:
     inside a Science or Social folder from displaying a Science/Social icon.
     """
     base = Path(rel_path).name
+
+    if has_canada_term(rel_path):
+        return safe_icon("🇨🇦")
+    if has_yahtzee_term(rel_path):
+        return safe_icon("🎲")
 
     if base in CUSTOM_ICONS:
         return safe_icon(CUSTOM_ICONS[base])
