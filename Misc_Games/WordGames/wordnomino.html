@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Word Pento/Tetro Prototype</title>
+<style>
+  :root {
+    --bg: #f7f2e9;
+    --panel: #fffaf2;
+    --panel-2: #f1e6d5;
+    --text: #263241;
+    --muted: #6a7482;
+    --cell: #fffdf8;
+    --cell-border: #d6c8b7;
+    --good: rgba(82, 196, 126, .36);
+    --bad: rgba(234, 91, 91, .36);
+    --word: rgba(255, 213, 79, .62);
+    --shadow: 0 18px 42px rgba(108, 84, 52, .16);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background:
+      radial-gradient(circle at top left, rgba(255, 213, 116, .45), transparent 32rem),
+      radial-gradient(circle at bottom right, rgba(112, 204, 255, .24), transparent 30rem),
+      var(--bg);
+    color: var(--text);
+    display: grid;
+    place-items: center;
+    padding: 18px;
+  }
+
+  .app {
+    width: min(1120px, 100%);
+    display: grid;
+    grid-template-columns: minmax(390px, 650px) minmax(270px, 350px);
+    gap: 18px;
+    align-items: start;
+  }
+
+  .card {
+    background: rgba(255, 250, 242, .96);
+    border: 1px solid rgba(120, 93, 54, .16);
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+  }
+
+  .board-card { padding: 18px; }
+
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    font-size: clamp(1.4rem, 3vw, 2.1rem);
+    margin: 0;
+    letter-spacing: -0.045em;
+  }
+
+  .score-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: .92rem;
+    color: var(--muted);
+    padding: 8px 11px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.72);
+    border: 1px solid rgba(120, 93, 54, .16);
+    white-space: nowrap;
+  }
+
+  .score-pill strong {
+    color: var(--text);
+    font-size: 1.1rem;
+  }
+
+  .topbar-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .top-new-game {
+    padding: 9px 12px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #bfe9ff, #7dccf4);
+    box-shadow: 0 9px 18px rgba(69, 147, 190, .18);
+    white-space: nowrap;
+  }
+
+  .board-wrap { display: grid; place-items: center; }
+
+  #board {
+    width: min(76vw, 574px);
+    max-width: 100%;
+    aspect-ratio: 1 / 1;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 6px;
+    padding: 10px;
+    border-radius: 20px;
+    background: #eadcc7;
+    border: 1px solid rgba(120, 93, 54, .20);
+    touch-action: manipulation;
+  }
+
+  .cell {
+    position: relative;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #fffdf8, #f3e8d8);
+    border: 1px solid var(--cell-border);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.88), 0 2px 6px rgba(105, 79, 42, .08);
+    cursor: pointer;
+    transition: transform .08s ease, filter .1s ease, background .1s ease, box-shadow .1s ease;
+    padding: 0;
+    color: #1d2936;
+    overflow: hidden;
+  }
+
+  .cell:hover { transform: translateY(-1px); }
+  .cell.filled {
+    border-color: rgba(73, 68, 56, .22);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.46), 0 7px 13px rgba(105, 79, 42, .17);
+  }
+  .cell.ghost-good { background: var(--good) !important; border-color: rgba(45,150,84,.78); }
+  .cell.ghost-bad { background: var(--bad) !important; border-color: rgba(205,74,74,.78); }
+  .cell.word-clear {
+    animation: wordClear .32s ease forwards;
+    background: var(--word) !important;
+    z-index: 2;
+  }
+
+  @keyframes wordClear {
+    0% { transform: scale(1); opacity: 1; filter: brightness(1); }
+    45% { transform: scale(1.06); opacity: 1; filter: brightness(1.08); }
+    100% { transform: scale(.18); opacity: 0; filter: brightness(1.18); }
+  }
+
+  .letter {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: clamp(1.15rem, 3.1vw, 2.1rem);
+    font-weight: 950;
+    letter-spacing: -.04em;
+    text-shadow: 0 1px 0 rgba(255,255,255,.32);
+  }
+
+  .value {
+    position: absolute;
+    right: 7px;
+    bottom: 5px;
+    font-size: clamp(.55rem, 1.45vw, .76rem);
+    font-weight: 900;
+    opacity: .74;
+  }
+
+  .side {
+    padding: 18px;
+    display: grid;
+    gap: 14px;
+  }
+
+  .panel {
+    background: rgba(255,255,255,.62);
+    border: 1px solid rgba(120, 93, 54, .14);
+    border-radius: 20px;
+    padding: 14px;
+  }
+
+  .panel h2 {
+    margin: 0 0 10px;
+    font-size: 1rem;
+    letter-spacing: -.02em;
+  }
+
+  .piece-holder {
+    min-height: 164px;
+    display: grid;
+    place-items: center;
+    background: #f3eadc;
+    border: 1px solid rgba(120, 93, 54, .14);
+    border-radius: 16px;
+  }
+
+  .piece-grid {
+    display: grid;
+    gap: 5px;
+    padding: 8px;
+  }
+
+  .piece-cell {
+    position: relative;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: transparent;
+  }
+
+  .piece-cell.block {
+    border: 1px solid rgba(73, 68, 56, .25);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 5px 10px rgba(105, 79, 42, .15);
+  }
+
+  .piece-cell .letter {
+    font-size: 1.12rem;
+  }
+
+  .piece-cell .value {
+    right: 4px;
+    bottom: 2px;
+    font-size: .55rem;
+  }
+
+  .next-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .mini-holder {
+    min-height: 104px;
+    display: grid;
+    place-items: center;
+    background: #f3eadc;
+    border: 1px solid rgba(120, 93, 54, .14);
+    border-radius: 14px;
+  }
+
+  .mini-holder .piece-cell {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+  }
+
+  .mini-holder .piece-cell .letter {
+    font-size: .72rem;
+  }
+
+  .mini-holder .piece-cell .value {
+    display: none;
+  }
+
+  .buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .mode-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .mode-buttons button {
+    padding: 10px 8px;
+    font-size: .83rem;
+    line-height: 1.1;
+    background: linear-gradient(180deg, #fffaf2, #f2e3cc);
+    box-shadow: none;
+    border: 1px solid rgba(120, 93, 54, .18);
+  }
+
+  .mode-buttons button.active {
+    background: linear-gradient(180deg, #ffe49a, #ffc857);
+    box-shadow: 0 8px 15px rgba(173, 124, 23, .18);
+  }
+
+  button {
+    appearance: none;
+    border: 0;
+    cursor: pointer;
+    border-radius: 14px;
+    padding: 12px 14px;
+    font-weight: 850;
+    color: #263241;
+    background: linear-gradient(180deg, #ffe49a, #ffc857);
+    box-shadow: 0 9px 18px rgba(173, 124, 23, .20);
+  }
+
+  button.secondary {
+    background: linear-gradient(180deg, #bfe9ff, #7dccf4);
+    box-shadow: 0 9px 18px rgba(69, 147, 190, .20);
+  }
+
+  button:hover { filter: brightness(1.04); }
+  button:active { transform: translateY(1px); }
+
+  .status, .word-log, .dictionary-line {
+    color: var(--muted);
+    line-height: 1.45;
+    margin: 0;
+    font-size: .94rem;
+  }
+
+  .word-log {
+    min-height: 2.75rem;
+  }
+
+  .word-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin: 3px 4px 3px 0;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #fff6d6;
+    border: 1px solid rgba(168, 126, 22, .18);
+    color: #3c3526;
+    font-weight: 850;
+  }
+
+  .word-chip span {
+    color: #77684a;
+    font-size: .82em;
+  }
+
+  .high-score-list {
+    margin: 0;
+    padding-left: 1.25rem;
+    display: grid;
+    gap: 8px;
+  }
+
+  .high-score-list li {
+    color: var(--muted);
+    line-height: 1.25;
+  }
+
+  .high-score-list strong {
+    color: var(--text);
+    display: block;
+  }
+
+  .high-score-list span {
+    font-size: .86rem;
+  }
+
+  .status-panel { display: none; }
+
+  .kbd {
+    display: inline-flex;
+    min-width: 1.8em;
+    justify-content: center;
+    padding: 2px 7px;
+    border-radius: 7px;
+    background: #fffaf2;
+    border: 1px solid rgba(120, 93, 54, .18);
+    color: var(--text);
+    font-weight: 800;
+  }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    place-items: center;
+    padding: 18px;
+    background: rgba(60, 50, 38, .38);
+    z-index: 50;
+  }
+
+  .overlay.show { display: grid; }
+
+  .modal {
+    width: min(430px, 100%);
+    background: #fffaf2;
+    border: 1px solid rgba(120, 93, 54, .18);
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+    padding: 22px;
+    text-align: center;
+  }
+
+  .modal h2 {
+    margin: 0 0 8px;
+    font-size: 1.7rem;
+  }
+
+  .modal p {
+    color: var(--muted);
+    margin: 0 0 18px;
+    line-height: 1.45;
+  }
+
+
+
+  .hidden { display: none !important; }
+
+  .start-screen {
+    width: min(560px, 100%);
+    padding: 26px;
+    text-align: center;
+  }
+
+  .start-screen h1 {
+    font-size: clamp(1.8rem, 5vw, 2.6rem);
+    margin-bottom: 8px;
+  }
+
+  .start-screen p {
+    margin: 0 auto 18px;
+    color: var(--muted);
+    line-height: 1.5;
+    max-width: 42ch;
+  }
+
+  .start-options {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 18px;
+  }
+
+  .start-options button {
+    padding: 16px;
+    font-size: 1.05rem;
+  }
+
+  .mode-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 11px;
+    border-radius: 999px;
+    background: #fff6d6;
+    border: 1px solid rgba(168, 126, 22, .18);
+    color: #3c3526;
+    font-weight: 850;
+  }
+
+  @media (max-width: 840px) {
+    body { align-items: start; }
+    .app { grid-template-columns: 1fr; }
+    .side { grid-template-columns: 1fr; }
+    #board { width: min(92vw, 574px); gap: 4px; padding: 7px; }
+    .cell { border-radius: 9px; }
+    .topbar { align-items: flex-start; flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+  <section id="startScreen" class="card start-screen">
+    <h1>Word Pento/Tetro</h1>
+    <p>Choose which piece set you want to use. After you pick, the board will open and the game begins.</p>
+    <div class="start-options" role="group" aria-label="Choose piece mode">
+      <button type="button" data-start-mode="tetrominoes">Tetrominoes Only</button>
+      <button type="button" data-start-mode="pentominoes" class="secondary">Pentominoes Only</button>
+      <button type="button" data-start-mode="both">Both</button>
+    </div>
+  </section>
+
+  <main id="appShell" class="app hidden">
+    <section class="card board-card">
+      <div class="topbar">
+        <h1>Word Pento/Tetro</h1>
+        <div class="topbar-actions">
+          <button id="topNewGameBtn" class="top-new-game" type="button">New Game</button>
+          <div class="score-pill">Score <strong id="score">0</strong></div>
+        </div>
+      </div>
+      <div class="board-wrap">
+        <div id="board" aria-label="8 by 8 word game board"></div>
+      </div>
+    </section>
+
+    <aside class="card side">
+      <section class="panel">
+        <h2>Mode</h2>
+        <div id="selectedModeLabel" class="mode-pill">Both</div>
+      </section>
+
+      <section class="panel">
+        <h2>High Scores</h2>
+        <ol id="highScoreList" class="high-score-list"><li>No scores yet.</li></ol>
+      </section>
+
+      <section class="panel">
+        <h2>Current Piece</h2>
+        <div id="currentPiece" class="piece-holder"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Next Two</h2>
+        <div class="next-row">
+          <div id="nextOne" class="mini-holder"></div>
+          <div id="nextTwo" class="mini-holder"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="buttons">
+          <button id="rotateLeftBtn">A ⟲</button>
+          <button id="rotateRightBtn" class="secondary">S ⟳</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Words</h2>
+        <p id="wordLog" class="word-log">Make words of 3+ letters. Piece-only words are avoided; score by connecting with letters already on the board.</p>
+      </section>
+
+      <section class="panel status-panel">
+        <p id="status" class="status">Click/tap the board to place the piece. Hover shows whether it fits. Keyboard: <span class="kbd">A</span> counterclockwise, <span class="kbd">S</span> clockwise.</p>
+      </section>
+
+      <section class="panel">
+        <p id="dictionaryStatus" class="dictionary-line">Loading dictionary…</p>
+      </section>
+    </aside>
+  </main>
+
+  <div id="gameOver" class="overlay" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
+    <div class="modal">
+      <h2 id="gameOverTitle">No More Moves</h2>
+      <p>The current piece can’t fit anywhere on the board.</p>
+      <p id="gameOverScore">Final score: 0</p>
+      <button id="newGameBtn">Choose Mode</button>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const SIZE = 8;
+  const MIN_WORD = 3;
+  const DICTIONARY_URL = 'https://raw.githubusercontent.com/jwesters/website/main/Misc_Games/WordGames/Scrabble100/dictionary.txt';
+
+  const COLORS = [
+    '#ff8585', '#ffc857', '#73d677', '#73c7f2', '#b890ff',
+    '#ff9cc7', '#76e3c4', '#91a7ff', '#ffe071', '#ff996e', '#83d8ff'
+  ];
+
+  const SCRABBLE = {
+    A: { count: 9, value: 1 }, B: { count: 2, value: 3 }, C: { count: 2, value: 3 },
+    D: { count: 4, value: 2 }, E: { count: 12, value: 1 }, F: { count: 2, value: 4 },
+    G: { count: 3, value: 2 }, H: { count: 2, value: 4 }, I: { count: 9, value: 1 },
+    J: { count: 1, value: 8 }, K: { count: 1, value: 5 }, L: { count: 4, value: 1 },
+    M: { count: 2, value: 3 }, N: { count: 6, value: 1 }, O: { count: 8, value: 1 },
+    P: { count: 2, value: 3 }, Q: { count: 1, value: 10 }, R: { count: 6, value: 1 },
+    S: { count: 4, value: 1 }, T: { count: 6, value: 1 }, U: { count: 4, value: 1 },
+    V: { count: 2, value: 4 }, W: { count: 2, value: 4 }, X: { count: 1, value: 8 },
+    Y: { count: 2, value: 4 }, Z: { count: 1, value: 10 }
+  };
+
+  const LETTER_BAG = Object.entries(SCRABBLE).flatMap(([letter, data]) => Array(data.count).fill(letter));
+
+  const FALLBACK_WORDS = `
+    AAH AAL AAS ABA ABS ACE ACT ADD ADO ADS ADZ AFF AFT AGE AGO AHA AID AIL AIM AIR AIS AIT ALA ALE ALL
+    ALT AMA AMI AMP AMU ANA AND ANE ANT ANY APE APP APT ARC ARE ARF ARK ARM ART ASH ASK ASP ATE ATT AUK AVA
+    AWE AWL AWN AXE AYE BAD BAG BAL BAM BAN BAR BAT BAY BED BEE BEG BEL BEN BET BID BIG BIN BIO BIT BIZ BOA
+    BOB BOD BOG BOO BOP BOW BOX BOY BRA BUB BUD BUG BUM BUN BUR BUS BUT BUY BYE CAB CAD CAM CAN CAP CAR CAT
+    CAW CEL CEP CHI CIG COB COD COG CON COO COP COT COW COX COY CRY CUB CUE CUP CUR CUT DAB DAD DAG DAM DAN
+    DAY DEE DEL DEN DEW DID DIE DIG DIM DIN DIP DOE DOG DON DOT DOW DRY DUB DUE DUG DUN DUO DYE EAR EAT EBB
+    EEL EGG EGO ELF ELM EME EMU END EON ERA ERG ERR EVE EWE EYE FAD FAN FAR FAT FAX FED FEE FEN FEW FEY FIG
+    FIN FIR FIT FIX FLU FLY FOE FOG FOP FOR FOX FRY FUN FUR GAB GAD GAG GAL GAM GAP GAS GAT GEL GEM GET GIG
+    GIN GIT GNU GOB GOD GOO GOT GUM GUN GUT GYM HAD HAG HAM HAS HAT HAW HAY HEM HEN HER HEW HEX HEY HID HIM
+    HIP HIS HIT HOB HOD HOE HOG HOP HOT HOW HUB HUE HUG HUM HUN HUT ICE ICK ILL IMP INK INN ION IRE IRK ITS
+    IVY JAB JAM JAR JAW JAY JET JIB JIG JOB JOG JOT JOY JUG JUT KAY KEG KEN KEY KID KIN KIT KOI LAB LAD LAG
+    LAM LAP LAW LAY LED LEE LEG LET LEV LID LIE LIN LIP LIT LOB LOG LOP LOT LOW LUG LYE MAD MAE MAN MAP MAR
+    MAT MAW MAY MED MEG MEN MET MEW MID MIG MIL MIM MIX MOB MOD MOM MOO MOP MOT MOW MUD MUG MUM NAB NAG NAM
+    NAP NAY NET NEW NIB NIL NIP NIT NIX NOD NOR NOT NOW NUB NUN NUT OAF OAK OAR OAT ODD ODE OFF OIL OLD ONE
+    OOH OOT OPE OPT ORB ORE OUR OUT OVA OWE OWL OWN PAC PAD PAL PAM PAN PAP PAR PAT PAW PAX PAY PEA PEG PEN
+    PEP PER PET PEW PHI PIC PIE PIN PIP PIT PIX PLY POD POI POP POT POW PRO PRY PUB PUG PUN PUP PUT QAT QIS
+    RAD RAG RAH RAM RAN RAP RAT RAW RAY RED REF REG REI REM REP RES RET REV REX RIB RID RIG RIM RIP ROB ROC
+    ROD ROE ROM ROT ROW RUB RUE RUG RUM RUN RUT RYE SAB SAC SAD SAG SAL SAP SAT SAW SAX SAY SEA SEC SEE SEG
+    SEN SET SEW SEX SHE SHY SIB SIC SIN SIP SIR SIS SIT SIX SKI SKY SLY SOB SOD SOL SON SOP SOT SOW SOY SPA
+    SPY SRI STY SUB SUE SUM SUN SUP TAB TAD TAG TAM TAN TAP TAR TAT TAW TAX TEA TEE TEN THE THY TIC TIE TIL
+    TIN TIP TOE TOG TOM TON TOO TOP TOR TOW TOY TRY TUB TUG TUN TUT TUX TWO UDO UGH UKE ULU UMM URN USE UTA
+    VAC VAN VAR VAT VEE VET VIA VIE VIG VIM VIS WAD WAG WAN WAR WAS WAT WAX WAY WEB WED WEE WEN WET WHO WHY
+    WIG WIN WIT WOE WOK WON WOO WOW WRY WYE YAK YAM YAP YAW YAY YEA YEN YEP YES YET YIN YIP YON YOU ZAG ZAP
+    ZED ZEE ZEN ZIG ZIP ZIT ZOO
+    ABLE ACID ACRE ACTS AGES AIDE AILS AIMS AIRS ALAS ALES AMEN AMID ANTS APES ARCH AREA ARKS ARMS ARTS ASKS
+    ATOM AUNT AURA AWAY AXES BABY BACK BAKE BALL BAND BANK BARK BARN BASE BATH BEAM BEAN BEAR BEAT BEDS BELL
+    BEND BENT BEST BIRD BITE BITS BLOW BLUE BOAT BODY BOLD BONE BOOK BOOM BORN BOWL BURN BUSY CAFE CAKE CALL
+    CAMP CARD CARE CART CASE CASH CAST CATS CELL CHAT CHIP CITY CLAY CLUB COAL CODE COLD COME COOK COOL CORD
+    CORE CORN COST CROW CUBE CUTE DARK DATA DAWN DAYS DEAL DEAR DECK DEER DEEP DICE DIRT DISH DOCK DOES DOGS
+    DONE DOOR DOVE DRAW DROP DUST EACH EARN EAST EASY ECHO EDGE EGGS ELSE EVEN EVER FACE FACT FAIR FALL FARM
+    FAST FEED FEEL FEET FERN FIND FINE FIRE FISH FIVE FLAG FLAT FLOW FOOD FOOT FORK FORT FOUR FREE FROG FULL
+    GAME GATE GEMS GIFT GIRL GIVE GLOW GOAL GOAT GOLD GONE GOOD GRAB GRAY GROW HALF HAND HARD HARE HARM HATS
+    HAVE HEAD HEAR HEAT HELP HERE HIDE HIGH HILL HINT HOLD HOME HOPE HORN HOST HOUR HUGE IDEA IDLE INCH INTO
+    IRON JACK JAZZ JOKE JUMP JUST KEEP KEPT KICK KIND KING KITE KNEW KNOT KNOW LACE LACK LAKE LAMP LAND LANE
+    LAST LATE LAWN LEAD LEAF LEFT LENS LIFE LIFT LIKE LIME LINE LION LIST LIVE LOCK LONG LOOK LORD LOST LOVE
+    LUCK MADE MAIL MAKE MANY MARK MARS MASK MATE MATH MEAL MEAN MEAT MEET MILD MILE MILK MIND MINE MINT MISS
+    MOON MORE MOST MOVE MUCH NAME NEAR NEAT NEST NEWS NICE NINE NODE NOON NOTE OATS ODDS ONCE ONLY OPEN ORAL
+    OVER OWNS PACK PAGE PAIR PARK PART PAST PATH PEAR PICK PILE PINE PINK PLAN PLAY POND POOL PORT POST POUR
+    PULL PUSH QUAD QUIT RACE RAIN RANK READ REAL REST RICE RICH RIDE RING RISE ROAD ROCK ROLL ROPE ROSE ROWS
+    SAFE SAND SAVE SEAL SEAT SEED SEEN SEND SHIP SHOE SHOP SHOW SICK SIDE SIGN SING SINK SITE SIZE SLAB SLOW
+    SNOW SOAP SOFT SOIL SOME SONG SOON SORT SOUP SPIN STAR STAY STEM STEP STOP SUCH SURE SWIM TAIL TAKE TALE
+    TALL TANK TASK TEAM TENT TEST THAN THAT THEM THEN THIN THIS TIDE TILE TIME TINY TONE TOOL TOWN TREE TRIP
+    TURN TWIN UNIT USED USER VASE VERY VIEW VINE WAIT WALK WALL WANT WARM WAVE WEAR WENT WEST WHAT WHEN WIDE
+    WILD WIND WING WIRE WISH WITH WORD WORK WORM YARD YEAR ZERO ZONE
+    ABOUT ABOVE ACTOR AFTER AGAIN AGILE ALARM ALBUM ALIVE ALLOW ALONE ALONG ALTER AMBER ANGEL ANGER APPLE APPLY
+    ARENA ARGUE ARISE ARRAY ASIDE AUDIO AVOID AWAKE BASIC BEACH BEARD BEAST BEGIN BELOW BENCH BERRY BIRTH BLACK
+    BLANK BLEND BLOCK BLOOM BOARD BRAIN BREAD BRICK BRING BROAD BROWN BRUSH BUILD CANDY CARRY CHAIR CHARM CHART
+    CHECK CHEER CHEST CHILD CLEAN CLEAR CLIMB CLOCK CLOUD COAST COLOR COULD COUNT COURT COVER CRAFT CRANE CREAM
+    CROWN DANCE DEPTH DREAM DRINK DRIVE EARLY EARTH EIGHT EMPTY ENJOY ENTER EQUAL EVENT EVERY FIELD FINAL FIRST
+    FLAME FLOOR FLOUR FOCUS FORCE FOUND FRAME FRESH FRONT FRUIT GIANT GLASS GLOVE GRACE GRADE GRAND GRAPE GRASS
+    GREAT GREEN GROUP GUARD GUESS HAPPY HEART HEAVY HORSE HOUSE HUMAN IMAGE JUICE KNIFE LARGE LAUGH LAYER LEARN
+    LIGHT LIMIT LUNCH MAGIC MAJOR MATCH METAL MONEY MONTH MOTOR MOUSE MUSIC NEVER NIGHT NORTH OCEAN OFTEN ORDER
+    OTHER PAPER PARTY PEACE PHONE PIECE PILOT PLACE PLAIN PLANT PLATE POINT POWER PRESS PRICE PRIDE PRINT PRIZE
+    PROOF QUICK QUIET RADIO RAISE RANGE READY RIGHT RIVER ROBOT ROUGH ROUND ROUTE SCALE SCORE SHAPE SHARE SHEEP
+    SHEET SHELF SHELL SHIFT SHINE SHIRT SHORT SKILL SMALL SMILE SOUND SOUTH SPACE SPEAK SPEED SPELL SPEND SPORT
+    STAGE STAND START STEAM STEEL STILL STONE STORE STORY STYLE SUGAR TABLE TEACH THANK THERE THESE THING THINK
+    THREE THROW TIGER TODAY TOTAL TOUCH TOWER TRAIN TRUCK UNDER VALUE VIDEO WATER WHERE WHICH WHITE WHOLE WOMAN
+    WORLD WOULD WRITE WRONG YOUNG
+    ANIMAL ANSWER AROUND AUTHOR BETTER BOTTLE BRIGHT BUTTON CAMERA CANADA CASTLE CENTER CHANGE CHARGE CHOICE
+    CIRCLE COMMON CREATE DESIGN DOUBLE ENERGY ENOUGH FAMILY FATHER FLOWER FRIEND FUTURE GARDEN GOLDEN GROWTH
+    LETTER LITTLE MARKET MATTER MEMORY MIDDLE MINUTE MODERN MOTHER NUMBER ORANGE PEOPLE PERIOD PLAYER POCKET
+    PUZZLE RANDOM READER REASON RESULT SCHOOL SCREEN SECOND SECRET SIMPLE SQUARE STRONG STUDENT SUMMER SYSTEM
+    TEACHER THOUGHT TICKET TURTLE WINDOW WINTER WONDER WORKER WRITER
+  `;
+
+  const BASE_SHAPES = [
+    { name: 'Tetro I', cells: [[0,0],[1,0],[2,0],[3,0]] },
+    { name: 'Tetro O', cells: [[0,0],[1,0],[0,1],[1,1]] },
+    { name: 'Tetro T', cells: [[0,0],[1,0],[2,0],[1,1]] },
+    { name: 'Tetro L', cells: [[0,0],[0,1],[0,2],[1,2]] },
+    { name: 'Tetro S', cells: [[1,0],[2,0],[0,1],[1,1]] },
+    { name: 'Pento F', cells: [[1,0],[2,0],[0,1],[1,1],[1,2]] },
+    { name: 'Pento I', cells: [[0,0],[0,1],[0,2],[0,3],[0,4]] },
+    { name: 'Pento L', cells: [[0,0],[0,1],[0,2],[0,3],[1,3]] },
+    { name: 'Pento P', cells: [[0,0],[1,0],[0,1],[1,1],[0,2]] },
+    { name: 'Pento N', cells: [[1,0],[2,0],[0,1],[1,1],[0,2]] },
+    { name: 'Pento T', cells: [[0,0],[1,0],[2,0],[1,1],[1,2]] },
+    { name: 'Pento U', cells: [[0,0],[2,0],[0,1],[1,1],[2,1]] },
+    { name: 'Pento V', cells: [[0,0],[0,1],[0,2],[1,2],[2,2]] },
+    { name: 'Pento W', cells: [[0,0],[0,1],[1,1],[1,2],[2,2]] },
+    { name: 'Pento X', cells: [[1,0],[0,1],[1,1],[2,1],[1,2]] },
+    { name: 'Pento Y', cells: [[0,0],[0,1],[0,2],[0,3],[1,1]] },
+    { name: 'Pento Z', cells: [[0,0],[1,0],[1,1],[1,2],[2,2]] }
+  ];
+
+  const DIRECTIONS = [
+    { dx: 1, dy: 0, label: '→' },
+    { dx: 0, dy: 1, label: '↓' },
+    { dx: 1, dy: 1, label: '↘' },
+    { dx: -1, dy: 1, label: '↙' }
+  ];
+
+  const startScreenEl = document.getElementById('startScreen');
+  const appShellEl = document.getElementById('appShell');
+  const boardEl = document.getElementById('board');
+  const currentPieceEl = document.getElementById('currentPiece');
+  const nextOneEl = document.getElementById('nextOne');
+  const nextTwoEl = document.getElementById('nextTwo');
+  const rotateLeftBtn = document.getElementById('rotateLeftBtn');
+  const rotateRightBtn = document.getElementById('rotateRightBtn');
+  const statusEl = document.getElementById('status');
+  const wordLogEl = document.getElementById('wordLog');
+  const scoreEl = document.getElementById('score');
+  const dictionaryStatusEl = document.getElementById('dictionaryStatus');
+  const overlay = document.getElementById('gameOver');
+  const newGameBtn = document.getElementById('newGameBtn');
+  const topNewGameBtn = document.getElementById('topNewGameBtn');
+  const gameOverScoreEl = document.getElementById('gameOverScore');
+  const selectedModeLabelEl = document.getElementById('selectedModeLabel');
+  const highScoreListEl = document.getElementById('highScoreList');
+  const startModeBtns = document.querySelectorAll('[data-start-mode]');
+
+  let board = [];
+  let queue = [];
+  let hoverCell = null;
+  let score = 0;
+  let placementId = 0;
+  let shapeMode = 'both';
+  let clearAnimationBusy = false;
+  let gameEnded = false;
+  let boardListenersBound = false;
+  let dictionary = parseWords(FALLBACK_WORDS);
+  let dictionaryName = 'starter list';
+
+  function parseWords(text) {
+    const found = new Set();
+    const matches = String(text || '').toUpperCase().match(/[A-Z]+/g) || [];
+    for (const word of matches) {
+      if (word.length >= MIN_WORD) found.add(word);
+    }
+    return found;
+  }
+
+  async function loadDictionary() {
+    dictionaryStatusEl.textContent = 'Loading GitHub dictionary…';
+    try {
+      const response = await fetch(DICTIONARY_URL, { cache: 'force-cache' });
+      if (!response.ok) throw new Error('Dictionary request failed.');
+      const text = await response.text();
+      const loaded = parseWords(text);
+      if (loaded.size < 1000) throw new Error('Dictionary looked too small.');
+      dictionary = loaded;
+      dictionaryName = 'GitHub dictionary';
+      dictionaryStatusEl.textContent = `${dictionary.size.toLocaleString()} words loaded.`;
+      refreshQueueLetters();
+    } catch (error) {
+      dictionaryName = 'starter list';
+      dictionaryStatusEl.textContent = 'Using starter word list. GitHub dictionary could not load from this browser.';
+    }
+  }
+
+  function normalizeCoords(cells) {
+    const minX = Math.min(...cells.map(c => c[0]));
+    const minY = Math.min(...cells.map(c => c[1]));
+    return cells.map(([x,y]) => [x - minX, y - minY])
+      .sort((a,b) => a[1] - b[1] || a[0] - b[0]);
+  }
+
+  function normalizeBlocks(blocks) {
+    const minX = Math.min(...blocks.map(c => c.x));
+    const minY = Math.min(...blocks.map(c => c.y));
+    return blocks.map(block => ({ ...block, x: block.x - minX, y: block.y - minY }))
+      .sort((a,b) => a.y - b.y || a.x - b.x);
+  }
+
+  function rotateCoordsCW(cells) {
+    return normalizeCoords(cells.map(([x,y]) => [-y, x]));
+  }
+
+  function flipCoords(cells) {
+    return normalizeCoords(cells.map(([x,y]) => [-x, y]));
+  }
+
+  function rotateBlocksCCW(blocks) {
+    return normalizeBlocks(blocks.map(block => ({ ...block, x: block.y, y: -block.x })));
+  }
+
+  function rotateBlocksCW(blocks) {
+    return normalizeBlocks(blocks.map(block => ({ ...block, x: -block.y, y: block.x })));
+  }
+
+  function shapeKey(blocks) {
+    return normalizeBlocks(blocks).map(c => `${c.x},${c.y}`).join('|');
+  }
+
+  function randomColor() {
+    return COLORS[Math.floor(Math.random() * COLORS.length)];
+  }
+
+  function randomLetter() {
+    return LETTER_BAG[Math.floor(Math.random() * LETTER_BAG.length)];
+  }
+
+  function letterValue(letter) {
+    return SCRABBLE[letter]?.value || 0;
+  }
+
+  function buildLetteredBlocks(coords, color, forcedLetters = null) {
+    return normalizeBlocks(coords.map(([x, y], index) => {
+      const letter = forcedLetters ? forcedLetters[index % forcedLetters.length] : randomLetter();
+      return { x, y, letter, value: letterValue(letter), color };
+    }));
+  }
+
+  function pieceContainsWord(blocks) {
+    const normalized = normalizeBlocks(blocks);
+    const dims = dimensions(normalized);
+    const byCoord = new Map(normalized.map(block => [`${block.x},${block.y}`, block]));
+
+    for (const direction of DIRECTIONS) {
+      for (let y = 0; y < dims.h; y++) {
+        for (let x = 0; x < dims.w; x++) {
+          let word = '';
+
+          for (let step = 0; step < Math.max(dims.w, dims.h); step++) {
+            const cx = x + direction.dx * step;
+            const cy = y + direction.dy * step;
+            const block = byCoord.get(`${cx},${cy}`);
+            if (!block) break;
+
+            word += block.letter;
+            if (word.length >= MIN_WORD && dictionary.has(word)) return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
+  function pieceSafeInPlayerRotations(blocks) {
+    let working = normalizeBlocks(blocks);
+    for (let r = 0; r < 4; r++) {
+      if (pieceContainsWord(working)) return false;
+      working = rotateBlocksCW(working);
+    }
+    return true;
+  }
+
+  function safeLetteredBlocks(coords, color) {
+    for (let attempt = 0; attempt < 1500; attempt++) {
+      const blocks = buildLetteredBlocks(coords, color);
+      if (pieceSafeInPlayerRotations(blocks)) return blocks;
+    }
+
+    const fallbackLetters = ['Q', 'Z', 'X', 'J', 'V', 'K', 'F', 'W'];
+    return buildLetteredBlocks(coords, color, fallbackLetters);
+  }
+
+  function reletterPiece(piece) {
+    const coords = normalizeBlocks(piece.blocks).map(block => [block.x, block.y]);
+    return { ...piece, blocks: safeLetteredBlocks(coords, piece.color) };
+  }
+
+  function refreshQueueLetters() {
+    if (!queue.length) return;
+    queue = queue.map(piece => reletterPiece(piece));
+    renderAll();
+  }
+
+  function availableShapes() {
+    if (shapeMode === 'tetrominoes') return BASE_SHAPES.filter(shape => shape.name.startsWith('Tetro'));
+    if (shapeMode === 'pentominoes') return BASE_SHAPES.filter(shape => shape.name.startsWith('Pento'));
+    return BASE_SHAPES;
+  }
+
+  function modeLabel() {
+    if (shapeMode === 'tetrominoes') return 'Tetrominoes only';
+    if (shapeMode === 'pentominoes') return 'Pentominoes only';
+    return 'Tetrominoes + Pentominoes';
+  }
+
+  function updateModeUI() {
+    if (selectedModeLabelEl) selectedModeLabelEl.textContent = modeLabel();
+    renderHighScores();
+  }
+
+  const HIGH_SCORE_KEY = 'wordPentoTetroHighScoresV1';
+  const HIGH_SCORE_MODES = ['tetrominoes', 'pentominoes', 'both'];
+
+  function blankHighScores() {
+    return { tetrominoes: [], pentominoes: [], both: [] };
+  }
+
+  function loadHighScores() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(HIGH_SCORE_KEY) || '{}');
+      const scores = blankHighScores();
+      HIGH_SCORE_MODES.forEach(mode => {
+        if (Array.isArray(parsed[mode])) {
+          scores[mode] = parsed[mode]
+            .filter(item => Number.isFinite(Number(item.score)))
+            .map(item => ({ score: Number(item.score), at: Number(item.at) || Date.now(), date: item.date || '' }))
+            .sort((a, b) => b.score - a.score || a.at - b.at)
+            .slice(0, 3);
+        }
+      });
+      return scores;
+    } catch (error) {
+      return blankHighScores();
+    }
+  }
+
+  function saveHighScores(scores) {
+    localStorage.setItem(HIGH_SCORE_KEY, JSON.stringify(scores));
+  }
+
+  function formatScoreDate(timestamp) {
+    return new Date(timestamp).toLocaleString([], {
+      year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+    });
+  }
+
+  function renderHighScores() {
+    if (!highScoreListEl) return;
+    const scores = loadHighScores()[shapeMode] || [];
+    highScoreListEl.innerHTML = '';
+    if (!scores.length) {
+      const empty = document.createElement('li');
+      empty.textContent = 'No scores yet.';
+      highScoreListEl.appendChild(empty);
+      return;
+    }
+    scores.forEach((item, index) => {
+      const li = document.createElement('li');
+      const scoreText = document.createElement('strong');
+      scoreText.textContent = `#${index + 1} — ${item.score} point${item.score === 1 ? '' : 's'}`;
+      const dateText = document.createElement('span');
+      dateText.textContent = item.date || formatScoreDate(item.at);
+      li.append(scoreText, dateText);
+      highScoreListEl.appendChild(li);
+    });
+  }
+
+  function recordHighScore() {
+    const scores = loadHighScores();
+    const at = Date.now();
+    const entry = { score, at, date: formatScoreDate(at) };
+    scores[shapeMode] = [...(scores[shapeMode] || []), entry]
+      .sort((a, b) => b.score - a.score || a.at - b.at)
+      .slice(0, 3);
+    saveHighScores(scores);
+    renderHighScores();
+  }
+
+  function endGame() {
+    if (gameEnded) return;
+    gameEnded = true;
+    recordHighScore();
+    if (gameOverScoreEl) gameOverScoreEl.textContent = `Final score: ${score}`;
+    statusEl.textContent = 'No moves left for the current piece.';
+    window.setTimeout(() => overlay.classList.add('show'), 220);
+  }
+
+  function showStartScreen() {
+    overlay.classList.remove('show');
+    appShellEl.classList.add('hidden');
+    startScreenEl.classList.remove('hidden');
+    hoverCell = null;
+  }
+
+  function startWithMode(mode) {
+    shapeMode = mode;
+    startScreenEl.classList.add('hidden');
+    appShellEl.classList.remove('hidden');
+    newGame();
+  }
+
+  function randomPiece() {
+    const choices = availableShapes();
+    const base = choices[Math.floor(Math.random() * choices.length)];
+    let coords = normalizeCoords(base.cells);
+
+    if (Math.random() < .5) coords = flipCoords(coords);
+    const turns = Math.floor(Math.random() * 4);
+    for (let i = 0; i < turns; i++) coords = rotateCoordsCW(coords);
+
+    const color = randomColor();
+    return { name: base.name, color, blocks: safeLetteredBlocks(coords, color) };
+  }
+
+  function initBoard() {
+    board = Array.from({ length: SIZE }, () => Array.from({ length: SIZE }, () => null));
+    boardEl.innerHTML = '';
+
+    for (let y = 0; y < SIZE; y++) {
+      for (let x = 0; x < SIZE; x++) {
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        cell.className = 'cell';
+        cell.dataset.x = x;
+        cell.dataset.y = y;
+        cell.setAttribute('aria-label', `Board cell ${x + 1}, ${y + 1}`);
+        cell.addEventListener('mouseenter', () => {
+          hoverCell = { x, y };
+          renderBoard();
+        });
+        cell.addEventListener('focus', () => {
+          hoverCell = { x, y };
+          renderBoard();
+        });
+        boardEl.appendChild(cell);
+      }
+    }
+
+    if (!boardListenersBound) {
+      function cellFromPointer(event) {
+        const target = event.target.closest('.cell');
+        if (!target || !boardEl.contains(target)) return null;
+        return {
+          x: Number(target.dataset.x),
+          y: Number(target.dataset.y)
+        };
+      }
+
+      boardEl.addEventListener('pointermove', (event) => {
+        if (clearAnimationBusy) return;
+        const cell = cellFromPointer(event);
+        if (!cell) return;
+        if (!hoverCell || hoverCell.x !== cell.x || hoverCell.y !== cell.y) {
+          hoverCell = cell;
+          renderBoard();
+        }
+      });
+
+      boardEl.addEventListener('pointerdown', (event) => {
+        if (clearAnimationBusy) return;
+        if (event.button !== 0) return;
+        const cell = cellFromPointer(event);
+        if (!cell) return;
+        event.preventDefault();
+        hoverCell = cell;
+        placeAt(cell.x, cell.y);
+      });
+
+      boardEl.addEventListener('mouseleave', () => {
+        if (clearAnimationBusy) return;
+        hoverCell = null;
+        renderBoard();
+      });
+
+      boardListenersBound = true;
+    }
+  }
+
+  function ensureQueue() {
+    while (queue.length < 3) queue.push(randomPiece());
+  }
+
+  function current() {
+    return queue[0];
+  }
+
+  function dimensions(blocks) {
+    return {
+      w: Math.max(...blocks.map(c => c.x)) + 1,
+      h: Math.max(...blocks.map(c => c.y)) + 1
+    };
+  }
+
+  function canPlace(piece, anchorX, anchorY) {
+    return piece.blocks.every(block => {
+      const x = anchorX + block.x;
+      const y = anchorY + block.y;
+      return x >= 0 && x < SIZE && y >= 0 && y < SIZE && !board[y][x];
+    });
+  }
+
+  function uniqueOrientations(blocks) {
+    const found = new Map();
+    let base = normalizeBlocks(blocks);
+
+    for (let f = 0; f < 2; f++) {
+      let working = f === 0
+        ? normalizeBlocks(base)
+        : normalizeBlocks(base.map(block => ({ ...block, x: -block.x, y: block.y })));
+
+      for (let r = 0; r < 4; r++) {
+        const n = normalizeBlocks(working);
+        found.set(shapeKey(n), n);
+        working = rotateBlocksCW(working);
+      }
+    }
+    return [...found.values()];
+  }
+
+  function hasAnyMove(piece = current()) {
+    if (!piece) return false;
+    const variants = uniqueOrientations(piece.blocks);
+    return variants.some(blocks => {
+      const testPiece = { ...piece, blocks };
+      for (let y = 0; y < SIZE; y++) {
+        for (let x = 0; x < SIZE; x++) {
+          if (canPlace(testPiece, x, y)) return true;
+        }
+      }
+      return false;
+    });
+  }
+
+  function inBounds(x, y) {
+    return x >= 0 && x < SIZE && y >= 0 && y < SIZE;
+  }
+
+  function findWordsForPlacement(pid) {
+    const candidates = new Map();
+
+    for (const direction of DIRECTIONS) {
+      for (let y = 0; y < SIZE; y++) {
+        for (let x = 0; x < SIZE; x++) {
+          let word = '';
+          let points = 0;
+          const coords = [];
+          let usesPlaced = false;
+          let usesExisting = false;
+
+          for (let step = 0; step < SIZE; step++) {
+            const cx = x + direction.dx * step;
+            const cy = y + direction.dy * step;
+            if (!inBounds(cx, cy) || !board[cy][cx]) break;
+
+            const tile = board[cy][cx];
+            word += tile.letter;
+            points += tile.value;
+            coords.push({ x: cx, y: cy });
+            if (tile.placedId === pid) usesPlaced = true;
+            else usesExisting = true;
+
+            if (word.length >= MIN_WORD && usesPlaced && usesExisting && dictionary.has(word)) {
+              const coordKey = coords.map(c => `${c.x},${c.y}`).join('|');
+              candidates.set(`${word}:${coordKey}`, {
+                word,
+                points,
+                coords: coords.map(c => ({ ...c })),
+                direction: direction.label
+              });
+            }
+          }
+        }
+      }
+    }
+
+    return [...candidates.values()].sort((a, b) => {
+      if (b.word.length !== a.word.length) return b.word.length - a.word.length;
+      if (b.points !== a.points) return b.points - a.points;
+      return a.word.localeCompare(b.word);
+    });
+  }
+
+  function placeAt(anchorX, anchorY) {
+    if (clearAnimationBusy) return;
+    const piece = current();
+    if (!piece) return;
+
+    if (!canPlace(piece, anchorX, anchorY)) {
+      statusEl.textContent = 'That spot does not fit. Try rotating or picking another board position.';
+      renderBoard();
+      return;
+    }
+
+    const pid = `p${++placementId}`;
+
+    piece.blocks.forEach(block => {
+      const x = anchorX + block.x;
+      const y = anchorY + block.y;
+      board[y][x] = {
+        letter: block.letter,
+        value: block.value,
+        color: piece.color,
+        placedId: pid
+      };
+    });
+
+    const words = findWordsForPlacement(pid);
+    const tilesToClear = new Map();
+    const pointsGained = words.reduce((total, item) => total + item.points, 0);
+
+    words.forEach(item => {
+      item.coords.forEach(coord => tilesToClear.set(`${coord.x},${coord.y}`, coord));
+    });
+
+    if (words.length) {
+      score += pointsGained;
+      scoreEl.textContent = score;
+      showWordLog(words, pointsGained);
+      renderBoard();
+      queue.shift();
+      ensureQueue();
+      hoverCell = null;
+      renderPieces();
+      statusEl.textContent = `${words.length} word${words.length === 1 ? '' : 's'} cleared for ${pointsGained} point${pointsGained === 1 ? '' : 's'}.`;
+      flashAndClear([...tilesToClear.values()]);
+      return;
+    }
+
+    wordLogEl.textContent = 'No word this move.';
+    queue.shift();
+    ensureQueue();
+    hoverCell = null;
+    renderAll();
+
+    if (!hasAnyMove()) {
+      endGame();
+    } else {
+      statusEl.textContent = '';
+    }
+  }
+
+  function flashAndClear(coords) {
+    clearAnimationBusy = true;
+    coords.forEach(({ x, y }) => {
+      const target = boardEl.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+      if (target) target.classList.add('word-clear');
+    });
+
+    window.setTimeout(() => {
+      coords.forEach(({ x, y }) => { board[y][x] = null; });
+      clearAnimationBusy = false;
+      renderBoard();
+      if (!hasAnyMove()) {
+        endGame();
+      }
+    }, 340);
+  }
+
+  function showWordLog(words, pointsGained) {
+    wordLogEl.innerHTML = '';
+    const topWords = words.slice(0, 12);
+    topWords.forEach(item => {
+      const chip = document.createElement('span');
+      chip.className = 'word-chip';
+      chip.textContent = item.word;
+      const points = document.createElement('span');
+      points.textContent = `${item.direction} +${item.points}`;
+      chip.appendChild(points);
+      wordLogEl.appendChild(chip);
+    });
+
+    if (words.length > topWords.length) {
+      const more = document.createElement('span');
+      more.className = 'word-chip';
+      more.textContent = `+${words.length - topWords.length} more`;
+      wordLogEl.appendChild(more);
+    }
+
+    const total = document.createElement('div');
+    total.style.marginTop = '6px';
+    total.textContent = `Total this move: ${pointsGained}`;
+    wordLogEl.appendChild(total);
+  }
+
+  function rotateCurrentCCW() {
+    if (clearAnimationBusy) return;
+    const piece = current();
+    if (!piece) return;
+    piece.blocks = rotateBlocksCCW(piece.blocks);
+    renderAll();
+  }
+
+  function rotateCurrentCW() {
+    if (clearAnimationBusy) return;
+    const piece = current();
+    if (!piece) return;
+    piece.blocks = rotateBlocksCW(piece.blocks);
+    renderAll();
+  }
+
+  function addTileText(el, tile) {
+    el.textContent = '';
+    const letter = document.createElement('span');
+    letter.className = 'letter';
+    letter.textContent = tile.letter;
+    const value = document.createElement('span');
+    value.className = 'value';
+    value.textContent = tile.value;
+    el.append(letter, value);
+  }
+
+  function renderBoard() {
+    const cells = boardEl.querySelectorAll('.cell');
+    cells.forEach(cell => {
+      const x = Number(cell.dataset.x);
+      const y = Number(cell.dataset.y);
+      const tile = board[y][x];
+      cell.className = 'cell';
+      cell.style.background = '';
+      cell.textContent = '';
+
+      if (tile) {
+        cell.classList.add('filled');
+        cell.style.background = tile.color;
+        addTileText(cell, tile);
+      }
+    });
+
+    if (!hoverCell || !current()) return;
+
+    const piece = current();
+    const valid = canPlace(piece, hoverCell.x, hoverCell.y);
+    piece.blocks.forEach(block => {
+      const x = hoverCell.x + block.x;
+      const y = hoverCell.y + block.y;
+      if (!inBounds(x, y)) return;
+      const target = boardEl.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+      if (!target) return;
+
+      if (!board[y][x]) {
+        target.classList.add(valid ? 'ghost-good' : 'ghost-bad');
+        if (valid) addTileText(target, block);
+      } else {
+        target.classList.add('ghost-bad');
+      }
+    });
+  }
+
+  function renderPiece(container, piece, mini = false) {
+    container.innerHTML = '';
+    const dims = dimensions(piece.blocks);
+    const grid = document.createElement('div');
+    grid.className = 'piece-grid';
+    grid.style.gridTemplateColumns = `repeat(${dims.w}, ${mini ? '22px' : '34px'})`;
+    grid.style.gridTemplateRows = `repeat(${dims.h}, ${mini ? '22px' : '34px'})`;
+
+    const byCoord = new Map(piece.blocks.map(block => [`${block.x},${block.y}`, block]));
+    for (let y = 0; y < dims.h; y++) {
+      for (let x = 0; x < dims.w; x++) {
+        const cell = document.createElement('div');
+        cell.className = 'piece-cell';
+        const block = byCoord.get(`${x},${y}`);
+        if (block) {
+          cell.classList.add('block');
+          cell.style.background = piece.color;
+          addTileText(cell, block);
+        }
+        grid.appendChild(cell);
+      }
+    }
+    container.appendChild(grid);
+  }
+
+  function renderPieces() {
+    renderPiece(currentPieceEl, queue[0], false);
+    renderPiece(nextOneEl, queue[1], true);
+    renderPiece(nextTwoEl, queue[2], true);
+  }
+
+  function renderAll() {
+    renderBoard();
+    renderPieces();
+  }
+
+  function newGame() {
+    overlay.classList.remove('show');
+    clearAnimationBusy = false;
+    gameEnded = false;
+    hoverCell = null;
+    queue = [];
+    score = 0;
+    placementId = 0;
+    scoreEl.textContent = '0';
+    updateModeUI();
+    initBoard();
+    ensureQueue();
+    wordLogEl.textContent = 'Make words of 3+ letters. Piece-only words are avoided; score by connecting with letters already on the board.';
+    statusEl.textContent = '';
+    renderAll();
+  }
+
+  function confirmNewGame() {
+    if (window.confirm('Start a new game? Your current board will be lost.')) {
+      showStartScreen();
+    }
+  }
+
+  startModeBtns.forEach(button => {
+    button.addEventListener('click', () => startWithMode(button.dataset.startMode));
+  });
+  rotateLeftBtn.addEventListener('click', rotateCurrentCCW);
+  rotateRightBtn.addEventListener('click', rotateCurrentCW);
+  newGameBtn.addEventListener('click', showStartScreen);
+  topNewGameBtn.addEventListener('click', confirmNewGame);
+
+  document.addEventListener('keydown', (event) => {
+    const key = event.key.toLowerCase();
+    if (key === 'a') {
+      event.preventDefault();
+      rotateCurrentCCW();
+    }
+    if (key === 's') {
+      event.preventDefault();
+      rotateCurrentCW();
+    }
+  });
+
+  showStartScreen();
+  loadDictionary();
+})();
+</script>
+</body>
+</html>

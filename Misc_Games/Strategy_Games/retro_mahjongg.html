@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Mah Jongg</title>
+<style>
+  :root{
+    --blue:#05038d;
+    --blue2:#08099f;
+    --panel:#1015a4;
+    --panel2:#07077e;
+    --text:#f7fbff;
+    --muted:#c9ddff;
+    --tile-edge:#6d8396;
+    --tile-edge-dark:#2e455b;
+    --tile-face:#dce9ef;
+    --tile-face-hi:#f9fdff;
+    --tile-face-low:#aabdc8;
+    --gold:#ffdf31;
+    --green:#43ff6c;
+    --red:#ff3b4d;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:radial-gradient(circle at center,#1011ae 0,#05038d 58%,#01015e 100%);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;overflow:hidden;}
+  body{display:flex;align-items:center;justify-content:center;padding:10px;}
+  #app{width:100%;height:100%;display:flex;align-items:center;justify-content:center;}
+  #shell{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;width:min(100%,980px);}
+  #toolbar{
+    display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;
+    padding:8px 10px;border:1px solid rgba(255,255,255,.23);border-radius:16px;
+    background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.04));
+    box-shadow:0 18px 36px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.16);
+    backdrop-filter:blur(6px);
+  }
+  button{font:800 14px/1 Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:#fff;background:linear-gradient(180deg,#2440dc,#0d168e);border:1px solid rgba(255,255,255,.34);border-radius:11px;box-shadow:0 4px 0 #010044,0 12px 18px rgba(0,0,0,.22);padding:9px 13px;min-height:36px;cursor:pointer;transition:transform .08s ease,box-shadow .08s ease,background .12s ease;}
+  button:hover{background:linear-gradient(180deg,#3153ff,#111aa5)}
+  button:active{transform:translateY(3px);box-shadow:0 1px 0 #010044,0 8px 14px rgba(0,0,0,.2)}
+  button:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:0 4px 0 #010044,0 12px 18px rgba(0,0,0,.22)}
+  select{font:800 14px/1 Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:#fff;background:linear-gradient(180deg,#2440dc,#0d168e);border:1px solid rgba(255,255,255,.34);border-radius:11px;box-shadow:0 4px 0 #010044,0 12px 18px rgba(0,0,0,.22);padding:9px 13px;min-height:36px;cursor:pointer;outline:none;}
+  select:hover{background:linear-gradient(180deg,#3153ff,#111aa5)}
+  select option{color:#111;background:#edf3ff}
+  #stageWrap{position:relative;margin:0 auto;width:820px;height:446px;flex:0 0 auto;}
+  #stage{position:absolute;left:0;top:0;width:820px;height:446px;background:#05038d;overflow:hidden;transform-origin:top left;border-radius:8px;box-shadow:0 22px 60px rgba(0,0,0,.28), inset 0 0 0 1px rgba(255,255,255,.08);}
+  #board{position:absolute;left:92px;top:0;width:637px;height:446px;}
+  .stat{position:absolute;z-index:200000;font-weight:900;font-size:16px;line-height:1.05;text-shadow:2px 2px 0 #000;white-space:pre;text-align:left;user-select:none;pointer-events:none;font-family:"Courier New",monospace;letter-spacing:-.2px;padding:9px 6px;border-radius:10px;background:rgba(0,0,95,.20);}
+  #tilesStat{left:16px;top:185px;width:88px;text-align:center;}
+  #tilesLeft{display:block;margin-left:0;margin-top:8px;}
+  #timeStat{left:735px;top:302px;width:70px;text-align:center;}
+  #timer{display:block;margin-top:3px;}
+
+  .tile{position:absolute;width:45px;height:57px;border:0;padding:0;margin:0;background:transparent;box-shadow:none;min-height:0;display:block;touch-action:manipulation;transition:opacity .16s ease, transform .12s ease;}
+  .tileBody{position:absolute;inset:0;display:block;}
+  .tileBody::before{content:"";position:absolute;left:0;top:6px;width:39px;height:51px;border-radius:6px;background:linear-gradient(135deg,#8299ab,#5e768a);border:2px solid var(--tile-edge-dark);box-shadow:inset 2px 2px 0 rgba(255,255,255,.24),inset -3px -3px 0 rgba(0,0,0,.2);}
+  .face{position:absolute;left:5px;top:0;width:39px;height:52px;border-radius:6px;border:2px solid #24394b;background:linear-gradient(135deg,#f9fdff 0%,#dce9ef 50%,#aabdc8 100%);box-shadow:inset 2px 2px 0 rgba(255,255,255,.92),inset -4px -4px 0 rgba(86,116,137,.35),0 2px 0 rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+    .iconImg{width:31px;height:44px;display:block;object-fit:contain;image-rendering:auto;user-select:none;pointer-events:none;}
+  .face::after{content:"";position:absolute;inset:4px;border-radius:4px;border:1px solid rgba(43,64,82,.18);pointer-events:none;}
+  .free{cursor:pointer;}
+  .blocked{cursor:not-allowed;}
+  .blocked .face{opacity:.72;}
+  .free:hover .face{box-shadow:inset 2px 2px 0 rgba(255,255,255,.92),inset -4px -4px 0 rgba(86,116,137,.35),0 0 0 2px rgba(255,255,255,.30),0 5px 10px rgba(0,0,0,.22);}
+  .selected .face{box-shadow:inset 2px 2px 0 rgba(255,255,255,.92),inset -4px -4px 0 rgba(86,116,137,.35),0 0 0 3px var(--gold),0 0 16px rgba(255,223,49,.62);}
+  .hint .face{box-shadow:inset 2px 2px 0 rgba(255,255,255,.92),inset -4px -4px 0 rgba(86,116,137,.35),0 0 0 3px var(--green),0 0 16px rgba(67,255,108,.65);animation:pulse .7s ease-in-out infinite alternate;}
+  .bad .face{box-shadow:inset 2px 2px 0 rgba(255,255,255,.92),inset -4px -4px 0 rgba(86,116,137,.35),0 0 0 3px var(--red),0 0 16px rgba(255,59,77,.65);animation:shake .18s ease-in-out 2;}
+  .removed{opacity:0;pointer-events:none;transform:translateY(5px) scale(.96);}
+  @keyframes pulse{from{transform:translateY(0)}to{transform:translateY(-1px)}}
+  @keyframes shake{0%,100%{transform:translateX(0)}50%{transform:translateX(2px)}}
+
+  #message{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:300000;min-height:28px;max-width:560px;padding:6px 12px;border:1px solid rgba(255,255,255,.38);border-radius:10px;background:rgba(2,2,86,.92);color:#fff;font-weight:900;text-align:center;text-shadow:1px 1px 0 #000;opacity:0;pointer-events:none;transition:opacity .12s ease;box-shadow:0 8px 22px rgba(0,0,0,.28);}
+  #message.show{opacity:1;}
+  .shade{position:fixed;inset:0;z-index:999999;background:rgba(0,0,56,.72);display:none;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(4px);}
+  .shade.open{display:flex;}
+  .modal{width:min(520px,96vw);border:1px solid rgba(255,255,255,.32);border-radius:18px;background:linear-gradient(180deg,#1216a7,#050578);box-shadow:0 22px 70px rgba(0,0,0,.48);color:#fff;text-align:center;padding:20px;}
+  .modal h2{font-size:29px;line-height:1;margin:0 0 12px;text-shadow:2px 2px 0 #000;}
+  .modal p{font-size:17px;line-height:1.35;margin:8px 0 14px;}
+  .scores{display:inline-block;text-align:left;font-size:16px;line-height:1.6;margin:6px auto 12px;}
+  .modalBtns{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:8px;}
+  @media (max-width:700px){body{padding:6px;align-items:flex-start;}#shell{gap:7px;}#toolbar{padding:7px 8px;gap:7px;}button{font-size:12px;padding:8px 10px;min-height:32px;}#stage{border-radius:6px;}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="shell">
+    <div id="toolbar">
+      <button id="newBtn" type="button">New Game</button>
+      <button id="undoBtn" type="button">Undo</button>
+      <button id="hintBtn" type="button">Hint</button>
+      <button id="bestBtn" type="button">Best</button>
+      <select id="layoutSelect" aria-label="Tile layout">
+        <option value="turtle">Turtle</option>
+        <option value="butterfly">Butterfly</option>
+        <option value="castle">Castle</option>
+        <option value="fish">Fish</option>
+        <option value="fortress">Fortress</option>
+              <option value="spider">Spider</option>
+        <option value="dragon">Dragon</option>
+        <option value="cross">Cross</option>
+        <option value="stadium">Stadium</option>
+        <option value="hourglass">Hourglass</option>
+      </select>
+      <button id="aboutBtn" type="button">About</button>
+    </div>
+    <div id="stageWrap">
+      <div id="stage">
+        <div id="tilesStat" class="stat">Tiles Left:<span id="tilesLeft">144</span></div>
+        <div id="timeStat" class="stat">Time:<span id="timer">0:00</span></div>
+        <div id="board" aria-label="Mah Jongg board"></div>
+        <div id="message"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="modalShade" class="shade" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h2 id="modalTitle"></h2>
+    <div id="modalBody"></div>
+    <div id="modalBtns" class="modalBtns"></div>
+  </div>
+</div>
+<script>
+(() => {
+  'use strict';
+
+  const DESIGN_W = 820;
+  const DESIGN_H = 446;
+  const UNIT_X = 19.5;
+  const UNIT_Y = 26.5;
+  const BASE_X = -18;
+  const BASE_Y = 15;
+  const LIFT = 8;
+  const TOTAL_TILES = 144;
+  const STORE_KEY_PREFIX = 'retroMahJonggBestTimesByLayoutV4:';
+
+  const ICONS = [
+    {name:'Red Moon', src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAsCAYAAACdQGM6AAABKklEQVR4nO2YOxLDIAxEbU8uppOrSJEih0oqGBvQDy3jIlHnQPQWI4Tk/fl6f7ab7LgL/IffZo+sAyZSx4lZHNtnot0CekWE4DNQTYALrkGLQ6+w83wz4CKr1fZ35FOFe8DtHEtAmU/MMjzqNDK3jA/hEhgh4Px7B8+s2BLQPl/gSLAlpIOj7RxcIzvaicWyq7bAFzjSPOAKz6bNGXCFo8FeWxZwHiEQuASyBCyvZDQBELiVfiUBabiVQjVR7ltt5MhzeWhHLlxAes8x/JxHEojHwpUM8qY7Ig6R4ArXDJn3w/CVAircW3WizFW3rxAwrNs9AcVE0yLa/3ZJhphDzUJmu8RebWWUb5vRsaDP9Mi32aUi38BUi5wVIb3FpV8mrK2bgqPsdz+FfQGa7rHI25vOlgAAAABJRU5ErkJggg=='},
+    {name:'Purple Gate', src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAsCAYAAACdQGM6AAABSklEQVR4nO2YQRKCMAxFU8dLeBAXLjwEHlQP4cKFB+EYdePHEJOmpUidgWxKyycvSaeBIdwfz0iNbNcKvG74vubh8+k4XN8fz2XgHCrXSoIogktoR/1wfaNDcRDZe87BHfUD+BoPX2taoJPhEgwDGKO87wXgwqUDlJeI6BL60SjvewEk4XgQ2WCUAAmWeisAN3NeRm1eozfh3n4hS5TcqkbKXzJzK+q51lV4zjEh+mTrZW35NTOfc2+t+//1VsstOSy35Jp/NXPZs/necpg8z7n6JJw7IiKK7w8tjF6TydW7ex5jel6jV1+pPNIQ4CRSwERoSvVJOO/hiDyEwK7HmlI9zC07C16d1+iz2iscYPTaaK7e/YzSyjuX/r863JLmll07Uqlylui3DjeyrcPxTKx5jX7rcE1svXD3nP9i3YRP+bcy1da7503hL240yZ1E1ubEAAAAAElFTkSuQmCC'},
+    {name:'Battle Axe', src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAsCAYAAACdQGM6AAABcElEQVR4nNVWsbXCMAwUeRQUrENBQaGClk1YghXYhDaFihQpMtT/DeEZx7JOjkPgqsSWdZLOT9am64c/WgnNWsQT8tPxsDhhyNGkFj8VwKTsSwYR+26WJswFkrxwSwST8mne9tPxUBQMck4ljw96AkDPZjOvUf6cD1eTEeYqNm/kXT+YhrfdHnaK2Hb94G+vucw8WRMRbcNIUvqEVUGdswh1z++czya1qP0TEZ0f12QQwkznx1UlSv1Pyp7Tn0WovdzV/fZyJxZR92PfW8QoBWF+EVlyaP7cFy6XWW6vCvmIUXtNawSb0jEqLrU3a6JvGqM8CDMtyXoWeVh2b2ebTV4DReTxDde6noVkk0EQdrP2U2Wv+ar9zm23uplXe7fm2svFIm7t4cw9GaG23/+qeV8uVHtYc2tKGeHR3sy8tG8jZ2HNPXqitlnyOVMKka29qTmqdQxEezXzOVqjvkzNS/s2cnbVYaJ4eq2B3xujauEfFLWoIiYqfHkAAAAASUVORK5CYII='},
+    {name:'Red Gate', src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAsCAYAAACdQGM6AAABY0lEQVR4nO1YMbKCQAwNzi+8ggexoLD8pY0zXoOOS0jnNSwtf2lh4UE8hlaPCSHZZAdE50uaBfaRl5dlHwzF5Xp70Jti8S7i7yb/GXLzply3x5frbRpyTiqv5RSRRS5J9/WxPT41VXYRRXSrcWJOemz+qKp/e0VECgg9cCliPsp5bXmyyGUCrgyKLeVeAUly3Ag1GCWBJJZ4qwBXOW+jdj4Eb5J76wWVaLnVjVS+pHKr6rGuq+SeagTUeqqtvKbyMdfWmv+st1q05Yhoy7X8PXvdlGvVs3nI+Vw8bDfZdiS607YzeiYTxbtrjgTW+RC82nYr6YrOSeIoHm1X3+fcw1H5is6dY47JxSPctsvqPfU5+JC9IgFGz0ajePczSmvvWPjPcrgpw207fzrll8pQ/OxwbcwOh5gdbna4f0Me3udjBvZ5QXTo/RzY18uXF0CkPO2cuNqVLyXvrPmUxB3yqVrN4wldEgKkxlYlWAAAAABJRU5ErkJggg=='},
+    {name:'Green Gate', src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAsCAYAAACdQGM6AAABQ0lEQVR4nO1YuxGDMAy1clmJgiKrpGci91mFgoKhSBMZfyTLwhxwwWow8kNPH5AAGKd5MSfJ4yzie5M/ay5+9Z1bj9N8DLlPGus0TqjIE9LBW1u9E8U1D4iHlXh8z4mOdHQreUJsQmLnQLQvOSCSJwast/fpgmO8LzmQJXcXYjR4tBTa00d4zgE57YNwXoFnycUbBu9uTDmXjYy9fOSc1zvpSfKSx8QYs0YrRM3Z5SPfsbbc/rWmWnHKUQpTTtmnI497tiXWPk6Lz5L7hsw6JNywEJpMKV6seTydpGmlwUP8AsnVfFkWAwBZ4lI8OkTPc6+HIxAA3PrVd2Gf1+J/op5q0tOgwRe1VzSQTLlKvPwaRaV3J/y1OtyRIqfdEutcOhX41uGctA6H0jpc63B/Q07XXPoQrNVz5Fv+rWyV+9b8VPIvjfKxqndtl+UAAAAASUVORK5CYII='},
+    {name:'Flames', src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAsCAYAAACdQGM6AAACZUlEQVR4nO2XMY6jMBSG/0QpshIHIP1cwdIgkYID0Kw0xwjd0k2KSbdlKPcO23AAiiCxkq+QPhxgpN0uWxA/nh1YsGEmzb4qdvD7/vc/mziLUyWveFAsHwX+DwcAhM8CoRTal+Z4SqhcPOeSJjKgTmKEshWhxrOBn3UBVHkpJPjnUAr4x1ybd41SSNRJDGQ6q7X9BsOOWbObZj232r/mAHQ3V1xJKAXqRQwAjZDMmUvxFLyhRgwfOc3VSYzwKBo4V0lgANgB5a9ptvtXvYhztdd7zjcYgQEgm2Z7KSSB6ySmNtZJ4+6KP6x6zq2fsuE46Fzt4WdNfiTN90sAOKReM9oByIAf6wLnak8JpoRysoiiZuKW/5B6euWHL96daq0NDlEKiWIdtYzUw+v3dwCG7WpSPYR1gWjiOVcVv/5+p/4rp+mcH1IPh9SjHikxZJdDqCoVmMb9leftHpgrGJjnXqjLBK9QKVMPRkXhxCTLjXwq54oPuIA5qzdzqWIW5jXK7PH+T6P6VNltvG3QHNG3dTe4E96XxEbA2DWDNxm+mCedCh4FtxFg69LoO9yQAJf2WF0g+wS4gIERG64r+qy3PRFOV+cuiC3YGT5XOMGHNtyHwc3NZfsecIb37WpXAaPhQ8fJRcAo+NhzbCtgEG77ArER0PmS6Vrk+pP6rxx3lW8DgQtiXBD3LhoTfI3KZwrS4AoMABvkmgDXuCDG5vY/zRRA8I8ADwnQeq4muQgXy3mYRQFtS7TKecwBVqAN9H89VPnLt6O225OvAbaBmAVsAk+V1HKT7cefFcE/K8j2z4TewR8RfwGoClcVvDPzNQAAAABJRU5ErkJggg=='},
+    {name:'Purple Mage', src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAsCAYAAACdQGM6AAABDklEQVR4nO2XvQ2DMBCFIcoYLMICjEJBwTAUFIxCS+GCNdiDVCc5Fph7z06M4rwGYeH77hfL5WLWvUikRyrwH05rqodiqofvw20o6wAFP4IxDsBwHwR1AIJrjCMOqOGIUe23KjhTT82eS7jPSDdXRTdXtANeeMgMa2w8GYNutPI+NhtkJ+nvlYpcImQjFt33YGlNHwzw2bhv5D8Np7pdxHa56DLykKa72ptvzfOFl9rr0lQP3rPb1thsqkaFRi10tFxBaZfI7efRmlZQ2hFFTztSc42S1lyddltnJUB/xdScH0GYMyDfi2K5mHWXTZI618in1t/giNwaR017a/rTJkIazmeHGrVYyvc8Twp/AbmrhaY3wtvsAAAAAElFTkSuQmCC'},
+    {name:'Royal Shield', src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAsCAYAAACdQGM6AAABX0lEQVR4nO2XMa7CMAyGDeIYXIQD0JFjvAEJDgNSB47BCOMbGN41eo/HZMkYJ/7tVCqV+Deok++3k7jp4vfx908TaTkV+Av/wumyOdFlc4IHt8avSkFERD+PY3GSlvgq3BvE2t/WRETUdwMUD8H1pKXn0Xj9vJq5hniKxkO7/b470313hidF4yc9atWya/f8e3s9jBL/uZmzYy+DbPzntNdZwftuKDYWRNU1Z1lrJ6F9N7w0GG+tWanMGby/rd3WOipcgrnsWQMhuAbL/zMGYLgF1mWPGoDgJTAra8CFe+AWA1U4Cs4aKMIRsPXejhgw4dGMtVADC/2hyJdAL2NLurNZScgbLlT2rLyypy6Qkfe2bkhSb5mXLv5jSM8NHbUWhY+adNhiQI61Kvq226Xk509043lgF64NICZ0pWp7yIVbBiwT1vJ4mxeC10xYQk9MCF4zkjmiafgYmu+9fdbwJwVDCYIeEJtGAAAAAElFTkSuQmCC'},
+    {name:'White Shield', src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAsCAYAAACdQGM6AAABO0lEQVR4nO2YzQ2CQBCF3xiL0EI4cKAETLQIS6AI7ECLMJESOHCgEYswwYOOgXVnWZclbIR3IwzzzRv2D6is6gYTaTUVeIEvcCRxhCSOrB8eGr+WggCgrGoxyZB4Ed40r2lPREZXHHc5HQAAx+xqjD/n+0+cCFeTA8CddgCATXPrTf6LwhlwvpRmD6TZYxq4rcR37iLVLV8XuR7zP87ZYZ9j1v+Ndlt5bTurr92ssJzzUqqT9p6lS53Ccq7bPIwby3tXc9F8p9oCDwNORKPB2ue3L7h0+vSpNiOstgPjtF5tuRY+ZuvV3GLbfbrXuRbhXKGPAhis66jo3EcBJrAR3n5oi8I7GLA4RpVVjSSOXgUQdb7hTNA+sBW8nSSJo85r4ELUAWU7Y8j1V5j6OewyRZ0PYD7Wg/CW11nAn0EdeOXwD5EtAAAAAElFTkSuQmCC'},
+    {name:'Pink Gate', src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAsCAYAAACdQGM6AAABUUlEQVR4nO1YvRKCMAxOPQcHfRwHB1/MOxnwzhdjYOBxZGCrU6DEpkkpB5w0S2n5yJcf+7WnqerGwkp2WIt43+THlI/vt2v/XNXNMuQuKV2LCSKKnJLactgopjDRQah77hLb0vbEr/flZ80X6GRySoyGxDjS91IAIjl1gOUFAHg+PqORvpcCCJLjh5gNjpSAElM8F4CYuVtG3zwFz5JL/cIsseRcNUL+gplzUc+17iXXbBOAIVspa84vm/mcveXeb+tU05YcTVtyn39v5lSz3d66ZHQ/a/FBctcRAEB5Oo9GSWS0eLHn6ICbp+ANvUByPbfWgjH6/obweNx6z3NXw/vSmeG56NoRJhaPJpa96NrgPAWvkld0gKMko1q8eI3ylXcu/LYUbkkTy+7+OulNJRWfFa63rHBoWeGywv0NubfnkoKlrrPkU/5bmWr77fmq5F+/NxVem5o4YQAAAABJRU5ErkJggg=='},
+    {name:'Orange Gate', src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAsCAYAAACdQGM6AAABUUlEQVR4nO1YuxaCMAxNPQ4O/I6Dg7/k6CaDbo78EgMDv8PgVqdAiU2TUg5wpFlK20tuHnLbo6mb1sJKdliLeN/kx5SXr5dz/1w37TLkLildiwkiipyS2mp4Nrf4INQ9d4ltNRC/7sXPmi/QyeSUGA2JcaT7UgAiOXWA5QUAeLy70Uj3pQCC5PgiZoMjJaDEFM8FIGbultE3T8Gz5FK/MEssOVeNkL9g5lzUc617yTWfCcCQrZQ155fNfM7ecvvbOtW0JUfTltzn35s51Wy3ty4Z/Z61+CC56wgA4HkqRqMkMlq82HN0wM1T8IZeILmeW2vBGBMk1uLxuPWe566G96Uzpn8uP90IE4tHE8tefrrgPAWvkld0gKMko1q8eI3ylXcu/LYUbkkTy+7+OulNJRWfFa63rHBoWeGywv0NubfnkoKlrrPkU/5bmWr77fmq5F+sN+DGt1z1vQAAAABJRU5ErkJggg=='},
+    {name:'Yellow Gate', src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAsCAYAAACdQGM6AAABSElEQVR4nO1YwQ3DIAw0VZfIIH300SG6TIboMhkijzwySMdwH5WDoRhDoCFS4g8xXHw+WzhVzTjNCI3s0or42OTXkpcf99vyPE7zNuSc1N/LSSKL3CdFdk+MyU8iueecGNESG/P62QsluprcJyYjYlr9cy0BldwPQOX9EvXO6p9rCUTJ6UVSY0sdxtO+j5cSUJUjxv0SvEiu9cuq7B0/J15UuZR1rf0geco1AbBqNdVSXFF5zd5K5/v6qqWWnCy15KH4QeX+zOa9dYfMOnyUnAcCAHjC21m1IZOKV3tOASS/BB/8pPJMB+gAAAARwbADjsnFR8n5DLelM8vzAJ2DycWTqWUnJZJfgk8arxTAlrQOXv0ZFSpvLfy+JtyWppY9dKVi5czBnxPOsXPCcSWSX4I/J1wTOy65es//sS+Sr/lvZa0dt+dNyT9fZ8jXtrLADQAAAABJRU5ErkJggg=='},
+    {name:'Purple Shield', src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAsCAYAAACdQGM6AAABPklEQVR4nO3YMRKCMBAF0IWh4BC0HoCSksLWm9hwEBpvYmuRwoLCwgPYcgg7LRx0DZuQ3UCQwa0YAnmf4DgbonNzecBMFc8F//F14gkAgCrLWfAYAKBUKjhcKvVZ9pABOot859vj3nrOd7yrCP/D4XevX3zaHayTccatTx6qjDhOqj/VGOMAlmWfsn572UNUop+43m+Tgnm6eR+vd9mXi1dNC1XThscxKg0gwilMEoCN2xBuABbuMjkngDPOmdT1WifcNFldZFAXmTjAIG6DqWNOACvuAvsEMOIcWBqAxCWwJEAP94G5AZx+7RyYc88gLoFd7+3huIn0gak59Ab1C8dbpjFgai5s9Ho4gFfCPB2vn8vTDSiiK49MH4SGeng9GG4MqaI2okbcVqZg3J2uCNdDSLfXXrhvLbd7XTT+BPSnn8+kM4KWAAAAAElFTkSuQmCC'},
+    {name:'White Banner', src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAsCAYAAACdQGM6AAAAr0lEQVR4nGM8fPz0f4YBAkwDZfGo5SPTchYGBgaGPkuZAbGcEZbVSHHAuv8SWMWDGF8QbUbR8SeIYC86/oRojZQCmF0jN8GNWj7yLGdBF8CVh4kBxOhFLgtGbrCPXMsxEhwxlQM1KhYGhpEc7KOWj1o+avmo5aOWD3PL6dFlQrZjQH3OiGtAiFCvFb1BQaghgS1UcVqOD+ByGKnRRpbl6I4gN61QZDmlYPBktRFlOQBx0zioDjHoOwAAAABJRU5ErkJggg=='},
+    {name:'Bow', src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAsCAYAAACdQGM6AAABPElEQVR4nM2WLZbCQBCEC96KFVwIEdECy02wSAQSy02wiBEjRuQ6CByo8AKZZHo6XcuWnaS/qp7fRUztAyQFEQCAhJAdX7LAnQ732+gYDd6lnhIFXmo3Da4FA8CPN1QLBpySW8DAzORWaCdz8rlgM9wDbIJ7gavhnuAquDdYDWeA1XCWinBWahWcqUk4M3URDgCby84dOgpv1gHN2j9lTq+LxQNYW2MRU/sY/rQ3oE+TNWJq83Bg6DomQRDB5rLDdXtWLbh88n0WDPTaHpNMFNCpq/FuaPz7wWMiV4Cl4la7bs/fgffnWfMOd4WzVYQz0//v5AAvvTo5w0BV270NVM+5pwHTgvMyYF7tHgZmbTUJ4WUiiFSbcNnn1i64HTKfXfhTeN+E1gDleNUaoJ3tmmcX/WI5/q6+Ay+lfwIuPoi6Pt9QnwAAAABJRU5ErkJggg=='},
+    {name:'Black Knight', src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAsCAYAAACdQGM6AAAA7ElEQVR4nO2YTQ6EIAyFx4lXcuHC07NgwaHGVQlGqC30h8R5iYkLywcPWhqXENPv46SvF/gPd9PaE3TsW34PMXXDySs/9i0/JbCcCFcLJ9UoII4TrD2nDAzuiMM5FlMmwdrzHmFxJPjIocLiH+GjYGwcFF4LCDEN5TYZ3pqQ1P434VJ2Y6rCLcBVuBX4BrcAl4w57nNLuy9wD3CGcyVVaC5wbEAAwjcjbkHsSoFqCU21FljqjDRt11wx6Na9PkElM0OtjRKFa9SCOcorJq0KaNbDdcE1xW4gzeDamhPu1r1aac7fIha32nttd4Wf25lNY6d3gV0AAAAASUVORK5CYII='},
+    {name:'Green Shield', src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAsCAYAAACdQGM6AAABS0lEQVR4nO1YwQ3DMAg8qq7UZ1fxABkoA3iVPvroUPQRWaUuEONYSqTmXlEF3AEOJqXH88XYCZe9iE/ykxz3fMM935qdt9pfLSMAeKSXGWSLvUnO8/La00ShrDySOm6B2fNiPAJWLPfArQngmZtsLKg9r51lqeTvidLyzLaNBzPzROkTvKMFxUfGqbGauQwms6OJwPx7iCJif8hpIvDMyJwBLMrLsyZAE1kgfTV7tezSKHP+KpuXVYTYJO8RECV2ySMCeogBgOQmY02o3oFjEZcx3HSreeq3+DRfqREBrbah+7wOqg2QiMjwMuEeoGB7miecBnmqe3CcNeok/z9ya/scCclxnMx3J4+U3tvPNNSxj5U50J595tw8YrWYZuYjT74Vyy37CAFejNWebxGw5kuRf6PqHU/78mwh7SL3hPRUqJt8BI73nv8F+RssWb3z3Qt3AgAAAABJRU5ErkJggg=='},
+    {name:'Red Serpent', src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAsCAYAAACdQGM6AAABMUlEQVR4nO2YvRaDIAyFC6dDh74Ur9YXY3Bw8KHsZI/CzZ8E6WBGCtyvIYTEMM3L+hhkcZTwLT7MntqJOSU4nnI+LR64aKcEKbOCQHGrqAYkp1SNVW73ENbucxC3nmsr6M/taCPtGWog0F4w2q2Bs823ei6Wi1quDlrL7dc1yUh/JJau8op2jQfD5/Umk4z1CDZw7TpWvAXEVVxrFkh38dI4mIN4ytkt4DQgYZqXFd3zXhB7gEocTfIG2fZmczsCsRqXcg/veQ9XU8dYifcCQBBQvCdEeZvYGq4niFq8NC+YU+JakyC7iksgl3UsKFf8T7vUUsFKhpJMpH7cj7dGN7Xe3ChaPCGV0mLdLhWYCEb7SJGvGmr0Wg0WE5yAFwTyENsic+erhWBruPtT2C1+pX0Bp4zTo7zCKhUAAAAASUVORK5CYII='},
+    {name:'Crossed Arrows', src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAsCAYAAACdQGM6AAABlUlEQVR4nO3XL27DMBQG8C9VQcGOMFi6AwT6CpN2hMENTCoZCAgYHMjgjjCpVzAoMCgsDdwhxjIwveTFs2v75R9oH4tU6ffl2X51soM5NlioVkvBV/wy8azc3DQAoLSeFa72psMB4PFH9X5Qm2IU6D2/7T2vd18AgOxgjo1WHUod2Obl4BAcfTHfAP7emCqjIeMKIA3hQm34+T7vNhwHeZDaFD10m5e9QBy00XMwYO12XwAOUyC7CLLX1wcDrO28fEsgKR8MeM55qANjwF58jAAh+Cw+JEAMHMQlAWLhKDwlQAocjccESIWT8HMBJHAy7goghUW4HeDu41UEi3EAOD29/QswC06t5gEkgygZt9d4yCRMwn2bSxogGg/takmAKDz2OKUGcP6fA+5LX+xx0kpFXUZ7uOsWQsWvRDHlumrZQdYhdIqiYMt/LoVamtpyIHzNrk3RvbkEkBYFa/Fqb9rPmCnrc6PbY7gimMruwJCO2K3nz1oprFwDZIolIJgPouxhVzUcnqu0Uv4JN0ctf86v+EXhv5Gv7vp/cWvxAAAAAElFTkSuQmCC'},
+    {name:'Firebird', src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAsCAYAAACdQGM6AAABiklEQVR4nO2XzZGDMAyFxU6K2EZyyCEl0IqPLoKjW9kSOOSQQpYuvIdERBj9sYYkzESXTIx4n/Rsg2n6yzXDi+LrVeAP/AOH8+kI59PRfXNt/kFKAgDoL1dRpCZfgXf332h01RX/vflRg0viVizNf6cFtzt4TtFO2gJeA66GAwAMoX0+PKcIQ2jhO/1sB/dYK+VY97o6L0Us0Zzi6EwVfAgtDKGdAVG4BCDUMyUmHAXKAnCcArjrVfAmdDMAdoZBC6PjTdAfuYtWOwrTYqi93PVqOO3eAuC41bUbXgpTa7kxb6jwnCL8Qm8uJM4NvE/blsr7/GZduV81u7nuNfsb+sVyO4nMk7mVLIU953E8bqmdjxXehaiF6Ar+lrmeYOARpCORJOwHTud/suCk0+eaQRnveJLxCS6ZX05zBt/S+lJbsX3N7nktFv6osO6ASDU4R8XO1ylABqvw+gJ0MEDxeJVi+gFozfGjUGvxuuB8EbSQqTPeHbMIrhXyny3qerFwscbzYN9fqbuF/wGlpNmuYvOx5AAAAABJRU5ErkJggg=='},
+    {name:'Armour', src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAsCAYAAACdQGM6AAAB8ElEQVR4nO1XO47CQAx9rLZIkatQpkiRY+QYoUtDQZEiDV04Ro5BQUGZq1Bst1usjDweezIzCKEVawkJgu33/M3M5ny5fuNF8vEq4PcG/8w1bOrK+X2+XJN9ZEVOwG0/oe0nlczTwAlY+54i2Wmfj7tc07v8zcgfAU0Cj22m1AnYhNYrd9b2E7anPQDg8HVT9YeiBAAs3ej0hEXCBOfjJIVISFm60XtGJDQCatoJeChKLAqwBmL9NxQlDl83NHXlEVAjb+rKSTMXC5gT0Gzm484D9yLndZa1kyUgIE4oZCOjV+ecGofEapilG81MSBvpEwiM2va0N7ua6xAJS+bjTgUGROSUcu6MRyBXqha5NWKkx8vqRU41WroREI6aujLH7A4OP+UE3PaTQ84D52maFedr3Q7lhWMtJyftoTSlvK+ljVVGtduJoRwt3jjb0975aDrch9a85pLRRC4eikg+s971URtOI8CzoI3hUJROeiUBbVc8dHo9X65ZB8dV8EecxvoKRs4jW5tvLqS7lpmkY9QagRSCSeChZgJ+R8kZzYjTbXbD8XTm9kd05Dyl2tqN1ckCd3a6kdIYHS7/V+RVibmbpd7fViPPufrG2gbBLWNttKxxCxEwwVOAcwlE1zx2kZBeTLmCF8Vny/vO+UvBfwCmFBpiJHSvggAAAABJRU5ErkJggg=='},
+    {name:'Gold Keys', src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAsCAYAAACdQGM6AAABgUlEQVR4nO2YoZKDMBCG/95UVPR1EBHIInH3GK07gUHUIOqOx6irBImI4HUQuDtx3QBpSEgCbafXf4ZhyCT5ssnusrCqeP2DB+njUeA3XKuQBU4ThywQlxOcBtougPrzItGON1r++fVtBSbxIkEZ52IBVnB5tbbWl3E+uFvBgc5qF+t3l/3gbg33lQ68OFy35YvDTZav54CMOWMZ52IBcp+K1/5wmvS42QLorO17O4UbtaVtg5AF/vCK1whZgLRt/iaOMgBdnO8ue7Brmzxulm2veD14pt3on7ncB3hlbzdpdjhtOYsypG0jzlsVEbOceV/kgP2UfD4d7n/mJr3h/w+u9HYKi/PpcNOu8lpXKS0nAC8SHDdb8WKYEzwKv5eMcFNB4CNx5q4FgTfcpyDwWcAa8CsIfCS23bUg8JHR4UwFwaLwJb39eS2f8rE3JkrNcoqeDJ/ysaeS7Jhjjqoto1iUgReJMsymSGc1AKx0v8L6Gc0lzExJSAtfWs/9VntZ+C93+Lk1FdYwhwAAAABJRU5ErkJggg=='},
+    {name:'Magic Ring', src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAsCAYAAACdQGM6AAACMUlEQVR4nO1Yu46kMBAsThfcB7ESSHzFBGTrcDLIlo/gMsg2dEjATxySkZYP2owL9spqTMMye6uZhE54uV1V3W23Z6I/7m3Gg+zHo4BP8IdZ9Izns+BO8LvZT+2lnS2GcUKWxADg77UrAH/f9A7lJVWfAcBEZoGzUm5nCxMZvKYNACCvWn8NgZveoemdJ9DVhZ+HgFkSw0QGJjKws91XTjVk2gkHAmZJ7CcnMSokGQDo6mKhVs4NKOucIadyALi60oPlVYtfv99CzgtfqVh+C31XYWd4r670717Txk+6BQx8RErLL+cqL+livFrtDK8kECqhmjCPkgDHZEnsRUlTw04CcnAYQs20MbIewnSqyskyr1oM43QIOPxmIoNhnNDVxXHlLC4qPwosLfSRy3NX+f8Ch2NZA2EaVXAS4ObyHRbuiJvgHCCXxS2qNZ+blNPhu0xuzbvgsspp4fo+YtKnvKTHlXd1gaZ3Xwq3ZuwFh3KeVy26uviyem1PJ4ld8CyJUV5Sn6f3l6ebCGhrnK32U+WSAPCRgnDd3gLMcGs73Kqfb+3FPGRIEJLSGo5/92/HPJTzrSYwjNMiBQTVgCUI27GmXM05neSETMVnjWXrPBAWsAqeV+3qIMBqbXqHYZxgZ4v3lyfY2eLqSv/MyZlrSSDs8yq4PATK45NkLZciCbF1Mm2MwF6kVgXHU6Y8LMrjryyepnfo6mLR/zmGq4WR4tzSzh+KJ/hdLTr/CjvB72l/AfhSvA9Ol1/kAAAAAElFTkSuQmCC'},
+    {name:'Blue Tower', src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAsCAYAAACdQGM6AAAA40lEQVR4nO2YMQ7DIAxFSdUrdWBg6KVyiF4qAwMDh2qGBpUScIht5Fb1kzLkW/D14zgSmXyITyPERcpYzcW4tgrO3j7ufYisdWMOkz+2a0y9mbykTHK2TjCH0vXUUeYzalOyuQ9xe5S4VG/m6ssGmueLRwGap/T7MVqMD/cObb82R79wIM4uaI1snnrZ3+uX5iy8r/YcJO8lZ/9P9TzfuNRquva8BeucQzraXOecG51zEX6r55AG6WhznXNuJui3COb8VYNwaKCfWFo0k3OlTtTSHySnpk7U03/vKXU0/zvnouYrRLSATWq6e0QAAAAASUVORK5CYII='}
+  ];
+  const KIND_COUNT = ICONS.length;
+
+  const stageWrap = document.getElementById('stageWrap');
+  const stage = document.getElementById('stage');
+  const toolbar = document.getElementById('toolbar');
+  const board = document.getElementById('board');
+  const tilesLeftEl = document.getElementById('tilesLeft');
+  const timerEl = document.getElementById('timer');
+  const messageEl = document.getElementById('message');
+  const newBtn = document.getElementById('newBtn');
+  const undoBtn = document.getElementById('undoBtn');
+  const hintBtn = document.getElementById('hintBtn');
+  const bestBtn = document.getElementById('bestBtn');
+  const layoutSelect = document.getElementById('layoutSelect');
+  const aboutBtn = document.getElementById('aboutBtn');
+  const modalShade = document.getElementById('modalShade');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalBody = document.getElementById('modalBody');
+  const modalBtns = document.getElementById('modalBtns');
+
+  let positions = [];
+  let tiles = [];
+  let activeIds = new Set();
+  let selectedId = null;
+  let history = [];
+  let elapsed = 0;
+  let timerHandle = null;
+  let gameOver = false;
+  let messageTimer = null;
+  let currentLayoutKey = 'turtle';
+
+  const LAYOUTS = {
+    turtle: {
+      name: 'Turtle',
+      build(){
+        const pos = [];
+        let id = 0;
+        const add = (z,x,y) => pos.push({id:id++, z, x, y});
+        const row = (z,y,start,count,skipX=null) => {
+          for(let i=0;i<count;i++){
+            const x = start + i*2;
+            if(x !== skipX) add(z, x, y);
+          }
+        };
+
+        // Turtle / Traditional-style layout.
+        // 87 + 36 + 16 + 4 + 1 = 144.
+        // The top center tile is half-offset and rests over four tiles beneath it.
+        row(0, 0, 4, 12);
+        row(0, 2, 8, 8);
+        row(0, 4, 6, 10);
+        row(0, 6, 2, 14);
+        row(0, 8, 2, 14, 14);
+        row(0,10, 6, 10);
+        row(0,12, 8, 8);
+        row(0,14, 4, 12);
+
+        row(1, 2,10, 6);
+        row(1, 4, 8, 8);
+        row(1, 6, 8, 8);
+        row(1, 8, 8, 8);
+        row(1,10,10, 6);
+
+        row(2, 4,10, 4);
+        row(2, 6,10, 4);
+        row(2, 8,10, 4);
+        row(2,10,10, 4);
+
+        add(3,12,6); add(3,14,6);
+        add(3,12,8); add(3,14,8);
+
+        add(4,13,7);
+        return pos;
+      }
+    },
+    butterfly: {
+      name: 'Butterfly',
+      build(){
+        const pos = [];
+        let id = 0;
+        const add = (z,x,y) => pos.push({id:id++, z, x, y});
+        const row = (z,y,start,count) => { for(let i=0;i<count;i++) add(z, start + i*2, y); };
+
+        // Butterfly-inspired wide wings.
+        // 84 + 40 + 16 + 4 = 144.
+        row(0, 0, 8, 6);
+        row(0, 2, 4,10);
+        row(0, 4, 0,14);
+        row(0, 6, 2,12);
+        row(0, 8, 2,12);
+        row(0,10, 0,14);
+        row(0,12, 4,10);
+        row(0,14, 8, 6);
+
+        row(1, 2,10, 4);
+        row(1, 4, 6, 8);
+        row(1, 6, 6, 8);
+        row(1, 8, 6, 8);
+        row(1,10, 6, 8);
+        row(1,12,10, 4);
+
+        row(2, 4,10, 4);
+        row(2, 6,10, 4);
+        row(2, 8,10, 4);
+        row(2,10,10, 4);
+
+        add(3,12,6); add(3,14,6);
+        add(3,12,8); add(3,14,8);
+        return pos;
+      }
+    },
+    castle: {
+      name: 'Castle',
+      build(){
+        const pos = [];
+        let id = 0;
+        const add = (z,x,y) => pos.push({id:id++, z, x, y});
+        const row = (z,y,start,count) => { for(let i=0;i<count;i++) add(z, start + i*2, y); };
+
+        // Castle-inspired block with raised inner walls.
+        // 92 + 40 + 12 = 144.
+        row(0,0,4,12);
+        row(0,2,4,12);
+        row(0,4,6,10);
+        row(0,6,2,14);
+        row(0,8,2,14);
+        row(0,10,6,10);
+        row(0,12,4,12);
+        row(0,14,8,8);
+
+        row(1,2,8,8);
+        row(1,4,8,8);
+        row(1,6,8,8);
+        row(1,8,8,8);
+        row(1,10,8,8);
+
+        row(2,4,12,4);
+        row(2,6,12,4);
+        row(2,8,12,4);
+        return pos;
+      }
+    },
+    fish: {
+      name: 'Fish',
+      build(){
+        const pos = [];
+        let id = 0;
+        const add = (z,x,y) => pos.push({id:id++, z, x, y});
+        const row = (z,y,start,count) => { for(let i=0;i<count;i++) add(z, start + i*2, y); };
+
+        // Fish-inspired long body and tail.
+        // 88 + 36 + 16 + 4 = 144.
+        row(0, 0,10, 4);
+        row(0, 2, 6, 8);
+        row(0, 4, 4,12);
+        row(0, 6, 2,14);
+        row(0, 8, 2,14);
+        row(0,10, 4,12);
+        row(0,12, 6, 8);
+        row(0,14, 0,16);
+
+        row(1, 2,10, 6);
+        row(1, 4, 8, 8);
+        row(1, 6, 8, 8);
+        row(1, 8, 8, 8);
+        row(1,10,10, 6);
+
+        row(2, 4,10, 4);
+        row(2, 6,10, 4);
+        row(2, 8,10, 4);
+        row(2,10,10, 4);
+
+        add(3,12,6); add(3,14,6);
+        add(3,12,8); add(3,14,8);
+        return pos;
+      }
+    },
+    fortress: {
+      name: 'Fortress',
+      build(){
+        const pos = [];
+        let id = 0;
+        const add = (z,x,y) => pos.push({id:id++, z, x, y});
+        const row = (z,y,start,count) => { for(let i=0;i<count;i++) add(z, start + i*2, y); };
+
+        // Fortress-inspired square foundation with raised keep.
+        // 96 + 32 + 12 + 4 = 144.
+        row(0,0,4,12);
+        row(0,2,4,12);
+        row(0,4,4,12);
+        row(0,6,4,12);
+        row(0,8,4,12);
+        row(0,10,4,12);
+        row(0,12,4,12);
+        row(0,14,4,12);
+
+        row(1,2,8,6);
+        row(1,4,8,6);
+        row(1,6,8,6);
+        row(1,8,8,6);
+        row(1,10,10,4);
+        row(1,12,10,4);
+
+        row(2,4,10,4);
+        row(2,6,10,4);
+        row(2,8,10,4);
+
+        add(3,12,6); add(3,14,6);
+        add(3,12,8); add(3,14,8);
+        return pos;
+      }
+    },
+    spider: {
+      name: 'Spider',
+      build(){
+        const pos = [];
+        let id = 0;
+        const add = (z,x,y) => pos.push({id:id++, z, x, y});
+        const row = (z,y,start,count) => { for(let i=0;i<count;i++) add(z, start + i*2, y); };
+
+        // Spider-inspired: long body with side legs.
+        // 88 + 36 + 16 + 4 = 144.
+        row(0, 0, 8, 8);
+        row(0, 2, 6,10);
+        row(0, 4, 2,14);
+        row(0, 6, 4,12);
+        row(0, 8, 4,12);
+        row(0,10, 2,14);
+        row(0,12, 6,10);
+        row(0,14, 8, 8);
+
+        row(1, 2,10, 6);
+        row(1, 4, 8, 8);
+        row(1, 6, 8, 8);
+        row(1, 8, 8, 8);
+        row(1,10,10, 6);
+
+        row(2, 4,10, 4);
+        row(2, 6,10, 4);
+        row(2, 8,10, 4);
+        row(2,10,10, 4);
+
+        add(3,12,6); add(3,14,6);
+        add(3,12,8); add(3,14,8);
+        return pos;
+      }
+    },
+    dragon: {
+      name: 'Dragon',
+      build(){
+        const pos = [];
+        let id = 0;
+        const add = (z,x,y) => pos.push({id:id++, z, x, y});
+        const row = (z,y,start,count) => { for(let i=0;i<count;i++) add(z, start + i*2, y); };
+
+        // Dragon-inspired: stepped head/tail with raised spine.
+        // 88 + 36 + 16 + 4 = 144.
+        row(0, 0, 2, 6);
+        row(0, 2, 2,10);
+        row(0, 4, 6,12);
+        row(0, 6, 4,14);
+        row(0, 8, 4,14);
+        row(0,10, 6,12);
+        row(0,12,10,10);
+        row(0,14,14,10);
+
+        row(1, 2, 8, 6);
+        row(1, 4, 8, 8);
+        row(1, 6,10, 8);
+        row(1, 8,10, 8);
+        row(1,10,12, 6);
+
+        row(2, 4,12, 4);
+        row(2, 6,12, 4);
+        row(2, 8,12, 4);
+        row(2,10,12, 4);
+
+        add(3,14,6); add(3,16,6);
+        add(3,14,8); add(3,16,8);
+        return pos;
+      }
+    },
+    cross: {
+      name: 'Cross',
+      build(){
+        const pos = [];
+        let id = 0;
+        const add = (z,x,y) => pos.push({id:id++, z, x, y});
+        const row = (z,y,start,count) => { for(let i=0;i<count;i++) add(z, start + i*2, y); };
+
+        // Cross-inspired: broad horizontal/vertical arms.
+        // 88 + 36 + 16 + 4 = 144.
+        row(0, 0, 8, 8);
+        row(0, 2, 8, 8);
+        row(0, 4, 2,14);
+        row(0, 6, 2,14);
+        row(0, 8, 2,14);
+        row(0,10, 2,14);
+        row(0,12, 8, 8);
+        row(0,14, 8, 8);
+
+        row(1, 2,12, 4);
+        row(1, 4, 8, 8);
+        row(1, 6, 8, 8);
+        row(1, 8, 8, 8);
+        row(1,10, 8, 8);
+
+        row(2, 4,10, 4);
+        row(2, 6,10, 4);
+        row(2, 8,10, 4);
+        row(2,10,10, 4);
+
+        add(3,12,6); add(3,14,6);
+        add(3,12,8); add(3,14,8);
+        return pos;
+      }
+    },
+    stadium: {
+      name: 'Stadium',
+      build(){
+        const pos = [];
+        let id = 0;
+        const add = (z,x,y) => pos.push({id:id++, z, x, y});
+        const row = (z,y,start,count) => { for(let i=0;i<count;i++) add(z, start + i*2, y); };
+
+        // Stadium-inspired: rounded outside and raised centre.
+        // 92 + 32 + 16 + 4 = 144.
+        row(0, 0, 8, 8);
+        row(0, 2, 4,12);
+        row(0, 4, 2,14);
+        row(0, 6, 2,14);
+        row(0, 8, 2,14);
+        row(0,10, 4,12);
+        row(0,12, 4,12);
+        row(0,14, 8, 6);
+
+        row(1, 2,10, 4);
+        row(1, 4, 8, 6);
+        row(1, 6, 8, 6);
+        row(1, 8, 8, 6);
+        row(1,10, 8, 6);
+        row(1,12,10, 4);
+
+        row(2, 4,10, 4);
+        row(2, 6,10, 4);
+        row(2, 8,10, 4);
+        row(2,10,10, 4);
+
+        add(3,12,6); add(3,14,6);
+        add(3,12,8); add(3,14,8);
+        return pos;
+      }
+    },
+    hourglass: {
+      name: 'Hourglass',
+      build(){
+        const pos = [];
+        let id = 0;
+        const add = (z,x,y) => pos.push({id:id++, z, x, y});
+        const row = (z,y,start,count) => { for(let i=0;i<count;i++) add(z, start + i*2, y); };
+
+        // Hourglass-inspired: wide ends, narrow waist.
+        // 88 + 36 + 16 + 4 = 144.
+        row(0, 0, 2,14);
+        row(0, 2, 4,12);
+        row(0, 4, 6,10);
+        row(0, 6, 8, 8);
+        row(0, 8, 8, 8);
+        row(0,10, 6,10);
+        row(0,12, 4,12);
+        row(0,14, 2,14);
+
+        row(1, 2, 6, 8);
+        row(1, 4, 8, 6);
+        row(1, 6,10, 4);
+        row(1, 8,10, 4);
+        row(1,10, 8, 6);
+        row(1,12, 6, 8);
+
+        row(2, 4,10, 4);
+        row(2, 6,10, 4);
+        row(2, 8,10, 4);
+        row(2,10,10, 4);
+
+        add(3,12,6); add(3,14,6);
+        add(3,12,8); add(3,14,8);
+        return pos;
+      }
+    }
+  };
+
+  function makeLayout(layoutKey=currentLayoutKey){
+    const layout = LAYOUTS[layoutKey] || LAYOUTS.classic;
+    const pos = layout.build();
+    if(pos.length !== TOTAL_TILES) throw new Error('Layout tile count: ' + pos.length + ' for ' + layoutKey);
+    pos.forEach((p, i) => p.id = i);
+    return pos;
+  }
+
+  function xyFor(pos){
+    return {
+      left: Math.round(BASE_X + pos.x * UNIT_X + pos.z * LIFT),
+      top: Math.round(BASE_Y + pos.y * UNIT_Y - pos.z * LIFT)
+    };
+  }
+
+  function resizeStage(){
+    const toolbarH = toolbar ? toolbar.getBoundingClientRect().height : 0;
+    const maxW = Math.max(320, window.innerWidth - 16);
+    const maxH = Math.max(300, window.innerHeight - toolbarH - 34);
+    const scale = Math.min(maxW / DESIGN_W, maxH / DESIGN_H, 1.55);
+    stage.style.transform = `scale(${scale})`;
+    stageWrap.style.width = `${Math.round(DESIGN_W * scale)}px`;
+    stageWrap.style.height = `${Math.round(DESIGN_H * scale)}px`;
+  }
+
+  window.addEventListener('resize', resizeStage, {passive:true});
+
+  function shuffle(arr){
+    for(let i = arr.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function rangesOverlap(a1,a2,b1,b2){ return a1 < b2 && b1 < a2; }
+  function overlaps(a,b){ return a.x < b.x + 2 && b.x < a.x + 2 && a.y < b.y + 2 && b.y < a.y + 2; }
+
+  function isFreePosition(pos, set){
+    for(const oid of set){
+      if(oid === pos.id) continue;
+      const other = positions[oid];
+      if(other.z > pos.z && overlaps(pos, other)) return false;
+    }
+    let leftBlocked = false;
+    let rightBlocked = false;
+    for(const oid of set){
+      if(oid === pos.id) continue;
+      const other = positions[oid];
+      if(other.z !== pos.z) continue;
+      if(other.x + 2 === pos.x && rangesOverlap(pos.y, pos.y + 2, other.y, other.y + 2)) leftBlocked = true;
+      if(pos.x + 2 === other.x && rangesOverlap(pos.y, pos.y + 2, other.y, other.y + 2)) rightBlocked = true;
+      if(leftBlocked && rightBlocked) return false;
+    }
+    return !leftBlocked || !rightBlocked;
+  }
+
+  function freeIdsFromSet(set){
+    const ids = [];
+    for(const id of set){
+      if(isFreePosition(positions[id], set)) ids.push(id);
+    }
+    return ids;
+  }
+
+  function pairKinds(){
+    const kinds = [];
+    for(let k=0;k<KIND_COUNT;k++){
+      for(let r=0;r<3;r++) kinds.push(k);
+    }
+    return shuffle(kinds);
+  }
+
+  function generateSolvableAssignment(){
+    for(let attempt=0; attempt<900; attempt++){
+      const set = new Set(positions.map(p => p.id));
+      const assignment = new Array(positions.length);
+      const kinds = pairKinds();
+      let ok = true;
+      for(const kind of kinds){
+        const free = freeIdsFromSet(set);
+        if(free.length < 2){ ok = false; break; }
+        const ai = Math.floor(Math.random() * free.length);
+        const a = free[ai];
+        free.splice(ai, 1);
+        const b = free[Math.floor(Math.random() * free.length)];
+        assignment[a] = kind;
+        assignment[b] = kind;
+        set.delete(a);
+        set.delete(b);
+      }
+      if(ok && set.size === 0 && assignment.every(v => Number.isInteger(v))) return assignment;
+    }
+    throw new Error('Could not make a solvable board.');
+  }
+
+  function formatTime(total){
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return `${m}:${String(s).padStart(2,'0')}`;
+  }
+
+  function startTimer(){
+    stopTimer();
+    timerHandle = setInterval(() => {
+      elapsed++;
+      timerEl.textContent = formatTime(elapsed);
+    }, 1000);
+  }
+  function stopTimer(){ if(timerHandle){ clearInterval(timerHandle); timerHandle = null; } }
+
+  function clearHints(){ tiles.forEach(t => t.el && t.el.classList.remove('hint','bad')); }
+  function clearSelection(){
+    if(selectedId !== null && tiles[selectedId]) tiles[selectedId].el.classList.remove('selected');
+    selectedId = null;
+  }
+  function isFree(tile){ return tile.active && isFreePosition(positions[tile.id], activeIds); }
+
+  function drawAllFreeStates(){
+    for(const tile of tiles){
+      if(!tile.active){ tile.el.classList.remove('free','blocked'); continue; }
+      const free = isFree(tile);
+      tile.el.classList.toggle('free', free);
+      tile.el.classList.toggle('blocked', !free);
+      tile.el.disabled = false;
+      tile.el.setAttribute('aria-disabled', free ? 'false' : 'true');
+    }
+  }
+
+  function setMessage(text, ms=1600){
+    clearTimeout(messageTimer);
+    messageEl.textContent = text;
+    messageEl.classList.add('show');
+    messageTimer = setTimeout(() => messageEl.classList.remove('show'), ms);
+  }
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
+  }
+
+  function scoreKey(layoutKey=currentLayoutKey){
+    return STORE_KEY_PREFIX + layoutKey;
+  }
+
+  function loadScores(layoutKey=currentLayoutKey){
+    try{
+      const raw = localStorage.getItem(scoreKey(layoutKey));
+      const scores = raw ? JSON.parse(raw) : [];
+      return Array.isArray(scores) ? scores.filter(s => Number.isFinite(s.seconds)).slice(0,5) : [];
+    }catch(e){ return []; }
+  }
+
+  function saveScore(seconds, layoutKey=currentLayoutKey){
+    const scores = loadScores(layoutKey);
+    scores.push({seconds, when:new Date().toLocaleString([], {dateStyle:'short', timeStyle:'short'})});
+    scores.sort((a,b) => a.seconds - b.seconds);
+    const top = scores.slice(0,5);
+    try{ localStorage.setItem(scoreKey(layoutKey), JSON.stringify(top)); }catch(e){}
+    return top;
+  }
+
+  function scoresHtml(scores){
+    if(!scores.length) return '<p>No saved times yet.</p>';
+    return '<div class="scores">' + scores.map((s,i) => `${i+1}. ${formatTime(s.seconds)} <span style="opacity:.75">${escapeHtml(s.when || '')}</span>`).join('<br>') + '</div>';
+  }
+
+  function showModal(title, bodyHtml, buttons){
+    modalTitle.textContent = title;
+    modalBody.innerHTML = bodyHtml;
+    modalBtns.innerHTML = '';
+    buttons.forEach(b => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = b.text;
+      btn.addEventListener('click', () => {
+        if(b.close !== false) closeModal();
+        if(b.onClick) b.onClick();
+      });
+      modalBtns.appendChild(btn);
+    });
+    modalShade.classList.add('open');
+  }
+  function closeModal(){ modalShade.classList.remove('open'); }
+  modalShade.addEventListener('click', e => { if(e.target === modalShade) closeModal(); });
+
+  function makeTileElement(tile){
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'tile';
+    el.title = ICONS[tile.kind].name;
+    el.setAttribute('aria-label', ICONS[tile.kind].name);
+    const pos = positions[tile.id];
+    const p = xyFor(pos);
+    el.style.left = p.left + 'px';
+    el.style.top = p.top + 'px';
+    el.style.zIndex = String(1000 + pos.z * 10000 + pos.y * 100 + pos.x);
+    const body = document.createElement('span');
+    body.className = 'tileBody';
+    const face = document.createElement('span');
+    face.className = 'face';
+    const img = document.createElement('img');
+    img.className = 'iconImg';
+    img.alt = '';
+    img.draggable = false;
+    img.src = ICONS[tile.kind].src;
+    face.appendChild(img);
+    body.appendChild(face);
+    el.appendChild(body);
+    el.addEventListener('click', () => onTile(tile.id));
+    return el;
+  }
+
+  function updateUi(){
+    tilesLeftEl.textContent = activeIds.size;
+    undoBtn.disabled = gameOver || history.length === 0;
+    hintBtn.disabled = gameOver || activeIds.size === 0;
+    drawAllFreeStates();
+  }
+
+  function applyLayout(nextKey, skipConfirm=false){
+    if(!LAYOUTS[nextKey]) return;
+    if(nextKey === currentLayoutKey && positions.length){
+      layoutSelect.value = currentLayoutKey;
+      return;
+    }
+    const doApply = () => {
+      currentLayoutKey = nextKey;
+      layoutSelect.value = currentLayoutKey;
+      positions = makeLayout(currentLayoutKey);
+      newGame(true);
+    };
+    if(!skipConfirm && activeIds.size > 0 && activeIds.size < TOTAL_TILES && !gameOver){
+      layoutSelect.value = currentLayoutKey;
+      showModal('Change Layout?', `<p>Switch to <strong>${escapeHtml(LAYOUTS[nextKey].name)}</strong>? This will start a new game.</p>`, [
+        {text:'Cancel'},
+        {text:'Change Layout', onClick:() => doApply()}
+      ]);
+      return;
+    }
+    doApply();
+  }
+
+  function newGame(skipConfirm=false){
+    if(!skipConfirm && activeIds.size > 0 && activeIds.size < TOTAL_TILES && !gameOver){
+      showModal('New Game?', '<p>This will quit the current game.</p>', [
+        {text:'Cancel'},
+        {text:'New Game', onClick:() => newGame(true)}
+      ]);
+      return;
+    }
+    closeModal();
+    stopTimer();
+    elapsed = 0;
+    timerEl.textContent = '0:00';
+    gameOver = false;
+    history = [];
+    selectedId = null;
+    board.innerHTML = '';
+    clearTimeout(messageTimer);
+    messageEl.classList.remove('show');
+    activeIds = new Set(positions.map(p => p.id));
+
+    let assignment;
+    try{ assignment = generateSolvableAssignment(); }
+    catch(e){ console.error(e); setMessage('Could not make a board. Try New Game.', 4200); return; }
+
+    tiles = positions.map(pos => ({id:pos.id, kind:assignment[pos.id], active:true, el:null}));
+    const drawOrder = tiles.slice().sort((a,b) => {
+      const pa = positions[a.id], pb = positions[b.id];
+      return (pa.z - pb.z) || (pa.y - pb.y) || (pa.x - pb.x);
+    });
+    for(const tile of drawOrder){
+      tile.el = makeTileElement(tile);
+      tiles[tile.id].el = tile.el;
+      board.appendChild(tile.el);
+    }
+    updateUi();
+    startTimer();
+  }
+
+  function onTile(id){
+    if(gameOver) return;
+    clearHints();
+    const tile = tiles[id];
+    if(!tile || !tile.active) return;
+    if(!isFree(tile)){
+      tile.el.classList.add('bad');
+      setTimeout(() => tile.el.classList.remove('bad'), 300);
+      setMessage('That tile is blocked.');
+      return;
+    }
+    if(selectedId === null){
+      selectedId = id;
+      tile.el.classList.add('selected');
+      return;
+    }
+    if(selectedId === id){ clearSelection(); return; }
+    const first = tiles[selectedId];
+    if(first && first.kind === tile.kind){
+      removePair(first.id, tile.id);
+    }else{
+      tile.el.classList.add('bad');
+      if(first) first.el.classList.add('bad');
+      setMessage('Not a match.');
+      setTimeout(() => {
+        tile.el.classList.remove('bad');
+        if(first) first.el.classList.remove('bad','selected');
+        selectedId = null;
+      }, 420);
+    }
+  }
+
+  function removePair(a,b){
+    const t1 = tiles[a], t2 = tiles[b];
+    t1.active = false;
+    t2.active = false;
+    activeIds.delete(a);
+    activeIds.delete(b);
+    t1.el.classList.remove('selected','free','blocked','hint','bad');
+    t2.el.classList.remove('selected','free','blocked','hint','bad');
+    t1.el.classList.add('removed');
+    t2.el.classList.add('removed');
+    history.push({a,b});
+    selectedId = null;
+    updateUi();
+    if(activeIds.size === 0) finishGame();
+    else if(availablePairs().length === 0) setMessage('No moves left. Start a new game.', 4200);
+  }
+
+  function undo(){
+    if(!history.length || gameOver) return;
+    clearHints();
+    clearSelection();
+    const last = history.pop();
+    [last.a,last.b].forEach(id => {
+      tiles[id].active = true;
+      activeIds.add(id);
+      tiles[id].el.classList.remove('removed','bad','hint');
+    });
+    updateUi();
+    setMessage('Undone.');
+  }
+
+  function availablePairs(){
+    const free = tiles.filter(t => t.active && isFree(t));
+    const groups = new Map();
+    free.forEach(t => {
+      if(!groups.has(t.kind)) groups.set(t.kind, []);
+      groups.get(t.kind).push(t);
+    });
+    const pairs = [];
+    groups.forEach(list => {
+      if(list.length >= 2){
+        for(let i=0;i<list.length;i++){
+          for(let j=i+1;j<list.length;j++) pairs.push([list[i], list[j]]);
+        }
+      }
+    });
+    return shuffle(pairs);
+  }
+
+  function hint(){
+    if(gameOver) return;
+    clearHints();
+    clearSelection();
+    const pairs = availablePairs();
+    if(!pairs.length){ setMessage('No available matches.'); return; }
+    elapsed += 30;
+    timerEl.textContent = formatTime(elapsed);
+    const [a,b] = pairs[0];
+    a.el.classList.add('hint');
+    b.el.classList.add('hint');
+    setMessage('Hint shown. +0:30');
+    setTimeout(() => {
+      if(a.el) a.el.classList.remove('hint');
+      if(b.el) b.el.classList.remove('hint');
+    }, 2600);
+  }
+
+  function finishGame(){
+    gameOver = true;
+    stopTimer();
+    clearSelection();
+    const scores = saveScore(elapsed, currentLayoutKey);
+    updateUi();
+    showModal(`Cleared! — ${LAYOUTS[currentLayoutKey].name}`, `<p>Time: <strong>${formatTime(elapsed)}</strong></p>${scoresHtml(scores)}`, [
+      {text:'New Game', onClick:() => newGame(true)},
+      {text:'Close'}
+    ]);
+  }
+
+
+  function showAbout(){
+    showModal('About', '<p>Credit to: Mah Johngg for Windows by Ron Balewski.<br>Tileset designed by Ron Balewski.</p>', [
+      {text:'Close'}
+    ]);
+  }
+
+  function showBest(){
+    showModal(`Best Times — ${LAYOUTS[currentLayoutKey].name}`, scoresHtml(loadScores(currentLayoutKey)), [
+      {text:'Close'},
+      {text:'New Game', onClick:() => newGame(false)}
+    ]);
+  }
+
+  newBtn.addEventListener('click', () => newGame(false));
+  undoBtn.addEventListener('click', undo);
+  hintBtn.addEventListener('click', hint);
+  bestBtn.addEventListener('click', showBest);
+  aboutBtn.addEventListener('click', showAbout);
+  layoutSelect.addEventListener('change', () => applyLayout(layoutSelect.value, false));
+
+  layoutSelect.value = currentLayoutKey;
+  positions = makeLayout(currentLayoutKey);
+  resizeStage();
+  newGame(true);
+})();
+</script>
+</body>
+</html>
