@@ -1,0 +1,2030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yahtzee</title>
+  <style>
+:root {
+  --bg: #101726;
+  --bg-soft: #18233a;
+  --panel: rgba(255, 255, 255, 0.94);
+  --panel-strong: #ffffff;
+  --ink: #172033;
+  --muted: #6a7488;
+  --line: #dbe3ef;
+  --accent: #376dff;
+  --accent-dark: #2551bf;
+  --accent-soft: #eaf0ff;
+  --good: #13a46e;
+  --warn: #ffb020;
+  --danger: #de3f52;
+  --shadow: 0 22px 70px rgba(0, 0, 0, 0.24);
+  --radius-xl: 28px;
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  font-family: var(--font);
+  background:
+    radial-gradient(circle at top left, rgba(81, 127, 255, 0.40), transparent 32rem),
+    radial-gradient(circle at bottom right, rgba(38, 201, 149, 0.24), transparent 30rem),
+    linear-gradient(135deg, #0c1322 0%, #16223a 52%, #0f1c32 100%);
+}
+
+button {
+  font: inherit;
+}
+
+.app-shell {
+  width: min(1260px, calc(100vw - 28px));
+  margin: 0 auto;
+  padding: 18px 0 26px;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: white;
+  margin-bottom: 16px;
+}
+
+.top-left-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#topNewGameBtn {
+  display: none;
+}
+
+#homeBtn,
+#topNewGameBtn {
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+}
+
+#homeBtn {
+  background: linear-gradient(135deg, #ff9f43 0%, #ff7a18 100%);
+}
+
+#topNewGameBtn {
+  background: linear-gradient(135deg, #20c997 0%, #0f9f74 100%);
+}
+
+#homeBtn:hover,
+#topNewGameBtn:hover,
+#homeBtn:focus-visible,
+#topNewGameBtn:focus-visible {
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.28);
+  filter: saturate(1.06) brightness(1.03);
+}
+
+.brand {
+  text-align: center;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: clamp(2.1rem, 5vw, 4rem);
+  letter-spacing: -0.08em;
+  line-height: 1;
+}
+
+.brand span {
+  display: inline-flex;
+  margin-top: 8px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.top-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ghost-button,
+.secondary-button,
+.primary-button,
+.danger-button,
+.seg-button,
+.mode-card,
+.score-choice,
+.close-button,
+.info-button,
+.die {
+  border: 0;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease, opacity 160ms ease;
+}
+
+.ghost-button {
+  color: white;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-weight: 800;
+}
+
+.ghost-button:hover,
+.secondary-button:hover,
+.primary-button:hover,
+.danger-button:hover,
+.mode-card:hover,
+.seg-button:hover,
+.score-choice:hover,
+.die:hover {
+  transform: translateY(-1px);
+}
+
+.screen {
+  display: none;
+}
+
+.screen.active {
+  display: block;
+}
+
+.hero-card,
+.play-card,
+.score-card,
+.modal {
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: var(--shadow);
+  border-radius: var(--radius-xl);
+}
+
+.hero-card {
+  width: min(880px, 100%);
+  margin: 28px auto 0;
+  padding: clamp(22px, 4vw, 42px);
+  text-align: center;
+}
+
+.hero-card h2 {
+  margin: 0 0 20px;
+  font-size: clamp(1.8rem, 4vw, 3.1rem);
+  letter-spacing: -0.05em;
+}
+
+.mode-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.mode-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-height: 152px;
+  padding: 18px 14px;
+  border-radius: 22px;
+  background: #f4f7fb;
+  border: 2px solid transparent;
+  color: var(--ink);
+}
+
+.mode-card.selected {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  box-shadow: 0 12px 28px rgba(55, 109, 255, 0.16);
+}
+
+.mode-icon {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 17px;
+  background: white;
+  color: var(--accent);
+  font-size: 1.35rem;
+  font-weight: 950;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.mode-card strong {
+  font-size: 1.08rem;
+}
+
+.mode-card small {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.difficulty-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 8px 0 22px;
+  font-weight: 900;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.segmented {
+  display: inline-flex;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 999px;
+  background: #eef3fa;
+}
+
+.seg-button {
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.seg-button.selected {
+  background: white;
+  color: var(--accent-dark);
+  box-shadow: 0 5px 16px rgba(33, 52, 83, 0.12);
+}
+
+.primary-button,
+.secondary-button,
+.danger-button {
+  border-radius: 999px;
+  padding: 12px 18px;
+  font-weight: 950;
+}
+
+.primary-button {
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 12px 24px rgba(55, 109, 255, 0.24);
+}
+
+.primary-button:hover {
+  background: var(--accent-dark);
+}
+
+.primary-button.big {
+  min-width: 190px;
+  font-size: 1.08rem;
+  padding: 14px 22px;
+}
+
+.secondary-button {
+  background: #eef3fa;
+  color: var(--ink);
+}
+
+.danger-button {
+  margin-top: 18px;
+  background: #fff0f2;
+  color: var(--danger);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.game-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 430px) minmax(560px, 720px);
+  gap: 18px;
+  align-items: start;
+  justify-content: start;
+}
+
+.play-card,
+.score-card {
+  padding: 16px;
+}
+
+.play-card {
+  width: 100%;
+  max-width: 430px;
+}
+
+.score-card {
+  width: 100%;
+  max-width: 720px;
+  justify-self: start;
+}
+
+.score-card.solo-card {
+  max-width: 650px;
+}
+
+.score-card.two-card {
+  max-width: 720px;
+}
+
+.turn-strip {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.eyebrow {
+  display: block;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 950;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.turn-strip h2 {
+  margin: 0;
+  font-size: clamp(1.7rem, 3vw, 2.4rem);
+  letter-spacing: -0.06em;
+}
+
+.roll-count {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 86px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: #eff4ff;
+  color: var(--accent-dark);
+  font-weight: 950;
+}
+
+.dice-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin: 24px 0 18px;
+}
+
+.die {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 22%;
+  background:
+    linear-gradient(145deg, #ffffff 0%, #f2f5fb 100%);
+  border: 2px solid #d7e0ec;
+  box-shadow:
+    0 14px 24px rgba(20, 32, 52, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.die.held {
+  background: linear-gradient(145deg, #eaf0ff 0%, #dce7ff 100%);
+  border-color: var(--accent);
+  transform: translateY(-5px);
+  box-shadow: 0 18px 28px rgba(55, 109, 255, 0.24);
+}
+
+.die.cpu-locked {
+  pointer-events: none;
+}
+
+.die.rolling {
+  animation: diceWobble 700ms ease-in-out;
+}
+
+@keyframes diceWobble {
+  0% { transform: translateY(0) rotate(0deg) scale(1); }
+  20% { transform: translateY(-10px) rotate(-12deg) scale(1.03); }
+  45% { transform: translateY(5px) rotate(15deg) scale(0.98); }
+  70% { transform: translateY(-7px) rotate(-8deg) scale(1.02); }
+  100% { transform: translateY(0) rotate(0deg) scale(1); }
+}
+
+.pip {
+  position: absolute;
+  width: 18%;
+  height: 18%;
+  border-radius: 50%;
+  background: #172033;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15);
+}
+
+.pos-tl { top: 18%; left: 18%; }
+.pos-tr { top: 18%; right: 18%; }
+.pos-ml { top: 41%; left: 18%; }
+.pos-mm { top: 41%; left: 41%; }
+.pos-mr { top: 41%; right: 18%; }
+.pos-bl { bottom: 18%; left: 18%; }
+.pos-br { bottom: 18%; right: 18%; }
+
+.controls-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.status-line {
+  min-height: 46px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #f5f7fb;
+  color: #4f5c71;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.status-line.good {
+  background: #e9fbf4;
+  color: #057d52;
+}
+
+.status-line.warn {
+  background: #fff7df;
+  color: #8a6200;
+}
+
+.score-head {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.player-total-row {
+  display: grid;
+  grid-template-columns: repeat(var(--player-count), minmax(0, 1fr));
+  gap: 8px;
+}
+
+.player-pill {
+  border-radius: 16px;
+  padding: 9px 12px;
+  background: #f4f7fb;
+  border: 2px solid transparent;
+}
+
+.player-pill.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.player-pill strong,
+.player-pill span {
+  display: block;
+}
+
+.player-pill strong {
+  font-size: 0.94rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-pill span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-weight: 950;
+}
+
+.score-board {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.score-section-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: white;
+}
+
+.score-section-title {
+  padding: 8px 10px;
+  background: #f0f4fb;
+  color: #506078;
+  font-size: 0.76rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+}
+
+.score-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.score-table th,
+.score-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 7px 8px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.score-table th:first-child,
+.score-table td:first-child {
+  text-align: left;
+  width: 58%;
+}
+
+.score-table[data-player-count="1"] th:first-child,
+.score-table[data-player-count="1"] td:first-child {
+  width: 68%;
+}
+
+.score-table[data-player-count="2"] th:first-child,
+.score-table[data-player-count="2"] td:first-child {
+  width: 48%;
+}
+
+.score-table th {
+  color: var(--muted);
+  background: #f6f8fc;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.score-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.section-row td {
+  background: #f0f4fb;
+  color: #506078;
+  font-size: 0.76rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.total-row td {
+  background: #f7f9fd;
+  font-weight: 950;
+}
+
+.grand-row td {
+  background: #172033;
+  color: white;
+  font-size: 1.02rem;
+  font-weight: 950;
+}
+
+.category-label {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  font-weight: 850;
+}
+
+.category-hint {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+  margin-left: 2px;
+  min-width: 0;
+  text-align: left;
+}
+
+
+.summary-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.info-button {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #eaf0ff;
+  color: var(--accent-dark);
+  font-size: 0.74rem;
+  font-weight: 950;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.info-button:hover {
+  background: #dce7ff;
+}
+
+.score-choice {
+  width: auto;
+  min-width: 46px;
+  min-height: 30px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #eef3ff;
+  color: var(--accent-dark);
+  font-weight: 950;
+}
+
+.score-choice.forced {
+  background: #fff3d1;
+  color: #8a6200;
+}
+
+.locked-score {
+  display: inline-flex;
+  min-width: 32px;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: #eef3fa;
+  font-weight: 950;
+}
+
+.empty-score {
+  color: #a0a9b8;
+  font-weight: 900;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(10, 16, 27, 0.64);
+  backdrop-filter: blur(7px);
+  z-index: 20;
+}
+
+.modal-backdrop.active {
+  display: flex;
+}
+
+.modal {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(780px, calc(100vh - 36px));
+  overflow: auto;
+  padding: 24px;
+}
+
+.modal.compact {
+  width: min(440px, 100%);
+  text-align: center;
+}
+
+.modal h2 {
+  margin: 0 36px 14px 0;
+  font-size: 2rem;
+  letter-spacing: -0.05em;
+}
+
+.close-button {
+  position: absolute;
+  right: 18px;
+  top: 16px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #eef3fa;
+  color: var(--ink);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.modal-copy p {
+  margin: 0 0 12px;
+  color: #40506a;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.records-content {
+  display: grid;
+  gap: 12px;
+}
+
+.record-block {
+  padding: 13px 14px;
+  border-radius: 16px;
+  background: #f5f7fb;
+}
+
+.record-block h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.record-block ol,
+.record-block p {
+  margin: 0;
+  padding-left: 20px;
+  color: #526176;
+  font-weight: 800;
+}
+
+.record-block p {
+  padding-left: 0;
+}
+
+.game-over-content {
+  display: grid;
+  gap: 10px;
+  margin: 8px 0 18px;
+}
+
+.final-score {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #f4f7fb;
+  font-weight: 950;
+}
+
+.final-score.winner {
+  background: #e9fbf4;
+  color: #04744c;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+@media (max-width: 920px) {
+  .game-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .play-card,
+  .score-card {
+    padding: 14px;
+  }
+
+  .score-card,
+  .score-card.solo-card,
+  .score-card.two-card {
+    max-width: min(760px, 100%);
+  }
+
+  .dice-row {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-shell {
+    width: min(100vw - 18px, 1180px);
+    padding-top: 10px;
+  }
+
+  .top-bar {
+    gap: 8px;
+  }
+
+  .brand h1 {
+    font-size: 2.15rem;
+  }
+
+  .brand span {
+    display: none;
+  }
+
+  .ghost-button {
+    padding: 9px 10px;
+    font-size: 0.88rem;
+  }
+
+  .top-actions {
+    gap: 6px;
+  }
+
+  .mode-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mode-card {
+    min-height: 96px;
+    display: grid;
+    grid-template-columns: 54px 1fr;
+    grid-template-rows: auto auto;
+    text-align: left;
+  }
+
+  .mode-icon {
+    grid-row: 1 / 3;
+  }
+
+  .difficulty-row {
+    flex-direction: column;
+  }
+
+  .dice-row {
+    gap: 6px;
+  }
+
+  .die {
+    border-radius: 19%;
+  }
+
+  .score-table th,
+  .score-table td {
+    padding: 8px 6px;
+    font-size: 0.9rem;
+  }
+
+  .score-board {
+    grid-template-columns: 1fr;
+  }
+
+  .score-table th:first-child,
+  .score-table td:first-child,
+  .score-table[data-player-count="1"] th:first-child,
+  .score-table[data-player-count="1"] td:first-child,
+  .score-table[data-player-count="2"] th:first-child,
+  .score-table[data-player-count="2"] td:first-child {
+    width: 58%;
+  }
+
+  .category-hint {
+    display: none;
+  }
+
+  .controls-row .primary-button,
+  .controls-row .secondary-button {
+    flex: 1 1 140px;
+  }
+}
+
+@media (max-width: 460px) {
+  .top-bar {
+    align-items: flex-start;
+  }
+
+  .top-actions {
+    flex-direction: column;
+  }
+
+  .hero-card {
+    padding: 18px;
+    border-radius: 22px;
+  }
+
+  .player-total-row {
+    grid-template-columns: 1fr;
+  }
+
+  .score-table th,
+  .score-table td {
+    font-size: 0.82rem;
+  }
+
+  .score-choice {
+    min-height: 32px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="top-bar">
+      <div class="top-left-actions">
+        <button class="ghost-button" id="homeBtn" type="button" aria-label="Main menu">Menu</button>
+        <button class="ghost-button" id="topNewGameBtn" type="button">New Game</button>
+      </div>
+      <div class="brand">
+        <h1>Yahtzee</h1>
+        <span id="gameBadge">Main Menu</span>
+      </div>
+      <div class="top-actions">
+        <button class="ghost-button" id="recordsBtn" type="button">Records</button>
+        <button class="ghost-button" id="rulesBtn" type="button">Rules</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="screen active" id="menuScreen" aria-label="Main menu">
+        <div class="hero-card">
+          <h2>Choose a game</h2>
+          <div class="mode-grid" role="radiogroup" aria-label="Game mode">
+            <button class="mode-card selected" data-mode="solo" type="button" role="radio" aria-checked="true">
+              <span class="mode-icon">★</span>
+              <strong>Single Player</strong>
+              <small>Score attack</small>
+            </button>
+            <button class="mode-card" data-mode="pvp" type="button" role="radio" aria-checked="false">
+              <span class="mode-icon">♟</span>
+              <strong>Player vs Player</strong>
+              <small>Same device</small>
+            </button>
+            <button class="mode-card" data-mode="cpu" type="button" role="radio" aria-checked="false">
+              <span class="mode-icon">CPU</span>
+              <strong>Player vs CPU</strong>
+              <small>Three difficulties</small>
+            </button>
+          </div>
+
+          <div class="difficulty-row hidden" id="difficultyPanel" aria-label="CPU difficulty">
+            <span>CPU</span>
+            <div class="segmented" role="radiogroup" aria-label="Difficulty">
+              <button class="seg-button selected" data-difficulty="easy" type="button" role="radio" aria-checked="true">Easy</button>
+              <button class="seg-button" data-difficulty="medium" type="button" role="radio" aria-checked="false">Medium</button>
+              <button class="seg-button" data-difficulty="hard" type="button" role="radio" aria-checked="false">Hard</button>
+            </div>
+          </div>
+
+          <button class="primary-button big" id="startBtn" type="button">Start Game</button>
+        </div>
+      </section>
+
+      <section class="screen" id="gameScreen" aria-label="Game board">
+        <div class="game-layout">
+          <section class="play-card" aria-label="Dice area">
+            <div class="turn-strip">
+              <div>
+                <span class="eyebrow">Turn</span>
+                <h2 id="turnName">Player 1</h2>
+              </div>
+              <div class="roll-count" id="rollCounter">3 rolls</div>
+            </div>
+
+            <div class="dice-row" id="diceRow" aria-label="Dice"></div>
+
+            <div class="controls-row">
+              <button class="primary-button" id="rollBtn" type="button">Roll Dice</button>
+            </div>
+
+            <div class="status-line" id="statusLine">Roll to begin.</div>
+          </section>
+
+          <section class="score-card" aria-label="Scorecard">
+            <div class="score-head" id="scoreHead"></div>
+            <div class="score-board" id="scoreBoard"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="quitModal" aria-hidden="true">
+    <div class="modal compact" role="dialog" aria-modal="true" aria-labelledby="quitTitle">
+      <button class="close-button" data-close-modal="quitModal" type="button" aria-label="Stay in game">×</button>
+      <h2 id="quitTitle">Quit game?</h2>
+      <div class="modal-copy">
+        <p>Going back to the menu will end this game.</p>
+      </div>
+      <div class="modal-actions">
+        <button class="secondary-button" id="quitCancelBtn" type="button">Stay</button>
+        <button class="primary-button" id="quitConfirmBtn" type="button">Quit to Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="newGameModal" aria-hidden="true">
+    <div class="modal compact" role="dialog" aria-modal="true" aria-labelledby="newGameTitle">
+      <button class="close-button" data-close-modal="newGameModal" type="button" aria-label="Cancel new game">×</button>
+      <h2 id="newGameTitle">Start a new game?</h2>
+      <div class="modal-copy">
+        <p>Your current game will be lost if you start a new one.</p>
+      </div>
+      <div class="modal-actions">
+        <button class="secondary-button" id="newGameCancelBtn" type="button">Cancel</button>
+        <button class="primary-button" id="newGameConfirmBtn" type="button">Start New Game</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="upperBonusModal" aria-hidden="true">
+    <div class="modal compact" role="dialog" aria-modal="true" aria-labelledby="upperBonusTitle">
+      <button class="close-button" data-close-modal="upperBonusModal" type="button" aria-label="Close upper bonus explanation">×</button>
+      <h2 id="upperBonusTitle">Upper Bonus</h2>
+      <div class="modal-copy">
+        <p>Earn <strong>+35</strong> if your upper total reaches <strong>63 or more</strong>.</p>
+        <p>That is roughly the same as scoring three of each upper number.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="rulesModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+      <button class="close-button" data-close-modal="rulesModal" type="button" aria-label="Close rules">×</button>
+      <h2 id="rulesTitle">Rules</h2>
+      <div class="modal-copy">
+        <p>Each turn, roll five dice up to three times. Click dice to hold them between rolls.</p>
+        <p>After rolling, score one open category. The game ends after all 13 categories are filled.</p>
+        <p>Upper section bonus: score 63 or more across Ones to Sixes to earn +35.</p>
+        <p>Yahtzee is five of a kind for 50 points. After scoring 50 in Yahtzee, each extra Yahtzee earns a +100 bonus.</p>
+        <p>Extra Yahtzee rule: score the matching upper category first if it is open. If it is filled, lower categories can use Joker scoring.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="recordsModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="recordsTitle">
+      <button class="close-button" data-close-modal="recordsModal" type="button" aria-label="Close records">×</button>
+      <h2 id="recordsTitle">Records</h2>
+      <div id="recordsContent" class="records-content"></div>
+      <button class="danger-button" id="clearRecordsBtn" type="button">Clear Records</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="gameOverModal" aria-hidden="true">
+    <div class="modal compact" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
+      <h2 id="gameOverTitle">Game Over</h2>
+      <div id="gameOverContent" class="game-over-content"></div>
+      <div class="modal-actions">
+        <button class="primary-button" id="playAgainBtn" type="button">Play Again</button>
+        <button class="secondary-button" id="menuFromGameOverBtn" type="button">Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+(() => {
+  'use strict';
+
+  const STORAGE_KEY = 'jw_yahtzee_records_v1';
+
+  const upperCats = [
+    { id: 'ones', label: 'Ones', hint: '1s', value: 1 },
+    { id: 'twos', label: 'Twos', hint: '2s', value: 2 },
+    { id: 'threes', label: 'Threes', hint: '3s', value: 3 },
+    { id: 'fours', label: 'Fours', hint: '4s', value: 4 },
+    { id: 'fives', label: 'Fives', hint: '5s', value: 5 },
+    { id: 'sixes', label: 'Sixes', hint: '6s', value: 6 }
+  ];
+
+  const lowerCats = [
+    { id: 'threeKind', label: '3 of a Kind', hint: 'sum' },
+    { id: 'fourKind', label: '4 of a Kind', hint: 'sum' },
+    { id: 'fullHouse', label: 'Full House', hint: '25' },
+    { id: 'smallStraight', label: 'Small Straight', hint: '30' },
+    { id: 'largeStraight', label: 'Large Straight', hint: '40' },
+    { id: 'yahtzee', label: 'Yahtzee', hint: '50' },
+    { id: 'chance', label: 'Chance', hint: 'sum' }
+  ];
+
+  const cats = [...upperCats, ...lowerCats];
+  const catMap = Object.fromEntries(cats.map(cat => [cat.id, cat]));
+  const upperByValue = Object.fromEntries(upperCats.map(cat => [cat.value, cat.id]));
+
+  const els = {
+    menuScreen: document.getElementById('menuScreen'),
+    gameScreen: document.getElementById('gameScreen'),
+    gameBadge: document.getElementById('gameBadge'),
+    homeBtn: document.getElementById('homeBtn'),
+    topNewGameBtn: document.getElementById('topNewGameBtn'),
+    recordsBtn: document.getElementById('recordsBtn'),
+    rulesBtn: document.getElementById('rulesBtn'),
+    startBtn: document.getElementById('startBtn'),
+    modeCards: Array.from(document.querySelectorAll('.mode-card')),
+    difficultyPanel: document.getElementById('difficultyPanel'),
+    difficultyButtons: Array.from(document.querySelectorAll('.seg-button')),
+    diceRow: document.getElementById('diceRow'),
+    rollBtn: document.getElementById('rollBtn'),
+    statusLine: document.getElementById('statusLine'),
+    rollCounter: document.getElementById('rollCounter'),
+    turnName: document.getElementById('turnName'),
+    scoreHead: document.getElementById('scoreHead'),
+    scoreCard: document.querySelector('.score-card'),
+    scoreBoard: document.getElementById('scoreBoard'),
+    quitModal: document.getElementById('quitModal'),
+    quitCancelBtn: document.getElementById('quitCancelBtn'),
+    quitConfirmBtn: document.getElementById('quitConfirmBtn'),
+    newGameModal: document.getElementById('newGameModal'),
+    newGameCancelBtn: document.getElementById('newGameCancelBtn'),
+    newGameConfirmBtn: document.getElementById('newGameConfirmBtn'),
+    upperBonusModal: document.getElementById('upperBonusModal'),
+    rulesModal: document.getElementById('rulesModal'),
+    recordsModal: document.getElementById('recordsModal'),
+    recordsContent: document.getElementById('recordsContent'),
+    clearRecordsBtn: document.getElementById('clearRecordsBtn'),
+    gameOverModal: document.getElementById('gameOverModal'),
+    gameOverContent: document.getElementById('gameOverContent'),
+    playAgainBtn: document.getElementById('playAgainBtn'),
+    menuFromGameOverBtn: document.getElementById('menuFromGameOverBtn')
+  };
+
+  let selectedMode = 'solo';
+  let selectedDifficulty = 'easy';
+  let isAnimating = false;
+  let state = null;
+
+  function defaultRecords() {
+    return {
+      soloBest: [],
+      pvp: { p1: 0, p2: 0, ties: 0 },
+      cpu: {
+        easy: { human: 0, cpu: 0, ties: 0 },
+        medium: { human: 0, cpu: 0, ties: 0 },
+        hard: { human: 0, cpu: 0, ties: 0 }
+      }
+    };
+  }
+
+  function loadRecords() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return defaultRecords();
+      const parsed = JSON.parse(raw);
+      return {
+        ...defaultRecords(),
+        ...parsed,
+        cpu: { ...defaultRecords().cpu, ...(parsed.cpu || {}) },
+        pvp: { ...defaultRecords().pvp, ...(parsed.pvp || {}) }
+      };
+    } catch {
+      return defaultRecords();
+    }
+  }
+
+  function saveRecords(records) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  }
+
+  function makePlayer(name, isCPU = false) {
+    return {
+      name,
+      isCPU,
+      scores: Object.fromEntries(cats.map(cat => [cat.id, null])),
+      yahtzeeBonus: 0,
+      yahtzeeBonusCount: 0
+    };
+  }
+
+  function showScreen(name) {
+    const isGame = name === 'game';
+    els.menuScreen.classList.toggle('active', name === 'menu');
+    els.gameScreen.classList.toggle('active', isGame);
+    els.homeBtn.style.visibility = isGame ? 'visible' : 'hidden';
+    els.topNewGameBtn.style.display = isGame ? 'inline-flex' : 'none';
+  }
+
+  function setMode(mode) {
+    selectedMode = mode;
+    els.modeCards.forEach(button => {
+      const selected = button.dataset.mode === mode;
+      button.classList.toggle('selected', selected);
+      button.setAttribute('aria-checked', String(selected));
+    });
+    els.difficultyPanel.classList.toggle('hidden', mode !== 'cpu');
+  }
+
+  function setDifficulty(difficulty) {
+    selectedDifficulty = difficulty;
+    els.difficultyButtons.forEach(button => {
+      const selected = button.dataset.difficulty === difficulty;
+      button.classList.toggle('selected', selected);
+      button.setAttribute('aria-checked', String(selected));
+    });
+  }
+
+  function startGame() {
+    const players = selectedMode === 'solo'
+      ? [makePlayer('Player 1')]
+      : selectedMode === 'pvp'
+        ? [makePlayer('Player 1'), makePlayer('Player 2')]
+        : [makePlayer('Player 1'), makePlayer(`CPU (${titleCase(selectedDifficulty)})`, true)];
+
+    state = {
+      mode: selectedMode,
+      difficulty: selectedDifficulty,
+      players,
+      currentPlayerIndex: 0,
+      dice: [1, 1, 1, 1, 1],
+      held: [false, false, false, false, false],
+      rollsLeft: 3,
+      turnHasRolled: false,
+      gameOver: false
+    };
+
+    els.gameBadge.textContent = modeLabel();
+    showScreen('game');
+    resetTurn(false);
+    renderAll();
+  }
+
+  function modeLabel() {
+    if (!state) return 'Main Menu';
+    if (state.mode === 'solo') return 'Single Player';
+    if (state.mode === 'pvp') return 'Player vs Player';
+    return `Vs CPU · ${titleCase(state.difficulty)}`;
+  }
+
+  function titleCase(text) {
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+
+  function resetTurn(advancePlayer = true) {
+    if (!state || state.gameOver) return;
+    if (advancePlayer && state.players.length > 1) {
+      state.currentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
+    }
+    state.dice = [1, 1, 1, 1, 1];
+    state.held = [false, false, false, false, false];
+    state.rollsLeft = 3;
+    state.turnHasRolled = false;
+    setStatus(`${currentPlayer().name}: roll to begin.`);
+    renderAll();
+    queueCpuTurn();
+  }
+
+  function currentPlayer() {
+    return state.players[state.currentPlayerIndex];
+  }
+
+  function renderAll() {
+    if (!state) {
+      showScreen('menu');
+      els.homeBtn.style.visibility = 'hidden';
+      return;
+    }
+    renderDice();
+    renderHeader();
+    renderScorecard();
+  }
+
+  function renderHeader() {
+    const player = currentPlayer();
+    els.turnName.textContent = player.name;
+    els.rollCounter.textContent = state.rollsLeft === 1 ? '1 roll' : `${state.rollsLeft} rolls`;
+    els.rollBtn.disabled = state.gameOver || isAnimating || player.isCPU || state.rollsLeft <= 0;
+    els.rollBtn.textContent = state.turnHasRolled ? 'Roll Again' : 'Roll Dice';
+  }
+
+  function renderDice() {
+    els.diceRow.innerHTML = '';
+    const player = currentPlayer();
+    state.dice.forEach((value, index) => {
+      const die = document.createElement('button');
+      die.className = 'die';
+      die.type = 'button';
+      die.dataset.index = String(index);
+      die.setAttribute('aria-label', `Die ${index + 1}: ${value}${state.held[index] ? ', held' : ''}`);
+      if (state.held[index]) die.classList.add('held');
+      if (player.isCPU || !state.turnHasRolled || isAnimating || state.rollsLeft === 0) {
+        die.classList.add('cpu-locked');
+      }
+      addPips(die, value);
+      die.addEventListener('click', () => toggleHold(index));
+      els.diceRow.appendChild(die);
+    });
+  }
+
+  function addPips(die, value) {
+    const positions = {
+      1: ['pos-mm'],
+      2: ['pos-tl', 'pos-br'],
+      3: ['pos-tl', 'pos-mm', 'pos-br'],
+      4: ['pos-tl', 'pos-tr', 'pos-bl', 'pos-br'],
+      5: ['pos-tl', 'pos-tr', 'pos-mm', 'pos-bl', 'pos-br'],
+      6: ['pos-tl', 'pos-tr', 'pos-ml', 'pos-mr', 'pos-bl', 'pos-br']
+    };
+    positions[value].forEach(pos => {
+      const pip = document.createElement('span');
+      pip.className = `pip ${pos}`;
+      die.appendChild(pip);
+    });
+  }
+
+  function toggleHold(index) {
+    if (!state || state.gameOver || currentPlayer().isCPU || isAnimating || !state.turnHasRolled || state.rollsLeft === 0) return;
+    state.held[index] = !state.held[index];
+    setStatus(state.held[index] ? `Die ${index + 1} held.` : `Die ${index + 1} released.`);
+    renderAll();
+  }
+
+  function setStatus(message, tone = '') {
+    els.statusLine.textContent = message;
+    els.statusLine.classList.remove('good', 'warn');
+    if (tone) els.statusLine.classList.add(tone);
+  }
+
+  async function rollDice() {
+    if (!state || state.gameOver || isAnimating || state.rollsLeft <= 0) return;
+    const rollableIndexes = state.dice.map((_, index) => index).filter(index => !state.held[index]);
+    if (rollableIndexes.length === 0) {
+      setStatus('All dice are held. Release one to roll again.', 'warn');
+      return;
+    }
+
+    isAnimating = true;
+    renderAll();
+    setStatus('Rolling…');
+
+    const dieButtons = Array.from(els.diceRow.querySelectorAll('.die'));
+    rollableIndexes.forEach(index => dieButtons[index]?.classList.add('rolling'));
+
+    const spins = 9;
+    for (let spin = 0; spin < spins; spin += 1) {
+      rollableIndexes.forEach(index => {
+        state.dice[index] = randDie();
+      });
+      renderDiceFacesOnly();
+      await delay(62 + spin * 8);
+    }
+
+    rollableIndexes.forEach(index => {
+      state.dice[index] = randDie();
+    });
+    state.rollsLeft -= 1;
+    state.turnHasRolled = true;
+    isAnimating = false;
+
+    const summary = rollSummaryText();
+    const tone = isYahtzee(state.dice) ? 'good' : '';
+    setStatus(state.rollsLeft > 0 ? `${summary} Choose dice to hold or roll again.` : `${summary} Choose a score.`, tone);
+    renderAll();
+    queueCpuTurn();
+  }
+
+  function renderDiceFacesOnly() {
+    const buttons = Array.from(els.diceRow.querySelectorAll('.die'));
+    buttons.forEach((button, index) => {
+      const hadRolling = button.classList.contains('rolling');
+      const held = button.classList.contains('held');
+      button.innerHTML = '';
+      addPips(button, state.dice[index]);
+      button.classList.toggle('rolling', hadRolling);
+      button.classList.toggle('held', held);
+      button.setAttribute('aria-label', `Die ${index + 1}: ${state.dice[index]}${state.held[index] ? ', held' : ''}`);
+    });
+  }
+
+  function randDie() {
+    return Math.floor(Math.random() * 6) + 1;
+  }
+
+  function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function rollSummaryText() {
+    const counts = getCounts(state.dice);
+    if (isYahtzee(state.dice)) return 'Yahtzee!';
+    if (hasNOfAKind(counts, 4)) return 'Four of a kind.';
+    if (isFullHouse(counts)) return 'Full house.';
+    if (isLargeStraight(state.dice)) return 'Large straight.';
+    if (isSmallStraight(state.dice)) return 'Small straight.';
+    if (hasNOfAKind(counts, 3)) return 'Three of a kind.';
+    return `Rolled ${state.dice.join(', ')}.`;
+  }
+
+  function renderScorecard() {
+    const playerCount = state.players.length;
+    els.scoreCard.classList.toggle('solo-card', playerCount === 1);
+    els.scoreCard.classList.toggle('two-card', playerCount === 2);
+    els.scoreHead.style.setProperty('--player-count', playerCount);
+    els.scoreHead.innerHTML = '';
+
+    const totals = document.createElement('div');
+    totals.className = 'player-total-row';
+    state.players.forEach((player, index) => {
+      const pill = document.createElement('div');
+      pill.className = 'player-pill';
+      if (index === state.currentPlayerIndex && !state.gameOver) pill.classList.add('active');
+      const total = getTotals(player).grand;
+      pill.innerHTML = `<strong>${escapeHtml(player.name)}</strong><span>${total} pts</span>`;
+      totals.appendChild(pill);
+    });
+    els.scoreHead.appendChild(totals);
+
+    els.scoreBoard.innerHTML = `
+      <div class="score-section-card">
+        <div class="score-section-title">Upper</div>
+        ${scoreSectionTable([...upperCats.map(cat => ({ type: 'category', cat })), { type: 'summary', label: 'Upper Total', key: 'upperSubtotal' }, { type: 'summary', label: 'Upper Bonus', key: 'upperBonus' }])}
+      </div>
+      <div class="score-section-card">
+        <div class="score-section-title">Lower</div>
+        ${scoreSectionTable([...lowerCats.map(cat => ({ type: 'category', cat })), { type: 'summary', label: 'Yahtzee Bonus', key: 'yahtzeeBonus' }, { type: 'summary', label: 'Total', key: 'grand', isGrand: true }])}
+      </div>
+    `;
+
+    Array.from(els.scoreBoard.querySelectorAll('.score-choice')).forEach(button => {
+      button.addEventListener('click', () => chooseScore(button.dataset.cat));
+    });
+
+    Array.from(els.scoreBoard.querySelectorAll('.info-button[data-info="upperBonus"]')).forEach(button => {
+      button.addEventListener('click', event => {
+        event.stopPropagation();
+        openModal('upperBonusModal');
+      });
+    });
+  }
+
+  function scoreSectionTable(rows) {
+    const playerHeaders = state.players.map(player => `<th>${escapeHtml(shortPlayerName(player.name))}</th>`).join('');
+    return `
+      <table class="score-table" data-player-count="${state.players.length}">
+        <thead><tr><th>Category</th>${playerHeaders}</tr></thead>
+        <tbody>${rows.map(row => row.type === 'category' ? renderCategoryRow(row.cat) : summaryRow(row.label, row.key, row.isGrand)).join('')}</tbody>
+      </table>
+    `;
+  }
+
+  function shortPlayerName(name) {
+    if (name === 'Player 1') return 'P1';
+    if (name === 'Player 2') return 'P2';
+    if (name.startsWith('CPU')) return 'CPU';
+    return name;
+  }
+
+  function sectionRow(text) {
+    return `<tr class="section-row"><td colspan="${state.players.length + 1}">${text}</td></tr>`;
+  }
+
+  function renderCategoryRow(cat) {
+    const label = `<div class="category-label"><span>${cat.label}</span><span class="category-hint">${cat.hint}</span></div>`;
+    const cells = state.players.map((player, index) => renderScoreCell(player, index, cat)).join('');
+    return `<tr><td>${label}</td>${cells}</tr>`;
+  }
+
+  function renderScoreCell(player, index, cat) {
+    const saved = player.scores[cat.id];
+    if (saved !== null) return `<td><span class="locked-score">${saved}</span></td>`;
+
+    const active = index === state.currentPlayerIndex && !state.gameOver && state.turnHasRolled && !isAnimating && !currentPlayer().isCPU;
+    if (!active) return '<td><span class="empty-score">—</span></td>';
+
+    const legal = getLegalCategories(player, state.dice);
+    if (!legal.includes(cat.id)) return '<td><span class="empty-score">—</span></td>';
+
+    const scored = scoreCategory(cat.id, state.dice, player);
+    const forced = getJokerInfo(state.dice, player).forcedUpper === cat.id;
+    const forcedClass = forced ? ' forced' : '';
+    const bonusText = scored.bonus ? ` +${scored.bonus}` : '';
+    return `<td><button class="score-choice${forcedClass}" type="button" data-cat="${cat.id}">${scored.points}${bonusText}</button></td>`;
+  }
+
+  function summaryRow(label, key, isGrand = false) {
+    const className = isGrand ? 'grand-row' : 'total-row';
+    const cells = state.players.map(player => `<td>${getTotals(player)[key]}</td>`).join('');
+    const labelCell = key === 'upperBonus'
+      ? `<span class="summary-label">${label}<button class="info-button" type="button" data-info="upperBonus" aria-label="Upper bonus explanation">?</button></span>`
+      : label;
+    return `<tr class="${className}"><td>${labelCell}</td>${cells}</tr>`;
+  }
+
+  function chooseScore(catId) {
+    if (!state || state.gameOver || currentPlayer().isCPU || !state.turnHasRolled || isAnimating) return;
+    scoreCurrentTurn(catId);
+  }
+
+  function scoreCurrentTurn(catId) {
+    const player = currentPlayer();
+    const legal = getLegalCategories(player, state.dice);
+    if (!legal.includes(catId) || player.scores[catId] !== null) return;
+
+    const scored = scoreCategory(catId, state.dice, player);
+    player.scores[catId] = scored.points;
+    if (scored.bonus) {
+      player.yahtzeeBonus += scored.bonus;
+      player.yahtzeeBonusCount += 1;
+    }
+
+    const categoryName = catMap[catId].label;
+    const message = scored.bonus
+      ? `${player.name} scored ${scored.points} in ${categoryName} and earned +${scored.bonus}.`
+      : `${player.name} scored ${scored.points} in ${categoryName}.`;
+    setStatus(message, scored.bonus ? 'good' : '');
+
+    if (isGameComplete()) {
+      finishGame();
+    } else {
+      setTimeout(() => resetTurn(true), player.isCPU ? 600 : 900);
+    }
+    renderAll();
+  }
+
+  function isGameComplete() {
+    return state.players.every(player => cats.every(cat => player.scores[cat.id] !== null));
+  }
+
+  function finishGame() {
+    state.gameOver = true;
+    const totals = state.players.map(player => getTotals(player).grand);
+    const max = Math.max(...totals);
+    const winners = state.players.filter((_, index) => totals[index] === max);
+
+    updateRecords(totals, winners);
+    renderAll();
+    showGameOver(totals, winners);
+  }
+
+  function updateRecords(totals, winners) {
+    const records = loadRecords();
+    if (state.mode === 'solo') {
+      records.soloBest.push({ score: totals[0], date: formatDate(new Date()) });
+      records.soloBest.sort((a, b) => b.score - a.score);
+      records.soloBest = records.soloBest.slice(0, 3);
+    } else if (state.mode === 'pvp') {
+      if (totals[0] === totals[1]) records.pvp.ties += 1;
+      else if (totals[0] > totals[1]) records.pvp.p1 += 1;
+      else records.pvp.p2 += 1;
+    } else {
+      const bucket = records.cpu[state.difficulty] || { human: 0, cpu: 0, ties: 0 };
+      if (totals[0] === totals[1]) bucket.ties += 1;
+      else if (totals[0] > totals[1]) bucket.human += 1;
+      else bucket.cpu += 1;
+      records.cpu[state.difficulty] = bucket;
+    }
+    saveRecords(records);
+  }
+
+  function showGameOver(totals, winners) {
+    const winnerNames = winners.map(player => player.name).join(' & ');
+    const title = winners.length > 1 ? 'Tie Game' : `${winnerNames} wins!`;
+    document.getElementById('gameOverTitle').textContent = state.mode === 'solo' ? 'Final Score' : title;
+    els.gameOverContent.innerHTML = state.players.map((player, index) => {
+      const winner = winners.includes(player);
+      return `<div class="final-score${winner ? ' winner' : ''}">${escapeHtml(player.name)}: ${totals[index]}</div>`;
+    }).join('');
+    openModal('gameOverModal');
+  }
+
+  function formatDate(date) {
+    return date.toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
+
+  function getTotals(player) {
+    const scoreValue = id => player.scores[id] ?? 0;
+    const upperSubtotal = upperCats.reduce((sum, cat) => sum + scoreValue(cat.id), 0);
+    const upperBonus = upperSubtotal >= 63 ? 35 : 0;
+    const lowerSubtotal = lowerCats.reduce((sum, cat) => sum + scoreValue(cat.id), 0);
+    const grand = upperSubtotal + upperBonus + lowerSubtotal + player.yahtzeeBonus;
+    return {
+      upperSubtotal,
+      upperBonus,
+      lowerSubtotal,
+      yahtzeeBonus: player.yahtzeeBonus,
+      grand
+    };
+  }
+
+  function scoreCategory(catId, dice, player) {
+    const counts = getCounts(dice);
+    const sum = dice.reduce((acc, value) => acc + value, 0);
+    const joker = getJokerInfo(dice, player);
+    let points = 0;
+
+    if (joker.extraYahtzee && joker.matchingUpperFilled && isLower(catId)) {
+      if (catId === 'threeKind' || catId === 'fourKind' || catId === 'chance') points = sum;
+      else if (catId === 'fullHouse') points = 25;
+      else if (catId === 'smallStraight') points = 30;
+      else if (catId === 'largeStraight') points = 40;
+      else if (catId === 'yahtzee') points = 0;
+    } else if (upperByValue[dice[0]] === catId && joker.extraYahtzee && joker.forcedUpper === catId) {
+      points = sum;
+    } else if (catId in Object.fromEntries(upperCats.map(cat => [cat.id, true]))) {
+      const value = catMap[catId].value;
+      points = (counts[value] || 0) * value;
+    } else {
+      switch (catId) {
+        case 'threeKind':
+          points = hasNOfAKind(counts, 3) ? sum : 0;
+          break;
+        case 'fourKind':
+          points = hasNOfAKind(counts, 4) ? sum : 0;
+          break;
+        case 'fullHouse':
+          points = isFullHouse(counts) ? 25 : 0;
+          break;
+        case 'smallStraight':
+          points = isSmallStraight(dice) ? 30 : 0;
+          break;
+        case 'largeStraight':
+          points = isLargeStraight(dice) ? 40 : 0;
+          break;
+        case 'yahtzee':
+          points = isYahtzee(dice) ? 50 : 0;
+          break;
+        case 'chance':
+          points = sum;
+          break;
+        default:
+          points = 0;
+      }
+    }
+
+    return { points, bonus: joker.extraYahtzee ? 100 : 0 };
+  }
+
+  function getLegalCategories(player, dice) {
+    const open = cats.filter(cat => player.scores[cat.id] === null).map(cat => cat.id);
+    const joker = getJokerInfo(dice, player);
+    if (!joker.extraYahtzee) return open;
+    if (joker.forcedUpper && open.includes(joker.forcedUpper)) return [joker.forcedUpper];
+    const openLower = open.filter(isLower);
+    if (openLower.length) return openLower;
+    return open;
+  }
+
+  function getJokerInfo(dice, player) {
+    const extraYahtzee = isYahtzee(dice) && player.scores.yahtzee === 50;
+    const matchingUpper = extraYahtzee ? upperByValue[dice[0]] : null;
+    const matchingUpperFilled = matchingUpper ? player.scores[matchingUpper] !== null : false;
+    const forcedUpper = extraYahtzee && matchingUpper && !matchingUpperFilled ? matchingUpper : null;
+    return { extraYahtzee, matchingUpper, matchingUpperFilled, forcedUpper };
+  }
+
+  function isLower(catId) {
+    return lowerCats.some(cat => cat.id === catId);
+  }
+
+  function getCounts(dice) {
+    return dice.reduce((counts, value) => {
+      counts[value] = (counts[value] || 0) + 1;
+      return counts;
+    }, {});
+  }
+
+  function hasNOfAKind(counts, n) {
+    return Object.values(counts).some(count => count >= n);
+  }
+
+  function isFullHouse(counts) {
+    const values = Object.values(counts).sort((a, b) => a - b);
+    return values.length === 2 && values[0] === 2 && values[1] === 3;
+  }
+
+  function isSmallStraight(dice) {
+    const set = new Set(dice);
+    const straights = [
+      [1, 2, 3, 4],
+      [2, 3, 4, 5],
+      [3, 4, 5, 6]
+    ];
+    return straights.some(straight => straight.every(value => set.has(value)));
+  }
+
+  function isLargeStraight(dice) {
+    const sorted = [...new Set(dice)].sort((a, b) => a - b).join('');
+    return sorted === '12345' || sorted === '23456';
+  }
+
+  function isYahtzee(dice) {
+    return dice.every(value => value === dice[0]);
+  }
+
+  function queueCpuTurn() {
+    if (!state || state.gameOver || isAnimating || !currentPlayer().isCPU) return;
+    setTimeout(cpuAction, 540);
+  }
+
+  async function cpuAction() {
+    if (!state || state.gameOver || !currentPlayer().isCPU || isAnimating) return;
+
+    if (!state.turnHasRolled) {
+      await rollDice();
+      return;
+    }
+
+    if (state.rollsLeft > 0 && cpuShouldRollAgain()) {
+      applyCpuHolds();
+      renderAll();
+      await delay(420);
+      await rollDice();
+      return;
+    }
+
+    const catId = chooseCpuCategory();
+    await delay(360);
+    scoreCurrentTurn(catId);
+  }
+
+  function cpuShouldRollAgain() {
+    const player = currentPlayer();
+    const bestNow = bestImmediateCategory(player);
+    if (state.difficulty === 'easy') {
+      if (state.rollsLeft === 0) return false;
+      return Math.random() < 0.82 && bestNow.score < 40;
+    }
+    if (state.difficulty === 'medium') {
+      return bestNow.score < 40 && state.rollsLeft > 0;
+    }
+    if (bestNow.id === 'yahtzee' && bestNow.score === 50) return false;
+    if (bestNow.id === 'largeStraight' && bestNow.score === 40) return false;
+    if (bestNow.id === 'fullHouse' && bestNow.score === 25 && state.rollsLeft === 1) return false;
+    return state.rollsLeft > 0;
+  }
+
+  function applyCpuHolds() {
+    const player = currentPlayer();
+    const dice = state.dice;
+    const counts = getCounts(dice);
+    let holdValues = [];
+
+    if (state.difficulty === 'easy') {
+      const common = mostCommonValues(counts)[0]?.value;
+      state.held = dice.map(value => value === common && Math.random() > 0.35);
+      if (state.held.every(Boolean) && Math.random() < 0.7) state.held[randIndex(5)] = false;
+      setStatus(`${player.name} is thinking…`);
+      return;
+    }
+
+    if (isYahtzee(dice) || isLargeStraight(dice)) {
+      state.held = [true, true, true, true, true];
+      setStatus(`${player.name} holds the roll.`);
+      return;
+    }
+
+    const open = getLegalCategories(player, dice);
+
+    if (open.includes('largeStraight') || open.includes('smallStraight')) {
+      const straightHold = bestStraightHold(dice, state.difficulty === 'hard');
+      if (straightHold.length >= 3) holdValues = straightHold;
+    }
+
+    const commonValues = mostCommonValues(counts);
+    const bestCount = commonValues[0].count;
+    const bestValue = chooseBestDuplicateValue(commonValues, player);
+
+    if (bestCount >= 3 || holdValues.length < 3) {
+      holdValues = [bestValue];
+    }
+
+    state.held = dice.map(value => holdValues.includes(value));
+
+    if (state.difficulty === 'hard') {
+      const upperNeeds = upperCats
+        .filter(cat => player.scores[cat.id] === null)
+        .map(cat => ({ value: cat.value, count: counts[cat.value] || 0 }))
+        .sort((a, b) => (b.count * b.value) - (a.count * a.value));
+      const bestUpper = upperNeeds[0];
+      if (bestUpper && bestUpper.count >= 2 && bestUpper.value >= bestValue) {
+        state.held = dice.map(value => value === bestUpper.value);
+      }
+    }
+
+    if (!state.held.some(Boolean)) state.held[dice.indexOf(bestValue)] = true;
+    if (state.held.every(Boolean) && !isYahtzee(dice) && !isLargeStraight(dice)) {
+      const leastUseful = leastUsefulHeldIndex(dice, counts);
+      state.held[leastUseful] = false;
+    }
+
+    setStatus(`${player.name} holds ${state.held.filter(Boolean).length} dice.`);
+  }
+
+  function bestStraightHold(dice, preferLarge) {
+    const sequences = preferLarge
+      ? [[1, 2, 3, 4, 5], [2, 3, 4, 5, 6], [1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 6]]
+      : [[1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 6], [1, 2, 3, 4, 5], [2, 3, 4, 5, 6]];
+    let best = [];
+    sequences.forEach(seq => {
+      const present = seq.filter(value => dice.includes(value));
+      if (present.length > best.length) best = present;
+    });
+    return best;
+  }
+
+  function chooseBestDuplicateValue(commonValues, player) {
+    const openUpper = new Set(upperCats.filter(cat => player.scores[cat.id] === null).map(cat => cat.value));
+    const sorted = [...commonValues].sort((a, b) => {
+      const aUpper = openUpper.has(a.value) ? 4 : 0;
+      const bUpper = openUpper.has(b.value) ? 4 : 0;
+      return (b.count * 10 + b.value + bUpper) - (a.count * 10 + a.value + aUpper);
+    });
+    return sorted[0].value;
+  }
+
+  function mostCommonValues(counts) {
+    return Object.entries(counts)
+      .map(([value, count]) => ({ value: Number(value), count }))
+      .sort((a, b) => b.count - a.count || b.value - a.value);
+  }
+
+  function leastUsefulHeldIndex(dice, counts) {
+    let index = 0;
+    let lowest = Infinity;
+    dice.forEach((value, i) => {
+      const score = counts[value] * 10 + value;
+      if (score < lowest) {
+        lowest = score;
+        index = i;
+      }
+    });
+    return index;
+  }
+
+  function randIndex(length) {
+    return Math.floor(Math.random() * length);
+  }
+
+  function chooseCpuCategory() {
+    const player = currentPlayer();
+    const legal = getLegalCategories(player, state.dice);
+
+    if (state.difficulty === 'easy') {
+      const nonZero = legal.filter(id => scoreCategory(id, state.dice, player).points > 0);
+      if (nonZero.length && Math.random() < 0.76) return nonZero[randIndex(nonZero.length)];
+      return legal[randIndex(legal.length)];
+    }
+
+    const weighted = legal.map(id => {
+      const raw = scoreCategory(id, state.dice, player);
+      return { id, score: raw.points, bonus: raw.bonus, weight: cpuWeight(id, raw.points, raw.bonus, player) };
+    }).sort((a, b) => b.weight - a.weight);
+
+    if (state.difficulty === 'medium' && weighted.length > 1 && Math.random() < 0.18) {
+      return weighted[1].id;
+    }
+    return weighted[0].id;
+  }
+
+  function bestImmediateCategory(player) {
+    return getLegalCategories(player, state.dice)
+      .map(id => {
+        const raw = scoreCategory(id, state.dice, player);
+        return { id, score: raw.points, weight: cpuWeight(id, raw.points, raw.bonus, player) };
+      })
+      .sort((a, b) => b.weight - a.weight)[0];
+  }
+
+  function cpuWeight(id, points, bonus, player) {
+    let weight = points + bonus;
+    const totals = getTotals(player);
+    const cat = catMap[id];
+
+    if (id === 'yahtzee') weight += points === 50 ? 42 : -12;
+    if (id === 'largeStraight') weight += points === 40 ? 18 : -4;
+    if (id === 'smallStraight') weight += points === 30 ? 10 : -2;
+    if (id === 'fullHouse') weight += points === 25 ? 8 : -3;
+    if (id === 'chance') weight -= state.rollsLeft > 0 ? 4 : 0;
+
+    if (upperCats.some(upper => upper.id === id)) {
+      const targetPerBox = cat.value * 3;
+      const neededForBonus = Math.max(0, 63 - totals.upperSubtotal);
+      const openUpper = upperCats.filter(upper => player.scores[upper.id] === null).length;
+      const bonusPressure = openUpper > 0 && neededForBonus / openUpper <= targetPerBox + 2;
+      weight += points >= targetPerBox ? 10 : -6;
+      if (bonusPressure) weight += points - targetPerBox;
+      if (cat.value >= 5 && points >= cat.value * 3) weight += 5;
+    }
+
+    if (points === 0) {
+      const lowValueSacrifice = ['ones', 'twos', 'threes'].includes(id) ? 8 : 0;
+      const painful = ['yahtzee', 'largeStraight', 'fourKind'].includes(id) ? -24 : 0;
+      weight += lowValueSacrifice + painful;
+    }
+
+    return weight;
+  }
+
+  function openModal(id) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeModal(id) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    modal.classList.remove('active');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
+  function renderRecords() {
+    const records = loadRecords();
+    const best = records.soloBest.length
+      ? `<ol>${records.soloBest.map(entry => `<li>${entry.score} — ${escapeHtml(entry.date)}</li>`).join('')}</ol>`
+      : '<p>No single-player scores yet.</p>';
+
+    const pvp = records.pvp;
+    const cpuRows = ['easy', 'medium', 'hard'].map(diff => {
+      const row = records.cpu[diff] || { human: 0, cpu: 0, ties: 0 };
+      return `<p><strong>${titleCase(diff)}:</strong> You ${row.human} · CPU ${row.cpu} · Ties ${row.ties}</p>`;
+    }).join('');
+
+    els.recordsContent.innerHTML = `
+      <div class="record-block"><h3>Single Player Best</h3>${best}</div>
+      <div class="record-block"><h3>Player vs Player</h3><p>Player 1 ${pvp.p1} · Player 2 ${pvp.p2} · Ties ${pvp.ties}</p></div>
+      <div class="record-block"><h3>Player vs CPU</h3>${cpuRows}</div>
+    `;
+  }
+
+  function clearRecords() {
+    saveRecords(defaultRecords());
+    renderRecords();
+  }
+
+  function goToMenu() {
+    state = null;
+    isAnimating = false;
+    els.gameBadge.textContent = 'Main Menu';
+    showScreen('menu');
+  }
+
+  function isActiveGameInProgress() {
+    return state && !state.gameOver && els.gameScreen.classList.contains('active');
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>'"]/g, char => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[char]));
+  }
+
+  els.modeCards.forEach(button => button.addEventListener('click', () => setMode(button.dataset.mode)));
+  els.difficultyButtons.forEach(button => button.addEventListener('click', () => setDifficulty(button.dataset.difficulty)));
+  els.startBtn.addEventListener('click', startGame);
+  els.rollBtn.addEventListener('click', rollDice);
+  els.topNewGameBtn.addEventListener('click', () => {
+    if (!state) return;
+    openModal('newGameModal');
+  });
+  els.playAgainBtn.addEventListener('click', () => {
+    closeModal('gameOverModal');
+    startGame();
+  });
+  els.menuFromGameOverBtn.addEventListener('click', () => {
+    closeModal('gameOverModal');
+    goToMenu();
+  });
+  els.homeBtn.addEventListener('click', () => {
+    if (isActiveGameInProgress()) {
+      openModal('quitModal');
+      return;
+    }
+    goToMenu();
+  });
+  els.quitCancelBtn.addEventListener('click', () => closeModal('quitModal'));
+  els.quitConfirmBtn.addEventListener('click', () => {
+    closeModal('quitModal');
+    goToMenu();
+  });
+  els.newGameCancelBtn.addEventListener('click', () => closeModal('newGameModal'));
+  els.newGameConfirmBtn.addEventListener('click', () => {
+    closeModal('newGameModal');
+    startGame();
+  });
+  els.rulesBtn.addEventListener('click', () => openModal('rulesModal'));
+  els.recordsBtn.addEventListener('click', () => {
+    renderRecords();
+    openModal('recordsModal');
+  });
+  els.clearRecordsBtn.addEventListener('click', clearRecords);
+
+  document.querySelectorAll('[data-close-modal]').forEach(button => {
+    button.addEventListener('click', () => closeModal(button.dataset.closeModal));
+  });
+
+  document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+    backdrop.addEventListener('click', event => {
+      if (event.target === backdrop && backdrop.id !== 'gameOverModal') closeModal(backdrop.id);
+    });
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      closeModal('quitModal');
+      closeModal('newGameModal');
+      closeModal('upperBonusModal');
+      closeModal('rulesModal');
+      closeModal('recordsModal');
+    }
+  });
+
+  setMode('solo');
+  setDifficulty('easy');
+  showScreen('menu');
+})();
+
+  </script>
+</body>
+</html>

@@ -66,7 +66,7 @@ CUSTOM_ICONS = {'BillboardNumberOne.html': '🎵',
  'Random_Card.html': '🃏',
  'attendance_maker.html': '✅',
  'draw_from_memory.html': '🧠',
- 'ELA6_practice_site.html': '📖',
+ 'ELA6_practice_site.html': '📚',
  'grade5_science.html': '🔬',
  'pitch_higher_quiz.html': '🎼',
  'QR_Creator.html': '🔳',
@@ -150,7 +150,7 @@ CUSTOM_ICONS = {'BillboardNumberOne.html': '🎵',
  'Strategy_Games': '♟️',
  'WordGames': '🔤',
  'SubjectTests': '📝',
- 'ELA': '📖',
+ 'ELA': '📚',
  'Science': '🔬',
  'Math': '➗',
  'Mazes': '🧩',
@@ -257,7 +257,8 @@ CUSTOM_ICONS = {'BillboardNumberOne.html': '🎵',
  'Grade5_Math.html': '➗',
  'Grade5_Science.html': '🔬',
  'Grade5_Social.html': '🌎',
- 'Grade6_ELA.html': '📖',
+ 'Grade5_ELA.html': '📚',
+ 'Grade6_ELA.html': '📚',
  'Grade6_Math.html': '➗',
  'Grade6_Science.html': '🔬',
  'Grade6_Social.html': '🌎'}
@@ -338,7 +339,7 @@ ICON_RULES = [('multiplication', '✖️'),
  ('word', '🔤'),
  ('reading', '📖'),
  ('writing', '✍️'),
- ('ela', '🕮'),
+ ('ela', '📚'),
  ('vocab', '🧠'),
  ('poem', '📝'),
  ('scrambler', '🔤'),
@@ -430,7 +431,7 @@ CATEGORY_ORDER = [
 
 CATEGORY_ICONS = {
     "Math & Numeracy": "➗",
-    "Literacy & ELA": "📖",
+    "Literacy & ELA": "📚",
     "Science & Social Studies": "🌎",
     "Teacher Tools": "🍎",
     "Art, Media & Creation": "🎨",
@@ -445,7 +446,7 @@ CATEGORY_ICONS = {
 # a clear icon match. This prevents a file from inheriting the wrong icon just
 # because it lives inside a broad folder such as Science, Social, or ArcadeGames.
 SUBCATEGORY_ICONS = {
-    "ELA Practice & Spelling": "📖",
+    "ELA Practice & Spelling": "📚",
     "Writing & Word Work": "✍️",
     "Reading Tools": "📖",
     "Word Work Generators": "🔎",
@@ -697,6 +698,83 @@ def safe_icon(icon: str) -> str:
     return icon.replace("\ufe0f", "")
 
 
+def split_camel_and_numbers(text: str) -> str:
+    """Add spaces around CamelCase and letter/number boundaries."""
+    text = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", text)
+    text = re.sub(r"(?<=[A-Z])(?=[A-Z][a-z])", " ", text)
+    text = re.sub(r"(?<=[A-Za-z])(?=[0-9])", " ", text)
+    text = re.sub(r"(?<=[0-9])(?=[A-Za-z])", " ", text)
+    return text
+
+
+def normalize_for_keyword_match(text: str) -> str:
+    """Normalize paths and filenames for safer keyword matching."""
+    text = normalize_path(split_camel_and_numbers(text)).casefold()
+    text = re.sub(r"[^a-z0-9]+", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+# These short/common words should only match as their own token/phrase.
+# This prevents false positives such as "go" matching "Boggle" or "logo".
+BROAD_ICON_KEYWORDS = {
+    "go",
+    "qr",
+    "dle",
+    "sim",
+    "nim",
+    "hex",
+    "sky",
+    "run",
+    "ball",
+    "city",
+    "time",
+    "mode",
+    "word",
+    "game",
+    "play",
+}
+
+BROAD_CATEGORY_TOKENS = {
+    "go",
+    "dle",
+    "sim",
+    "nim",
+    "hex",
+    "maze",
+    "social",
+    "drop",
+}
+
+
+def keyword_matches(text: str, keyword: str, *, broad_keywords: set[str]) -> bool:
+    """Return True when a keyword safely matches text.
+
+    Most existing rules keep their historical substring behavior. Very short or
+    ambiguous keywords are matched only as normalized whole tokens/phrases so
+    they do not accidentally match inside unrelated words.
+    """
+    key = keyword.casefold().strip()
+    if not key:
+        return False
+
+    normalized_text = normalize_for_keyword_match(text)
+    normalized_key = normalize_for_keyword_match(key)
+    if not normalized_key:
+        return False
+
+    should_use_token_match = (
+        key in broad_keywords
+        or (len(normalized_key) <= 3 and " " not in normalized_key)
+    )
+
+    if should_use_token_match:
+        return re.search(rf"(?<![a-z0-9]){re.escape(normalized_key)}(?![a-z0-9])", normalized_text) is not None
+
+    compact_text = normalized_text.replace(" ", "")
+    compact_key = normalized_key.replace(" ", "")
+    return normalized_key in normalized_text or compact_key in compact_text
+
+
 def slugify(s: str) -> str:
     out = []
     for ch in s.lower():
@@ -716,6 +794,7 @@ def display_name(name: str, *, strip_extension: bool = False) -> str:
         raw = Path(raw).stem
 
     raw = raw.replace("_", " ").replace("-", " ")
+    raw = split_camel_and_numbers(raw)
     raw = re.sub(r"\s+", " ", raw).strip()
 
     special = {
@@ -785,7 +864,7 @@ def icon_for(name: str, is_dir: bool) -> str:
         return safe_icon(CUSTOM_ICONS[base])
 
     low = name.casefold()
-    matches = [(key, icon) for key, icon in ICON_RULES if key.casefold() in low]
+    matches = [(key, icon) for key, icon in ICON_RULES if keyword_matches(low, key, broad_keywords=BROAD_ICON_KEYWORDS)]
     if matches:
         matches.sort(key=lambda item: len(item[0]), reverse=True)
         return safe_icon(matches[0][1])
@@ -811,7 +890,7 @@ def icon_for_file(rel_path: str, category: str, subcategory: str) -> str:
         return safe_icon("🃏")
 
     low = base.casefold()
-    matches = [(key, icon) for key, icon in ICON_RULES if key.casefold() in low]
+    matches = [(key, icon) for key, icon in ICON_RULES if keyword_matches(low, key, broad_keywords=BROAD_ICON_KEYWORDS)]
     if matches:
         matches.sort(key=lambda item: len(item[0]), reverse=True)
         return safe_icon(matches[0][1])
@@ -827,7 +906,11 @@ def categorize_file(rel_path: str) -> Tuple[str, str]:
     filename = Path(low).name
 
     for tokens, category, subcategory in CATEGORY_RULES:
-        if any(token.casefold() in low or token.casefold() in filename for token in tokens):
+        if any(
+            keyword_matches(low, token, broad_keywords=BROAD_CATEGORY_TOKENS)
+            or keyword_matches(filename, token, broad_keywords=BROAD_CATEGORY_TOKENS)
+            for token in tokens
+        ):
             return category, subcategory
 
     return "Other / Unsorted", "Other"
@@ -1184,10 +1267,20 @@ def render_folder_view(entries: Sequence[FileEntry], recent_paths: set[str], inc
     for dirname in sorted(tree.dirs.keys(), key=lambda s: s.casefold()):
         folders.append(render_folder_dir(tree.dirs[dirname], recent_paths, open_by_default=False))
 
+    root_files_html = ""
+    if tree.files:
+        root_files_html = (
+            '<details class="dir-block" open>'
+            f'<summary><span class="icon">🏠</span>Root Files <span class="muted">({len(tree.files)})</span></summary>'
+            f'<div class="nested">{render_folder_files(tree.files, recent_paths)}</div>'
+            '</details>'
+        )
+
     return (
         '<section class="category-block folder-view-section" id="folder-view">'
         '<div class="category-heading"><span class="icon">🗂</span><span>Repository Folder View</span></div>'
         '<p class="section-note">This maintenance view keeps the original folder structure, but the main list above is grouped by app purpose.</p>'
+        + root_files_html
         + "\n".join(folders)
         + '</section>'
     )
