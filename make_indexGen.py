@@ -703,13 +703,67 @@ def safe_icon(icon: str) -> str:
     return icon.replace("\ufe0f", "")
 
 
+# Acronyms that should stay together when filenames are turned into display titles.
+# This prevents names like toJPEGconverter.html from becoming "To JPE Gconverter"
+# and names like PEDMASgame.html from becoming "PEDMA Sgame".
+KNOWN_ACRONYMS = (
+    "PEDMAS",
+    "ASCII",
+    "JPEG",
+    "WEBP",
+    "AVIF",
+    "JTIF",
+    "HTML",
+    "EPUB",
+    "PWIM",
+    "RAFT",
+    "NSFW",
+    "PDF",
+    "JPG",
+    "PNG",
+    "ELA",
+    "WTW",
+    "CPU",
+    "AAC",
+    "DLE",
+    "SIM",
+    "NIM",
+    "SOS",
+    "WAV",
+    "MP3",
+    "CLI",
+    "CSS",
+    "URL",
+    "QR",
+    "UI",
+    "JS",
+)
+
+
+def protect_known_acronyms(text: str) -> str:
+    """Pad known embedded acronyms before CamelCase splitting.
+
+    The CamelCase rule that separates "ABCd" as "AB Cd" is useful for normal
+    names, but it breaks embedded acronyms followed by lowercase words. Padding
+    exact uppercase acronym runs first keeps the acronym intact and creates the
+    intended word boundary. Lowercase acronym tokens, such as "jpeg" in
+    to_jpeg_converter.html, are still handled later by display_name().
+    """
+    if not text:
+        return text
+
+    pattern = re.compile("|".join(re.escape(word) for word in KNOWN_ACRONYMS))
+    return pattern.sub(lambda match: f" {match.group(0).upper()} ", text)
+
+
 def split_camel_and_numbers(text: str) -> str:
-    """Add spaces around CamelCase and letter/number boundaries."""
+    """Add spaces around CamelCase, acronyms, and letter/number boundaries."""
+    text = protect_known_acronyms(text)
     text = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", text)
     text = re.sub(r"(?<=[A-Z])(?=[A-Z][a-z])", " ", text)
     text = re.sub(r"(?<=[A-Za-z])(?=[0-9])", " ", text)
     text = re.sub(r"(?<=[0-9])(?=[A-Za-z])", " ", text)
-    return text
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def normalize_for_keyword_match(text: str) -> str:
@@ -820,19 +874,7 @@ def display_name(name: str, *, strip_extension: bool = False) -> str:
     raw = split_camel_and_numbers(raw)
     raw = re.sub(r"\s+", " ", raw).strip()
 
-    special = {
-        "ela": "ELA",
-        "aac": "AAC",
-        "qr": "QR",
-        "epub": "EPUB",
-        "pedmas": "PEDMAS",
-        "dle": "DLE",
-        "nsfw": "NSFW",
-        "html": "HTML",
-        "cpu": "CPU",
-        "sim": "SIM",
-        "nim": "NIM",
-    }
+    special = {word.casefold(): word for word in KNOWN_ACRONYMS}
 
     words = []
     for word in raw.split(" "):
