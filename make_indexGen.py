@@ -30,6 +30,7 @@ from __future__ import annotations
 import argparse
 import os
 import re
+from functools import lru_cache
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -416,6 +417,16 @@ ICON_RULES = [('canadian', '🇨🇦'),
 DEFAULT_FOLDER_ICON = "📁"
 DEFAULT_FILE_ICON = "📄"
 
+# Acronyms that should be kept together when turning filenames into titles.
+# This prevents names such as "toJPEGconverter.html" from becoming "To JPE Gconverter".
+ACRONYMS = {
+    "AAC", "ASCII", "AVIF", "CPU", "DLE", "ELA", "EPUB", "HTML",
+    "JPEG", "JPG", "JTIF", "NIM", "NSFW", "PDF", "PEDMAS", "PNG",
+    "QR", "SIM", "WEBP", "WTW",
+}
+ACRONYM_LOOKUP = {acro.casefold(): acro for acro in ACRONYMS}
+ACRONYM_PATTERN = re.compile("|".join(re.escape(acro) for acro in sorted(ACRONYMS, key=len, reverse=True)))
+
 
 # ---------------------------------------------------------------------------
 # Logical category rules
@@ -661,7 +672,7 @@ class FileEntry:
 class FolderNode:
     name: str
     rel_path: str
-    files: List[Tuple[str, str]] = field(default_factory=list)
+    files: List[FileEntry] = field(default_factory=list)
     dirs: Dict[str, "FolderNode"] = field(default_factory=dict)
 
 
@@ -684,10 +695,12 @@ def href_for(rel_path: str) -> str:
     return quote(rel_path, safe="/")
 
 
+@lru_cache(maxsize=None)
 def normalize_path(s: str) -> str:
     return s.replace("\\", "/").strip("/")
 
 
+@lru_cache(maxsize=None)
 def normalize_ext(ext: str) -> str:
     e = ext.strip()
     if not e:
@@ -703,62 +716,10 @@ def safe_icon(icon: str) -> str:
     return icon.replace("\ufe0f", "")
 
 
-# Acronyms that should stay together when filenames are turned into display titles.
-# This prevents names like toJPEGconverter.html from becoming "To JPE Gconverter"
-# and names like PEDMASgame.html from becoming "PEDMA Sgame".
-KNOWN_ACRONYMS = (
-    "PEDMAS",
-    "ASCII",
-    "JPEG",
-    "WEBP",
-    "AVIF",
-    "JTIF",
-    "HTML",
-    "EPUB",
-    "PWIM",
-    "RAFT",
-    "NSFW",
-    "PDF",
-    "JPG",
-    "PNG",
-    "ELA",
-    "WTW",
-    "CPU",
-    "AAC",
-    "DLE",
-    "SIM",
-    "NIM",
-    "SOS",
-    "WAV",
-    "MP3",
-    "CLI",
-    "CSS",
-    "URL",
-    "QR",
-    "UI",
-    "JS",
-)
-
-
-def protect_known_acronyms(text: str) -> str:
-    """Pad known embedded acronyms before CamelCase splitting.
-
-    The CamelCase rule that separates "ABCd" as "AB Cd" is useful for normal
-    names, but it breaks embedded acronyms followed by lowercase words. Padding
-    exact uppercase acronym runs first keeps the acronym intact and creates the
-    intended word boundary. Lowercase acronym tokens, such as "jpeg" in
-    to_jpeg_converter.html, are still handled later by display_name().
-    """
-    if not text:
-        return text
-
-    pattern = re.compile("|".join(re.escape(word) for word in KNOWN_ACRONYMS))
-    return pattern.sub(lambda match: f" {match.group(0).upper()} ", text)
-
-
+@lru_cache(maxsize=None)
 def split_camel_and_numbers(text: str) -> str:
-    """Add spaces around CamelCase, acronyms, and letter/number boundaries."""
-    text = protect_known_acronyms(text)
+    """Add spaces around acronyms, CamelCase, and letter/number boundaries."""
+    text = ACRONYM_PATTERN.sub(lambda match: f" {ACRONYM_LOOKUP[match.group(0).casefold()]} ", text)
     text = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", text)
     text = re.sub(r"(?<=[A-Z])(?=[A-Z][a-z])", " ", text)
     text = re.sub(r"(?<=[A-Za-z])(?=[0-9])", " ", text)
@@ -766,6 +727,7 @@ def split_camel_and_numbers(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+@lru_cache(maxsize=None)
 def normalize_for_keyword_match(text: str) -> str:
     """Normalize paths and filenames for safer keyword matching."""
     text = normalize_path(split_camel_and_numbers(text)).casefold()
@@ -815,6 +777,11 @@ def keyword_matches(text: str, keyword: str, *, broad_keywords: set[str]) -> boo
     ambiguous keywords are matched only as normalized whole tokens/phrases so
     they do not accidentally match inside unrelated words.
     """
+    return _keyword_matches_cached(text, keyword, tuple(sorted(broad_keywords)))
+
+
+@lru_cache(maxsize=None)
+def _keyword_matches_cached(text: str, keyword: str, broad_keywords: Tuple[str, ...]) -> bool:
     key = keyword.casefold().strip()
     if not key:
         return False
@@ -830,7 +797,8 @@ def keyword_matches(text: str, keyword: str, *, broad_keywords: set[str]) -> boo
     )
 
     if should_use_token_match:
-        return re.search(rf"(?<![a-z0-9]){re.escape(normalized_key)}(?![a-z0-9])", normalized_text) is not None
+        pattern = rf"(?<![a-z0-9]){re.escape(normalized_key)}(?![a-z0-9])"
+        return re.search(pattern, normalized_text) is not None
 
     compact_text = normalized_text.replace(" ", "")
     compact_key = normalized_key.replace(" ", "")
@@ -839,6 +807,7 @@ def keyword_matches(text: str, keyword: str, *, broad_keywords: set[str]) -> boo
 
 
 
+@lru_cache(maxsize=None)
 def has_canada_term(text: str) -> bool:
     """Return True for Canada/Canadian terms in filenames or folder paths."""
     normalized = normalize_for_keyword_match(text)
@@ -848,10 +817,12 @@ def has_canada_term(text: str) -> bool:
     )
 
 
+@lru_cache(maxsize=None)
 def has_yahtzee_term(text: str) -> bool:
     """Return True for Yahtzee filenames or paths."""
     return keyword_matches(text, "yahtzee", broad_keywords=BROAD_ICON_KEYWORDS)
 
+@lru_cache(maxsize=None)
 def slugify(s: str) -> str:
     out = []
     for ch in s.lower():
@@ -865,6 +836,7 @@ def slugify(s: str) -> str:
     return slug.strip("-") or "section"
 
 
+@lru_cache(maxsize=None)
 def display_name(name: str, *, strip_extension: bool = False) -> str:
     raw = Path(name).name
     if strip_extension:
@@ -874,13 +846,11 @@ def display_name(name: str, *, strip_extension: bool = False) -> str:
     raw = split_camel_and_numbers(raw)
     raw = re.sub(r"\s+", " ", raw).strip()
 
-    special = {word.casefold(): word for word in KNOWN_ACRONYMS}
-
     words = []
     for word in raw.split(" "):
         low = word.casefold()
-        if low in special:
-            words.append(special[low])
+        if low in ACRONYM_LOOKUP:
+            words.append(ACRONYM_LOOKUP[low])
         elif word.isupper():
             words.append(word)
         else:
@@ -923,6 +893,7 @@ def should_include_file(
 # Icons and categorization
 # ---------------------------------------------------------------------------
 
+@lru_cache(maxsize=None)
 def icon_for(name: str, is_dir: bool) -> str:
     base = Path(name).name
 
@@ -943,6 +914,7 @@ def icon_for(name: str, is_dir: bool) -> str:
     return DEFAULT_FOLDER_ICON if is_dir else DEFAULT_FILE_ICON
 
 
+@lru_cache(maxsize=None)
 def icon_for_file(rel_path: str, category: str, subcategory: str) -> str:
     """Return a file icon without letting folder names mislabel the file.
 
@@ -977,6 +949,7 @@ def icon_for_file(rel_path: str, category: str, subcategory: str) -> str:
     return safe_icon(CATEGORY_ICONS.get(category, DEFAULT_FILE_ICON))
 
 
+@lru_cache(maxsize=None)
 def categorize_file(rel_path: str) -> Tuple[str, str]:
     low = normalize_path(rel_path).casefold()
     filename = Path(low).name
@@ -1118,21 +1091,21 @@ def get_or_create_dir(parent: FolderNode, dir_name: str, full_rel: str) -> Folde
     return parent.dirs[dir_name]
 
 
-def add_file_to_tree(tree: FolderNode, rel_file_path: str) -> None:
-    parts = [p for p in normalize_path(rel_file_path).split("/") if p]
-    filename = parts.pop()
+def add_file_to_tree(tree: FolderNode, entry: FileEntry) -> None:
+    parts = [p for p in normalize_path(entry.rel_path).split("/") if p]
+    parts.pop()  # filename
     node = tree
     accum = ""
     for dirname in parts:
         accum = f"{accum}/{dirname}" if accum else dirname
         node = get_or_create_dir(node, dirname, accum)
-    node.files.append((filename, rel_file_path))
+    node.files.append(entry)
 
 
 def build_folder_tree(entries: Sequence[FileEntry]) -> FolderNode:
     tree = FolderNode(name="", rel_path="")
     for entry in entries:
-        add_file_to_tree(tree, entry.rel_path)
+        add_file_to_tree(tree, entry)
     prune_empty_dirs(tree)
     return tree
 
@@ -1169,6 +1142,15 @@ def recent_entries(entries: Sequence[FileEntry], days: int) -> List[FileEntry]:
     recent = [entry for entry in entries if entry.mtime is not None and entry.mtime >= cutoff]
     recent.sort(key=lambda item: item.mtime or 0, reverse=True)
     return recent
+
+
+# ---------------------------------------------------------------------------
+# Page assets
+# ---------------------------------------------------------------------------
+
+INDEX_CSS = '  :root {\n    color-scheme: light;\n    --bg:#f4f6f8;\n    --panel:#ffffff;\n    --panel-soft:#fafbfc;\n    --border:#e4e8ee;\n    --text:#1f2937;\n    --muted:#667085;\n    --link:#0b66d0;\n    --accent:#2563eb;\n    --accent-soft:#eef5ff;\n    --shadow:0 8px 28px rgba(15, 23, 42, .08);\n    --radius:18px;\n  }\n  * { box-sizing:border-box; }\n  html { scroll-behavior:smooth; }\n  body { margin:0; font-family:Arial, sans-serif; color:var(--text); background:var(--bg); }\n  a { color:var(--link); text-decoration:none; }\n  a:hover { text-decoration:underline; }\n  .page { max-width:1500px; margin:0 auto; padding:24px; }\n  .hero {\n    background:linear-gradient(135deg, #ffffff, #f8fbff);\n    border:1px solid var(--border);\n    border-radius:24px;\n    box-shadow:var(--shadow);\n    padding:24px;\n    margin-bottom:20px;\n  }\n  .hero h1 { margin:0 0 8px; font-size:clamp(26px, 3vw, 38px); letter-spacing:-.03em; }\n  .hero p { margin:0; color:var(--muted); line-height:1.5; }\n  .pill-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }\n  .pill {\n    display:inline-flex; align-items:center; gap:6px;\n    padding:6px 10px; border:1px solid var(--border); border-radius:999px;\n    background:#fff; color:var(--muted); font-size:.92rem;\n  }\n  .layout {\n    display:grid;\n    grid-template-columns:300px minmax(0, 1fr);\n    grid-template-areas:"sidebar search" "sidebar content";\n    gap:20px;\n    align-items:start;\n  }\n  .layout-search { grid-area:search; }\n  .sidebar {\n    grid-area:sidebar;\n    position:sticky;\n    top:18px;\n    background:var(--panel);\n    border:1px solid var(--border);\n    border-radius:var(--radius);\n    box-shadow:var(--shadow);\n    padding:18px;\n  }\n  .sidebar h2 { margin:0 0 14px; font-size:18px; }\n  .sidebar-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:5px; }\n  .sidebar-list a { display:block; padding:8px 10px; border-radius:12px; color:var(--text); }\n  .sidebar-list a:hover { background:var(--accent-soft); color:var(--link); text-decoration:none; }\n  .content { grid-area:content; display:flex; flex-direction:column; gap:18px; }\n  .category-block {\n    background:var(--panel);\n    border:1px solid var(--border);\n    border-radius:var(--radius);\n    box-shadow:var(--shadow);\n    padding:18px;\n  }\n  .category-heading {\n    display:flex;\n    align-items:center;\n    gap:10px;\n    font-size:21px;\n    font-weight:800;\n    margin-bottom:14px;\n    letter-spacing:-.02em;\n  }\n  .subcategory-block {\n    border:1px solid var(--border);\n    border-radius:16px;\n    background:var(--panel-soft);\n    padding:14px;\n  }\n  .subcategory-block + .subcategory-block { margin-top:14px; }\n  .subcategory-block h3 { margin:0 0 10px; font-size:16px; }\n  .app-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; }\n  .app-item {\n    min-width:0;\n    padding:10px 12px;\n    border-radius:12px;\n    background:#fff;\n    border:1px solid rgba(228,232,238,.75);\n  }\n  .app-item:hover { border-color:#cbd8e8; box-shadow:0 4px 16px rgba(15,23,42,.06); }\n  .app-item a { display:inline-flex; align-items:center; gap:4px; font-weight:700; color:var(--text); }\n  .app-item a:hover { color:var(--link); text-decoration:none; }\n  .app-title { overflow-wrap:anywhere; }\n  .path-note { display:block; margin-top:4px; color:var(--muted); font-size:.82rem; overflow-wrap:anywhere; }\n  .changed-note { display:inline-block; margin-left:8px; color:var(--muted); font-size:.88rem; }\n  .muted { color:var(--muted); font-weight:400; margin-left:4px; font-size:.92em; }\n  .icon { display:inline-block; width:24px; text-align:center; margin-right:2px; flex:0 0 auto; }\n  .new-badge {\n    display:inline-block;\n    margin-left:8px;\n    padding:2px 8px;\n    border-radius:999px;\n    background:#ffe7a8;\n    color:#7a5300;\n    font-size:.75rem;\n    font-weight:800;\n    vertical-align:middle;\n  }\n  .recent-empty, .section-note { margin:0 0 12px; color:var(--muted); line-height:1.45; }\n  .search-panel {\n    background:var(--panel);\n    border:1px solid var(--border);\n    border-radius:var(--radius);\n    box-shadow:var(--shadow);\n    padding:16px 18px;\n  }\n  .search-label { display:block; font-size:14px; font-weight:800; margin-bottom:8px; color:var(--muted); }\n  .search-input {\n    width:100%;\n    padding:12px 14px;\n    border:1px solid var(--border);\n    border-radius:12px;\n    font-size:16px;\n    background:#fff;\n    color:var(--text);\n  }\n  .search-input:focus {\n    outline:none;\n    border-color:#b9d4f5;\n    box-shadow:0 0 0 4px rgba(11, 102, 208, .10);\n  }\n  .search-help { margin-top:8px; color:var(--muted); font-size:.92em; }\n  .search-empty {\n    display:none;\n    background:var(--panel);\n    border:1px solid var(--border);\n    border-radius:var(--radius);\n    box-shadow:var(--shadow);\n    padding:18px;\n    color:var(--muted);\n  }\n  details {\n    margin:10px 0;\n    border:1px solid var(--border);\n    border-radius:14px;\n    background:var(--panel-soft);\n    overflow:hidden;\n  }\n  summary {\n    cursor:pointer;\n    padding:12px 14px;\n    font-weight:800;\n    user-select:none;\n    list-style:none;\n  }\n  summary::-webkit-details-marker { display:none; }\n  summary::before { content:"▸"; display:inline-block; width:18px; color:#666; }\n  details[open] summary::before { content:"▾"; }\n  .nested { padding:0 12px 12px 18px; }\n  .folder-list { padding:10px 0; }\n  .footer { margin-top:18px; color:var(--muted); font-size:.95em; }\n  .last-updated { margin-bottom:6px; }\n  .footer a { font-weight:800; }\n  @media (max-width: 980px) {\n    .page { padding:14px; }\n    .layout {\n      grid-template-columns:1fr;\n      grid-template-areas:"search" "sidebar" "content";\n    }\n    .sidebar { position:static; }\n  }'
+
+INDEX_JS = '(function () {\n  const input = document.getElementById(\'site-search\');\n  const empty = document.getElementById(\'search-empty\');\n  if (!input) return;\n\n  function norm(s) {\n    return (s || \'\').toLowerCase().trim();\n  }\n\n  function isVisible(el) {\n    return !!el && el.style.display !== \'none\';\n  }\n\n  function formatLongDate(date) {\n    return date.toLocaleDateString(undefined, { year: \'numeric\', month: \'long\', day: \'numeric\' });\n  }\n\n  function updateChangedNotes() {\n    const today = new Date();\n    const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());\n    const oneDay = 24 * 60 * 60 * 1000;\n\n    Array.from(document.querySelectorAll(\'.changed-note[data-changed-date]\')).forEach((note) => {\n      const iso = note.dataset.changedDate || \'\';\n      const parts = iso.split(\'-\').map(Number);\n      if (parts.length !== 3 || parts.some(Number.isNaN)) return;\n\n      const changed = new Date(parts[0], parts[1] - 1, parts[2]);\n      const diffDays = Math.floor((todayOnly - changed) / oneDay);\n      let label = \'Today\';\n      if (diffDays === 1) label = \'Yesterday\';\n      else if (diffDays > 1) label = `${diffDays} days ago`;\n\n      note.textContent = label;\n      note.title = `Changed ${formatLongDate(changed)}`;\n    });\n  }\n\n  function applySearch() {\n    const q = norm(input.value);\n    const appItems = Array.from(document.querySelectorAll(\'.app-item\'));\n    const visiblePaths = new Set();\n\n    appItems.forEach((item) => {\n      const haystack = item.dataset.search || norm(item.textContent);\n      const match = !q || haystack.includes(q);\n      item.style.display = match ? \'\' : \'none\';\n      if (match && item.dataset.path) visiblePaths.add(item.dataset.path);\n    });\n\n    Array.from(document.querySelectorAll(\'.subcategory-block\')).forEach((block) => {\n      const show = !!block.querySelector(\'.app-item:not([style*="display: none"])\');\n      block.style.display = show ? \'\' : \'none\';\n    });\n\n    Array.from(document.querySelectorAll(\'.searchable-category\')).forEach((section) => {\n      const show = !!section.querySelector(\'.app-item:not([style*="display: none"]), .subcategory-block:not([style*="display: none"])\');\n      section.style.display = show ? \'\' : \'none\';\n    });\n\n    Array.from(document.querySelectorAll(\'details.dir-block\')).reverse().forEach((details) => {\n      const show = !q ||\n        !!details.querySelector(\'.app-item:not([style*="display: none"])\') ||\n        Array.from(details.querySelectorAll(\':scope > .nested > details.dir-block\')).some(isVisible);\n      details.style.display = show ? \'\' : \'none\';\n      if (q && show) details.open = true;\n    });\n\n    const folderView = document.querySelector(\'.folder-view-section\');\n    if (folderView) {\n      const show = !q || !!folderView.querySelector(\'.app-item:not([style*="display: none"]), details.dir-block:not([style*="display: none"])\');\n      folderView.style.display = show ? \'\' : \'none\';\n    }\n\n    Array.from(document.querySelectorAll(\'.sidebar-list li\')).forEach((li) => {\n      const href = li.querySelector(\'a\')?.getAttribute(\'href\');\n      if (!href || !href.startsWith(\'#\')) {\n        li.style.display = \'\';\n        return;\n      }\n      const target = document.querySelector(href);\n      li.style.display = (!q || isVisible(target)) ? \'\' : \'none\';\n    });\n\n    empty.style.display = q && visiblePaths.size === 0 ? \'block\' : \'none\';\n  }\n\n  updateChangedNotes();\n  input.addEventListener(\'input\', applySearch);\n})();'
 
 
 # ---------------------------------------------------------------------------
@@ -1298,19 +1280,9 @@ def render_category_sections(entries: Sequence[FileEntry], recent_paths: set[str
     return "\n".join(sections)
 
 
-def render_folder_files(files: List[Tuple[str, str]], recent_paths: set[str]) -> str:
-    files_sorted = sorted(files, key=lambda item: item[0].casefold())
-    items = []
-    for name, relpath in files_sorted:
-        category, subcategory = categorize_file(relpath)
-        entry = FileEntry(
-            name=name,
-            rel_path=relpath,
-            category=category,
-            subcategory=subcategory,
-            icon=icon_for_file(relpath, category, subcategory),
-        )
-        items.append(render_app_item(entry, recent_paths, show_path=False))
+def render_folder_files(files: List[FileEntry], recent_paths: set[str]) -> str:
+    files_sorted = sorted(files, key=lambda item: display_name(item.name, strip_extension=True).casefold())
+    items = [render_app_item(entry, recent_paths, show_path=False) for entry in files_sorted]
     return '<ul class="app-list folder-list">' + "\n".join(items) + '</ul>'
 
 
@@ -1390,179 +1362,7 @@ def render_page(
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>{esc(title)}</title>
 <style>
-  :root {{
-    color-scheme: light;
-    --bg:#f4f6f8;
-    --panel:#ffffff;
-    --panel-soft:#fafbfc;
-    --border:#e4e8ee;
-    --text:#1f2937;
-    --muted:#667085;
-    --link:#0b66d0;
-    --accent:#2563eb;
-    --accent-soft:#eef5ff;
-    --shadow:0 8px 28px rgba(15, 23, 42, .08);
-    --radius:18px;
-  }}
-  * {{ box-sizing:border-box; }}
-  html {{ scroll-behavior:smooth; }}
-  body {{ margin:0; font-family:Arial, sans-serif; color:var(--text); background:var(--bg); }}
-  a {{ color:var(--link); text-decoration:none; }}
-  a:hover {{ text-decoration:underline; }}
-  .page {{ max-width:1500px; margin:0 auto; padding:24px; }}
-  .hero {{
-    background:linear-gradient(135deg, #ffffff, #f8fbff);
-    border:1px solid var(--border);
-    border-radius:24px;
-    box-shadow:var(--shadow);
-    padding:24px;
-    margin-bottom:20px;
-  }}
-  .hero h1 {{ margin:0 0 8px; font-size:clamp(26px, 3vw, 38px); letter-spacing:-.03em; }}
-  .hero p {{ margin:0; color:var(--muted); line-height:1.5; }}
-  .pill-row {{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }}
-  .pill {{
-    display:inline-flex; align-items:center; gap:6px;
-    padding:6px 10px; border:1px solid var(--border); border-radius:999px;
-    background:#fff; color:var(--muted); font-size:.92rem;
-  }}
-  .layout {{
-    display:grid;
-    grid-template-columns:300px minmax(0, 1fr);
-    grid-template-areas:"sidebar search" "sidebar content";
-    gap:20px;
-    align-items:start;
-  }}
-  .layout-search {{ grid-area:search; }}
-  .sidebar {{
-    grid-area:sidebar;
-    position:sticky;
-    top:18px;
-    background:var(--panel);
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    box-shadow:var(--shadow);
-    padding:18px;
-  }}
-  .sidebar h2 {{ margin:0 0 14px; font-size:18px; }}
-  .sidebar-list {{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:5px; }}
-  .sidebar-list a {{ display:block; padding:8px 10px; border-radius:12px; color:var(--text); }}
-  .sidebar-list a:hover {{ background:var(--accent-soft); color:var(--link); text-decoration:none; }}
-  .content {{ grid-area:content; display:flex; flex-direction:column; gap:18px; }}
-  .category-block {{
-    background:var(--panel);
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    box-shadow:var(--shadow);
-    padding:18px;
-  }}
-  .category-heading {{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    font-size:21px;
-    font-weight:800;
-    margin-bottom:14px;
-    letter-spacing:-.02em;
-  }}
-  .subcategory-block {{
-    border:1px solid var(--border);
-    border-radius:16px;
-    background:var(--panel-soft);
-    padding:14px;
-  }}
-  .subcategory-block + .subcategory-block {{ margin-top:14px; }}
-  .subcategory-block h3 {{ margin:0 0 10px; font-size:16px; }}
-  .app-list {{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; }}
-  .app-item {{
-    min-width:0;
-    padding:10px 12px;
-    border-radius:12px;
-    background:#fff;
-    border:1px solid rgba(228,232,238,.75);
-  }}
-  .app-item:hover {{ border-color:#cbd8e8; box-shadow:0 4px 16px rgba(15,23,42,.06); }}
-  .app-item a {{ display:inline-flex; align-items:center; gap:4px; font-weight:700; color:var(--text); }}
-  .app-item a:hover {{ color:var(--link); text-decoration:none; }}
-  .app-title {{ overflow-wrap:anywhere; }}
-  .path-note {{ display:block; margin-top:4px; color:var(--muted); font-size:.82rem; overflow-wrap:anywhere; }}
-  .changed-note {{ display:inline-block; margin-left:8px; color:var(--muted); font-size:.88rem; }}
-  .muted {{ color:var(--muted); font-weight:400; margin-left:4px; font-size:.92em; }}
-  .icon {{ display:inline-block; width:24px; text-align:center; margin-right:2px; flex:0 0 auto; }}
-  .new-badge {{
-    display:inline-block;
-    margin-left:8px;
-    padding:2px 8px;
-    border-radius:999px;
-    background:#ffe7a8;
-    color:#7a5300;
-    font-size:.75rem;
-    font-weight:800;
-    vertical-align:middle;
-  }}
-  .recent-empty, .section-note {{ margin:0 0 12px; color:var(--muted); line-height:1.45; }}
-  .search-panel {{
-    background:var(--panel);
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    box-shadow:var(--shadow);
-    padding:16px 18px;
-  }}
-  .search-label {{ display:block; font-size:14px; font-weight:800; margin-bottom:8px; color:var(--muted); }}
-  .search-input {{
-    width:100%;
-    padding:12px 14px;
-    border:1px solid var(--border);
-    border-radius:12px;
-    font-size:16px;
-    background:#fff;
-    color:var(--text);
-  }}
-  .search-input:focus {{
-    outline:none;
-    border-color:#b9d4f5;
-    box-shadow:0 0 0 4px rgba(11, 102, 208, .10);
-  }}
-  .search-help {{ margin-top:8px; color:var(--muted); font-size:.92em; }}
-  .search-empty {{
-    display:none;
-    background:var(--panel);
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    box-shadow:var(--shadow);
-    padding:18px;
-    color:var(--muted);
-  }}
-  details {{
-    margin:10px 0;
-    border:1px solid var(--border);
-    border-radius:14px;
-    background:var(--panel-soft);
-    overflow:hidden;
-  }}
-  summary {{
-    cursor:pointer;
-    padding:12px 14px;
-    font-weight:800;
-    user-select:none;
-    list-style:none;
-  }}
-  summary::-webkit-details-marker {{ display:none; }}
-  summary::before {{ content:"▸"; display:inline-block; width:18px; color:#666; }}
-  details[open] summary::before {{ content:"▾"; }}
-  .nested {{ padding:0 12px 12px 18px; }}
-  .folder-list {{ padding:10px 0; }}
-  .footer {{ margin-top:18px; color:var(--muted); font-size:.95em; }}
-  .last-updated {{ margin-bottom:6px; }}
-  .footer a {{ font-weight:800; }}
-  @media (max-width: 980px) {{
-    .page {{ padding:14px; }}
-    .layout {{
-      grid-template-columns:1fr;
-      grid-template-areas:"search" "sidebar" "content";
-    }}
-    .sidebar {{ position:static; }}
-  }}
+{INDEX_CSS}
 </style>
 </head>
 <body>
@@ -1599,96 +1399,7 @@ def render_page(
   </div>
 
 <script>
-(function () {{
-  const input = document.getElementById('site-search');
-  const empty = document.getElementById('search-empty');
-  if (!input) return;
-
-  function norm(s) {{
-    return (s || '').toLowerCase().trim();
-  }}
-
-  function isVisible(el) {{
-    return !!el && el.style.display !== 'none';
-  }}
-
-  function formatLongDate(date) {{
-    return date.toLocaleDateString(undefined, {{ year: 'numeric', month: 'long', day: 'numeric' }});
-  }}
-
-  function updateChangedNotes() {{
-    const today = new Date();
-    const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const oneDay = 24 * 60 * 60 * 1000;
-
-    Array.from(document.querySelectorAll('.changed-note[data-changed-date]')).forEach((note) => {{
-      const iso = note.dataset.changedDate || '';
-      const parts = iso.split('-').map(Number);
-      if (parts.length !== 3 || parts.some(Number.isNaN)) return;
-
-      const changed = new Date(parts[0], parts[1] - 1, parts[2]);
-      const diffDays = Math.floor((todayOnly - changed) / oneDay);
-      let label = 'Today';
-      if (diffDays === 1) label = 'Yesterday';
-      else if (diffDays > 1) label = `${{diffDays}} days ago`;
-
-      note.textContent = label;
-      note.title = `Changed ${{formatLongDate(changed)}}`;
-    }});
-  }}
-
-  function applySearch() {{
-    const q = norm(input.value);
-    const appItems = Array.from(document.querySelectorAll('.app-item'));
-    const visiblePaths = new Set();
-
-    appItems.forEach((item) => {{
-      const haystack = item.dataset.search || norm(item.textContent);
-      const match = !q || haystack.includes(q);
-      item.style.display = match ? '' : 'none';
-      if (match && item.dataset.path) visiblePaths.add(item.dataset.path);
-    }});
-
-    Array.from(document.querySelectorAll('.subcategory-block')).forEach((block) => {{
-      const show = !!block.querySelector('.app-item:not([style*="display: none"])');
-      block.style.display = show ? '' : 'none';
-    }});
-
-    Array.from(document.querySelectorAll('.searchable-category')).forEach((section) => {{
-      const show = !!section.querySelector('.app-item:not([style*="display: none"]), .subcategory-block:not([style*="display: none"])');
-      section.style.display = show ? '' : 'none';
-    }});
-
-    Array.from(document.querySelectorAll('details.dir-block')).reverse().forEach((details) => {{
-      const show = !q ||
-        !!details.querySelector('.app-item:not([style*="display: none"])') ||
-        Array.from(details.querySelectorAll(':scope > .nested > details.dir-block')).some(isVisible);
-      details.style.display = show ? '' : 'none';
-      if (q && show) details.open = true;
-    }});
-
-    const folderView = document.querySelector('.folder-view-section');
-    if (folderView) {{
-      const show = !q || !!folderView.querySelector('.app-item:not([style*="display: none"]), details.dir-block:not([style*="display: none"])');
-      folderView.style.display = show ? '' : 'none';
-    }}
-
-    Array.from(document.querySelectorAll('.sidebar-list li')).forEach((li) => {{
-      const href = li.querySelector('a')?.getAttribute('href');
-      if (!href || !href.startsWith('#')) {{
-        li.style.display = '';
-        return;
-      }}
-      const target = document.querySelector(href);
-      li.style.display = (!q || isVisible(target)) ? '' : 'none';
-    }});
-
-    empty.style.display = q && visiblePaths.size === 0 ? 'block' : 'none';
-  }}
-
-  updateChangedNotes();
-  input.addEventListener('input', applySearch);
-}})();
+{INDEX_JS}
 </script>
 </body>
 </html>
