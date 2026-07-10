@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MIDI Drum Pattern Maker</title>
+  <style>
+    :root{
+      --bg:#f6f1e8;
+      --card:#fffaf2;
+      --ink:#231f20;
+      --muted:#6f675f;
+      --line:#d8cfc1;
+      --accent:#2f6f73;
+      --accent2:#bf6d3f;
+      --accent3:#6a4c93;
+      --good:#2e7d32;
+      --bad:#b23b3b;
+      --shadow: 0 14px 34px rgba(35,31,32,.12);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;background:linear-gradient(135deg,#f6f1e8 0%,#efe4d4 100%);color:var(--ink);font-family:Inter,Segoe UI,Roboto,Arial,sans-serif}
+    body{padding:22px}
+    .wrap{max-width:1220px;margin:0 auto}
+    header{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:start;margin-bottom:16px}
+    h1{font-size:clamp(2rem,4vw,4.15rem);letter-spacing:-.06em;line-height:.9;margin:0 0 10px;font-weight:900}
+    .subtitle{font-size:1.05rem;line-height:1.45;max-width:820px;color:var(--muted);margin:0}
+    .export-pill{align-self:start;background:var(--ink);color:white;border-radius:999px;padding:12px 18px;font-weight:850;box-shadow:var(--shadow);white-space:nowrap}
+    .layout{display:grid;grid-template-columns:360px 1fr;gap:18px;align-items:start}
+    .card{background:rgba(255,250,242,.92);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+    .card h2{font-size:1.15rem;margin:0;padding:15px 16px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.38)}
+    .card-body{padding:16px}
+    .section-title{display:flex;align-items:center;gap:8px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;font-size:.78rem;color:var(--muted);margin:2px 0 10px}
+    .section-title::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--accent2);display:inline-block}
+    .control-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+    .control-grid.one{grid-template-columns:1fr}
+    label{font-size:.86rem;font-weight:850;display:block;margin-bottom:6px;color:#3b3530}
+    select,input[type="text"],input[type="number"]{width:100%;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);padding:10px 11px;font:inherit;font-weight:650;outline:none}
+    select:focus,input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(47,111,115,.15)}
+    input[type="range"]{width:100%;accent-color:var(--accent);cursor:pointer}
+    .range-line{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+    .range-value{font-size:.8rem;font-weight:900;background:#f1e7d8;border:1px solid var(--line);border-radius:999px;padding:5px 8px;min-width:55px;text-align:center}
+    .checks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
+    .check{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px 10px;font-weight:800;font-size:.88rem;cursor:pointer;user-select:none}
+    .check input{accent-color:var(--accent);transform:scale(1.08)}
+    .seed-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
+    .tiny-note{font-size:.79rem;line-height:1.35;color:var(--muted);margin-top:8px}
+    .button-row{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 0}
+    button{border:0;border-radius:13px;padding:11px 14px;font-weight:950;font-size:.94rem;cursor:pointer;color:white;background:var(--ink);box-shadow:0 7px 18px rgba(35,31,32,.16);transition:transform .08s ease, filter .15s ease, opacity .15s ease}
+    button:hover{filter:brightness(1.04)}
+    button:active{transform:translateY(1px) scale(.99)}
+    button.secondary{background:var(--accent)}
+    button.warm{background:var(--accent2)}
+    button.purple{background:var(--accent3)}
+    button.light{background:#efe3d2;color:var(--ink);border:1px solid var(--line);box-shadow:none}
+    button:disabled{opacity:.45;cursor:not-allowed}
+    .status{margin-top:12px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 13px;font-weight:760;color:var(--muted);line-height:1.35}
+    .status.ok{color:var(--good)}
+    .status.err{color:var(--bad)}
+    .main-card{min-height:640px}
+    .hero-panel{display:grid;grid-template-columns:1.15fr .85fr;gap:16px;margin-bottom:16px}
+    .summary{border:1px solid var(--line);background:#fff;border-radius:16px;padding:14px}
+    .summary h3{margin:0 0 8px;font-size:1rem}
+    .summary p{margin:0;color:var(--muted);line-height:1.42}
+    .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+    .stat{background:#f7efe3;border:1px solid var(--line);border-radius:14px;padding:11px;text-align:center}
+    .stat b{display:block;font-size:1.25rem;line-height:1;color:var(--ink)}
+    .stat span{display:block;font-size:.74rem;color:var(--muted);font-weight:850;text-transform:uppercase;letter-spacing:.06em;margin-top:5px}
+    .map-box{border:1px dashed #cdbfae;background:rgba(255,255,255,.64);border-radius:16px;padding:14px;min-height:168px}
+    .map-box h3{margin:0 0 8px;font-size:1rem}
+    .map-box.map-compact{min-height:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .map-box.map-compact p{margin:0;color:var(--muted);line-height:1.35}
+    button.mini{padding:9px 11px;font-size:.82rem;white-space:nowrap}
+    .map-tags{display:flex;flex-wrap:wrap;gap:7px}
+    .tag{background:var(--ink);color:white;border-radius:999px;padding:6px 9px;font-size:.78rem;font-weight:850}
+    .tag.alt{background:var(--accent)}
+    .tag.warm{background:var(--accent2)}
+    .tag.soft{background:#f0e4d2;color:#4c443d;border:1px solid var(--line)}
+    .grid-wrap{border:1px solid var(--line);background:#fff;border-radius:16px;overflow:hidden}
+    .grid-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);background:#fbf5eb}
+    .grid-head h3{margin:0;font-size:1rem}
+    .legend{display:flex;gap:6px;flex-wrap:wrap;color:var(--muted);font-size:.78rem;font-weight:800}
+    .legend span{display:flex;align-items:center;gap:4px}
+    .dot{width:10px;height:10px;border-radius:50%;background:var(--accent2);display:inline-block}
+    .dot.kick{background:#222}.dot.snare{background:#bf6d3f}.dot.hat{background:#2f6f73}.dot.tom{background:#6a4c93}.dot.cym{background:#c8972f}.dot.perc{background:#737373}
+    .pattern-scroll{overflow:auto;max-width:100%;padding:12px 14px 16px}
+    .pattern-grid{display:grid;gap:4px;min-width:max-content}
+    .lane{display:grid;grid-template-columns:92px 1fr;gap:8px;align-items:center}
+    .lane-name{font-weight:900;color:#3b3530;font-size:.82rem;text-align:right;white-space:nowrap}
+    .cells{display:grid;gap:2px}
+    .cell{width:16px;height:20px;border:1px solid #eadfce;background:#fffaf2;border-radius:4px;position:relative}
+    .cell.beat{background:#f0e4d2;border-color:#d3c4b0}
+    .cell.bar{border-left:2px solid var(--ink)}
+    .hit{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:9px;height:9px;border-radius:50%;background:#222;box-shadow:0 0 0 2px rgba(255,255,255,.8)}
+    .hit.ghost{width:6px;height:6px;opacity:.6}
+    .hit.kick{background:#222}.hit.snare{background:#bf6d3f}.hit.hat{background:#2f6f73}.hit.tom{background:#6a4c93}.hit.cym{background:#c8972f}.hit.perc{background:#737373}
+    .hit.half{left:78%}
+    .hit.trip{left:68%;width:6px;height:6px}
+    .empty{padding:64px 20px;text-align:center;color:var(--muted);font-weight:750}
+    .empty b{display:block;font-size:1.25rem;color:var(--ink);margin-bottom:6px}
+    .footer-note{font-size:.78rem;color:var(--muted);line-height:1.35;margin-top:14px}
+
+    .modal-backdrop[hidden]{display:none}
+    .modal-backdrop{position:fixed;inset:0;background:rgba(35,31,32,.48);display:flex;align-items:center;justify-content:center;padding:18px;z-index:1000}
+    .modal-card{width:min(720px,100%);max-height:86vh;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:22px;box-shadow:0 24px 80px rgba(35,31,32,.28);padding:16px}
+    .modal-head{display:flex;align-items:start;justify-content:space-between;gap:14px;margin-bottom:14px;border-bottom:1px solid var(--line);padding-bottom:12px}
+    .modal-head h2{font-size:1.25rem;margin:0 0 5px}
+    .modal-head p{margin:0;color:var(--muted);line-height:1.4}
+    @media (max-width: 960px){
+      body{padding:14px}
+      header{grid-template-columns:1fr}
+      .layout{grid-template-columns:1fr}
+      .hero-panel{grid-template-columns:1fr}
+      .stat-grid{grid-template-columns:repeat(2,1fr)}
+    }
+    @media (max-width: 520px){
+      .control-grid,.control-grid.one,.checks{grid-template-columns:1fr}
+      .button-row button{flex:1 1 100%}
+      .export-pill{width:max-content}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>MIDI Drum Pattern Maker</h1>
+        <p class="subtitle">Build varied MIDI drum sequences with style presets, fills, swing, humanized timing, velocity changes, repeatable seeds, browser preview, and a clean .mid download.</p>
+      </div>
+      <div class="export-pill">Export: .mid</div>
+    </header>
+
+    <div class="layout">
+      <aside class="card">
+        <h2>Build the MIDI</h2>
+        <div class="card-body">
+          <div class="section-title">Groove setup</div>
+          <div class="control-grid">
+            <div>
+              <label for="style">Style</label>
+              <select id="style">
+                <option value="rock">Rock</option>
+                <option value="pop">Pop</option>
+                <option value="hiphop">Hip-Hop</option>
+                <option value="trap">Trap</option>
+                <option value="funk">Funk</option>
+                <option value="disco">Disco</option>
+                <option value="house">House</option>
+                <option value="techno">Techno</option>
+                <option value="dnb">Drum &amp; Bass</option>
+                <option value="reggaeton">Reggaeton</option>
+                <option value="jazz">Jazz</option>
+                <option value="latin">Latin</option>
+                <option value="metal">Metal</option>
+                <option value="shuffle">Shuffle</option>
+              </select>
+            </div>
+            <div>
+              <label for="bars">Bars</label>
+              <select id="bars">
+                <option value="1">1 bar</option>
+                <option value="2">2 bars</option>
+                <option value="4" selected>4 bars</option>
+                <option value="8">8 bars</option>
+                <option value="16">16 bars</option>
+              </select>
+            </div>
+            <div>
+              <label for="complexity">Complexity</label>
+              <select id="complexity">
+                <option value="simple">Simple</option>
+                <option value="medium" selected>Medium</option>
+                <option value="busy">Busy</option>
+                <option value="wild">Wild</option>
+              </select>
+            </div>
+            <div>
+              <label for="drumMap">Drum map</label>
+              <select id="drumMap">
+                <option value="gm">GM Standard</option>
+                <option value="mod">GM + ModWheel</option>
+                <option value="brush">Brush Snare</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="section-title">Timing + feel</div>
+          <div class="control-grid one">
+            <div>
+              <label for="bpm">BPM</label>
+              <div class="range-line">
+                <input id="bpm" type="range" min="40" max="240" value="120" />
+                <span class="range-value" id="bpmVal">120</span>
+              </div>
+            </div>
+            <div>
+              <label for="swing">Swing</label>
+              <div class="range-line">
+                <input id="swing" type="range" min="0" max="70" value="8" />
+                <span class="range-value" id="swingVal">8%</span>
+              </div>
+            </div>
+            <div>
+              <label for="humanize">Humanize timing</label>
+              <div class="range-line">
+                <input id="humanize" type="range" min="0" max="30" value="8" />
+                <span class="range-value" id="humanizeVal">8 ms</span>
+              </div>
+            </div>
+            <div>
+              <label for="velVar">Velocity variation</label>
+              <div class="range-line">
+                <input id="velVar" type="range" min="0" max="42" value="18" />
+                <span class="range-value" id="velVarVal">18</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-title">Parts</div>
+          <div class="checks">
+            <label class="check"><input type="checkbox" id="partKick" checked /> Kick</label>
+            <label class="check"><input type="checkbox" id="partSnare" checked /> Snare / Clap</label>
+            <label class="check"><input type="checkbox" id="partHats" checked /> Hi-hats</label>
+            <label class="check"><input type="checkbox" id="partToms" checked /> Toms</label>
+            <label class="check"><input type="checkbox" id="partCymbals" checked /> Cymbals</label>
+            <label class="check"><input type="checkbox" id="partPerc" checked /> Percussion</label>
+            <label class="check"><input type="checkbox" id="partExtras" checked /> Extras / Brush</label>
+            <label class="check"><input type="checkbox" id="repeatSeed" checked /> Repeatable seed</label>
+          </div>
+
+          <div class="section-title">Fills + seed</div>
+          <div class="control-grid">
+            <div>
+              <label for="fills">Fills</label>
+              <select id="fills">
+                <option value="none">No fills</option>
+                <option value="last" selected>Last bar</option>
+                <option value="every4">Every 4 bars</option>
+                <option value="every8">Every 8 bars</option>
+              </select>
+            </div>
+            <div>
+              <label for="velocity">Base velocity</label>
+              <select id="velocity">
+                <option value="soft">Soft</option>
+                <option value="medium" selected>Medium</option>
+                <option value="loud">Loud</option>
+              </select>
+            </div>
+          </div>
+          <div class="seed-row">
+            <div>
+              <label for="seed">Seed</label>
+              <input id="seed" type="text" value="drum-120" spellcheck="false" />
+            </div>
+            <button class="light" id="newSeedBtn" type="button">New Seed</button>
+          </div>
+          <p class="tiny-note">Patterns use mixed 16th, 32nd, offbeat, ghost-note, and fill placements. MIDI drum note lengths and velocities are also varied so exported files feel less rigid.</p>
+
+          <div class="button-row">
+            <button class="secondary" id="generateBtn" type="button">Generate MIDI</button>
+            <button class="purple" id="playBtn" type="button" disabled>Play Preview</button>
+            <button class="light" id="stopBtn" type="button" disabled>Stop</button>
+            <button class="warm" id="downloadBtn" type="button" disabled>Download MIDI File</button>
+          </div>
+          <div id="status" class="status">Ready. Choose your settings, then generate a MIDI drum sequence.</div>
+        </div>
+      </aside>
+
+      <main class="card main-card">
+        <h2>Generated pattern</h2>
+        <div class="card-body">
+          <div class="hero-panel">
+            <div class="summary" id="summaryBox">
+              <h3>No MIDI generated yet</h3>
+              <p>After generating, this area will show the groove details, note count, fill behavior, and the .mid filename.</p>
+            </div>
+            <div class="map-box map-compact" id="mapBox">
+              <div>
+                <h3>Drum map</h3>
+                <p>GM Standard selected.</p>
+              </div>
+              <button class="light mini" id="showMapBtn" type="button">Show notes</button>
+            </div>
+          </div>
+
+          <div class="grid-wrap">
+            <div class="grid-head">
+              <h3>Drum-lane preview</h3>
+              <div class="legend">
+                <span><i class="dot kick"></i>Kick</span>
+                <span><i class="dot snare"></i>Snare</span>
+                <span><i class="dot hat"></i>Hat</span>
+                <span><i class="dot tom"></i>Tom</span>
+                <span><i class="dot cym"></i>Cymbal</span>
+                <span><i class="dot perc"></i>Perc</span>
+              </div>
+            </div>
+            <div class="pattern-scroll" id="patternScroll">
+              <div class="empty"><b>No pattern yet</b>Click Generate MIDI to create a drum sequence.</div>
+            </div>
+          </div>
+          <p class="footer-note">MIDI exports use channel 10 for drums. Preview sounds are simple browser-synthesized percussion, so your DAW or MIDI player may sound different depending on the selected kit.</p>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="mapModal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="mapModalTitle">
+      <div class="modal-head">
+        <div>
+          <h2 id="mapModalTitle">Drum map notes</h2>
+          <p id="mapModalDesc"></p>
+        </div>
+        <button class="light mini" id="closeMapBtn" type="button">Close</button>
+      </div>
+      <div class="map-tags" id="mapTags"></div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  'use strict';
+
+  const PPQ = 480;
+  const BAR_TICKS = PPQ * 4;
+  const STEP_TICKS = PPQ / 4;      // 16th notes
+  const HALF_STEP_TICKS = PPQ / 8; // 32nd notes
+
+  const el = id => document.getElementById(id);
+
+  const styleNames = {
+    rock:'Rock', pop:'Pop', hiphop:'Hip-Hop', trap:'Trap', funk:'Funk', disco:'Disco', house:'House', techno:'Techno',
+    dnb:'Drum & Bass', reggaeton:'Reggaeton', jazz:'Jazz', latin:'Latin', metal:'Metal', shuffle:'Shuffle'
+  };
+  const complexityIndex = { simple:0, medium:1, busy:2, wild:3 };
+  const baseVelocity = { soft:78, medium:96, loud:114 };
+
+  const DRUM_MAPS = {
+    gm: {
+      title:'GM Standard',
+      description:'Standard channel-10 drum notes with familiar kick, snare, hat, tom, cymbal, and percussion lanes.',
+      instruments: {
+        kick:{note:36,label:'Kick',kind:'kick'}, kickLow:{note:35,label:'Kick Low',kind:'kick'},
+        snare:{note:38,label:'Snare Center',kind:'snare'}, snareEdge:{note:40,label:'Snare Edge',kind:'snare'}, sidestick:{note:37,label:'Snare Sidestick',kind:'snare'}, clap:{note:39,label:'Hand Claps',kind:'snare'}, rimshot:{note:40,label:'Snare Rimshot',kind:'snare'},
+        closedHat:{note:42,label:'Hi-Hat Closed',kind:'hat'}, pedalHat:{note:44,label:'Hi-Hat Foot Close',kind:'hat'}, openHat:{note:46,label:'Hi-Hat Open',kind:'hat'}, footSplash:{note:44,label:'Hi-Hat Foot Splash',kind:'hat'},
+        lowTom:{note:41,label:'Low Tom',kind:'tom'}, lowTomEdge:{note:43,label:'Low Tom Edge',kind:'tom'}, midTom:{note:47,label:'Mid Tom',kind:'tom'}, midTomEdge:{note:48,label:'Mid Tom Edge',kind:'tom'}, highTom:{note:50,label:'High Tom',kind:'tom'}, highTomEdge:{note:48,label:'High Tom Edge',kind:'tom'},
+        crashLeft:{note:49,label:'Crash Left',kind:'cym'}, crashRight:{note:57,label:'Crash Right',kind:'cym'}, crashStop:{note:49,label:'Crash Stop',kind:'cym'}, ride:{note:51,label:'Ride Outer',kind:'cym'}, rideEdge:{note:59,label:'Ride Edge',kind:'cym'}, rideBell:{note:53,label:'Ride Bell',kind:'cym'}, rideInner:{note:51,label:'Ride Inner',kind:'cym'},
+        tambourine:{note:54,label:'Tambourine',kind:'perc'}, cowbell:{note:56,label:'Cowbell',kind:'perc'}, shaker:{note:70,label:'Shaker',kind:'perc'}, claves:{note:75,label:'Claves',kind:'perc'}, maracas:{note:70,label:'Maracas / Shaker',kind:'perc'}
+      }
+    },
+    mod: {
+      title:'GM + ModWheel',
+      description:'GM notes with modwheel values on hat articulations for tip, edge, and shank-style variation.',
+      instruments: {
+        kick:{note:36,label:'Kick',kind:'kick'}, kickLow:{note:35,label:'Kick Low',kind:'kick'},
+        snare:{note:38,label:'Snare Center',kind:'snare'}, snareEdge:{note:40,label:'Snare Edge',kind:'snare'}, sidestick:{note:37,label:'Snare Sidestick',kind:'snare'}, clap:{note:39,label:'Hand Claps',kind:'snare'}, rimshot:{note:40,label:'Snare Rimshot',kind:'snare'},
+        closedHat:{note:42,label:'Hi-Hat Tip',kind:'hat',ccMod:22}, pedalHat:{note:44,label:'Hi-Hat Shank',kind:'hat',ccMod:82}, openHat:{note:46,label:'Hi-Hat Edge',kind:'hat',ccMod:116}, footSplash:{note:44,label:'Hi-Hat Foot Splash',kind:'hat',ccMod:105},
+        lowTom:{note:41,label:'Low Tom',kind:'tom'}, lowTomEdge:{note:43,label:'Low Tom Edge',kind:'tom'}, midTom:{note:47,label:'Mid Tom',kind:'tom'}, midTomEdge:{note:48,label:'Mid Tom Edge',kind:'tom'}, highTom:{note:50,label:'High Tom',kind:'tom'}, highTomEdge:{note:48,label:'High Tom Edge',kind:'tom'},
+        crashLeft:{note:49,label:'Crash Left',kind:'cym'}, crashRight:{note:57,label:'Crash Right',kind:'cym'}, crashStop:{note:49,label:'Crash Stop',kind:'cym'}, ride:{note:51,label:'Ride Outer',kind:'cym'}, rideEdge:{note:59,label:'Ride Edge',kind:'cym'}, rideBell:{note:53,label:'Ride Bell',kind:'cym'}, rideInner:{note:51,label:'Ride Inner',kind:'cym'},
+        tambourine:{note:54,label:'Tambourine',kind:'perc'}, cowbell:{note:56,label:'Cowbell',kind:'perc'}, shaker:{note:70,label:'Shaker',kind:'perc'}, claves:{note:75,label:'Claves',kind:'perc'}, maracas:{note:70,label:'Maracas / Shaker',kind:'perc'}
+      }
+    },
+    brush: {
+      title:'Brush Snare',
+      description:'GM-style drums with brush snare articulations for drags, mutes, sweeps, circles, accents, and sweep strokes.',
+      instruments: {
+        kick:{note:36,label:'Kick',kind:'kick'}, kickLow:{note:35,label:'Kick Low',kind:'kick'},
+        snare:{note:38,label:'Snare Center',kind:'snare'}, snareEdge:{note:40,label:'Snare Edge',kind:'snare'}, sidestick:{note:37,label:'Snare Sidestick',kind:'snare'}, clap:{note:39,label:'Hand Claps',kind:'snare'}, rimshot:{note:40,label:'Snare Rimshot',kind:'snare'},
+        brushDrag:{note:31,label:'Snare Drag',kind:'brush'}, brushMute1:{note:29,label:'Snare Center Mute 1',kind:'brush'}, brushMute2:{note:30,label:'Snare Center Mute 2',kind:'brush'}, brushSweep8:{note:27,label:'Snare Sweeps 8th Note',kind:'brush'}, brushSweep16:{note:28,label:'Snare Sweeps 16th Note',kind:'brush'}, brushCircleHalf:{note:25,label:'Snare 1/2 Note Circles',kind:'brush'}, brushCircleQuarter:{note:26,label:'Snare 1/4 Note Circles',kind:'brush'}, brushAccent:{note:32,label:'Snare Sweep Accents Hit',kind:'brush'}, brushStroke:{note:33,label:'Sweep Stroke',kind:'brush'},
+        closedHat:{note:42,label:'Hi-Hat Closed',kind:'hat'}, pedalHat:{note:44,label:'Hi-Hat Foot Close',kind:'hat'}, openHat:{note:46,label:'Hi-Hat Open',kind:'hat'}, footSplash:{note:44,label:'Hi-Hat Foot Splash',kind:'hat'},
+        lowTom:{note:41,label:'Low Tom',kind:'tom'}, lowTomEdge:{note:43,label:'Low Tom Edge',kind:'tom'}, midTom:{note:47,label:'Mid Tom',kind:'tom'}, midTomEdge:{note:48,label:'Mid Tom Edge',kind:'tom'}, highTom:{note:50,label:'High Tom',kind:'tom'}, highTomEdge:{note:48,label:'High Tom Edge',kind:'tom'},
+        crashLeft:{note:49,label:'Crash Left',kind:'cym'}, crashRight:{note:57,label:'Crash Right',kind:'cym'}, crashStop:{note:49,label:'Crash Stop',kind:'cym'}, ride:{note:51,label:'Ride Outer',kind:'cym'}, rideEdge:{note:59,label:'Ride Edge',kind:'cym'}, rideBell:{note:53,label:'Ride Bell',kind:'cym'}, rideInner:{note:51,label:'Ride Inner',kind:'cym'},
+        tambourine:{note:54,label:'Tambourine',kind:'perc'}, cowbell:{note:56,label:'Cowbell',kind:'perc'}, shaker:{note:70,label:'Shaker',kind:'perc'}, claves:{note:75,label:'Claves',kind:'perc'}, maracas:{note:70,label:'Maracas / Shaker',kind:'perc'}
+      }
+    }
+  };
+
+  let currentPattern = null;
+  let currentMidiBytes = null;
+  let currentFilename = '';
+  let audioCtx = null;
+  let activeSources = [];
+  let previewMaster = null;
+  let finishTimer = null;
+
+  function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+  function titleCase(s){ return String(s).replace(/[-_]+/g,' ').replace(/\b\w/g, c => c.toUpperCase()); }
+  function sanitizeFilePart(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60) || 'drums'; }
+
+  function hashString(str){
+    let h = 2166136261 >>> 0;
+    for(let i=0;i<str.length;i++){
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+  function mulberry32(seed){
+    let a = seed >>> 0;
+    return function(){
+      a += 0x6D2B79F5;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function pick(rng, arr){ return arr[Math.floor(rng() * arr.length)]; }
+  function chance(rng, p){ return rng() < p; }
+  function randRange(rng, min, max){ return min + rng() * (max - min); }
+  function intRange(rng, min, max){ return Math.floor(randRange(rng, min, max + 1)); }
+
+  function readSettings(){
+    return {
+      style: el('style').value,
+      bars: parseInt(el('bars').value,10),
+      complexity: el('complexity').value,
+      drumMap: el('drumMap').value,
+      bpm: parseInt(el('bpm').value,10),
+      swing: parseInt(el('swing').value,10),
+      humanizeMs: parseInt(el('humanize').value,10),
+      velocityVariation: parseInt(el('velVar').value,10),
+      fills: el('fills').value,
+      velocity: el('velocity').value,
+      seed: (el('seed').value.trim() || 'drum-seed'),
+      repeatSeed: el('repeatSeed').checked,
+      parts: {
+        kick: el('partKick').checked,
+        snare: el('partSnare').checked,
+        hats: el('partHats').checked,
+        toms: el('partToms').checked,
+        cymbals: el('partCymbals').checked,
+        percussion: el('partPerc').checked,
+        extras: el('partExtras').checked
+      }
+    };
+  }
+
+  function getInstrument(mapKey, name){
+    const map = DRUM_MAPS[mapKey] || DRUM_MAPS.gm;
+    return map.instruments[name] || DRUM_MAPS.gm.instruments[name] || DRUM_MAPS.brush.instruments[name];
+  }
+
+  function instrumentDuration(instr, rng, complexity){
+    const kind = instr.kind;
+    if(kind === 'kick') return intRange(rng, 55, 135);
+    if(kind === 'snare') return intRange(rng, 45, 145);
+    if(kind === 'hat') return instr.label.includes('Open') ? intRange(rng, 150, 320) : intRange(rng, 25, 95);
+    if(kind === 'tom') return intRange(rng, 70, 175);
+    if(kind === 'cym') return instr.label.includes('Stop') ? intRange(rng, 45, 95) : intRange(rng, 280, 760);
+    if(kind === 'brush') return intRange(rng, 90, 360 + complexity * 70);
+    return intRange(rng, 45, 150);
+  }
+
+  function eventTick(bar, stepValue, settings, rng){
+    let tick = bar * BAR_TICKS + Math.round(stepValue * STEP_TICKS);
+    const fractional = Math.abs(stepValue - Math.round(stepValue)) > 0.001;
+    const rounded = Math.floor(stepValue);
+    const isOff16th = !fractional && (rounded % 2 === 1);
+    if(isOff16th && settings.swing > 0){
+      tick += Math.round((settings.swing / 100) * STEP_TICKS * 0.62);
+    }
+    if(settings.humanizeMs > 0){
+      const beatMs = 60000 / settings.bpm;
+      const humanTicks = (settings.humanizeMs / beatMs) * PPQ;
+      const strongBeat = Math.round(stepValue) % 4 === 0 && !fractional;
+      const amount = strongBeat ? humanTicks * 0.35 : humanTicks;
+      tick += Math.round(randRange(rng, -amount, amount));
+    }
+    return clamp(tick, 0, settings.bars * BAR_TICKS - 1);
+  }
+
+  function velocityFor(settings, rng, base, stepValue, ghost=false){
+    let v = baseVelocity[settings.velocity] + (base || 0);
+    if(Math.round(stepValue) % 4 === 0) v += 8;
+    if(Math.abs(stepValue - Math.round(stepValue)) > 0.001) v -= 12;
+    if(ghost) v -= 35;
+    v += intRange(rng, -settings.velocityVariation, settings.velocityVariation);
+    return clamp(Math.round(v), 18, 127);
+  }
+
+  function makeAdder(events, settings, rng){
+    return function add(name, bar, stepValue, opts={}){
+      const probability = opts.probability == null ? 1 : opts.probability;
+      if(probability < 1 && !chance(rng, probability)) return;
+      const instr = getInstrument(settings.drumMap, name);
+      if(!instr) return;
+      const tick = eventTick(bar, stepValue, settings, rng);
+      const velocity = velocityFor(settings, rng, opts.velocityOffset || 0, stepValue, !!opts.ghost);
+      const duration = opts.duration || instrumentDuration(instr, rng, complexityIndex[settings.complexity]);
+      events.push({
+        tick,
+        bar,
+        step: stepValue,
+        note: instr.note,
+        label: instr.label,
+        name,
+        kind: instr.kind,
+        velocity,
+        duration,
+        ghost: !!opts.ghost,
+        ccMod: instr.ccMod == null ? null : instr.ccMod
+      });
+    };
+  }
+
+  function addHatLine(add, settings, rng, bar, type='straight'){
+    const c = complexityIndex[settings.complexity];
+    if(!settings.parts.hats) return;
+    if(type === 'jazz'){
+      [0,3,6,8,11,14].forEach((s,i)=> add('ride', bar, s, {velocityOffset:i%2? -8:3, probability:.96}));
+      if(c > 1) [2.5,10.5].forEach(s => add('rideBell', bar, s, {velocityOffset:-12, probability:.45 + c*.1, ghost:true}));
+      return;
+    }
+    if(type === 'shuffle'){
+      [0,3,6,9,12,15].forEach((s,i)=> add('closedHat', bar, s, {velocityOffset:i%2? -10:2, probability:.97}));
+      if(c >= 2) [1.5,7.5,13.5].forEach(s => add('closedHat', bar, s, {velocityOffset:-18, probability:.5, ghost:true}));
+      return;
+    }
+    if(type === 'offbeatOpen'){
+      [0,4,8,12].forEach(s => add('closedHat', bar, s, {velocityOffset:-4, probability:.82}));
+      [2,6,10,14].forEach(s => add('openHat', bar, s, {velocityOffset:7, probability:.88}));
+      if(c >= 2) [1,5,9,13].forEach(s => add('closedHat', bar, s, {velocityOffset:-15, probability:.48, ghost:true}));
+      return;
+    }
+    if(type === 'trap'){
+      for(let s=0;s<16;s++) add('closedHat', bar, s, {velocityOffset:s%4===0? 4:-10, probability:c===0?.74:.94});
+      const rollCount = c === 0 ? 0 : c === 1 ? 1 : c === 2 ? 2 : 4;
+      for(let i=0;i<rollCount;i++){
+        const start = pick(rng,[3,7,11,13,14]);
+        add('closedHat', bar, start + .5, {velocityOffset:-18, probability:.95, ghost:true, duration:35});
+        if(c >= 3) add('closedHat', bar, start + .75, {velocityOffset:-24, probability:.55, ghost:true, duration:28});
+      }
+      return;
+    }
+    if(type === 'ride8'){
+      for(let s=0;s<16;s+=2) add('ride', bar, s, {velocityOffset:s%4===0? 4:-8, probability:.93});
+      if(c >= 2) [1,5,9,13].forEach(s => add('rideBell', bar, s, {velocityOffset:-16, probability:.42, ghost:true}));
+      return;
+    }
+    const every = c >= 2 || type === 'sixteen' ? 1 : 2;
+    for(let s=0;s<16;s+=every){
+      add('closedHat', bar, s, {velocityOffset:s%4===0? 2:-11, probability:type==='sparse'?.72:.92});
+    }
+    if(c >= 2){
+      [3.5,7.5,11.5,15.5].forEach(s => add('closedHat', bar, s, {velocityOffset:-22, probability:.20 + c*.08, ghost:true, duration:32}));
+    }
+  }
+
+  function addCoreHits(add, settings, rng, bar, kickSteps, snareSteps, opts={}){
+    const c = complexityIndex[settings.complexity];
+    if(settings.parts.kick){
+      kickSteps.forEach(s => add(opts.altKick && chance(rng,.28) ? 'kickLow' : 'kick', bar, s, {velocityOffset:opts.kickOffset || 0, probability:.96}));
+      const extras = opts.extraKicks || [3,6,10,14,15];
+      const extraProb = [0.05,0.13,0.24,0.36][c];
+      extras.forEach(s => add('kick', bar, s, {velocityOffset:-11, probability:extraProb}));
+      if(c >= 2) [2.5,6.5,10.5,14.5].forEach(s => add('kick', bar, s, {velocityOffset:-18, probability:c===2?.11:.2, ghost:true, duration:55}));
+    }
+    if(settings.parts.snare){
+      snareSteps.forEach(s => add(opts.clap ? 'clap' : (opts.rim ? 'sidestick' : 'snare'), bar, s, {velocityOffset:opts.snareOffset || 0, probability:.98}));
+      if(opts.layerClap) snareSteps.forEach(s => add('clap', bar, s, {velocityOffset:-7, probability:.72}));
+      const ghosts = opts.ghosts || [2,7,11,15];
+      const ghostProb = [0.06,0.18,0.34,0.52][c];
+      ghosts.forEach(s => add(settings.drumMap==='brush' ? 'brushDrag' : 'snareEdge', bar, s, {velocityOffset:-16, probability:ghostProb, ghost:true}));
+      if(c >= 3) [3.5,7.5,13.5].forEach(s => add(settings.drumMap==='brush'?'brushMute1':'snareEdge', bar, s, {probability:.2, ghost:true, velocityOffset:-22, duration:42}));
+    }
+  }
+
+  function maybeAddPerc(add, settings, rng, bar, mode='basic'){
+    const c = complexityIndex[settings.complexity];
+    if(!settings.parts.percussion) return;
+    if(mode === 'latin'){
+      [0,3,6,10,12].forEach(s => add('claves', bar, s, {velocityOffset:-4, probability:.85}));
+      [2,6,10,14].forEach(s => add('cowbell', bar, s, {velocityOffset:-6, probability:.55 + c*.08}));
+      [1,5,9,13].forEach(s => add('shaker', bar, s, {velocityOffset:-17, probability:.48 + c*.1, ghost:true}));
+      return;
+    }
+    if(mode === 'dance'){
+      [2,6,10,14].forEach(s => add('tambourine', bar, s, {velocityOffset:-9, probability:.22 + c*.11}));
+      return;
+    }
+    if(mode === 'funk'){
+      [1,5,9,13].forEach(s => add('tambourine', bar, s, {velocityOffset:-10, probability:.25 + c*.1}));
+      [3,11].forEach(s => add('cowbell', bar, s, {velocityOffset:-12, probability:.18 + c*.07}));
+      return;
+    }
+    [2,6,10,14].forEach(s => add('shaker', bar, s, {velocityOffset:-15, probability:.15 + c*.08, ghost:true}));
+  }
+
+  function maybeAddBrushExtras(add, settings, rng, bar){
+    if(settings.drumMap !== 'brush' || !settings.parts.extras) return;
+    const c = complexityIndex[settings.complexity];
+    add('brushCircleQuarter', bar, 0, {velocityOffset:-20, probability:.32 + c*.08, ghost:true, duration:PPQ});
+    add('brushSweep8', bar, 6, {velocityOffset:-18, probability:.24 + c*.08, ghost:true, duration:PPQ/2});
+    add('brushStroke', bar, 14.5, {velocityOffset:-14, probability:.20 + c*.1, ghost:true});
+  }
+
+  function grooveForBar(add, settings, rng, bar){
+    switch(settings.style){
+      case 'rock':
+        addCoreHits(add, settings, rng, bar, [0,8], [4,12], {extraKicks:[6,10,14], layerClap: false});
+        addHatLine(add, settings, rng, bar, complexityIndex[settings.complexity] >= 2 ? 'sixteen' : 'straight');
+        maybeAddPerc(add, settings, rng, bar);
+        break;
+      case 'pop':
+        addCoreHits(add, settings, rng, bar, [0,7,10], [4,12], {extraKicks:[3,8,14], layerClap: true});
+        addHatLine(add, settings, rng, bar, 'straight');
+        maybeAddPerc(add, settings, rng, bar);
+        break;
+      case 'hiphop':
+        addCoreHits(add, settings, rng, bar, [0,3,10,14], [4,12], {extraKicks:[6,8,15], rim:false});
+        addHatLine(add, settings, rng, bar, 'sparse');
+        maybeAddPerc(add, settings, rng, bar);
+        break;
+      case 'trap':
+        addCoreHits(add, settings, rng, bar, [0,6,10,15], [4,12], {extraKicks:[2,7,11,13], layerClap:true});
+        addHatLine(add, settings, rng, bar, 'trap');
+        break;
+      case 'funk':
+        addCoreHits(add, settings, rng, bar, [0,3,6,10,13], [4,12], {extraKicks:[2,8,15], ghosts:[1.5,2,7,9.5,11,15]});
+        addHatLine(add, settings, rng, bar, 'sixteen');
+        maybeAddPerc(add, settings, rng, bar, 'funk');
+        break;
+      case 'disco':
+        addCoreHits(add, settings, rng, bar, [0,4,8,12], [4,12], {clap:true, extraKicks:[7,15], layerClap:true});
+        addHatLine(add, settings, rng, bar, 'offbeatOpen');
+        maybeAddPerc(add, settings, rng, bar, 'dance');
+        break;
+      case 'house':
+        addCoreHits(add, settings, rng, bar, [0,4,8,12], [4,12], {clap:true, extraKicks:[14], layerClap:true});
+        addHatLine(add, settings, rng, bar, 'offbeatOpen');
+        maybeAddPerc(add, settings, rng, bar, 'dance');
+        break;
+      case 'techno':
+        addCoreHits(add, settings, rng, bar, [0,4,8,12], [4,12], {extraKicks:[2,6,10,14], snareOffset:-4});
+        addHatLine(add, settings, rng, bar, complexityIndex[settings.complexity] >= 1 ? 'sixteen' : 'offbeatOpen');
+        if(settings.parts.cymbals && chance(rng,.32)) add('rideBell', bar, pick(rng,[2,6,10,14]), {velocityOffset:-5});
+        break;
+      case 'dnb':
+        addCoreHits(add, settings, rng, bar, [0,6,11], [4,10,12], {extraKicks:[2,8,14,15], snareOffset:5});
+        addHatLine(add, settings, rng, bar, 'sixteen');
+        if(settings.parts.cymbals) [0,8].forEach(s => add('ride', bar, s, {velocityOffset:-7, probability:.35}));
+        break;
+      case 'reggaeton':
+        addCoreHits(add, settings, rng, bar, [0,3,8,11], [4,7,12,15], {clap:true, extraKicks:[6,14], layerClap:false});
+        addHatLine(add, settings, rng, bar, 'straight');
+        maybeAddPerc(add, settings, rng, bar, 'latin');
+        break;
+      case 'jazz':
+        addCoreHits(add, settings, rng, bar, [0,8], [4,12], {rim:true, extraKicks:[6,14], ghosts:[2.5,5.5,9.5,13.5], kickOffset:-18, snareOffset:-12});
+        addHatLine(add, settings, rng, bar, 'jazz');
+        if(settings.parts.hats) [4,12].forEach(s => add('pedalHat', bar, s, {velocityOffset:-8, probability:.76}));
+        maybeAddBrushExtras(add, settings, rng, bar);
+        break;
+      case 'latin':
+        addCoreHits(add, settings, rng, bar, [0,6,8,14], [4,12], {rim:true, extraKicks:[3,11], ghosts:[2,7,10,15]});
+        addHatLine(add, settings, rng, bar, 'straight');
+        maybeAddPerc(add, settings, rng, bar, 'latin');
+        break;
+      case 'metal':
+        addCoreHits(add, settings, rng, bar, [0,2,4,6,8,10,12,14], [4,12], {extraKicks:[1,3,5,7,9,11,13,15], altKick:true, snareOffset:7});
+        addHatLine(add, settings, rng, bar, 'ride8');
+        if(settings.parts.cymbals && bar % 2 === 0) add('crashLeft', bar, 0, {velocityOffset:10, probability:.55});
+        break;
+      case 'shuffle':
+        addCoreHits(add, settings, rng, bar, [0,6,10,14], [4,12], {extraKicks:[3,8,15], ghosts:[2.5,6.5,10.5,14.5]});
+        addHatLine(add, settings, rng, bar, 'shuffle');
+        maybeAddPerc(add, settings, rng, bar);
+        break;
+    }
+  }
+
+  function shouldFill(settings, bar){
+    if(settings.fills === 'none') return false;
+    if(settings.fills === 'last') return bar === settings.bars - 1;
+    if(settings.fills === 'every4') return (bar + 1) % 4 === 0 || bar === settings.bars - 1;
+    if(settings.fills === 'every8') return (bar + 1) % 8 === 0 || bar === settings.bars - 1;
+    return false;
+  }
+
+  function addFill(add, settings, rng, bar){
+    const c = complexityIndex[settings.complexity];
+    const start = c === 0 ? 12 : c === 1 ? 10 : 8;
+    const toms = ['highTom','midTom','lowTom','lowTomEdge'];
+    const brushy = settings.drumMap === 'brush' && settings.parts.extras;
+    for(let s=start; s<16; s++){
+      if(settings.parts.toms && chance(rng, .74 + c*.05)){
+        add(pick(rng, toms), bar, s, {velocityOffset:intRange(rng,-8,12), probability:1});
+      } else if(settings.parts.snare) {
+        add(brushy ? pick(rng,['brushDrag','brushAccent','brushMute2']) : 'snareEdge', bar, s, {velocityOffset:-6, probability:.8});
+      }
+      if(c >= 2 && chance(rng,.34)){
+        add(settings.parts.toms ? pick(rng,toms) : (brushy?'brushStroke':'snareEdge'), bar, s + .5, {velocityOffset:-14, ghost:true, duration:40});
+      }
+      if(c >= 3 && chance(rng,.18)){
+        add(brushy ? 'brushSweep16' : 'snareEdge', bar, s + .75, {velocityOffset:-20, ghost:true, duration:32});
+      }
+    }
+    if(settings.parts.cymbals){
+      if(bar < settings.bars - 1) add('crashRight', bar + 1, 0, {velocityOffset:12, probability:1});
+      else add('crashLeft', bar, 15.5, {velocityOffset:7, probability:1, duration:420});
+    }
+  }
+
+  function generatePattern(settings){
+    const seedSource = settings.repeatSeed ? settings.seed : `${settings.seed}-${Date.now()}-${Math.random()}`;
+    const rng = mulberry32(hashString(seedSource));
+    const events = [];
+    const add = makeAdder(events, settings, rng);
+    for(let bar=0; bar<settings.bars; bar++){
+      grooveForBar(add, settings, rng, bar);
+      if(shouldFill(settings, bar)) addFill(add, settings, rng, bar);
+      if(settings.parts.cymbals && bar % 4 === 0 && chance(rng, bar === 0 ? .72 : .38)) add('crashLeft', bar, 0, {velocityOffset:8});
+      maybeAddBrushExtras(add, settings, rng, bar);
+    }
+    // A few micro-variations so repeated bars do not feel like cloned loops.
+    const c = complexityIndex[settings.complexity];
+    for(let bar=1; bar<settings.bars; bar++){
+      if(settings.parts.kick && chance(rng,.1 + c*.06)) add('kick', bar, pick(rng,[1.5,5.5,9.5,13.5]), {velocityOffset:-16, ghost:true, duration:55});
+      if(settings.parts.hats && chance(rng,.16 + c*.08)) add('openHat', bar, pick(rng,[6,14]), {velocityOffset:-5});
+      if(settings.parts.snare && chance(rng,.12 + c*.07)) add(settings.drumMap==='brush'?'brushStroke':'snareEdge', bar, pick(rng,[3.5,7.5,11.5,15.5]), {velocityOffset:-20, ghost:true, duration:36});
+    }
+    events.sort((a,b) => a.tick - b.tick || a.note - b.note || b.velocity - a.velocity);
+    return { events, seedUsed: seedSource, settings };
+  }
+
+  function stringBytes(s){ return [...s].map(ch => ch.charCodeAt(0) & 0xFF); }
+  function u16(n){ return [(n >> 8) & 0xFF, n & 0xFF]; }
+  function u32(n){ return [(n >> 24) & 0xFF, (n >> 16) & 0xFF, (n >> 8) & 0xFF, n & 0xFF]; }
+  function vlq(value){
+    let buffer = value & 0x7F;
+    const bytes = [];
+    while((value >>= 7)){
+      buffer <<= 8;
+      buffer |= ((value & 0x7F) | 0x80);
+    }
+    while(true){
+      bytes.push(buffer & 0xFF);
+      if(buffer & 0x80) buffer >>= 8;
+      else break;
+    }
+    return bytes;
+  }
+  function addMidiEvent(trackEvents, tick, data, order=1){
+    trackEvents.push({tick:Math.max(0, Math.round(tick)), data, order});
+  }
+  function buildMidi(pattern){
+    const settings = pattern.settings;
+    const trackEvents = [];
+    const tempo = Math.round(60000000 / settings.bpm);
+    addMidiEvent(trackEvents, 0, [0xFF,0x03, ...vlq('MIDI Drum Pattern Maker'.length), ...stringBytes('MIDI Drum Pattern Maker')], 0);
+    addMidiEvent(trackEvents, 0, [0xFF,0x51,0x03, (tempo>>16)&255, (tempo>>8)&255, tempo&255], 0);
+    addMidiEvent(trackEvents, 0, [0xFF,0x58,0x04,0x04,0x02,0x18,0x08], 0);
+    addMidiEvent(trackEvents, 0, [0xB9, 7, 100], 1); // channel volume
+    addMidiEvent(trackEvents, 0, [0xB9, 10, 64], 1); // pan center
+
+    pattern.events.forEach(ev => {
+      if(ev.ccMod != null) addMidiEvent(trackEvents, Math.max(0, ev.tick - 1), [0xB9, 1, clamp(ev.ccMod,0,127)], 1);
+      addMidiEvent(trackEvents, ev.tick, [0x99, ev.note, ev.velocity], 2);
+      addMidiEvent(trackEvents, ev.tick + ev.duration, [0x89, ev.note, 0], 0);
+    });
+    const endTick = settings.bars * BAR_TICKS + PPQ;
+    addMidiEvent(trackEvents, endTick, [0xFF,0x2F,0x00], 9);
+    trackEvents.sort((a,b) => a.tick - b.tick || a.order - b.order);
+
+    let last = 0;
+    const trackData = [];
+    trackEvents.forEach(evt => {
+      const delta = Math.max(0, evt.tick - last);
+      trackData.push(...vlq(delta), ...evt.data);
+      last = evt.tick;
+    });
+    const header = [...stringBytes('MThd'), ...u32(6), ...u16(0), ...u16(1), ...u16(PPQ)];
+    const trackChunk = [...stringBytes('MTrk'), ...u32(trackData.length), ...trackData];
+    return new Uint8Array([...header, ...trackChunk]);
+  }
+
+  function renderMapTags(mapKey){
+    const map = DRUM_MAPS[mapKey];
+    const tags = [];
+    const names = ['kick','snare','snareEdge','sidestick','clap','closedHat','openHat','pedalHat','lowTom','midTom','highTom','crashLeft','ride','rideBell','tambourine','cowbell','shaker'];
+    if(mapKey === 'brush') names.splice(5,0,'brushDrag','brushMute1','brushSweep8','brushCircleQuarter','brushStroke');
+    names.forEach((name, idx) => {
+      const instr = getInstrument(mapKey, name);
+      if(instr) tags.push(`<span class="tag ${idx%4===0?'alt':idx%4===1?'warm':idx%4===2?'soft':''}">${instr.label} ${instr.note}</span>`);
+    });
+    el('mapBox').innerHTML = `
+      <div>
+        <h3>Drum map</h3>
+        <p><b>${map.title}</b> selected. Click below to view the note list.</p>
+      </div>
+      <button class="light mini" id="showMapBtn" type="button">Show notes</button>
+    `;
+    el('mapModalTitle').textContent = map.title;
+    el('mapModalDesc').textContent = map.description;
+    el('mapTags').innerHTML = tags.join('');
+    el('showMapBtn').addEventListener('click', openMapModal);
+  }
+
+  function openMapModal(){
+    el('mapModal').hidden = false;
+    el('closeMapBtn').focus();
+  }
+
+  function closeMapModal(){
+    el('mapModal').hidden = true;
+  }
+
+  function renderSummary(pattern, filename){
+    const s = pattern.settings;
+    const uniqueNotes = new Set(pattern.events.map(e => e.note)).size;
+    const fillsText = {none:'No fills', last:'Fill in the last bar', every4:'Fills every 4 bars', every8:'Fills every 8 bars'}[s.fills];
+    const kindCounts = pattern.events.reduce((acc,e)=>{ acc[e.kind]=(acc[e.kind]||0)+1; return acc; },{});
+    el('summaryBox').innerHTML = `
+      <h3>${styleNames[s.style]} • ${DRUM_MAPS[s.drumMap].title}</h3>
+      <p>${s.bars} bar${s.bars===1?'':'s'} at ${s.bpm} BPM. ${titleCase(s.complexity)} complexity with ${s.swing}% swing, ${s.humanizeMs} ms timing humanization, and ${s.velocityVariation} velocity variation. ${fillsText}.</p>
+      <div class="stat-grid">
+        <div class="stat"><b>${pattern.events.length}</b><span>hits</span></div>
+        <div class="stat"><b>${uniqueNotes}</b><span>MIDI notes</span></div>
+        <div class="stat"><b>${kindCounts.hat || 0}</b><span>hat hits</span></div>
+        <div class="stat"><b>${kindCounts.snare || 0}</b><span>snare hits</span></div>
+      </div>
+      <p style="margin-top:12px"><b>Filename:</b> ${filename}</p>
+    `;
+  }
+
+  function renderPatternGrid(pattern){
+    const s = pattern.settings;
+    const steps = s.bars * 16;
+    const lanes = [
+      {name:'Kick', kinds:['kick'], cls:'kick'},
+      {name:'Snare/Clap', kinds:['snare','brush'], cls:'snare'},
+      {name:'Hi-Hat', kinds:['hat'], cls:'hat'},
+      {name:'Toms', kinds:['tom'], cls:'tom'},
+      {name:'Cymbals', kinds:['cym'], cls:'cym'},
+      {name:'Perc/Extras', kinds:['perc'], cls:'perc'}
+    ];
+    const byLane = new Map();
+    lanes.forEach(l => byLane.set(l.name, Array.from({length:steps}, () => [])));
+    pattern.events.forEach(ev => {
+      const pos = ev.tick / STEP_TICKS;
+      const cell = clamp(Math.floor(pos + 0.001), 0, steps - 1);
+      const lane = lanes.find(l => l.kinds.includes(ev.kind));
+      if(lane) byLane.get(lane.name)[cell].push({...ev, inCell:pos - cell});
+    });
+    const grid = document.createElement('div');
+    grid.className = 'pattern-grid';
+    lanes.forEach(lane => {
+      const row = document.createElement('div');
+      row.className = 'lane';
+      const name = document.createElement('div');
+      name.className = 'lane-name';
+      name.textContent = lane.name;
+      const cells = document.createElement('div');
+      cells.className = 'cells';
+      cells.style.gridTemplateColumns = `repeat(${steps}, 16px)`;
+      byLane.get(lane.name).forEach((hits, idx) => {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        if(idx % 4 === 0) cell.classList.add('beat');
+        if(idx % 16 === 0) cell.classList.add('bar');
+        hits.slice(0,3).forEach(hit => {
+          const dot = document.createElement('i');
+          dot.className = `hit ${lane.cls}${hit.ghost ? ' ghost':''}${hit.inCell > .45 ? ' half':''}${hit.inCell > .2 && hit.inCell <= .45 ? ' trip':''}`;
+          dot.title = `${hit.label} • note ${hit.note} • vel ${hit.velocity}`;
+          cell.appendChild(dot);
+        });
+        cells.appendChild(cell);
+      });
+      row.appendChild(name);
+      row.appendChild(cells);
+      grid.appendChild(row);
+    });
+    const holder = el('patternScroll');
+    holder.innerHTML = '';
+    holder.appendChild(grid);
+  }
+
+  function status(msg, kind=''){
+    const box = el('status');
+    box.textContent = msg;
+    box.className = `status ${kind}`.trim();
+  }
+
+  function generate(){
+    stopPreview();
+    const settings = readSettings();
+    if(!settings.parts.kick && !settings.parts.snare && !settings.parts.hats && !settings.parts.toms && !settings.parts.cymbals && !settings.parts.percussion && !settings.parts.extras){
+      status('Please turn on at least one drum part before generating.', 'err');
+      return false;
+    }
+    if(!settings.repeatSeed){
+      el('seed').value = newSeedText();
+      settings.seed = el('seed').value;
+    }
+    currentPattern = generatePattern(settings);
+    currentFilename = `midi-drum-pattern-${sanitizeFilePart(styleNames[settings.style])}-${settings.bars}bars-${settings.bpm}bpm-${sanitizeFilePart(settings.complexity)}-${sanitizeFilePart(DRUM_MAPS[settings.drumMap].title)}-${sanitizeFilePart(settings.seed)}.mid`;
+    currentMidiBytes = buildMidi(currentPattern);
+    renderSummary(currentPattern, currentFilename);
+    renderPatternGrid(currentPattern);
+    renderMapTags(settings.drumMap);
+    el('playBtn').disabled = false;
+    el('downloadBtn').disabled = false;
+    status(`Generated ${currentPattern.events.length} drum hits. Preview or download the MIDI file.`, 'ok');
+    return true;
+  }
+
+  function newSeedText(){
+    const syll = ['kick','snare','hat','brush','swing','tom','ride','clap','groove','fill','ghost','shuffle','pulse','crash','clave','floor'];
+    return `${pick(Math.random, syll)}-${pick(Math.random, syll)}-${Math.floor(1000 + Math.random()*9000)}`;
+  }
+
+  // Math.random-compatible picker support
+  function pick(fn, arr){ return arr[Math.floor(fn() * arr.length)]; }
+
+  function downloadMidi(){
+    if(!currentMidiBytes) return;
+    const blob = new Blob([currentMidiBytes], {type:'audio/midi'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = currentFilename || 'midi-drum-pattern.mid';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 800);
+    status('MIDI file downloaded.', 'ok');
+  }
+
+  function getAudioContext(){
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+  function registerSource(src){ activeSources.push(src); return src; }
+  function safeStopSource(src){ try{ src.stop(0); }catch(e){} }
+  function stopPreview(){
+    if(finishTimer){ clearTimeout(finishTimer); finishTimer = null; }
+    activeSources.forEach(safeStopSource);
+    activeSources = [];
+    if(previewMaster){ try{ previewMaster.disconnect(); }catch(e){} previewMaster = null; }
+    el('stopBtn').disabled = true;
+    if(currentPattern) el('playBtn').disabled = false;
+  }
+  function noiseBuffer(ctx, seconds=1){
+    const len = Math.max(1, Math.floor(ctx.sampleRate * seconds));
+    const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0;i<len;i++) data[i] = Math.random() * 2 - 1;
+    return buffer;
+  }
+  function envGain(ctx, out, time, dur, peak, attack=.004, release=.035){
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, time);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), time + attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, time + dur + release);
+    g.connect(out);
+    return g;
+  }
+  function playKick(ctx, out, time, vel){
+    const osc = registerSource(ctx.createOscillator());
+    const g = envGain(ctx, out, time, .15, vel*.85, .004, .08);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(135, time);
+    osc.frequency.exponentialRampToValueAtTime(42, time + .13);
+    osc.connect(g);
+    osc.start(time); osc.stop(time + .24);
+  }
+  function playSnare(ctx, out, time, vel, brush=false){
+    const src = registerSource(ctx.createBufferSource());
+    src.buffer = noiseBuffer(ctx, brush ? .5 : .22);
+    const filter = ctx.createBiquadFilter();
+    filter.type = brush ? 'bandpass' : 'highpass';
+    filter.frequency.value = brush ? 1400 : 900;
+    filter.Q.value = brush ? .8 : .4;
+    const g = envGain(ctx, out, time, brush ? .23 : .12, vel * (brush ? .42 : .58), .003, brush ? .16 : .06);
+    src.connect(filter); filter.connect(g);
+    src.start(time); src.stop(time + (brush ? .5 : .26));
+    if(!brush){
+      const osc = registerSource(ctx.createOscillator());
+      const og = envGain(ctx, out, time, .07, vel*.2, .004, .035);
+      osc.type = 'triangle'; osc.frequency.value = 190;
+      osc.connect(og); osc.start(time); osc.stop(time+.13);
+    }
+  }
+  function playHat(ctx, out, time, vel, open=false){
+    const src = registerSource(ctx.createBufferSource());
+    src.buffer = noiseBuffer(ctx, open ? .8 : .18);
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = open ? 5200 : 7200;
+    const g = envGain(ctx, out, time, open ? .35 : .055, vel * (open ? .34 : .22), .002, open ? .25 : .025);
+    src.connect(hp); hp.connect(g);
+    src.start(time); src.stop(time + (open ? .72 : .16));
+  }
+  function playTom(ctx, out, time, vel, note){
+    const osc = registerSource(ctx.createOscillator());
+    const g = envGain(ctx, out, time, .18, vel*.58, .004, .12);
+    const base = note >= 49 ? 180 : note >= 45 ? 130 : 92;
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(base, time);
+    osc.frequency.exponentialRampToValueAtTime(base*.62, time+.16);
+    osc.connect(g); osc.start(time); osc.stop(time+.32);
+  }
+  function playCym(ctx, out, time, vel, ride=false){
+    const src = registerSource(ctx.createBufferSource());
+    src.buffer = noiseBuffer(ctx, ride ? .75 : 1.3);
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = ride ? 4200 : 2600;
+    const g = envGain(ctx, out, time, ride ? .48 : .85, vel * (ride ? .22 : .34), .005, ride ? .42 : .85);
+    src.connect(hp); hp.connect(g);
+    src.start(time); src.stop(time + (ride ? .9 : 1.45));
+  }
+  function playPerc(ctx, out, time, vel, note){
+    if(note === 56){
+      const osc = registerSource(ctx.createOscillator());
+      const g = envGain(ctx, out, time, .08, vel*.32, .002, .045);
+      osc.type = 'square'; osc.frequency.value = 830;
+      osc.connect(g); osc.start(time); osc.stop(time+.12);
+      return;
+    }
+    const src = registerSource(ctx.createBufferSource());
+    src.buffer = noiseBuffer(ctx, .18);
+    const hp = ctx.createBiquadFilter(); hp.type = 'bandpass'; hp.frequency.value = note === 54 ? 6200 : 3800;
+    hp.Q.value = 1.8;
+    const g = envGain(ctx, out, time, .08, vel*.25, .002, .04);
+    src.connect(hp); hp.connect(g);
+    src.start(time); src.stop(time+.18);
+  }
+  function scheduleEventSound(ctx, out, ev, time){
+    const vel = ev.velocity / 127;
+    if(ev.kind === 'kick') playKick(ctx, out, time, vel);
+    else if(ev.kind === 'snare') playSnare(ctx, out, time, vel, false);
+    else if(ev.kind === 'brush') playSnare(ctx, out, time, vel, true);
+    else if(ev.kind === 'hat') playHat(ctx, out, time, vel, ev.label.includes('Open') || ev.name === 'footSplash');
+    else if(ev.kind === 'tom') playTom(ctx, out, time, vel, ev.note);
+    else if(ev.kind === 'cym') playCym(ctx, out, time, vel, ev.name.includes('ride') || ev.label.includes('Ride'));
+    else playPerc(ctx, out, time, vel, ev.note);
+  }
+
+  async function playPreview(){
+    if(!currentPattern) return;
+    stopPreview();
+    const ctx = getAudioContext();
+    if(ctx.state === 'suspended') await ctx.resume();
+    previewMaster = ctx.createGain();
+    previewMaster.gain.value = .86;
+    previewMaster.connect(ctx.destination);
+    const start = ctx.currentTime + .08;
+    const secPerTick = (60 / currentPattern.settings.bpm) / PPQ;
+    currentPattern.events.forEach(ev => scheduleEventSound(ctx, previewMaster, ev, start + ev.tick * secPerTick));
+    const duration = currentPattern.settings.bars * BAR_TICKS * secPerTick + 1.2;
+    finishTimer = setTimeout(() => {
+      stopPreview();
+      status('Preview finished.', 'ok');
+    }, duration * 1000);
+    el('playBtn').disabled = true;
+    el('stopBtn').disabled = false;
+    status('Playing preview...', 'ok');
+  }
+
+  function updateRangeLabels(){
+    el('bpmVal').textContent = el('bpm').value;
+    el('swingVal').textContent = `${el('swing').value}%`;
+    el('humanizeVal').textContent = `${el('humanize').value} ms`;
+    el('velVarVal').textContent = el('velVar').value;
+  }
+
+  ['bpm','swing','humanize','velVar'].forEach(id => el(id).addEventListener('input', updateRangeLabels));
+  el('newSeedBtn').addEventListener('click', () => {
+    el('seed').value = newSeedText();
+    const didGenerate = generate();
+    if(didGenerate) status(`New seed created and pattern regenerated with ${currentPattern.events.length} drum hits.`, 'ok');
+  });
+  el('generateBtn').addEventListener('click', generate);
+  el('downloadBtn').addEventListener('click', downloadMidi);
+  el('playBtn').addEventListener('click', playPreview);
+  el('stopBtn').addEventListener('click', () => { stopPreview(); status('Preview stopped.'); });
+  el('drumMap').addEventListener('change', () => renderMapTags(el('drumMap').value));
+  el('closeMapBtn').addEventListener('click', closeMapModal);
+  el('mapModal').addEventListener('click', event => { if(event.target === el('mapModal')) closeMapModal(); });
+  document.addEventListener('keydown', event => { if(event.key === 'Escape' && !el('mapModal').hidden) closeMapModal(); });
+
+  updateRangeLabels();
+  renderMapTags('gm');
+})();
+</script>
+</body>
+</html>
