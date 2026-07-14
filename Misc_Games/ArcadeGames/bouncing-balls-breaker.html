@@ -324,6 +324,136 @@
     margin-bottom: 2px;
   }
 
+
+  body.mobile {
+    padding: 4px;
+    align-items: flex-start;
+    overflow: hidden;
+  }
+
+  body.mobile .app {
+    width: 100%;
+    height: var(--app-height, 100svh);
+    min-height: 0;
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  body.mobile .main-card {
+    height: var(--app-height, 100svh);
+    min-height: 0;
+    border-radius: 12px;
+    padding: 6px;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 5px;
+  }
+
+  body.mobile .side-card {
+    display: none;
+  }
+
+  body.mobile .topbar {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  body.mobile h1 {
+    font-size: 1rem;
+  }
+
+  body.mobile .subtitle {
+    display: none;
+  }
+
+  body.mobile .button-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+  }
+
+  body.mobile button {
+    border-radius: 9px;
+    padding: 7px 5px;
+    font-size: 0.68rem;
+    min-width: 0;
+  }
+
+  body.mobile .stats-row {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    margin-top: 5px;
+  }
+
+  body.mobile .stat-pill {
+    border-radius: 9px;
+    padding: 5px 3px;
+  }
+
+  body.mobile .stat-label {
+    font-size: 0.48rem;
+    letter-spacing: 0.05em;
+  }
+
+  body.mobile .stat-value {
+    font-size: 0.78rem;
+  }
+
+  body.mobile .game-shell {
+    height: auto;
+    min-height: 0;
+    padding: 3px;
+    border-radius: 12px;
+  }
+
+  body.mobile canvas {
+    border-radius: 10px;
+  }
+
+  body.mobile .overlay {
+    padding: 10px;
+  }
+
+  body.mobile .overlay-card {
+    width: min(360px, 96vw);
+    max-height: calc(var(--app-height, 100svh) - 22px);
+    border-radius: 14px;
+    padding: 14px;
+  }
+
+  body.mobile .overlay-title {
+    font-size: 1.15rem;
+  }
+
+  body.mobile .overlay-copy {
+    font-size: 0.84rem;
+  }
+
+  body.mobile .powerup-menu-list {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  body.mobile .powerup-card {
+    font-size: 0.76rem;
+    padding: 8px;
+  }
+
+  body.mobile .mobile-scores {
+    display: block;
+  }
+
+  .mobile-scores {
+    display: none;
+    margin-top: 10px;
+    text-align: left;
+  }
+
+  .mobile-scores .score-list {
+    max-height: 190px;
+    overflow: auto;
+  }
+
   @media (max-width: 760px) {
     html, body { overflow: auto; }
     body { padding: 6px; }
@@ -404,6 +534,7 @@
             <button id="newGameBtn" class="btn-secondary">New Game</button>
             <button id="speedBtn" class="btn-green">Speed 1x</button>
             <button id="powerupsBtn">Power-Ups</button>
+            <button id="scoresBtn">Scores</button>
             <button id="pauseBtn" class="btn-ghost">Pause</button>
           </div>
         </div>
@@ -470,6 +601,7 @@
   const pauseBtn = document.getElementById('pauseBtn');
   const speedBtn = document.getElementById('speedBtn');
   const powerupsBtn = document.getElementById('powerupsBtn');
+  const scoresBtn = document.getElementById('scoresBtn');
   const overlay = document.getElementById('overlay');
   const overlayTitle = document.getElementById('overlayTitle');
   const overlayCopy = document.getElementById('overlayCopy');
@@ -532,7 +664,26 @@
     turnBombArmed: false
   };
 
+
+  function isMobileDevice() {
+    const ua = navigator.userAgent || navigator.vendor || '';
+    const uaMobile = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini|Mobile/i.test(ua);
+    const coarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    const narrowScreen = Math.min(window.innerWidth, window.innerHeight) <= 760;
+    return uaMobile || (coarsePointer && narrowScreen);
+  }
+
+  function applyDeviceLayout() {
+    const mobile = isMobileDevice();
+    document.body.classList.toggle('mobile', mobile);
+    document.body.classList.toggle('desktop', !mobile);
+
+    const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    document.documentElement.style.setProperty('--app-height', `${Math.floor(viewportHeight)}px`);
+  }
+
   function init() {
+    applyDeviceLayout();
     resizeCanvas();
     loadHighScores();
     bindEvents();
@@ -544,6 +695,7 @@
   function bindEvents() {
     window.addEventListener('resize', queueResize);
     window.addEventListener('orientationchange', queueResize);
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', queueResize);
 
     document.addEventListener('keydown', (e) => {
       if (e.key.toLowerCase() === 'f') cycleSpeed();
@@ -585,6 +737,7 @@
 
     speedBtn.addEventListener('click', cycleSpeed);
     powerupsBtn.addEventListener('click', showPowerupsMenu);
+    scoresBtn.addEventListener('click', showScoresMenu);
   }
 
   function queueResize() {
@@ -592,22 +745,36 @@
       resizeQueued = true;
       requestAnimationFrame(() => {
         resizeQueued = false;
+        applyDeviceLayout();
         resizeCanvas();
       });
     }
   }
 
   function resizeCanvas() {
+    applyDeviceLayout();
+
     const rect = gameShell.getBoundingClientRect();
-    const shellW = Math.max(260, rect.width - 8);
-    const shellH = Math.max(320, rect.height - 8);
-    const ratio = 10.7 / 7;
+    const mobile = document.body.classList.contains('mobile');
+    const shellW = Math.max(250, rect.width - (mobile ? 4 : 8));
+    const shellH = Math.max(280, rect.height - (mobile ? 4 : 8));
+    const ratio = mobile ? 1.54 : 10.7 / 7;
+
     let width = Math.min(shellW, shellH / ratio);
-    width = Math.max(280, Math.floor(width));
+    width = Math.max(mobile ? 248 : 280, Math.floor(width));
+
     let height = Math.floor(width * ratio);
     if (height > shellH) {
       height = Math.floor(shellH);
       width = Math.floor(height / ratio);
+    }
+
+    if (mobile) {
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+    } else {
+      canvas.style.width = '';
+      canvas.style.height = '';
     }
 
     canvas.width = width;
@@ -692,6 +859,34 @@
     ]);
   }
 
+
+  function showScoresMenu() {
+    const entries = loadHighScores(true);
+    const html = entries.length
+      ? `<div class="mobile-scores"><div class="score-list">${entries.slice(0, 3).map((entry, index) => `
+          <div class="score-item">
+            <div class="rank">${index + 1}</div>
+            <div>
+              <div class="score-main">Level ${entry.level}</div>
+              <div class="score-sub">${entry.time}</div>
+            </div>
+          </div>
+        `).join('')}</div></div>`
+      : '<div class="note-box">No scores yet. Start playing!</div>';
+
+    const wasPaused = game.paused;
+    if (!game.paused && !game.gameOver) game.paused = true;
+    updateStats();
+
+    showOverlay('High Scores', '', html, [
+      { label: wasPaused ? 'Close' : 'Back to Game', className: 'btn-green', onClick: () => {
+        hideOverlay();
+        if (!wasPaused && !game.gameOver) game.paused = false;
+        updateStats();
+      }}
+    ]);
+  }
+
   function pauseGame() {
     if (game.gameOver) return;
     game.paused = true;
@@ -701,6 +896,7 @@
     showOverlay('Paused', 'Press resume to keep playing.', '', [
       { label: 'Resume', className: 'btn-green', onClick: resumeGame },
       { label: 'Power-Ups', className: '', onClick: showPowerupsMenu },
+      { label: 'Scores', className: '', onClick: showScoresMenu },
       { label: 'New Game', className: 'btn-secondary', onClick: showNewGameConfirm }
     ]);
   }
