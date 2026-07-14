@@ -446,7 +446,7 @@
 
       <div class="note-box howto">
         <div class="panel-title">Help</div>
-        Power-ups are used on the <strong>next turn</strong>. After level 20, power-ups appear more often and fewer bricks are added. Every <strong>200 brick hits</strong> gives you an extra ball.
+        Power-ups are used on the <strong>next turn</strong>. After level 20, power-ups appear more often and fewer bricks are added. Brick-hit bonus: first +1 ball at <strong>200 hits</strong>, then each next bonus needs 25 more hits than the last.
       </div>
 
       <div class="tiny">High scores are saved locally in your browser.</div>
@@ -515,6 +515,7 @@
     queuedPowerups: [],
     brickHits: 0,
     nextHitBonus: 200,
+    nextHitBonusStep: 225,
     shotInProgress: false,
     paused: false,
     gameOver: false,
@@ -674,6 +675,7 @@
     game.queuedPowerups = [];
     game.brickHits = 0;
     game.nextHitBonus = 200;
+    game.nextHitBonusStep = 225;
     game.shotInProgress = false;
     game.paused = false;
     game.gameOver = false;
@@ -1166,11 +1168,20 @@
 
   function recordBrickHit() {
     game.brickHits += 1;
-    if (game.brickHits >= game.nextHitBonus) {
+
+    while (game.brickHits >= game.nextHitBonus) {
+      const reachedAt = game.nextHitBonus;
+      const nextNeeded = game.nextHitBonusStep;
+
       game.permanentBalls += 1;
-      game.nextHitBonus += 200;
-      showFloater('+1 Ball: 200 hits!', game.launchX, game.launchY - 42, '#20ba66');
+      game.nextHitBonus += game.nextHitBonusStep;
+      game.nextHitBonusStep += 25;
+
+      showFloater(`+1 Ball: ${reachedAt} hits!`, game.launchX, game.launchY - 42, '#20ba66');
       spawnParticles(game.launchX, game.launchY - 24, '#20ba66', 18);
+
+      // Example thresholds: 200 total, then +225 = 425, then +250 = 675, then +275 = 950.
+      if (game.brickHits < game.nextHitBonus) break;
     }
   }
 
