@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <title>Binaural Beat Maker</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --panel:#131a2e;
+      --panel2:#18213a;
+      --text:#f8fafc;
+      --muted:#a9b4ca;
+      --accent:#67e8f9;
+      --accent2:#8b5cf6;
+      --danger:#fb7185;
+      --line:rgba(255,255,255,.1);
+      --shadow:0 18px 50px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;background:
+      radial-gradient(circle at 15% 10%,rgba(103,232,249,.14),transparent 26%),
+      radial-gradient(circle at 85% 15%,rgba(139,92,246,.16),transparent 28%),
+      var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    body{display:grid;place-items:center;padding:18px}
+    button,input,select{font:inherit}
+    .app{width:min(980px,100%);display:grid;grid-template-columns:1.2fr .8fr;gap:18px}
+    .panel{background:linear-gradient(180deg,rgba(24,33,58,.96),rgba(19,26,46,.96));border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow)}
+    .main{padding:24px}
+    .side{padding:20px;display:flex;flex-direction:column;gap:16px}
+    h1{font-size:clamp(1.8rem,5vw,3rem);line-height:1;margin:0 0 8px;letter-spacing:-.05em}
+    .subtitle{margin:0;color:var(--muted)}
+    .badge{display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:8px 12px;border-radius:999px;background:rgba(103,232,249,.1);border:1px solid rgba(103,232,249,.25);color:#cffafe;font-size:.9rem}
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 16px var(--accent)}
+    .visual{height:190px;margin:24px 0 18px;border-radius:20px;overflow:hidden;background:linear-gradient(180deg,#0b1227,#0e172f);border:1px solid var(--line);position:relative}
+    canvas{width:100%;height:100%;display:block}
+    .center-label{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;text-align:center}
+    .beat-number{font-size:clamp(2.7rem,8vw,5rem);font-weight:800;letter-spacing:-.06em;text-shadow:0 8px 30px rgba(0,0,0,.4)}
+    .beat-number small{font-size:.28em;color:var(--muted);letter-spacing:0}
+    .status{margin-top:3px;color:var(--muted);font-size:.9rem}
+    .controls{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .field{background:rgba(255,255,255,.035);border:1px solid var(--line);border-radius:16px;padding:14px}
+    .field label{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--muted);font-size:.9rem;margin-bottom:10px}
+    .readout{color:var(--text);font-weight:700}
+    input[type="range"]{width:100%;accent-color:var(--accent)}
+    input[type="number"],select{width:100%;background:#0d1529;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:11px 12px;outline:none}
+    input:focus,select:focus{border-color:rgba(103,232,249,.7);box-shadow:0 0 0 3px rgba(103,232,249,.12)}
+    .button-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
+    button{border:0;border-radius:14px;padding:13px 16px;font-weight:750;cursor:pointer;transition:transform .15s ease,filter .15s ease,opacity .15s}
+    button:hover{filter:brightness(1.08)}
+    button:active{transform:translateY(1px) scale(.99)}
+    .primary{background:linear-gradient(135deg,var(--accent),#38bdf8);color:#07111f}
+    .secondary{background:#26314d;color:var(--text);border:1px solid var(--line)}
+    .stop{background:linear-gradient(135deg,var(--danger),#f43f5e);color:#fff}
+    button:disabled{opacity:.45;cursor:not-allowed}
+    .section-title{font-size:.78rem;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);font-weight:800}
+    .presets{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.presets .preset:last-child:nth-child(odd){grid-column:1/-1}
+    .preset{background:#202b46;color:var(--text);border:1px solid var(--line);padding:11px 10px;font-size:.9rem}
+    .preset strong{display:block;color:var(--accent);font-size:1rem}
+    .mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .help{font-size:.88rem;line-height:1.55;color:var(--muted);background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:16px;padding:14px}
+    .help strong{color:var(--text)}
+    .progress-wrap{display:none}
+    .progress-wrap.show{display:block}
+    .progress{height:10px;border-radius:999px;background:#0c1428;overflow:hidden;border:1px solid var(--line)}
+    .progress > div{height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:width .1s linear}
+    .progress-text{margin-top:7px;color:var(--muted);font-size:.85rem}
+    .footer{font-size:.78rem;text-align:center;color:#7f8aa3;margin-top:auto}
+    @media (max-width:780px){
+      body{padding:10px}
+      .app{grid-template-columns:1fr}
+      .main{padding:18px}
+      .side{padding:18px}
+      .visual{height:160px}
+    }
+    @media (max-width:520px){
+      .controls,.button-row,.mini-grid{grid-template-columns:1fr}
+      .presets{grid-template-columns:repeat(2,1fr)}
+      h1{font-size:2.15rem}
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="panel main">
+      <h1>Binaural Beat Maker</h1>
+      <p class="subtitle">Create a different tone in each ear and hear the beat between them.</p>
+      <div class="badge"><span class="dot"></span> Stereo headphones required</div>
+
+      <div class="visual">
+        <canvas id="visualizer"></canvas>
+        <div class="center-label">
+          <div>
+            <div class="beat-number"><span id="beatDisplay">10.0</span><small> Hz</small></div>
+            <div class="status" id="statusText">Ready to play</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="field">
+          <label for="leftFreq">Left channel <span class="readout"><span id="leftReadout">200</span> Hz</span></label>
+          <input id="leftFreq" type="range" min="40" max="1000" step="1" value="200" />
+          <input id="leftNumber" type="number" min="20" max="20000" step="1" value="200" aria-label="Left frequency in hertz" />
+          <label for="leftVolume" style="margin-top:12px">Left volume <span class="readout"><span id="leftVolumeReadout">100</span>%</span></label>
+          <input id="leftVolume" type="range" min="0" max="100" step="1" value="100" />
+        </div>
+        <div class="field">
+          <label for="rightFreq">Right channel <span class="readout"><span id="rightReadout">210</span> Hz</span></label>
+          <input id="rightFreq" type="range" min="40" max="1000" step="1" value="210" />
+          <input id="rightNumber" type="number" min="20" max="20000" step="1" value="210" aria-label="Right frequency in hertz" />
+          <label for="rightVolume" style="margin-top:12px">Right volume <span class="readout"><span id="rightVolumeReadout">100</span>%</span></label>
+          <input id="rightVolume" type="range" min="0" max="100" step="1" value="100" />
+        </div>
+        <div class="field">
+          <label for="volume">Volume <span class="readout"><span id="volumeReadout">25</span>%</span></label>
+          <input id="volume" type="range" min="0" max="60" step="1" value="25" />
+        </div>
+        <div class="field">
+          <label for="waveform">Waveform</label>
+          <select id="waveform">
+            <option value="sine">Sine — smooth</option>
+            <option value="triangle">Triangle — soft</option>
+            <option value="square">Square — bright</option>
+            <option value="sawtooth">Sawtooth — buzzy</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="noiseType">Ambient noise</label>
+          <select id="noiseType">
+            <option value="none" selected>None</option>
+            <option value="pink">Pink noise</option>
+            <option value="brown">Brown noise</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="noiseVolume">Ambient volume <span class="readout"><span id="noiseVolumeReadout">15</span>%</span></label>
+          <input id="noiseVolume" type="range" min="0" max="60" step="1" value="15" />
+        </div>
+      </div>
+
+      <div class="button-row">
+        <button class="primary" id="playBtn">▶ Play</button>
+        <button class="stop" id="stopBtn" disabled>■ Stop</button>
+      </div>
+    </section>
+
+    <aside class="panel side">
+      <div>
+        <div class="section-title">Beat presets</div>
+        <div class="presets" style="margin-top:10px">
+          <button class="preset" data-beat="2"><strong>2 Hz</strong>Delta</button>
+          <button class="preset" data-beat="6"><strong>6 Hz</strong>Theta</button>
+          <button class="preset" data-beat="7.83"><strong>7.83 Hz</strong>Schumann</button>
+          <button class="preset" data-beat="10"><strong>10 Hz</strong>Alpha</button>
+          <button class="preset" data-beat="18"><strong>18 Hz</strong>Beta</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Export audio</div>
+        <div class="mini-grid" style="margin-top:10px">
+          <div class="field">
+            <label for="duration">Duration <span class="readout"><span id="durationReadout">2</span> min</span></label>
+            <input id="duration" type="range" min="1" max="60" step="1" value="2" />
+          </div>
+          <div class="field">
+            <label for="fade">Fade <span class="readout"><span id="fadeReadout">3</span> sec</span></label>
+            <input id="fade" type="range" min="0" max="30" step="1" value="3" />
+          </div>
+        </div>
+        <button class="secondary" id="downloadBtn" style="width:100%;margin-top:10px">⬇ Generate WAV</button>
+      </div>
+
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress"><div id="progressBar"></div></div>
+        <div class="progress-text" id="progressText">Preparing audio…</div>
+      </div>
+
+      <div class="help">
+        <strong>How it works:</strong> each ear receives a separate tone. The displayed beat frequency is the absolute difference between the left and right channels. Optional pink or brown noise can play underneath the tones. Keep both volume levels comfortable.
+      </div>
+
+      <div class="footer">Audio is generated locally in your browser.</div>
+    </aside>
+  </main>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+  const leftFreq = $("leftFreq");
+  const rightFreq = $("rightFreq");
+  const leftNumber = $("leftNumber");
+  const rightNumber = $("rightNumber");
+  const leftVolume = $("leftVolume");
+  const rightVolume = $("rightVolume");
+  const volume = $("volume");
+  const waveform = $("waveform");
+  const noiseType = $("noiseType");
+  const noiseVolume = $("noiseVolume");
+  const playBtn = $("playBtn");
+  const stopBtn = $("stopBtn");
+  const downloadBtn = $("downloadBtn");
+  const durationControl = $("duration");
+  const fadeControl = $("fade");
+  const beatDisplay = $("beatDisplay");
+  const statusText = $("statusText");
+
+  let audioCtx = null;
+  let leftOsc = null;
+  let rightOsc = null;
+  let leftChannelGain = null;
+  let rightChannelGain = null;
+  let masterGain = null;
+  let noiseSource = null;
+  let noiseGain = null;
+  let isPlaying = false;
+
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, Number(value) || min));
+  }
+
+  function updateExportReadouts() {
+    $("durationReadout").textContent = durationControl.value;
+    $("fadeReadout").textContent = fadeControl.value;
+  }
+
+  function getValues() {
+    return {
+      left: clamp(leftNumber.value, 20, 20000),
+      right: clamp(rightNumber.value, 20, 20000),
+      leftVolume: clamp(leftVolume.value, 0, 100) / 100,
+      rightVolume: clamp(rightVolume.value, 0, 100) / 100,
+      volume: clamp(volume.value, 0, 60) / 100,
+      wave: waveform.value,
+      noise: noiseType.value,
+      noiseVolume: clamp(noiseVolume.value, 0, 60) / 100
+    };
+  }
+
+  function updateUI() {
+    const v = getValues();
+    leftNumber.value = v.left;
+    rightNumber.value = v.right;
+    leftFreq.value = Math.min(1000, Math.max(40, v.left));
+    rightFreq.value = Math.min(1000, Math.max(40, v.right));
+    $("leftReadout").textContent = v.left;
+    $("rightReadout").textContent = v.right;
+    $("leftVolumeReadout").textContent = Math.round(v.leftVolume * 100);
+    $("rightVolumeReadout").textContent = Math.round(v.rightVolume * 100);
+    $("volumeReadout").textContent = Math.round(v.volume * 100);
+    $("noiseVolumeReadout").textContent = Math.round(v.noiseVolume * 100);
+    noiseVolume.disabled = v.noise === "none";
+    beatDisplay.textContent = Math.abs(v.right - v.left).toFixed(1);
+
+    if (isPlaying && audioCtx) {
+      const now = audioCtx.currentTime;
+      leftOsc.frequency.setTargetAtTime(v.left, now, 0.015);
+      rightOsc.frequency.setTargetAtTime(v.right, now, 0.015);
+      leftOsc.type = v.wave;
+      rightOsc.type = v.wave;
+      if (leftChannelGain) leftChannelGain.gain.setTargetAtTime(v.leftVolume, now, 0.02);
+      if (rightChannelGain) rightChannelGain.gain.setTargetAtTime(v.rightVolume, now, 0.02);
+      masterGain.gain.setTargetAtTime(v.volume, now, 0.02);
+      if (noiseGain) {
+        noiseGain.gain.setTargetAtTime(v.noise === "none" ? 0 : v.noiseVolume, now, 0.02);
+      }
+    }
+  }
+
+  function syncFromRange(range, number) {
+    number.value = range.value;
+    updateUI();
+  }
+
+  leftFreq.addEventListener("input", () => syncFromRange(leftFreq, leftNumber));
+  rightFreq.addEventListener("input", () => syncFromRange(rightFreq, rightNumber));
+  leftNumber.addEventListener("input", updateUI);
+  rightNumber.addEventListener("input", updateUI);
+  leftVolume.addEventListener("input", updateUI);
+  rightVolume.addEventListener("input", updateUI);
+  volume.addEventListener("input", updateUI);
+  waveform.addEventListener("change", updateUI);
+  noiseVolume.addEventListener("input", updateUI);
+  noiseType.addEventListener("change", () => {
+    updateUI();
+    if (isPlaying) restartNoise();
+  });
+  durationControl.addEventListener("input", updateExportReadouts);
+  fadeControl.addEventListener("input", updateExportReadouts);
+
+
+  function createNoiseBuffer(ctx, type, durationSeconds = 2) {
+    const length = Math.max(1, Math.floor(ctx.sampleRate * durationSeconds));
+    const buffer = ctx.createBuffer(2, length, ctx.sampleRate);
+
+    for (let channel = 0; channel < 2; channel++) {
+      const data = buffer.getChannelData(channel);
+
+      if (type === "pink") {
+        let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+        for (let i = 0; i < length; i++) {
+          const white = Math.random() * 2 - 1;
+          b0 = 0.99886 * b0 + white * 0.0555179;
+          b1 = 0.99332 * b1 + white * 0.0750759;
+          b2 = 0.96900 * b2 + white * 0.1538520;
+          b3 = 0.86650 * b3 + white * 0.3104856;
+          b4 = 0.55000 * b4 + white * 0.5329522;
+          b5 = -0.7616 * b5 - white * 0.0168980;
+          data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+          b6 = white * 0.115926;
+        }
+      } else if (type === "brown") {
+        let last = 0;
+        for (let i = 0; i < length; i++) {
+          const white = Math.random() * 2 - 1;
+          last = (last + 0.02 * white) / 1.02;
+          data[i] = last * 3.5;
+        }
+      }
+    }
+    return buffer;
+  }
+
+  function stopNoise() {
+    if (noiseSource) {
+      try { noiseSource.stop(); } catch (_) {}
+      try { noiseSource.disconnect(); } catch (_) {}
+      noiseSource = null;
+    }
+    if (noiseGain) {
+      try { noiseGain.disconnect(); } catch (_) {}
+      noiseGain = null;
+    }
+  }
+
+  function startNoise(v) {
+    stopNoise();
+    if (!audioCtx || v.noise === "none") return;
+
+    noiseSource = audioCtx.createBufferSource();
+    noiseGain = audioCtx.createGain();
+    noiseSource.buffer = createNoiseBuffer(audioCtx, v.noise, 3);
+    noiseSource.loop = true;
+    noiseGain.gain.value = v.noiseVolume;
+    noiseSource.connect(noiseGain).connect(audioCtx.destination);
+    noiseSource.start();
+  }
+
+  function restartNoise() {
+    if (!isPlaying) return;
+    startNoise(getValues());
+  }
+
+  async function startAudio() {
+    if (isPlaying) return;
+    const v = getValues();
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    await audioCtx.resume();
+
+    leftOsc = audioCtx.createOscillator();
+    rightOsc = audioCtx.createOscillator();
+    leftChannelGain = audioCtx.createGain();
+    rightChannelGain = audioCtx.createGain();
+    const leftPan = audioCtx.createStereoPanner();
+    const rightPan = audioCtx.createStereoPanner();
+    masterGain = audioCtx.createGain();
+
+    leftOsc.type = v.wave;
+    rightOsc.type = v.wave;
+    leftOsc.frequency.value = v.left;
+    rightOsc.frequency.value = v.right;
+    leftPan.pan.value = -1;
+    rightPan.pan.value = 1;
+    leftChannelGain.gain.value = v.leftVolume;
+    rightChannelGain.gain.value = v.rightVolume;
+    masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
+    masterGain.gain.linearRampToValueAtTime(v.volume, audioCtx.currentTime + 0.08);
+
+    leftOsc.connect(leftChannelGain).connect(leftPan).connect(masterGain);
+    rightOsc.connect(rightChannelGain).connect(rightPan).connect(masterGain);
+    masterGain.connect(audioCtx.destination);
+
+    leftOsc.start();
+    rightOsc.start();
+    startNoise(v);
+    isPlaying = true;
+    playBtn.disabled = true;
+    stopBtn.disabled = false;
+    statusText.textContent = "Playing";
+  }
+
+  function stopAudio() {
+    if (!isPlaying || !audioCtx) return;
+    const now = audioCtx.currentTime;
+    masterGain.gain.cancelScheduledValues(now);
+    masterGain.gain.setValueAtTime(masterGain.gain.value, now);
+    masterGain.gain.linearRampToValueAtTime(0, now + 0.08);
+    setTimeout(() => {
+      try { leftOsc.stop(); rightOsc.stop(); } catch (_) {}
+      try {
+        leftOsc.disconnect();
+        rightOsc.disconnect();
+        if (leftChannelGain) leftChannelGain.disconnect();
+        if (rightChannelGain) rightChannelGain.disconnect();
+        masterGain.disconnect();
+      } catch (_) {}
+    }, 100);
+    stopNoise();
+    isPlaying = false;
+    playBtn.disabled = false;
+    stopBtn.disabled = true;
+    statusText.textContent = "Ready to play";
+  }
+
+  playBtn.addEventListener("click", startAudio);
+  stopBtn.addEventListener("click", stopAudio);
+
+  document.querySelectorAll(".preset").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const beat = Number(btn.dataset.beat);
+      const base = clamp(leftNumber.value, 20, 19980);
+      rightNumber.value = base + beat;
+      updateUI();
+    });
+  });
+
+  function writeString(view, offset, text) {
+    for (let i = 0; i < text.length; i++) view.setUint8(offset + i, text.charCodeAt(i));
+  }
+
+  function encodeWav(audioBuffer) {
+    const channels = audioBuffer.numberOfChannels;
+    const sampleRate = audioBuffer.sampleRate;
+    const frames = audioBuffer.length;
+    const bytesPerSample = 2;
+    const blockAlign = channels * bytesPerSample;
+    const buffer = new ArrayBuffer(44 + frames * blockAlign);
+    const view = new DataView(buffer);
+
+    writeString(view, 0, "RIFF");
+    view.setUint32(4, 36 + frames * blockAlign, true);
+    writeString(view, 8, "WAVE");
+    writeString(view, 12, "fmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, channels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * blockAlign, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, 16, true);
+    writeString(view, 36, "data");
+    view.setUint32(40, frames * blockAlign, true);
+
+    const channelData = [];
+    for (let c = 0; c < channels; c++) channelData.push(audioBuffer.getChannelData(c));
+
+    let offset = 44;
+    for (let i = 0; i < frames; i++) {
+      for (let c = 0; c < channels; c++) {
+        const sample = Math.max(-1, Math.min(1, channelData[c][i]));
+        view.setInt16(offset, sample < 0 ? sample * 32768 : sample * 32767, true);
+        offset += 2;
+      }
+    }
+    return new Blob([view], { type: "audio/wav" });
+  }
+
+  async function generateWav() {
+    const v = getValues();
+    const durationMinutes = Number(durationControl.value);
+    const durationSeconds = durationMinutes * 60;
+    const fadeSeconds = Math.min(Number(fadeControl.value), durationSeconds / 2);
+    const sampleRate = 44100;
+    const frames = Math.floor(sampleRate * durationSeconds);
+    const OfflineCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+
+    if (!OfflineCtx) {
+      alert("This browser does not support offline audio rendering.");
+      return;
+    }
+
+    downloadBtn.disabled = true;
+    $("progressWrap").classList.add("show");
+    $("progressBar").style.width = "8%";
+    $("progressText").textContent = "Building stereo audio…";
+
+    try {
+      const ctx = new OfflineCtx(2, frames, sampleRate);
+      const left = ctx.createOscillator();
+      const right = ctx.createOscillator();
+      const leftGain = ctx.createGain();
+      const rightGain = ctx.createGain();
+      const leftPan = ctx.createStereoPanner();
+      const rightPan = ctx.createStereoPanner();
+      const master = ctx.createGain();
+
+      left.type = v.wave;
+      right.type = v.wave;
+      left.frequency.value = v.left;
+      right.frequency.value = v.right;
+      leftPan.pan.value = -1;
+      rightPan.pan.value = 1;
+      master.gain.setValueAtTime(fadeSeconds > 0 ? 0 : v.volume, 0);
+      if (fadeSeconds > 0) master.gain.linearRampToValueAtTime(v.volume, fadeSeconds);
+      if (fadeSeconds > 0) {
+        master.gain.setValueAtTime(v.volume, durationSeconds - fadeSeconds);
+        master.gain.linearRampToValueAtTime(0, durationSeconds);
+      }
+
+      left.connect(leftGain).connect(leftPan).connect(master);
+      right.connect(rightGain).connect(rightPan).connect(master);
+      master.connect(ctx.destination);
+
+      let offlineNoise = null;
+      if (v.noise !== "none" && v.noiseVolume > 0) {
+        offlineNoise = ctx.createBufferSource();
+        const offlineNoiseGain = ctx.createGain();
+        offlineNoise.buffer = createNoiseBuffer(ctx, v.noise, durationSeconds);
+        offlineNoiseGain.gain.value = v.noiseVolume;
+        offlineNoise.connect(offlineNoiseGain).connect(ctx.destination);
+        offlineNoise.start(0);
+        offlineNoise.stop(durationSeconds);
+      }
+
+      left.start(0); right.start(0);
+      left.stop(durationSeconds); right.stop(durationSeconds);
+
+      $("progressBar").style.width = "35%";
+      $("progressText").textContent = "Rendering audio…";
+      const rendered = await ctx.startRendering();
+
+      $("progressBar").style.width = "75%";
+      $("progressText").textContent = "Encoding WAV file…";
+      await new Promise(r => setTimeout(r, 30));
+      const blob = encodeWav(rendered);
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const beat = Math.abs(v.right - v.left).toFixed(1).replace(".", "-");
+      a.href = url;
+      a.download = `binaural-beat-${beat}Hz-${durationMinutes}min.wav`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+      $("progressBar").style.width = "100%";
+      $("progressText").textContent = "Download ready.";
+    } catch (error) {
+      console.error(error);
+      alert("The audio could not be generated. Try a shorter duration.");
+      $("progressText").textContent = "Generation failed.";
+    } finally {
+      downloadBtn.disabled = false;
+      setTimeout(() => {
+        $("progressWrap").classList.remove("show");
+        $("progressBar").style.width = "0";
+      }, 1600);
+    }
+  }
+
+  downloadBtn.addEventListener("click", generateWav);
+
+  const canvas = $("visualizer");
+  const ctx2d = canvas.getContext("2d");
+  let phase = 0;
+
+  function draw() {
+    const ratio = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    if (canvas.width !== Math.floor(rect.width * ratio) || canvas.height !== Math.floor(rect.height * ratio)) {
+      canvas.width = Math.floor(rect.width * ratio);
+      canvas.height = Math.floor(rect.height * ratio);
+    }
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx2d.clearRect(0, 0, w, h);
+
+    const v = getValues();
+    const speed = isPlaying ? 0.08 : 0.015;
+    phase += speed;
+
+    function wave(yMid, amp, cycles, offset, alpha) {
+      ctx2d.beginPath();
+      for (let x = 0; x <= w; x += 3 * ratio) {
+        const y = yMid + Math.sin((x / w) * Math.PI * 2 * cycles + phase + offset) * amp;
+        if (x === 0) ctx2d.moveTo(x, y); else ctx2d.lineTo(x, y);
+      }
+      const grad = ctx2d.createLinearGradient(0, 0, w, 0);
+      grad.addColorStop(0, `rgba(103,232,249,${alpha})`);
+      grad.addColorStop(1, `rgba(139,92,246,${alpha})`);
+      ctx2d.strokeStyle = grad;
+      ctx2d.lineWidth = 2.2 * ratio;
+      ctx2d.stroke();
+    }
+
+    wave(h * .42, h * .16, 3 + (v.left % 9) / 10, 0, .65);
+    wave(h * .58, h * .16, 3 + (v.right % 9) / 10, Math.PI / 2, .65);
+    requestAnimationFrame(draw);
+  }
+
+  updateUI();
+  updateExportReadouts();
+  draw();
+
+  window.addEventListener("beforeunload", stopAudio);
+})();
+</script>
+</body>
+</html>
