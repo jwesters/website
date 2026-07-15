@@ -163,6 +163,24 @@
             </select>
           </div>
         </div>
+        <div class="grid2" style="margin-top:10px">
+          <div class="field">
+            <label for="primaryBeatType">Starting beat type</label>
+            <select id="primaryBeatType">
+              <option value="Delta">Delta — deep sleep</option>
+              <option value="Theta">Theta — meditation</option>
+              <option value="Schumann">Schumann — 7.83 Hz</option>
+              <option value="Alpha">Alpha — relaxed focus</option>
+              <option value="Beta" selected>Beta — active focus</option>
+              <option value="Gamma">Gamma — intense focus</option>
+              <option value="Custom">Custom</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="primaryBeatHz">Starting beat frequency <span class="readout">Hz</span></label>
+            <input id="primaryBeatHz" type="number" min="0.1" max="100" step="0.01" value="18">
+          </div>
+        </div>
         <div class="note-card" style="margin-top:10px">
           <div>
             <div class="note-main" id="anchorName">C4</div>
@@ -342,6 +360,24 @@
     "Custom":10
   };
 
+  function syncPrimaryBeatControls(){
+    const first = state.stages[0];
+    if(!first) return;
+    $("primaryBeatType").value = Object.prototype.hasOwnProperty.call(BEAT_PRESETS, first.type) ? first.type : "Custom";
+    $("primaryBeatHz").value = Number(first.beat).toFixed(2).replace(/\.00$/, "");
+  }
+
+  function updatePrimaryBeatFromControls(){
+    if(!state.stages.length){
+      state.stages.push({type:"Alpha",beat:10,hold:5,transition:0});
+    }
+    const type = $("primaryBeatType").value;
+    const beat = Math.max(0.1, Math.min(100, Number($("primaryBeatHz").value) || 0.1));
+    state.stages[0].type = type;
+    state.stages[0].beat = beat;
+    renderTimeline();
+  }
+
   const state = {
     stages:[
       {type:"Beta", beat:18, hold:5, transition:2},
@@ -501,6 +537,7 @@
         renderTimeline();updateAll();
       }));
     });
+    syncPrimaryBeatControls();
     updateAll();
   }
 
@@ -765,6 +802,20 @@
   $("doneJourneyBtn").addEventListener("click",closeJourneyModal);
   journeyModal.addEventListener("click",e=>{if(e.target===journeyModal)closeJourneyModal();});
   document.addEventListener("keydown",e=>{if(e.key==="Escape"&&journeyModal.classList.contains("open"))closeJourneyModal();});
+
+  $("primaryBeatType").addEventListener("change",()=>{
+    const type=$("primaryBeatType").value;
+    if(type!=="Custom"){
+      $("primaryBeatHz").value=BEAT_PRESETS[type];
+    }
+    updatePrimaryBeatFromControls();
+  });
+  $("primaryBeatHz").addEventListener("input",()=>{
+    const value=Number($("primaryBeatHz").value);
+    const matched=Object.entries(BEAT_PRESETS).find(([name,hz])=>name!=="Custom"&&Math.abs(hz-value)<0.005);
+    $("primaryBeatType").value=matched?matched[0]:"Custom";
+    updatePrimaryBeatFromControls();
+  });
 
   $("addStageBtn").addEventListener("click",()=>{
     const last=state.stages[state.stages.length-1]||{type:"Alpha",beat:10};
