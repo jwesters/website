@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Match 3 Prototype</title>
+  <style>
+    :root{
+      --bg:#f8efe2;
+      --bg2:#fffaf1;
+      --panel:#fffdf8;
+      --panel2:#f6e7d2;
+      --ink:#2f2418;
+      --muted:#756655;
+      --line:rgba(89,63,38,.16);
+      --accent:#f7a72f;
+      --accent2:#37bfa4;
+      --danger:#e65f55;
+      --ok:#3fb969;
+      --shadow:0 18px 50px rgba(82,55,24,.18);
+      --tile-size:min(10.1vw,62px);
+      --gap:7px;
+    }
+
+    *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+    html,body{height:100%; overscroll-behavior:none;}
+    body{
+      margin:0;
+      font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color:var(--ink);
+      background:
+        radial-gradient(circle at 9% 8%, rgba(255,202,93,.42), transparent 30%),
+        radial-gradient(circle at 88% 12%, rgba(96,211,190,.26), transparent 32%),
+        radial-gradient(circle at 45% 98%, rgba(235,124,86,.20), transparent 38%),
+        linear-gradient(180deg, var(--bg2), var(--bg));
+      min-height:100%;
+      overflow-x:hidden;
+    }
+    body.game-active{overflow:hidden; position:fixed; inset:0; width:100%;}
+    button,input{font:inherit;}
+    button{
+      border:0;
+      color:var(--ink);
+      cursor:pointer;
+      border-radius:16px;
+      padding:12px 15px;
+      font-weight:900;
+      letter-spacing:.01em;
+      background:linear-gradient(180deg, #ffffff, #f2dfc9);
+      box-shadow:inset 0 0 0 1px var(--line), 0 8px 18px rgba(82,55,24,.13);
+      transition:transform .12s ease, filter .12s ease, background .12s ease;
+      user-select:none;
+      touch-action:manipulation;
+    }
+    button:hover{filter:brightness(1.025);}
+    button:active{transform:translateY(1px) scale(.99);}
+    button.primary{background:linear-gradient(135deg, #ffd267, #ff9f46); color:#33200d;}
+    button.green{background:linear-gradient(135deg, #79e7ca, #57c58f); color:#0d3429;}
+    button.danger{background:linear-gradient(135deg, #ff8d79, #ef5d55); color:#42140e;}
+    button.ghost{background:linear-gradient(180deg, #fffaf2, #f0deca);}
+    button.small{padding:9px 11px;border-radius:13px;font-size:.92rem;}
+    button:disabled{opacity:.48; cursor:not-allowed; filter:grayscale(.25);}
+
+    .app{
+      width:min(1180px, 100%);
+      margin:0 auto;
+      padding:18px;
+      min-height:100dvh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    body.game-active .app{height:100dvh; min-height:100dvh; overflow:hidden; align-items:center;}
+    .screen{display:none; width:100%;}
+    .screen.active{display:block;}
+
+    .menu-card{
+      width:min(900px,100%);
+      margin:0 auto;
+      padding:28px;
+      border-radius:30px;
+      background:rgba(255,253,248,.86);
+      box-shadow:var(--shadow), inset 0 0 0 1px rgba(89,63,38,.13);
+      backdrop-filter: blur(10px);
+    }
+    .title-row{display:flex; align-items:flex-start; justify-content:space-between; gap:18px; flex-wrap:wrap;}
+    h1{font-size:clamp(2.2rem, 6vw, 5.1rem); line-height:.92; margin:0; letter-spacing:-.07em;}
+    .subtitle{color:var(--muted); font-size:1.06rem; max-width:680px; line-height:1.55; margin:16px 0 0;}
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 12px; border-radius:999px;
+      background:#fff5df;
+      color:#6f5230; font-weight:900; font-size:.88rem;
+      box-shadow:inset 0 0 0 1px var(--line);
+      white-space:nowrap;
+    }
+    .menu-actions{display:flex; gap:12px; flex-wrap:wrap; margin-top:22px;}
+    .menu-grid{display:grid; grid-template-columns:1.05fr .95fr; gap:18px; margin-top:24px; align-items:stretch;}
+    .info-box{
+      border-radius:22px;
+      background:#fff8eb;
+      box-shadow:inset 0 0 0 1px var(--line);
+      padding:18px;
+      min-height:100%;
+    }
+    .info-box h2,.info-box h3{margin:0 0 11px; font-size:1.1rem; letter-spacing:-.02em;}
+    .rules{display:grid; gap:9px; color:var(--muted); line-height:1.4; font-size:.96rem;}
+    .rule{display:flex; gap:10px; align-items:flex-start;}
+    .rule b{color:var(--ink);}
+    .leader-list{display:grid; gap:8px;}
+    .leader-item{
+      display:grid;
+      grid-template-columns:auto 1fr auto;
+      gap:10px;
+      align-items:center;
+      padding:10px 11px;
+      border-radius:15px;
+      background:#fffdf8;
+      color:var(--muted);
+      box-shadow:inset 0 0 0 1px rgba(89,63,38,.10);
+    }
+    .rank{
+      width:28px; height:28px; display:grid; place-items:center; border-radius:10px;
+      background:#fff0c1; color:#af6c00; font-weight:1000;
+    }
+    .leader-score{color:var(--ink); font-weight:1000;}
+    .empty-score{color:var(--muted); padding:10px 0; line-height:1.45;}
+
+    .game-shell{
+      display:grid;
+      grid-template-columns:minmax(320px, auto) 310px;
+      gap:18px;
+      align-items:start;
+      justify-content:center;
+      max-height:calc(100dvh - 28px);
+    }
+    .board-panel,.side-panel{
+      border-radius:28px;
+      background:rgba(255,253,248,.9);
+      box-shadow:var(--shadow), inset 0 0 0 1px rgba(89,63,38,.13);
+      backdrop-filter:blur(9px);
+    }
+    .board-panel{padding:16px;}
+    .top-strip{
+      height:50px;
+      display:grid;
+      grid-template-columns:auto minmax(180px, 1fr);
+      align-items:center;
+      gap:12px;
+      margin-bottom:12px;
+      overflow:hidden;
+    }
+    .level-title{font-size:clamp(1.35rem, 3vw, 2.1rem); font-weight:1000; letter-spacing:-.055em; white-space:nowrap;}
+    .message-pill{
+      min-height:36px;
+      display:flex; align-items:center; justify-content:center;
+      text-align:center;
+      padding:8px 12px; border-radius:999px; color:#173d32;
+      font-weight:1000; background:linear-gradient(135deg, #8ee7cd, #ffd267);
+      opacity:0; transform:translateY(-4px); transition:opacity .2s ease, transform .2s ease;
+      max-width:48ch;
+      justify-self:end;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.55), 0 8px 18px rgba(82,55,24,.11);
+    }
+    .message-pill.show{opacity:1; transform:translateY(0);}
+    .board-wrap{
+      padding:10px;
+      border-radius:24px;
+      background:linear-gradient(145deg, #e0c39f, #fff3dc);
+      box-shadow:inset 0 0 0 1px rgba(89,63,38,.16), 0 10px 22px rgba(82,55,24,.10);
+      touch-action:none;
+      width:calc((var(--tile-size) * 8) + (var(--gap) * 7) + 20px);
+      height:calc((var(--tile-size) * 8) + (var(--gap) * 7) + 20px);
+      max-width:100%;
+      margin:0 auto;
+      overflow:hidden;
+    }
+    .board{
+      display:grid;
+      grid-template-columns:repeat(8, var(--tile-size));
+      grid-template-rows:repeat(8, var(--tile-size));
+      gap:var(--gap);
+      position:relative;
+      user-select:none;
+      touch-action:none;
+      width:calc((var(--tile-size) * 8) + (var(--gap) * 7));
+      height:calc((var(--tile-size) * 8) + (var(--gap) * 7));
+    }
+    .slot{
+      width:var(--tile-size);
+      height:var(--tile-size);
+      border-radius:18px;
+      background:rgba(255,255,255,.18);
+      box-shadow:inset 0 0 0 1px rgba(89,63,38,.08);
+    }
+    .tile{
+      position:relative;
+      display:grid; place-items:center;
+      width:var(--tile-size); height:var(--tile-size);
+      border-radius:18px;
+      min-width:0; min-height:0;
+      font-weight:1000;
+      font-size:calc(var(--tile-size) * .42);
+      color:rgba(255,255,255,.96);
+      text-shadow:0 2px 7px rgba(0,0,0,.22);
+      box-shadow:
+        inset 0 4px 8px rgba(255,255,255,.30),
+        inset 0 -8px 14px rgba(0,0,0,.18),
+        0 8px 13px rgba(89,63,38,.22);
+      transition:transform .18s ease, filter .18s ease, opacity .22s ease, box-shadow .18s ease;
+      overflow:hidden;
+      cursor:pointer;
+      will-change:transform, opacity;
+      touch-action:none;
+    }
+    .tile::before{
+      content:"";
+      position:absolute; inset:8% 12% auto 12%; height:28%; border-radius:999px;
+      background:linear-gradient(180deg, rgba(255,255,255,.58), rgba(255,255,255,.03));
+      pointer-events:none;
+    }
+    .tile:hover{filter:brightness(1.06); transform:translateY(-1px);}
+    .tile.selected{
+      transform:translateY(-3px) scale(1.06);
+      box-shadow:
+        0 0 0 4px rgba(255,255,255,.92),
+        0 0 0 8px rgba(255,186,59,.58),
+        inset 0 4px 8px rgba(255,255,255,.30),
+        inset 0 -8px 14px rgba(0,0,0,.18),
+        0 14px 18px rgba(89,63,38,.28);
+      z-index:4;
+    }
+    .tile.hinted{animation:hintPulse .95s ease-in-out infinite; z-index:5;}
+    .tile.matched{animation:matchPop .30s ease forwards; pointer-events:none; z-index:6;}
+    .tile.invalid{animation:wiggle .28s ease;}
+    .tile.c0{background:linear-gradient(145deg,#ff5b82,#ce224f);}
+    .tile.c1{background:linear-gradient(145deg,#5bb7ff,#176bd9);}
+    .tile.c2{background:linear-gradient(145deg,#ffd95c,#ff9c22);}
+    .tile.c3{background:linear-gradient(145deg,#5def9a,#0aa15c);}
+    .tile.c4{background:linear-gradient(145deg,#b779ff,#6830d8);}
+    .tile.c5{background:linear-gradient(145deg,#ff945c,#d84412);}
+    .tile.c6{background:linear-gradient(145deg,#4ee6da,#078b91);}
+    .tile.c7{background:linear-gradient(145deg,#ff8fd6,#b82794);}
+    .tile.c8{background:linear-gradient(145deg,#b7c8db,#58697d);}
+
+    @keyframes matchPop{0%{transform:scale(1); opacity:1;} 70%{transform:scale(1.22) rotate(5deg); opacity:.96;} 100%{transform:scale(.18) rotate(-10deg); opacity:0;}}
+    @keyframes hintPulse{0%,100%{transform:scale(1);} 50%{transform:scale(1.09); box-shadow:0 0 0 6px rgba(55,191,164,.45), inset 0 4px 8px rgba(255,255,255,.30), inset 0 -8px 14px rgba(0,0,0,.18), 0 14px 22px rgba(89,63,38,.25);}}
+    @keyframes wiggle{0%,100%{transform:translateX(0);} 25%{transform:translateX(-5px);} 75%{transform:translateX(5px);}}
+
+    .side-panel{padding:16px; display:grid; gap:12px; align-content:start;}
+    .stats-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+    .stat{
+      border-radius:18px;
+      padding:12px;
+      background:#fff7e8;
+      box-shadow:inset 0 0 0 1px var(--line);
+      min-height:72px;
+    }
+    .stat.wide{grid-column:1 / -1;}
+    .stat-label{font-size:.78rem; color:var(--muted); font-weight:900; text-transform:uppercase; letter-spacing:.08em;}
+    .stat-value{font-size:1.55rem; font-weight:1000; margin-top:3px; letter-spacing:-.04em;}
+    .progress-shell{height:16px; border-radius:999px; background:#ead8bd; overflow:hidden; margin-top:9px; box-shadow:inset 0 0 0 1px rgba(89,63,38,.12);}
+    .progress-fill{height:100%; width:0%; background:linear-gradient(90deg,#37bfa4,#ffd267,#ff8b64); border-radius:999px; transition:width .22s ease;}
+    .button-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+    .button-grid .wide{grid-column:1/-1;}
+    .help-card{border-radius:18px; padding:13px; background:#fff8eb; color:var(--muted); line-height:1.42; font-size:.9rem; box-shadow:inset 0 0 0 1px var(--line);}
+    .help-card b{color:var(--ink);}
+    .mini-leaders{display:grid; gap:7px;}
+    .mini-leader{display:flex; justify-content:space-between; gap:8px; color:var(--muted); font-size:.9rem; padding:8px 0; border-bottom:1px solid rgba(89,63,38,.12);}
+    .mini-leader:last-child{border-bottom:0;}
+
+    .modal-layer{
+      position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:18px;
+      background:rgba(72,49,25,.34); z-index:20; backdrop-filter:blur(8px);
+    }
+    .modal-layer.show{display:flex;}
+    .modal{
+      width:min(520px, 100%);
+      border-radius:28px;
+      background:#fffdf8;
+      box-shadow:var(--shadow), inset 0 0 0 1px rgba(89,63,38,.16);
+      padding:22px;
+      text-align:left;
+    }
+    .modal h2{margin:0 0 8px; font-size:2rem; letter-spacing:-.055em;}
+    .modal p{color:var(--muted); line-height:1.5; margin:9px 0;}
+    .modal-actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:18px;}
+    .scoreline{display:grid; grid-template-columns:1fr auto; gap:10px; padding:10px 0; border-bottom:1px solid rgba(89,63,38,.12); color:var(--muted);}
+    .scoreline:last-child{border-bottom:0;}
+    .scoreline b{color:var(--ink);}
+
+    .confetti{pointer-events:none; position:fixed; inset:0; overflow:hidden; z-index:19;}
+    .confetti span{position:absolute; top:-20px; width:9px; height:16px; border-radius:3px; background:var(--accent); opacity:.9; animation:fall 900ms linear forwards;}
+    @keyframes fall{to{transform:translateY(110vh) rotate(540deg); opacity:0;}}
+
+    @media (max-width:920px){
+      :root{--tile-size:min(10.5vw,56px); --gap:6px;}
+      body.game-active{overflow:auto; position:static;}
+      body.game-active .app{height:auto; min-height:100dvh; overflow:visible; align-items:flex-start;}
+      .app{align-items:flex-start; padding:12px;}
+      .game-shell{grid-template-columns:1fr; gap:12px; max-height:none;}
+      .side-panel{max-width:calc((var(--tile-size) * 8) + (var(--gap) * 7) + 40px); width:100%; margin:0 auto;}
+      .menu-grid{grid-template-columns:1fr;}
+      .top-strip{grid-template-columns:1fr; height:88px; align-items:start;}
+      .message-pill{max-width:none; justify-self:stretch;}
+    }
+    @media (max-width:520px){
+      :root{--gap:5px; --tile-size:calc((100vw - 54px) / 8);}
+      .app{padding:8px;}
+      .board-panel{padding:10px; border-radius:22px;}
+      .side-panel{padding:10px; border-radius:22px;}
+      .board-wrap{padding:7px; width:calc((var(--tile-size) * 8) + (var(--gap) * 7) + 14px); height:calc((var(--tile-size) * 8) + (var(--gap) * 7) + 14px); border-radius:18px;}
+      .tile,.slot{border-radius:13px;}
+      .menu-card{padding:18px; border-radius:24px;}
+      .stats-grid{grid-template-columns:repeat(4, 1fr); gap:7px;}
+      .stat{min-height:60px; padding:9px; border-radius:14px;}
+      .stat.wide{grid-column:1 / -1;}
+      .stat-label{font-size:.64rem;}
+      .stat-value{font-size:1.12rem;}
+      .button-grid{grid-template-columns:repeat(4, 1fr); gap:7px;}
+      .button-grid .wide{grid-column:auto;}
+      button{padding:10px 9px; border-radius:13px; font-size:.86rem;}
+      .help-card{font-size:.78rem; padding:10px;}
+      .mini-leaders{display:none;}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section id="menuScreen" class="screen active">
+      <div class="menu-card">
+        <div class="title-row">
+          <div>
+            <h1>Match 3<br>Prototype</h1>
+            <p class="subtitle">Swap neighbouring gems, score enough points before the timer runs out, and climb as many stages as you can.</p>
+          </div>
+          <div class="pill">8×8 board · Local highscores</div>
+        </div>
+        <div class="menu-actions">
+          <button class="primary" id="startBtn">Start Game</button>
+          <button class="ghost" id="howBtn">How to Play</button>
+          <button class="ghost" id="soundBtnMenu">Sound On</button>
+          <button class="ghost" id="clearScoresBtn">Clear Highscores</button>
+        </div>
+        <div class="menu-grid">
+          <div class="info-box">
+            <h2>Prototype rules</h2>
+            <div class="rules">
+              <div class="rule"><span>🍬</span><span><b>Stages 1–10:</b> 4 colours. <b>Stages 11–20:</b> 5 colours. <b>Stages 21–25:</b> 6 colours. After that, a new colour appears every 5 stages until there are 9.</span></div>
+              <div class="rule"><span>⏱️</span><span>Level 1 starts at <b>25 points in 60 seconds</b>. The goal rises by 5 points each level. More time is added at the bigger point milestones.</span></div>
+              <div class="rule"><span>✨</span><span>Match 3 = <b>3</b>, match 4 = <b>5</b>, match 5+ = <b>10</b>. Cascades after the first clear get bigger multipliers.</span></div>
+              <div class="rule"><span>💡</span><span>One free hint is added each level. Unused free hints carry over up to 3. Paid hints cost 5 total points.</span></div>
+            </div>
+          </div>
+          <div class="info-box">
+            <h3>Top Scores</h3>
+            <div id="leaderList" class="leader-list"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="gameScreen" class="screen">
+      <div class="game-shell">
+        <div class="board-panel">
+          <div class="top-strip">
+            <div class="level-title" id="levelTitle">Stage 1</div>
+            <div class="message-pill" id="messagePill">Ready</div>
+          </div>
+          <div class="board-wrap" id="boardWrap">
+            <div id="board" class="board" aria-label="Match 3 board"></div>
+          </div>
+        </div>
+        <aside class="side-panel">
+          <div class="stats-grid">
+            <div class="stat"><div class="stat-label">Time</div><div class="stat-value" id="timeValue">60</div></div>
+            <div class="stat"><div class="stat-label">Goal</div><div class="stat-value" id="goalValue">25</div></div>
+            <div class="stat"><div class="stat-label">Stage Score</div><div class="stat-value" id="levelScoreValue">0</div></div>
+            <div class="stat"><div class="stat-label">Total</div><div class="stat-value" id="totalScoreValue">0</div></div>
+            <div class="stat wide">
+              <div class="stat-label">Progress</div>
+              <div class="progress-shell"><div class="progress-fill" id="progressFill"></div></div>
+            </div>
+          </div>
+          <div class="button-grid">
+            <button class="green" id="hintBtn">Hint <span id="hintCount">1</span></button>
+            <button class="ghost" id="shuffleBtn">Shuffle</button>
+            <button class="ghost" id="soundBtnGame">Sound On</button>
+            <button class="danger" id="quitBtn">Main Menu</button>
+          </div>
+          <div class="help-card" id="hintHelp"><b>Hint bank:</b> Free hints carry over up to 3. When free hints are gone, a hint costs 5 total points.</div>
+          <div class="help-card"><b>Move:</b> Click or tap one gem, then an adjacent gem. Invalid swaps animate back and score nothing. Sound can be muted anytime.</div>
+          <div class="mini-leaders" id="miniLeaders"></div>
+        </aside>
+      </div>
+    </section>
+  </div>
+
+  <div id="modalLayer" class="modal-layer" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h2 id="modalTitle">Nice!</h2>
+      <div id="modalBody"></div>
+      <div id="modalActions" class="modal-actions"></div>
+    </div>
+  </div>
+  <div id="confetti" class="confetti"></div>
+
+  <script>
+    (() => {
+      const SIZE = 8;
+      const symbols = ['◆','●','⬟','■','✦','⬢','▲','✚','⬥'];
+      const STORAGE_KEY = 'match3_prototype_scores_v2';
+      const SOUND_KEY = 'match3_prototype_sound_muted_v1';
+      const boardEl = document.getElementById('board');
+      const menuScreen = document.getElementById('menuScreen');
+      const gameScreen = document.getElementById('gameScreen');
+      const messagePill = document.getElementById('messagePill');
+      const modalLayer = document.getElementById('modalLayer');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalBody = document.getElementById('modalBody');
+      const modalActions = document.getElementById('modalActions');
+      const confetti = document.getElementById('confetti');
+
+      let board = [];
+      let nextTileId = 1;
+      let selected = null;
+      let locked = false;
+      let level = 1;
+      let totalScore = 0;
+      let levelScore = 0;
+      let freeHints = 0;
+      let timeLeft = 60;
+      let levelGoal = 25;
+      let levelTime = 60;
+      let timer = null;
+      let runStartedAt = 0;
+      let hintedCells = [];
+      let toastTimer = null;
+      let hintTimer = null;
+      let audioCtx = null;
+      let muted = localStorage.getItem(SOUND_KEY) === '1';
+      let lastTickSecond = null;
+
+      const $ = id => document.getElementById(id);
+      const delay = ms => new Promise(res => setTimeout(res, ms));
+      const nextFrame = () => new Promise(res => requestAnimationFrame(() => requestAnimationFrame(res)));
+      const rand = n => Math.floor(Math.random() * n);
+      const keyOf = (r,c) => `${r},${c}`;
+      const colourOf = cell => cell && typeof cell === 'object' ? cell.color : null;
+      const makeTile = color => ({ id: nextTileId++, color });
+
+      function colourCountForLevel(lv){
+        if(lv <= 10) return 4;
+        if(lv <= 20) return 5;
+        if(lv <= 25) return 6;
+        return Math.min(9, 6 + Math.ceil((lv - 25) / 5));
+      }
+
+      function goalForLevel(lv){ return 25 + (lv - 1) * 5; }
+
+      function timeForGoal(goal){
+        if(goal <= 70) return 60;
+        if(goal < 100) return 70;
+        return 70 + 10 * (Math.floor((goal - 100) / 25) + 1);
+      }
+
+      function groupPoints(len){
+        if(len >= 5) return 10;
+        if(len === 4) return 5;
+        return 3;
+      }
+
+      function cloneBoard(src){
+        return src.map(row => row.map(cell => cell ? { id: cell.id, color: cell.color } : null));
+      }
+
+      function showScreen(name){
+        menuScreen.classList.toggle('active', name === 'menu');
+        gameScreen.classList.toggle('active', name === 'game');
+        document.body.classList.toggle('game-active', name === 'game');
+      }
+
+      function showToast(msg, ms=1500){
+        messagePill.textContent = msg;
+        messagePill.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => messagePill.classList.remove('show'), ms);
+      }
+
+      function unlockAudio(){
+        if(muted) return null;
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if(!AudioContext) return null;
+        if(!audioCtx) audioCtx = new AudioContext();
+        if(audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+
+        // A nearly silent blip unlocks audio on browsers that require sound
+        // to begin from a direct user gesture. This makes the final countdown
+        // ticks reliable later, even if the player has not made a move yet.
+        try{
+          const osc = audioCtx.createOscillator();
+          const amp = audioCtx.createGain();
+          const start = audioCtx.currentTime;
+          amp.gain.setValueAtTime(0.00001, start);
+          amp.gain.exponentialRampToValueAtTime(0.00001, start + .018);
+          osc.frequency.setValueAtTime(440, start);
+          osc.connect(amp).connect(audioCtx.destination);
+          osc.start(start);
+          osc.stop(start + .02);
+        }catch(err){}
+        return audioCtx;
+      }
+
+      function getAudio(){
+        if(muted) return null;
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if(!AudioContext) return null;
+        if(!audioCtx) audioCtx = new AudioContext();
+        if(audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+        return audioCtx;
+      }
+
+      function tone({freq=440, duration=.08, type='sine', gain=.03, delayTime=0, endFreq=null}){
+        const ctx = getAudio();
+        if(!ctx) return;
+        const start = ctx.currentTime + delayTime;
+        const osc = ctx.createOscillator();
+        const amp = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, start);
+        if(endFreq) osc.frequency.exponentialRampToValueAtTime(endFreq, start + duration);
+        amp.gain.setValueAtTime(0.0001, start);
+        amp.gain.exponentialRampToValueAtTime(gain, start + Math.min(.025, duration * .35));
+        amp.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+        osc.connect(amp).connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + duration + .03);
+      }
+
+      function softNoise({duration=.06, gain=.018, delayTime=0}){
+        const ctx = getAudio();
+        if(!ctx) return;
+        const length = Math.max(1, Math.floor(ctx.sampleRate * duration));
+        const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for(let i=0;i<length;i++) data[i] = (Math.random()*2 - 1) * Math.pow(1 - i/length, 1.8);
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 1200;
+        const amp = ctx.createGain();
+        const start = ctx.currentTime + delayTime;
+        amp.gain.setValueAtTime(gain, start);
+        amp.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+        src.connect(filter).connect(amp).connect(ctx.destination);
+        src.start(start);
+        src.stop(start + duration + .02);
+      }
+
+      function playSound(kind){
+        if(muted) return;
+        if(kind === 'select'){
+          tone({freq:340, endFreq:390, duration:.055, type:'triangle', gain:.018});
+        }else if(kind === 'swap'){
+          tone({freq:310, endFreq:420, duration:.075, type:'triangle', gain:.024});
+          tone({freq:410, endFreq:330, duration:.075, type:'triangle', gain:.016, delayTime:.025});
+        }else if(kind === 'invalid'){
+          tone({freq:170, endFreq:140, duration:.09, type:'sine', gain:.02});
+        }else if(kind === 'match'){
+          tone({freq:520, duration:.10, type:'sine', gain:.028});
+          tone({freq:780, duration:.13, type:'triangle', gain:.018, delayTime:.045});
+          softNoise({duration:.055, gain:.010, delayTime:.015});
+        }else if(kind === 'chain'){
+          tone({freq:640, duration:.10, type:'sine', gain:.026});
+          tone({freq:960, duration:.14, type:'triangle', gain:.019, delayTime:.04});
+          tone({freq:1280, duration:.09, type:'sine', gain:.011, delayTime:.095});
+        }else if(kind === 'tick'){
+          tone({freq:720, endFreq:520, duration:.052, type:'triangle', gain:.026});
+          softNoise({duration:.032, gain:.010});
+        }else if(kind === 'level'){
+          tone({freq:523.25, duration:.10, type:'sine', gain:.025});
+          tone({freq:659.25, duration:.11, type:'sine', gain:.022, delayTime:.075});
+          tone({freq:783.99, duration:.16, type:'triangle', gain:.020, delayTime:.16});
+        }else if(kind === 'shuffle'){
+          softNoise({duration:.11, gain:.016});
+          tone({freq:240, endFreq:360, duration:.12, type:'triangle', gain:.012});
+        }else if(kind === 'hint'){
+          tone({freq:660, duration:.08, type:'sine', gain:.018});
+          tone({freq:880, duration:.10, type:'sine', gain:.014, delayTime:.055});
+        }
+      }
+
+      function updateSoundButtons(){
+        const label = muted ? 'Sound Off' : 'Sound On';
+        const menuBtn = $('soundBtnMenu');
+        const gameBtn = $('soundBtnGame');
+        if(menuBtn) menuBtn.textContent = label;
+        if(gameBtn) gameBtn.textContent = label;
+      }
+
+      function toggleSound(){
+        muted = !muted;
+        localStorage.setItem(SOUND_KEY, muted ? '1' : '0');
+        updateSoundButtons();
+        if(!muted){
+          unlockAudio();
+          playSound('select');
+          showToast('Sound on', 900);
+        }else{
+          showToast('Sound muted', 900);
+        }
+      }
+
+      function saveScores(){
+        const duration = Math.max(0, Math.round((Date.now() - runStartedAt) / 1000));
+        if(totalScore <= 0) return;
+        const scores = getScores();
+        scores.push({score: totalScore, time: duration, level, date: new Date().toLocaleString()});
+        scores.sort((a,b) => b.score - a.score || a.time - b.time || b.level - a.level);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(scores.slice(0,3)));
+        updateSoundButtons();
+      renderScores();
+      }
+
+      function getScores(){
+        try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+        catch(e){ return []; }
+      }
+
+      function formatTime(sec){
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return `${m}:${String(s).padStart(2,'0')}`;
+      }
+
+      function renderScores(){
+        const scores = getScores();
+        const leaderList = $('leaderList');
+        const mini = $('miniLeaders');
+        if(!scores.length){
+          leaderList.innerHTML = '<div class="empty-score">No scores yet. Start a run and see how far you can get.</div>';
+          mini.innerHTML = '<div class="help-card"><b>Top Scores:</b> No local scores yet.</div>';
+          return;
+        }
+        leaderList.innerHTML = scores.map((s,i)=>`
+          <div class="leader-item">
+            <div class="rank">${i+1}</div>
+            <div><div class="leader-score">${s.score} points</div><div>${formatTime(s.time)} · reached stage ${s.level}</div></div>
+            <div>${String(s.date).split(',')[0]}</div>
+          </div>`).join('');
+        mini.innerHTML = '<div class="help-card"><b>Top Scores</b></div>' + scores.map((s,i)=>`
+          <div class="mini-leader"><span>#${i+1} · ${s.score} pts</span><span>${formatTime(s.time)}</span></div>`).join('');
+      }
+
+      function canPlaceWithoutMatch(b, r, c, val){
+        if(c >= 2 && colourOf(b[r][c-1]) === val && colourOf(b[r][c-2]) === val) return false;
+        if(r >= 2 && colourOf(b[r-1][c]) === val && colourOf(b[r-2][c]) === val) return false;
+        return true;
+      }
+
+      function makeBoard(){
+        const colors = colourCountForLevel(level);
+        let attempts = 0;
+        do{
+          attempts++;
+          nextTileId = 1;
+          board = Array.from({length: SIZE}, () => Array(SIZE).fill(null));
+          for(let r=0;r<SIZE;r++){
+            for(let c=0;c<SIZE;c++){
+              const choices = [];
+              for(let v=0; v<colors; v++) if(canPlaceWithoutMatch(board,r,c,v)) choices.push(v);
+              board[r][c] = makeTile(choices[rand(choices.length)] ?? rand(colors));
+            }
+          }
+        }while((findMatches(board).groups.length || !findPossibleMove(board)) && attempts < 300);
+      }
+
+      function render(){
+        const hinted = new Set(hintedCells.map(cell => keyOf(cell.r, cell.c)));
+        let html = '';
+        for(let r=0;r<SIZE;r++){
+          for(let c=0;c<SIZE;c++){
+            const cell = board[r][c];
+            if(!cell){
+              html += `<div class="slot" data-r="${r}" data-c="${c}"></div>`;
+              continue;
+            }
+            const isSel = selected && selected.r === r && selected.c === c;
+            const isHint = hinted.has(keyOf(r,c));
+            html += `<div class="tile c${cell.color} ${isSel?'selected':''} ${isHint?'hinted':''}" data-id="${cell.id}" data-r="${r}" data-c="${c}" role="button" aria-label="Gem row ${r+1} column ${c+1}">${symbols[cell.color]}</div>`;
+          }
+        }
+        boardEl.innerHTML = html;
+      }
+
+      function updateUI(){
+        $('levelTitle').textContent = `Stage ${level}`;
+        $('timeValue').textContent = timeLeft;
+        $('goalValue').textContent = levelGoal;
+        $('levelScoreValue').textContent = levelScore;
+        $('totalScoreValue').textContent = totalScore;
+        $('hintCount').textContent = freeHints;
+        $('progressFill').style.width = `${Math.min(100, (levelScore / levelGoal) * 100)}%`;
+        const paid = freeHints <= 0;
+        $('hintBtn').disabled = paid && totalScore < 5;
+        $('hintHelp').innerHTML = paid
+          ? '<b>Hint bank:</b> No free hints left. A hint costs 5 total points.'
+          : `<b>Hint bank:</b> ${freeHints} free hint${freeHints === 1 ? '' : 's'} available. Free hints can stack up to 3.`;
+      }
+
+      function findMatches(b){
+        const cells = new Set();
+        const groups = [];
+        for(let r=0;r<SIZE;r++){
+          let start = 0;
+          for(let c=1;c<=SIZE;c++){
+            const startVal = start < SIZE ? colourOf(b[r][start]) : null;
+            const same = c<SIZE && startVal !== null && colourOf(b[r][c]) === startVal;
+            if(!same){
+              const len = c - start;
+              if(startVal !== null && len >= 3){
+                const group = [];
+                for(let x=start;x<c;x++){ cells.add(keyOf(r,x)); group.push({r,c:x}); }
+                groups.push({len, cells:group, dir:'h'});
+              }
+              start = c;
+            }
+          }
+        }
+        for(let c=0;c<SIZE;c++){
+          let start = 0;
+          for(let r=1;r<=SIZE;r++){
+            const startVal = start < SIZE ? colourOf(b[start][c]) : null;
+            const same = r<SIZE && startVal !== null && colourOf(b[r][c]) === startVal;
+            if(!same){
+              const len = r - start;
+              if(startVal !== null && len >= 3){
+                const group = [];
+                for(let y=start;y<r;y++){ cells.add(keyOf(y,c)); group.push({r:y,c}); }
+                groups.push({len, cells:group, dir:'v'});
+              }
+              start = r;
+            }
+          }
+        }
+        return {cells, groups};
+      }
+
+      function swapInBoard(b, a, d){
+        const temp = b[a.r][a.c];
+        b[a.r][a.c] = b[d.r][d.c];
+        b[d.r][d.c] = temp;
+      }
+
+      function areAdjacent(a,b){ return Math.abs(a.r-b.r) + Math.abs(a.c-b.c) === 1; }
+
+      function findPossibleMove(b){
+        for(let r=0;r<SIZE;r++){
+          for(let c=0;c<SIZE;c++){
+            const here = {r,c};
+            const dirs = [{r:r+1,c},{r,c:c+1}];
+            for(const other of dirs){
+              if(other.r >= SIZE || other.c >= SIZE) continue;
+              const test = cloneBoard(b);
+              swapInBoard(test, here, other);
+              if(findMatches(test).groups.length) return [here, other];
+            }
+          }
+        }
+        return null;
+      }
+
+      function getPositions(){
+        const map = new Map();
+        boardEl.querySelectorAll('.tile[data-id]').forEach(el => {
+          map.set(el.dataset.id, el.getBoundingClientRect());
+        });
+        return map;
+      }
+
+      async function animateBoardChange(mutator, duration=260, newTilesFall=false){
+        const first = getPositions();
+        mutator();
+        render();
+        await nextFrame();
+        const animated = [];
+        boardEl.querySelectorAll('.tile[data-id]').forEach(el => {
+          const last = el.getBoundingClientRect();
+          const prev = first.get(el.dataset.id);
+          if(prev){
+            const dx = prev.left - last.left;
+            const dy = prev.top - last.top;
+            if(Math.abs(dx) > .5 || Math.abs(dy) > .5){
+              el.style.transition = 'none';
+              el.style.transform = `translate(${dx}px, ${dy}px)`;
+              el.style.zIndex = '7';
+              animated.push(el);
+            }
+          }else if(newTilesFall){
+            el.style.transition = 'none';
+            el.style.transform = `translateY(-${Math.max(80, last.height * 3)}px)`;
+            el.style.opacity = '0';
+            el.style.zIndex = '3';
+            animated.push(el);
+          }
+        });
+        if(!animated.length){
+          await delay(20);
+          return;
+        }
+        await nextFrame();
+        animated.forEach(el => {
+          el.style.transition = `transform ${duration}ms cubic-bezier(.18,.82,.28,1), opacity ${duration}ms ease`;
+          el.style.transform = 'translate(0,0)';
+          el.style.opacity = '1';
+        });
+        await delay(duration + 45);
+        animated.forEach(el => {
+          el.style.transition = '';
+          el.style.transform = '';
+          el.style.opacity = '';
+          el.style.zIndex = '';
+        });
+      }
+
+      function markMatched(cells){
+        for(const key of cells){
+          const [r,c] = key.split(',').map(Number);
+          const el = boardEl.querySelector(`[data-r="${r}"][data-c="${c}"]`);
+          if(el) el.classList.add('matched');
+        }
+      }
+
+      function scoreGroups(groups, chainDepth){
+        const multiplier = chainDepth === 0 ? 1 : chainDepth + 1;
+        const base = groups.reduce((sum,g) => sum + groupPoints(Math.min(g.len, 5)), 0);
+        return {base, multiplier, gained: base * multiplier};
+      }
+
+      function clearMatchedCells(cells){
+        for(const key of cells){
+          const [r,c] = key.split(',').map(Number);
+          board[r][c] = null;
+        }
+      }
+
+      function applyGravityAndFill(){
+        const colors = colourCountForLevel(level);
+        for(let c=0;c<SIZE;c++){
+          const stack = [];
+          for(let r=SIZE-1;r>=0;r--){
+            if(board[r][c]) stack.push(board[r][c]);
+          }
+          for(let r=SIZE-1;r>=0;r--){
+            if(stack.length){
+              board[r][c] = stack.shift();
+            }else{
+              board[r][c] = makeTile(rand(colors));
+            }
+          }
+        }
+      }
+
+      async function resolveMatches(){
+        locked = true;
+        clearTimeout(hintTimer);
+        hintedCells = [];
+        render();
+        let chain = 0;
+        let any = false;
+        while(true){
+          const result = findMatches(board);
+          if(!result.groups.length) break;
+          any = true;
+          const score = scoreGroups(result.groups, chain);
+          totalScore += score.gained;
+          levelScore += score.gained;
+          updateUI();
+          if(chain === 0){
+            showToast(`+${score.gained} points`, 900);
+            playSound('match');
+          }else{
+            showToast(`Chain x${score.multiplier}! +${score.gained}`, 1050);
+            playSound('chain');
+          }
+          markMatched(result.cells);
+          await delay(310);
+          clearMatchedCells(result.cells);
+          render();
+          await delay(55);
+          await animateBoardChange(() => applyGravityAndFill(), 315, true);
+          await delay(35);
+          chain++;
+        }
+        if(any && levelScore >= levelGoal){
+          locked = true;
+          stopTimer();
+          playSound('level');
+          celebrate();
+          showLevelComplete();
+          return;
+        }
+        await ensurePlayable();
+        locked = false;
+      }
+
+      async function ensurePlayable(){
+        if(findMatches(board).groups.length){
+          await resolveMatches();
+          return;
+        }
+        if(!findPossibleMove(board)){
+          showToast('No moves left. Shuffling tiles!', 1500);
+          playSound('shuffle');
+          await delay(500);
+          await shuffleBoard(true);
+        }
+      }
+
+      function boardIsPlayable(){
+        return !findMatches(board).groups.length && !!findPossibleMove(board);
+      }
+
+      async function shuffleBoard(silent=false){
+        if(locked && !silent) return;
+        locked = true;
+        const colors = colourCountForLevel(level);
+        let vals = board.flat().filter(Boolean);
+        while(vals.length < SIZE*SIZE) vals.push(makeTile(rand(colors)));
+        let attempts = 0;
+        do{
+          attempts++;
+          for(let i=vals.length-1;i>0;i--){
+            const j = rand(i+1);
+            [vals[i], vals[j]] = [vals[j], vals[i]];
+          }
+          const next = [];
+          for(let r=0;r<SIZE;r++) next.push(vals.slice(r*SIZE, (r+1)*SIZE));
+          board = next;
+        }while(!boardIsPlayable() && attempts < 300);
+        if(attempts >= 300) makeBoard();
+        selected = null;
+        hintedCells = [];
+        await animateBoardChange(() => {}, 300, true);
+        if(!silent){
+          playSound('shuffle');
+          showToast('Board shuffled', 1000);
+        }
+        locked = false;
+      }
+
+      async function handleTileClick(r,c){
+        if(locked) return;
+        clearTimeout(hintTimer);
+        hintedCells = [];
+        if(!selected){
+          selected = {r,c};
+          render();
+          playSound('select');
+          return;
+        }
+        if(selected.r === r && selected.c === c){
+          selected = null;
+          render();
+          playSound('select');
+          return;
+        }
+        const second = {r,c};
+        if(!areAdjacent(selected, second)){
+          selected = second;
+          render();
+          playSound('select');
+          return;
+        }
+        locked = true;
+        const first = selected;
+        selected = null;
+        playSound('swap');
+        await animateBoardChange(() => swapInBoard(board, first, second), 230, false);
+        const result = findMatches(board);
+        if(result.groups.length){
+          await resolveMatches();
+        }else{
+          playSound('invalid');
+          showToast('No match', 850);
+          const el1 = boardEl.querySelector(`[data-r="${first.r}"][data-c="${first.c}"]`);
+          const el2 = boardEl.querySelector(`[data-r="${second.r}"][data-c="${second.c}"]`);
+          if(el1) el1.classList.add('invalid');
+          if(el2) el2.classList.add('invalid');
+          await delay(190);
+          await animateBoardChange(() => swapInBoard(board, first, second), 230, false);
+          locked = false;
+        }
+      }
+
+      function useHint(){
+        if(locked) return;
+        const move = findPossibleMove(board);
+        if(!move){
+          shuffleBoard();
+          return;
+        }
+        if(freeHints > 0){
+          freeHints--;
+        }else{
+          if(totalScore < 5){
+            showToast('Need 5 total points for a paid hint', 1500);
+            return;
+          }
+          totalScore -= 5;
+          showToast('Paid hint used: -5 points', 1100);
+        }
+        playSound('hint');
+        hintedCells = move;
+        selected = null;
+        render();
+        updateUI();
+        clearTimeout(hintTimer);
+        hintTimer = setTimeout(() => { hintedCells = []; render(); }, 2300);
+      }
+
+      function startTimer(){
+        stopTimer();
+        lastTickSecond = null;
+        timer = setInterval(() => {
+          timeLeft--;
+          if(timeLeft > 0 && timeLeft <= 10 && lastTickSecond !== timeLeft){
+            lastTickSecond = timeLeft;
+            playSound('tick');
+          }
+          updateUI();
+          if(timeLeft <= 0){
+            timeLeft = 0;
+            updateUI();
+            stopTimer();
+            endRun();
+          }
+        }, 1000);
+      }
+
+      function stopTimer(){
+        if(timer) clearInterval(timer);
+        timer = null;
+        lastTickSecond = null;
+      }
+
+      function setupLevel(){
+        levelGoal = goalForLevel(level);
+        levelTime = timeForGoal(levelGoal);
+        timeLeft = levelTime;
+        levelScore = 0;
+        selected = null;
+        hintedCells = [];
+        lastTickSecond = null;
+        freeHints = Math.min(3, freeHints + 1);
+        makeBoard();
+        render();
+        updateUI();
+        showToast(`${colourCountForLevel(level)} colours · ${levelGoal} point goal`, 1600);
+        startTimer();
+      }
+
+      function startGame(){
+        unlockAudio();
+        closeModal();
+        level = 1;
+        totalScore = 0;
+        levelScore = 0;
+        freeHints = 0;
+        runStartedAt = Date.now();
+        showScreen('game');
+        setupLevel();
+      }
+
+      function showLevelComplete(){
+        const nextGoal = goalForLevel(level + 1);
+        const nextTime = timeForGoal(nextGoal);
+        openModal(
+          `Stage ${level} cleared!`,
+          `<p>You reached <b>${levelScore}</b> points before time ran out.</p>
+           <div class="scoreline"><span>Total score</span><b>${totalScore}</b></div>
+           <div class="scoreline"><span>Next stage goal</span><b>${nextGoal} in ${nextTime}s</b></div>`,
+          [
+            {label:'Next Stage', cls:'primary', action:() => { closeModal(); level++; setupLevel(); locked=false; }},
+            {label:'Main Menu', cls:'ghost', action:confirmLevelCompleteMenu}
+          ]
+        );
+      }
+
+      function confirmLevelCompleteMenu(){
+        openModal(
+          'Go back to main menu?',
+          `<p>You cleared this stage. Going to the main menu will end the current run and save your total score if it makes the top 3.</p>
+           <div class="scoreline"><span>Total score</span><b>${totalScore}</b></div>`,
+          [
+            {label:'Keep Playing', cls:'green', action:showLevelComplete},
+            {label:'Main Menu', cls:'danger', action:() => { saveScores(); stopTimer(); closeModal(); showScreen('menu'); locked=false; }}
+          ]
+        );
+      }
+
+      function endRun(){
+        locked = true;
+        saveScores();
+        openModal(
+          'Time is up!',
+          `<p>Your final score was <b>${totalScore}</b> points. You reached stage <b>${level}</b>.</p>
+           <p>Scores are saved locally on this device.</p>`,
+          [
+            {label:'Main Menu', cls:'primary', action:() => { closeModal(); showScreen('menu'); locked=false; }},
+            {label:'Play Again', cls:'green', action:() => startGame()}
+          ]
+        );
+      }
+
+      function quitToMenu(){
+        stopTimer();
+        saveScores();
+        closeModal();
+        showScreen('menu');
+        locked = false;
+      }
+
+      function openModal(title, body, actions){
+        modalTitle.textContent = title;
+        modalBody.innerHTML = body;
+        modalActions.innerHTML = '';
+        actions.forEach(a => {
+          const btn = document.createElement('button');
+          btn.textContent = a.label;
+          btn.className = a.cls || 'ghost';
+          btn.addEventListener('click', a.action);
+          modalActions.appendChild(btn);
+        });
+        modalLayer.classList.add('show');
+      }
+
+      function closeModal(){ modalLayer.classList.remove('show'); }
+
+      function celebrate(){
+        confetti.innerHTML = '';
+        const colors = ['#ffd267','#37bfa4','#ff8b64','#5bb7ff','#b779ff'];
+        for(let i=0;i<42;i++){
+          const s = document.createElement('span');
+          s.style.left = `${Math.random()*100}%`;
+          s.style.background = colors[rand(colors.length)];
+          s.style.animationDelay = `${Math.random()*260}ms`;
+          s.style.transform = `rotate(${rand(180)}deg)`;
+          confetti.appendChild(s);
+        }
+        setTimeout(() => confetti.innerHTML = '', 1300);
+      }
+
+      boardEl.addEventListener('pointerdown', e => {
+        e.preventDefault();
+      }, {passive:false});
+
+      boardEl.addEventListener('pointerup', e => {
+        e.preventDefault();
+        unlockAudio();
+        const tile = e.target.closest('.tile');
+        if(!tile) return;
+        handleTileClick(Number(tile.dataset.r), Number(tile.dataset.c));
+      }, {passive:false});
+
+      $('startBtn').addEventListener('click', startGame);
+      $('soundBtnMenu').addEventListener('click', toggleSound);
+      $('soundBtnGame').addEventListener('click', toggleSound);
+      $('hintBtn').addEventListener('click', () => { unlockAudio(); useHint(); });
+      $('shuffleBtn').addEventListener('click', () => { unlockAudio(); if(!locked) shuffleBoard(); });
+      $('quitBtn').addEventListener('click', () => {
+        if(locked) return;
+        stopTimer();
+        openModal(
+          'Return to main menu?',
+          `<p>This will end the current run. Your current total score will be saved if it makes the top 3.</p>`,
+          [
+            {label:'Stay Here', cls:'green', action:() => { closeModal(); startTimer(); }},
+            {label:'Main Menu', cls:'danger', action:quitToMenu}
+          ]
+        );
+      });
+      $('howBtn').addEventListener('click', () => {
+        openModal(
+          'How to Play',
+          `<p>Click or tap a gem, then click or tap an adjacent gem to swap them. Invalid swaps animate there and back, but score nothing.</p>
+           <p><b>Scoring:</b> Match 3 = 3 points, match 4 = 5 points, match 5+ = 10 points. Cascades after the first clear get x2, x3, x4, and so on.</p>
+           <p>Colours increase as stages climb: 4, then 5, then 6, then one more every 5 stages after stage 25 until the board has 9 colours.</p>
+           <p>If there are no possible moves, the game will tell you and shuffle the board. Sound can be muted from the menu or game screen.</p>`,
+          [{label:'Got it', cls:'primary', action:closeModal}]
+        );
+      });
+      $('clearScoresBtn').addEventListener('click', () => {
+        openModal(
+          'Clear highscores?',
+          '<p>This removes the local top 3 scores saved on this device.</p>',
+          [
+            {label:'Cancel', cls:'ghost', action:closeModal},
+            {label:'Clear', cls:'danger', action:() => { localStorage.removeItem(STORAGE_KEY); renderScores(); closeModal(); }}
+          ]
+        );
+      });
+
+      document.addEventListener('keydown', e => {
+        if(e.key === 'Escape' && modalLayer.classList.contains('show')) closeModal();
+      });
+
+      updateSoundButtons();
+      renderScores();
+    })();
+  </script>
+</body>
+</html>
