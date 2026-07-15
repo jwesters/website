@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1020">
+  <title>Binaural Beat Journey Maker</title>
+  <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
+  <style>
+    :root{
+      --bg:#09101f;
+      --panel:#121a2f;
+      --panel2:#18233e;
+      --line:rgba(255,255,255,.10);
+      --text:#f8fafc;
+      --muted:#aab6cc;
+      --cyan:#67e8f9;
+      --blue:#38bdf8;
+      --violet:#a78bfa;
+      --rose:#fb7185;
+      --green:#86efac;
+      --shadow:0 22px 60px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text);background:
+      radial-gradient(circle at 12% 7%,rgba(103,232,249,.13),transparent 25%),
+      radial-gradient(circle at 90% 12%,rgba(167,139,250,.15),transparent 27%),
+      var(--bg)}
+    body{padding:16px}
+    button,input,select{font:inherit}
+    .app{width:min(1250px,100%);margin:auto}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}
+    h1{margin:0;font-size:clamp(2rem,5vw,3.4rem);line-height:.95;letter-spacing:-.055em}
+    .subtitle{margin:10px 0 0;color:var(--muted);max-width:780px;line-height:1.5}
+    .badge{display:inline-flex;gap:8px;align-items:center;padding:8px 12px;border-radius:999px;border:1px solid rgba(103,232,249,.25);background:rgba(103,232,249,.08);color:#cffafe;white-space:nowrap}
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 14px var(--cyan)}
+    .layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(340px,.85fr);gap:16px}
+    .panel{background:linear-gradient(180deg,rgba(24,35,62,.97),rgba(18,26,47,.97));border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow)}
+    .pad{padding:20px}
+    .section{margin-bottom:18px}
+    .section:last-child{margin-bottom:0}
+    .section-title{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;font-weight:800}
+    .section-title small{font-weight:500;color:var(--muted)}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    .field{padding:13px;border:1px solid var(--line);border-radius:15px;background:rgba(255,255,255,.035)}
+    label{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:.88rem;margin-bottom:8px}
+    .readout{color:var(--text);font-weight:800}
+    select,input[type="number"],input[type="text"]{width:100%;background:#0b1428;color:var(--text);border:1px solid var(--line);border-radius:11px;padding:10px 11px;outline:none}
+    select:focus,input:focus{border-color:rgba(103,232,249,.7);box-shadow:0 0 0 3px rgba(103,232,249,.11)}
+    input[type="range"]{width:100%;accent-color:var(--cyan)}
+    .visual{height:210px;border-radius:18px;overflow:hidden;border:1px solid var(--line);background:#091225;position:relative;margin-bottom:16px}
+    canvas{display:block;width:100%;height:100%}
+    .visual-center{position:absolute;inset:0;display:grid;place-items:center;text-align:center;pointer-events:none}
+    .big{font-size:clamp(2.8rem,8vw,5.2rem);font-weight:900;letter-spacing:-.06em;text-shadow:0 10px 28px rgba(0,0,0,.4)}
+    .big small{font-size:.24em;color:var(--muted);letter-spacing:0}
+    .status{color:var(--muted);font-size:.9rem;margin-top:2px}
+    .note-card{display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;padding:14px;border-radius:16px;background:linear-gradient(135deg,rgba(103,232,249,.10),rgba(167,139,250,.10));border:1px solid rgba(103,232,249,.20)}
+    .note-main{font-size:1.35rem;font-weight:900}
+    .note-sub{color:var(--muted);font-size:.88rem;margin-top:3px}
+    .freq-pill{font-weight:900;color:#dffcff;background:rgba(0,0,0,.2);padding:9px 12px;border-radius:999px}
+    .channel-card{padding:14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+    .channel-head{display:flex;justify-content:space-between;gap:10px;margin-bottom:10px}
+    .channel-head strong{font-size:1.05rem}
+    .channel-head span{color:var(--cyan);font-weight:900}
+    .buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    button{border:0;border-radius:13px;padding:12px 14px;font-weight:850;cursor:pointer;transition:filter .15s,transform .15s}
+    button:hover{filter:brightness(1.07)}
+    button:active{transform:translateY(1px)}
+    button:disabled{opacity:.45;cursor:not-allowed}
+    .primary{background:linear-gradient(135deg,var(--cyan),var(--blue));color:#07111f}
+    .danger{background:linear-gradient(135deg,var(--rose),#f43f5e);color:white}
+    .secondary{background:#263553;color:white;border:1px solid var(--line)}
+    .ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+    .success{background:linear-gradient(135deg,var(--green),#22c55e);color:#05210f}
+    .timeline{display:flex;flex-direction:column;gap:10px}
+    .stage{border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.035);padding:12px}
+    .stage-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+    .stage-num{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(103,232,249,.12);color:var(--cyan);font-weight:900}
+    .stage-actions{display:flex;gap:6px}
+    .icon-btn{padding:7px 9px;border-radius:9px;background:#263553;color:white;border:1px solid var(--line);font-size:.82rem}
+    .stage-grid{display:grid;grid-template-columns:1.15fr .7fr .7fr;gap:9px}
+    .total{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:14px;background:#0b1428;border:1px solid var(--line);font-weight:800}
+    .total span:last-child{color:var(--cyan)}
+    .preset-row{display:flex;flex-wrap:wrap;gap:8px}
+    .preset{padding:8px 10px;border-radius:999px;background:#253451;color:white;border:1px solid var(--line);font-size:.83rem}
+    .help{color:var(--muted);font-size:.88rem;line-height:1.55;padding:13px;border:1px solid var(--line);border-radius:15px;background:rgba(255,255,255,.025)}
+    .help strong{color:var(--text)}
+    .progress-wrap{display:none;margin-top:10px}
+    .progress-wrap.show{display:block}
+    .progress{height:10px;background:#0b1428;border-radius:999px;overflow:hidden;border:1px solid var(--line)}
+    .progress>div{height:100%;width:0;background:linear-gradient(90deg,var(--violet),var(--cyan))}
+    .progress-text{font-size:.83rem;color:var(--muted);margin-top:6px}
+    .checkline{display:flex;align-items:center;justify-content:flex-start;gap:8px;color:var(--muted);font-size:.88rem}
+    .checkline input{accent-color:var(--cyan)}
+    .hidden{display:none!important}
+    .footer{text-align:center;color:#74819a;font-size:.78rem;margin-top:14px}
+    .journey-launch{width:100%;margin-top:12px;background:linear-gradient(135deg,rgba(167,139,250,.95),rgba(56,189,248,.95));color:#07111f}
+    .journey-summary{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:10px;padding:11px 13px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.03);color:var(--muted);font-size:.88rem}
+    .journey-summary strong{color:var(--cyan)}
+    .modal-backdrop{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(3,8,20,.82);backdrop-filter:blur(8px)}
+    .modal-backdrop.open{display:flex}
+    .modal{width:min(820px,100%);max-height:min(90vh,900px);overflow:auto;background:linear-gradient(180deg,#1a2542,#11192e);border:1px solid rgba(255,255,255,.14);border-radius:22px;box-shadow:0 30px 90px rgba(0,0,0,.55);padding:20px}
+    .modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:14px}
+    .modal-head h2{margin:0;font-size:1.55rem}
+    .modal-head p{margin:5px 0 0;color:var(--muted);font-size:.9rem}
+    .close-modal{flex:0 0 auto;width:40px;height:40px;padding:0;border-radius:50%;background:#263553;color:white;border:1px solid var(--line);font-size:1.2rem}
+    body.modal-open{overflow:hidden}
+    @media(max-width:900px){
+      .layout{grid-template-columns:1fr}
+      .header{flex-direction:column}
+    }
+    @media(max-width:620px){
+      body{padding:9px}
+      .pad{padding:15px}
+      .grid2,.grid3,.stage-grid,.buttons{grid-template-columns:1fr}
+      .visual{height:175px}
+      .stage-actions{flex-wrap:wrap;justify-content:flex-end}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <div>
+      <h1>Binaural Beat Journey Maker</h1>
+      <p class="subtitle">Anchor the tones to a musical key, build multiple brainwave stages, and glide smoothly from one binaural beat to the next.</p>
+    </div>
+    <div class="badge"><span class="dot"></span>Stereo headphones required</div>
+  </header>
+
+  <div class="layout">
+    <section class="panel pad">
+      <div class="visual">
+        <canvas id="visualizer"></canvas>
+        <div class="visual-center">
+          <div>
+            <div class="big"><span id="beatDisplay">10.00</span><small> Hz</small></div>
+            <div class="status" id="statusText">Ready to play</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Musical anchor <small>keeps the main tone compatible with a selected key</small></div>
+        <div class="grid3">
+          <div class="field">
+            <label for="keySelect">Key</label>
+            <select id="keySelect"></select>
+          </div>
+          <div class="field">
+            <label for="noteSelect">Anchor note</label>
+            <select id="noteSelect"></select>
+          </div>
+          <div class="field">
+            <label for="octaveSelect">Octave</label>
+            <select id="octaveSelect">
+              <option value="2">2 — low</option>
+              <option value="3">3</option>
+              <option value="4" selected>4 — medium</option>
+              <option value="5">5 — high</option>
+              <option value="6">6 — very high</option>
+            </select>
+          </div>
+        </div>
+        <div class="note-card" style="margin-top:10px">
+          <div>
+            <div class="note-main" id="anchorName">C4</div>
+            <div class="note-sub">The other ear adds the current binaural-beat difference.</div>
+          </div>
+          <div class="freq-pill"><span id="anchorHz">261.63</span> Hz</div>
+        </div>
+        <label class="checkline" style="margin-top:10px">
+          <input type="checkbox" id="manualAnchorToggle">
+          Use an exact custom anchor frequency
+        </label>
+        <div class="field hidden" id="manualAnchorBox" style="margin-top:10px">
+          <label for="manualAnchor">Custom anchor frequency <span class="readout">Hz</span></label>
+          <input id="manualAnchor" type="number" min="20" max="20000" step="0.01" value="261.63">
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Stereo channels</div>
+        <div class="grid2">
+          <div class="channel-card">
+            <div class="channel-head"><strong>Left ear</strong><span id="leftHz">261.63 Hz</span></div>
+            <label for="leftVolume">Left volume <span class="readout"><span id="leftVolumeReadout">100</span>%</span></label>
+            <input id="leftVolume" type="range" min="0" max="100" value="100">
+          </div>
+          <div class="channel-card">
+            <div class="channel-head"><strong>Right ear</strong><span id="rightHz">271.63 Hz</span></div>
+            <label for="rightVolume">Right volume <span class="readout"><span id="rightVolumeReadout">100</span>%</span></label>
+            <input id="rightVolume" type="range" min="0" max="100" value="100">
+          </div>
+        </div>
+        <div class="field" style="margin-top:10px">
+          <label for="anchorEar">Anchor ear</label>
+          <select id="anchorEar">
+            <option value="left" selected>Left ear holds the musical anchor</option>
+            <option value="right">Right ear holds the musical anchor</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Sound</div>
+        <div class="grid2">
+          <div class="field">
+            <label for="masterVolume">Tone volume <span class="readout"><span id="masterVolumeReadout">25</span>%</span></label>
+            <input id="masterVolume" type="range" min="0" max="60" value="25">
+          </div>
+          <div class="field">
+            <label for="waveform">Waveform</label>
+            <select id="waveform">
+              <option value="sine" selected>Sine — pure and smooth</option>
+              <option value="triangle">Triangle — softer harmonics</option>
+              <option value="square">Square — bright</option>
+              <option value="sawtooth">Sawtooth — buzzy</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="noiseType">Ambient noise</label>
+            <select id="noiseType">
+              <option value="none" selected>None</option>
+              <option value="pink">Pink noise</option>
+              <option value="brown">Brown noise</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="noiseVolume">Ambient volume <span class="readout"><span id="noiseVolumeReadout">15</span>%</span></label>
+            <input id="noiseVolume" type="range" min="0" max="60" value="15">
+          </div>
+        </div>
+        <button class="journey-launch" id="openJourneyBtn">✦ Build Guided Journey</button>
+        <div class="journey-summary">
+          <span><span id="stageCountSummary">3</span> stages configured</span>
+          <strong id="journeyDurationSummary">0 min</strong>
+        </div>
+      </div>
+
+      <div class="buttons">
+        <button class="primary" id="playBtn">▶ Play Journey</button>
+        <button class="danger" id="stopBtn" disabled>■ Stop</button>
+      </div>
+    </section>
+
+    <aside class="panel pad">
+      <div class="section">
+        <div class="section-title">Export</div>
+        <div class="grid2">
+          <div class="field">
+            <label for="fadeIn">Fade in <span class="readout"><span id="fadeInReadout">3</span> sec</span></label>
+            <input id="fadeIn" type="range" min="0" max="30" value="3">
+          </div>
+          <div class="field">
+            <label for="fadeOut">Fade out <span class="readout"><span id="fadeOutReadout">3</span> sec</span></label>
+            <input id="fadeOut" type="range" min="0" max="30" value="3">
+          </div>
+        </div>
+        <div class="buttons" style="margin-top:10px">
+          <button class="secondary" id="wavBtn">⬇ Export WAV</button>
+          <button class="success" id="mp3Btn">⬇ Export MP3</button>
+        </div>
+        <div class="progress-wrap" id="progressWrap">
+          <div class="progress"><div id="progressBar"></div></div>
+          <div class="progress-text" id="progressText">Preparing audio…</div>
+        </div>
+      </div>
+
+      <div class="help">
+        <strong>How the key feature works:</strong> the anchor ear stays on a note belonging to the selected key. The other ear is offset by the current binaural-beat frequency. For example, A4 at 440 Hz with an 8 Hz beat uses 440 Hz and 448 Hz. The second tone will be slightly outside perfect tuning—that difference creates the binaural beat.
+      </div>
+      <div class="footer">Audio is generated in your browser. MP3 encoding uses the included browser encoder.</div>
+    </aside>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="journeyModal" role="dialog" aria-modal="true" aria-labelledby="journeyModalTitle">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h2 id="journeyModalTitle">Guided Journey Builder</h2>
+        <p>Choose each beat, how long it plays, and how slowly it transitions to the next stage.</p>
+      </div>
+      <button class="close-modal" id="closeJourneyBtn" aria-label="Close guided journey builder">×</button>
+    </div>
+    <div class="preset-row">
+      <button class="preset" data-preset="sleep">Sleep Journey</button>
+      <button class="preset" data-preset="focus">Focus Journey</button>
+      <button class="preset" data-preset="meditate">Meditation Journey</button>
+      <button class="preset" data-preset="clear">Clear</button>
+    </div>
+    <div class="timeline" id="timeline" style="margin-top:12px"></div>
+    <button class="secondary" id="addStageBtn" style="width:100%;margin-top:10px">＋ Add Stage</button>
+    <div class="total" style="margin-top:10px"><span>Total journey</span><span id="totalDuration">0 min</span></div>
+    <button class="primary" id="doneJourneyBtn" style="width:100%;margin-top:12px">Done</button>
+  </div>
+</div>
+
+
+<script>
+(() => {
+  "use strict";
+  const $ = id => document.getElementById(id);
+
+  const NOTES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+  const KEY_NOTES = {
+    "C major":["C","D","E","F","G","A","B"],
+    "C minor":["C","D","D#","F","G","G#","A#"],
+    "C# major":["C#","D#","F","F#","G#","A#","C"],
+    "C# minor":["C#","D#","E","F#","G#","A","B"],
+    "D major":["D","E","F#","G","A","B","C#"],
+    "D minor":["D","E","F","G","A","A#","C"],
+    "D# major":["D#","F","G","G#","A#","C","D"],
+    "D# minor":["D#","F","F#","G#","A#","B","C#"],
+    "E major":["E","F#","G#","A","B","C#","D#"],
+    "E minor":["E","F#","G","A","B","C","D"],
+    "F major":["F","G","A","A#","C","D","E"],
+    "F minor":["F","G","G#","A#","C","C#","D#"],
+    "F# major":["F#","G#","A#","B","C#","D#","F"],
+    "F# minor":["F#","G#","A","B","C#","D","E"],
+    "G major":["G","A","B","C","D","E","F#"],
+    "G minor":["G","A","A#","C","D","D#","F"],
+    "G# major":["G#","A#","C","C#","D#","F","G"],
+    "G# minor":["G#","A#","B","C#","D#","E","F#"],
+    "A major":["A","B","C#","D","E","F#","G#"],
+    "A minor":["A","B","C","D","E","F","G"],
+    "A# major":["A#","C","D","D#","F","G","A"],
+    "A# minor":["A#","C","C#","D#","F","F#","G#"],
+    "B major":["B","C#","D#","E","F#","G#","A#"],
+    "B minor":["B","C#","D","E","F#","G","A"]
+  };
+
+  const BEAT_PRESETS = {
+    "Delta":2,
+    "Theta":6,
+    "Schumann":7.83,
+    "Alpha":10,
+    "Beta":18,
+    "Gamma":40,
+    "Custom":10
+  };
+
+  const state = {
+    stages:[
+      {type:"Beta", beat:18, hold:5, transition:2},
+      {type:"Gamma", beat:40, hold:5, transition:3},
+      {type:"Delta", beat:2, hold:10, transition:0}
+    ],
+    playing:false,
+    audioCtx:null,
+    nodes:[],
+    stopTimer:null,
+    animationStart:0,
+    journeySeconds:0
+  };
+
+  function noteFrequency(note, octave){
+    const midi = NOTES.indexOf(note) + 12 * (Number(octave) + 1);
+    return 440 * Math.pow(2, (midi - 69) / 12);
+  }
+
+  function populateKeys(){
+    $("keySelect").innerHTML = Object.keys(KEY_NOTES).map(k => `<option>${k}</option>`).join("");
+    $("keySelect").value = "C major";
+    populateNotes();
+  }
+
+  function populateNotes(){
+    const key = $("keySelect").value;
+    const notes = KEY_NOTES[key];
+    const old = $("noteSelect").value;
+    $("noteSelect").innerHTML = notes.map(n => `<option value="${n}">${n}</option>`).join("");
+    $("noteSelect").value = notes.includes(old) ? old : notes[0];
+    updateAll();
+  }
+
+  function anchorFrequency(){
+    if($("manualAnchorToggle").checked){
+      return clamp($("manualAnchor").value,20,20000);
+    }
+    return noteFrequency($("noteSelect").value, $("octaveSelect").value);
+  }
+
+  function currentBeatAt(seconds){
+    if(!state.stages.length) return 0;
+    let t = 0;
+    for(let i=0;i<state.stages.length;i++){
+      const s = state.stages[i];
+      const holdSec = s.hold*60;
+      if(seconds <= t + holdSec) return s.beat;
+      t += holdSec;
+      if(i < state.stages.length-1){
+        const transSec = s.transition*60;
+        if(transSec > 0 && seconds <= t + transSec){
+          const p = (seconds - t)/transSec;
+          return s.beat + (state.stages[i+1].beat - s.beat)*p;
+        }
+        t += transSec;
+      }
+    }
+    return state.stages[state.stages.length-1].beat;
+  }
+
+  function totalSeconds(){
+    return state.stages.reduce((sum,s,i)=>sum+s.hold*60+(i<state.stages.length-1?s.transition*60:0),0);
+  }
+
+  function updateAll(){
+    const anchor = anchorFrequency();
+    const beat = state.playing ? currentBeatAt((performance.now()-state.animationStart)/1000) : (state.stages[0]?.beat || 0);
+    const left = $("anchorEar").value==="left" ? anchor : anchor+beat;
+    const right = $("anchorEar").value==="left" ? anchor+beat : anchor;
+    $("anchorHz").textContent = anchor.toFixed(2);
+    $("anchorName").textContent = $("manualAnchorToggle").checked ? "Custom anchor" : `${$("noteSelect").value}${$("octaveSelect").value}`;
+    $("leftHz").textContent = `${left.toFixed(2)} Hz`;
+    $("rightHz").textContent = `${right.toFixed(2)} Hz`;
+    $("beatDisplay").textContent = beat.toFixed(2);
+    $("leftVolumeReadout").textContent = $("leftVolume").value;
+    $("rightVolumeReadout").textContent = $("rightVolume").value;
+    $("masterVolumeReadout").textContent = $("masterVolume").value;
+    $("noiseVolumeReadout").textContent = $("noiseVolume").value;
+    $("noiseVolume").disabled = $("noiseType").value==="none";
+    $("fadeInReadout").textContent = $("fadeIn").value;
+    $("fadeOutReadout").textContent = $("fadeOut").value;
+    $("manualAnchorBox").classList.toggle("hidden", !$("manualAnchorToggle").checked);
+    const mins = totalSeconds()/60;
+    const durationLabel = mins < 60 ? `${mins.toFixed(mins%1?1:0)} min` : `${Math.floor(mins/60)} hr ${(mins%60).toFixed(0)} min`;
+    $("totalDuration").textContent = durationLabel;
+    $("journeyDurationSummary").textContent = durationLabel;
+    $("stageCountSummary").textContent = state.stages.length;
+  }
+
+  function clamp(v,min,max){ return Math.min(max,Math.max(min,Number(v)||min)); }
+
+  function renderTimeline(){
+    const timeline = $("timeline");
+    timeline.innerHTML = "";
+    state.stages.forEach((stage,index)=>{
+      const el = document.createElement("div");
+      el.className="stage";
+      el.innerHTML = `
+        <div class="stage-head">
+          <div style="display:flex;align-items:center;gap:9px"><span class="stage-num">${index+1}</span><strong>Stage ${index+1}</strong></div>
+          <div class="stage-actions">
+            <button class="icon-btn" data-act="up" ${index===0?"disabled":""}>↑</button>
+            <button class="icon-btn" data-act="down" ${index===state.stages.length-1?"disabled":""}>↓</button>
+            <button class="icon-btn" data-act="dup">Duplicate</button>
+            <button class="icon-btn" data-act="del" ${state.stages.length===1?"disabled":""}>Remove</button>
+          </div>
+        </div>
+        <div class="stage-grid">
+          <div>
+            <label>Beat type</label>
+            <select class="stage-type">${Object.keys(BEAT_PRESETS).map(k=>`<option ${k===stage.type?"selected":""}>${k}</option>`).join("")}</select>
+          </div>
+          <div>
+            <label>Beat Hz</label>
+            <input class="stage-beat" type="number" min="0.1" max="100" step="0.01" value="${stage.beat}">
+          </div>
+          <div>
+            <label>Hold minutes</label>
+            <input class="stage-hold" type="number" min="0.1" max="60" step="0.1" value="${stage.hold}">
+          </div>
+        </div>
+        <div style="margin-top:9px">
+          <label>Transition to next stage <span class="readout">${index===state.stages.length-1?"Not used":"minutes"}</span></label>
+          <input class="stage-transition" type="number" min="0" max="30" step="0.1" value="${stage.transition}" ${index===state.stages.length-1?"disabled":""}>
+        </div>`;
+      timeline.appendChild(el);
+
+      const type = el.querySelector(".stage-type");
+      const beat = el.querySelector(".stage-beat");
+      const hold = el.querySelector(".stage-hold");
+      const transition = el.querySelector(".stage-transition");
+
+      type.addEventListener("change",()=>{
+        stage.type=type.value;
+        if(type.value!=="Custom"){
+          stage.beat=BEAT_PRESETS[type.value];
+          beat.value=stage.beat;
+        }
+        updateAll();
+      });
+      beat.addEventListener("input",()=>{
+        stage.beat=clamp(beat.value,.1,100);
+        stage.type="Custom";
+        type.value="Custom";
+        updateAll();
+      });
+      hold.addEventListener("input",()=>{stage.hold=clamp(hold.value,.1,60);updateAll();});
+      transition.addEventListener("input",()=>{stage.transition=clamp(transition.value,0,30);updateAll();});
+
+      el.querySelectorAll("[data-act]").forEach(btn=>btn.addEventListener("click",()=>{
+        const act=btn.dataset.act;
+        if(act==="up" && index>0)[state.stages[index-1],state.stages[index]]=[state.stages[index],state.stages[index-1]];
+        if(act==="down" && index<state.stages.length-1)[state.stages[index+1],state.stages[index]]=[state.stages[index],state.stages[index+1]];
+        if(act==="dup")state.stages.splice(index+1,0,{...stage});
+        if(act==="del" && state.stages.length>1)state.stages.splice(index,1);
+        renderTimeline();updateAll();
+      }));
+    });
+    updateAll();
+  }
+
+  function createNoiseBuffer(ctx,type,duration=3){
+    const len=Math.max(1,Math.floor(ctx.sampleRate*duration));
+    const buffer=ctx.createBuffer(2,len,ctx.sampleRate);
+    for(let c=0;c<2;c++){
+      const data=buffer.getChannelData(c);
+      if(type==="pink"){
+        let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+        for(let i=0;i<len;i++){
+          const white=Math.random()*2-1;
+          b0=.99886*b0+white*.0555179;b1=.99332*b1+white*.0750759;b2=.969*b2+white*.153852;
+          b3=.8665*b3+white*.3104856;b4=.55*b4+white*.5329522;b5=-.7616*b5-white*.016898;
+          data[i]=(b0+b1+b2+b3+b4+b5+b6+white*.5362)*.11;b6=white*.115926;
+        }
+      } else {
+        let last=0;
+        for(let i=0;i<len;i++){const white=Math.random()*2-1;last=(last+.02*white)/1.02;data[i]=last*3.5;}
+      }
+    }
+    return buffer;
+  }
+
+  function scheduleJourney(param,start){
+    let t=start;
+    state.stages.forEach((s,i)=>{
+      param.setValueAtTime(s.beat,t);
+      t+=s.hold*60;
+      if(i<state.stages.length-1){
+        const next=state.stages[i+1].beat;
+        if(s.transition>0)param.linearRampToValueAtTime(next,t+s.transition*60);
+        else param.setValueAtTime(next,t);
+        t+=s.transition*60;
+      }
+    });
+  }
+
+  async function playJourney(){
+    if(state.playing || !state.stages.length)return;
+    const AudioCtx=window.AudioContext||window.webkitAudioContext;
+    state.audioCtx=state.audioCtx||new AudioCtx();
+    await state.audioCtx.resume();
+    const ctx=state.audioCtx;
+    const anchor=anchorFrequency();
+    const master=ctx.createGain();
+    const leftOsc=ctx.createOscillator(),rightOsc=ctx.createOscillator();
+    const leftGain=ctx.createGain(),rightGain=ctx.createGain();
+    const leftPan=ctx.createStereoPanner(),rightPan=ctx.createStereoPanner();
+    const beatOffset=ctx.createConstantSource();
+
+    leftOsc.type=rightOsc.type=$("waveform").value;
+    leftGain.gain.value=$("leftVolume").value/100;
+    rightGain.gain.value=$("rightVolume").value/100;
+    leftPan.pan.value=-1;rightPan.pan.value=1;
+    master.gain.setValueAtTime(0,ctx.currentTime);
+    master.gain.linearRampToValueAtTime($("masterVolume").value/100,ctx.currentTime+.08);
+
+    if($("anchorEar").value==="left"){
+      leftOsc.frequency.value=anchor;
+      rightOsc.frequency.value=anchor;
+      beatOffset.connect(rightOsc.frequency);
+    }else{
+      rightOsc.frequency.value=anchor;
+      leftOsc.frequency.value=anchor;
+      beatOffset.connect(leftOsc.frequency);
+    }
+    scheduleJourney(beatOffset.offset,ctx.currentTime);
+
+    leftOsc.connect(leftGain).connect(leftPan).connect(master);
+    rightOsc.connect(rightGain).connect(rightPan).connect(master);
+    master.connect(ctx.destination);
+
+    state.nodes=[leftOsc,rightOsc,leftGain,rightGain,leftPan,rightPan,master,beatOffset];
+
+    if($("noiseType").value!=="none" && $("noiseVolume").value>0){
+      const source=ctx.createBufferSource(),gain=ctx.createGain();
+      source.buffer=createNoiseBuffer(ctx,$("noiseType").value,3);source.loop=true;
+      gain.gain.value=$("noiseVolume").value/100;
+      source.connect(gain).connect(ctx.destination);source.start();
+      state.nodes.push(source,gain);
+    }
+
+    leftOsc.start();rightOsc.start();beatOffset.start();
+    state.playing=true;
+    state.animationStart=performance.now();
+    state.journeySeconds=totalSeconds();
+    $("playBtn").disabled=true;$("stopBtn").disabled=false;
+    $("statusText").textContent="Playing journey";
+    state.stopTimer=setTimeout(stopJourney,state.journeySeconds*1000);
+  }
+
+  function stopJourney(){
+    if(!state.playing)return;
+    clearTimeout(state.stopTimer);
+    const ctx=state.audioCtx;
+    const master=state.nodes.find(n=>n && n.gain && n.connect && n.constructor.name.includes("Gain"));
+    try{
+      state.nodes.forEach(n=>{if(n.stop)try{n.stop()}catch(e){}});
+      state.nodes.forEach(n=>{if(n.disconnect)try{n.disconnect()}catch(e){}});
+    }catch(e){}
+    state.nodes=[];
+    state.playing=false;
+    $("playBtn").disabled=false;$("stopBtn").disabled=true;
+    $("statusText").textContent="Ready to play";
+    updateAll();
+  }
+
+  function noiseSample(type,noiseState){
+    const white=Math.random()*2-1;
+    if(type==="pink"){
+      let s=noiseState;
+      s.b0=.99886*s.b0+white*.0555179;s.b1=.99332*s.b1+white*.0750759;s.b2=.969*s.b2+white*.153852;
+      s.b3=.8665*s.b3+white*.3104856;s.b4=.55*s.b4+white*.5329522;s.b5=-.7616*s.b5-white*.016898;
+      const out=(s.b0+s.b1+s.b2+s.b3+s.b4+s.b5+s.b6+white*.5362)*.11;s.b6=white*.115926;return out;
+    }
+    noiseState.last=(noiseState.last+.02*white)/1.02;
+    return noiseState.last*3.5;
+  }
+
+  function waveSample(phase,type){
+    const p=((phase/(Math.PI*2))%1+1)%1;
+    if(type==="square")return p<.5?1:-1;
+    if(type==="sawtooth")return 2*p-1;
+    if(type==="triangle")return 1-4*Math.abs(p-.5);
+    return Math.sin(phase);
+  }
+
+  function createPcmState(){
+    return {
+      phaseL:0,
+      phaseR:0,
+      noise:{b0:0,b1:0,b2:0,b3:0,b4:0,b5:0,b6:0,last:0}
+    };
+  }
+
+  function pcmChunk(startFrame,frames,sampleRate,genState){
+    const left=new Int16Array(frames),right=new Int16Array(frames);
+    const anchor=anchorFrequency(), master=$("masterVolume").value/100;
+    const lv=$("leftVolume").value/100,rv=$("rightVolume").value/100;
+    const noiseType=$("noiseType").value,nv=$("noiseVolume").value/100;
+    const waveform=$("waveform").value;
+    const total=totalSeconds(),fadeIn=Number($("fadeIn").value),fadeOut=Number($("fadeOut").value);
+    for(let i=0;i<frames;i++){
+      const time=(startFrame+i)/sampleRate;
+      const beat=currentBeatAt(time);
+      const lf=$("anchorEar").value==="left"?anchor:anchor+beat;
+      const rf=$("anchorEar").value==="left"?anchor+beat:anchor;
+      genState.phaseL+=2*Math.PI*lf/sampleRate;
+      genState.phaseR+=2*Math.PI*rf/sampleRate;
+      let env=1;
+      if(fadeIn>0 && time<fadeIn)env=time/fadeIn;
+      if(fadeOut>0 && time>total-fadeOut)env=Math.max(0,(total-time)/fadeOut);
+      const noise=noiseType==="none"?0:noiseSample(noiseType,genState.noise)*nv;
+      const l=(waveSample(genState.phaseL,waveform)*master*lv+noise)*env;
+      const r=(waveSample(genState.phaseR,waveform)*master*rv+noise)*env;
+      left[i]=Math.max(-32768,Math.min(32767,Math.round(l*32767)));
+      right[i]=Math.max(-32768,Math.min(32767,Math.round(r*32767)));
+    }
+    return {left,right};
+  }
+
+  function wavHeader(dataBytes,sampleRate){
+    const b=new ArrayBuffer(44),v=new DataView(b);
+    const w=(o,s)=>[...s].forEach((c,i)=>v.setUint8(o+i,c.charCodeAt(0)));
+    w(0,"RIFF");v.setUint32(4,36+dataBytes,true);w(8,"WAVE");w(12,"fmt ");v.setUint32(16,16,true);
+    v.setUint16(20,1,true);v.setUint16(22,2,true);v.setUint32(24,sampleRate,true);v.setUint32(28,sampleRate*4,true);
+    v.setUint16(32,4,true);v.setUint16(34,16,true);w(36,"data");v.setUint32(40,dataBytes,true);return b;
+  }
+
+  async function exportWav(){
+    const sampleRate=44100,totalFrames=Math.floor(totalSeconds()*sampleRate);
+    if(totalFrames<=0)return alert("Add at least one journey stage.");
+    const chunks=[wavHeader(totalFrames*4,sampleRate)];
+    const genState=createPcmState();
+    const chunkFrames=sampleRate*2;
+    showProgress("Generating WAV…",0);
+    for(let start=0;start<totalFrames;start+=chunkFrames){
+      const frames=Math.min(chunkFrames,totalFrames-start);
+      const pcm=pcmChunk(start,frames,sampleRate,genState);
+      const buf=new ArrayBuffer(frames*4),view=new DataView(buf);
+      for(let i=0;i<frames;i++){view.setInt16(i*4,pcm.left[i],true);view.setInt16(i*4+2,pcm.right[i],true);}
+      chunks.push(buf);
+      showProgress("Generating WAV…",Math.round((start+frames)/totalFrames*100));
+      await new Promise(r=>setTimeout(r,0));
+    }
+    downloadBlob(new Blob(chunks,{type:"audio/wav"}),"binaural-journey.wav");
+    finishProgress("WAV ready.");
+  }
+
+  async function exportMp3(){
+    if(typeof lamejs==="undefined"){
+      alert("The MP3 encoder could not load. Check your internet connection and reopen the app.");
+      return;
+    }
+    const sampleRate=44100,totalFrames=Math.floor(totalSeconds()*sampleRate);
+    if(totalFrames<=0)return alert("Add at least one journey stage.");
+    const encoder=new lamejs.Mp3Encoder(2,sampleRate,192);
+    const genState=createPcmState();
+    const mp3=[],chunkFrames=1152*20;
+    showProgress("Encoding MP3…",0);
+    for(let start=0;start<totalFrames;start+=chunkFrames){
+      const frames=Math.min(chunkFrames,totalFrames-start);
+      const pcm=pcmChunk(start,frames,sampleRate,genState);
+      const encoded=encoder.encodeBuffer(pcm.left,pcm.right);
+      if(encoded.length)mp3.push(new Int8Array(encoded));
+      showProgress("Encoding MP3…",Math.round((start+frames)/totalFrames*100));
+      await new Promise(r=>setTimeout(r,0));
+    }
+    const end=encoder.flush();if(end.length)mp3.push(new Int8Array(end));
+    downloadBlob(new Blob(mp3,{type:"audio/mpeg"}),"binaural-journey.mp3");
+    finishProgress("MP3 ready.");
+  }
+
+  function showProgress(text,pct){
+    $("progressWrap").classList.add("show");$("progressText").textContent=text;$("progressBar").style.width=pct+"%";
+    $("wavBtn").disabled=true;$("mp3Btn").disabled=true;
+  }
+  function finishProgress(text){
+    $("progressText").textContent=text;$("progressBar").style.width="100%";
+    $("wavBtn").disabled=false;$("mp3Btn").disabled=false;
+    setTimeout(()=>$("progressWrap").classList.remove("show"),1800);
+  }
+  function downloadBlob(blob,name){
+    const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
+  }
+
+  function applyPreset(name){
+    if(name==="clear")state.stages=[{type:"Alpha",beat:10,hold:5,transition:0}];
+    if(name==="sleep")state.stages=[
+      {type:"Alpha",beat:10,hold:5,transition:3},
+      {type:"Theta",beat:6,hold:10,transition:5},
+      {type:"Delta",beat:2,hold:20,transition:0}
+    ];
+    if(name==="focus")state.stages=[
+      {type:"Alpha",beat:10,hold:3,transition:2},
+      {type:"Beta",beat:18,hold:15,transition:2},
+      {type:"Gamma",beat:40,hold:5,transition:0}
+    ];
+    if(name==="meditate")state.stages=[
+      {type:"Alpha",beat:10,hold:5,transition:3},
+      {type:"Schumann",beat:7.83,hold:10,transition:3},
+      {type:"Theta",beat:6,hold:15,transition:0}
+    ];
+    renderTimeline();
+  }
+
+  const journeyModal=$("journeyModal");
+  function openJourneyModal(){
+    journeyModal.classList.add("open");
+    document.body.classList.add("modal-open");
+    $("closeJourneyBtn").focus();
+  }
+  function closeJourneyModal(){
+    journeyModal.classList.remove("open");
+    document.body.classList.remove("modal-open");
+    $("openJourneyBtn").focus();
+  }
+  $("openJourneyBtn").addEventListener("click",openJourneyModal);
+  $("closeJourneyBtn").addEventListener("click",closeJourneyModal);
+  $("doneJourneyBtn").addEventListener("click",closeJourneyModal);
+  journeyModal.addEventListener("click",e=>{if(e.target===journeyModal)closeJourneyModal();});
+  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&journeyModal.classList.contains("open"))closeJourneyModal();});
+
+  $("addStageBtn").addEventListener("click",()=>{
+    const last=state.stages[state.stages.length-1]||{type:"Alpha",beat:10};
+    state.stages.push({type:last.type,beat:last.beat,hold:5,transition:2});
+    renderTimeline();
+  });
+  document.querySelectorAll("[data-preset]").forEach(b=>b.addEventListener("click",()=>applyPreset(b.dataset.preset)));
+  $("playBtn").addEventListener("click",playJourney);
+  $("stopBtn").addEventListener("click",stopJourney);
+  $("wavBtn").addEventListener("click",exportWav);
+  $("mp3Btn").addEventListener("click",exportMp3);
+
+  ["keySelect","noteSelect","octaveSelect","manualAnchorToggle","manualAnchor","anchorEar","leftVolume","rightVolume","masterVolume","waveform","noiseType","noiseVolume","fadeIn","fadeOut"].forEach(id=>{
+    $(id).addEventListener(id==="keySelect"?"change":"input",id==="keySelect"?populateNotes:updateAll);
+    if(["noteSelect","octaveSelect","anchorEar","waveform","noiseType"].includes(id))$(id).addEventListener("change",updateAll);
+  });
+
+  const canvas=$("visualizer"),ctx=canvas.getContext("2d");let phase=0;
+  function draw(){
+    const dpr=window.devicePixelRatio||1,r=canvas.getBoundingClientRect();
+    if(canvas.width!==Math.floor(r.width*dpr)||canvas.height!==Math.floor(r.height*dpr)){canvas.width=Math.floor(r.width*dpr);canvas.height=Math.floor(r.height*dpr);}
+    const w=canvas.width,h=canvas.height;ctx.clearRect(0,0,w,h);phase+=state.playing?.07:.015;
+    const beat=state.playing?currentBeatAt((performance.now()-state.animationStart)/1000):(state.stages[0]?.beat||0);
+    const wave=(mid,amp,cycles,off)=>{
+      ctx.beginPath();
+      for(let x=0;x<=w;x+=3*dpr){const y=mid+Math.sin(x/w*Math.PI*2*cycles+phase+off)*amp;x?ctx.lineTo(x,y):ctx.moveTo(x,y);}
+      const g=ctx.createLinearGradient(0,0,w,0);g.addColorStop(0,"rgba(103,232,249,.7)");g.addColorStop(1,"rgba(167,139,250,.7)");
+      ctx.strokeStyle=g;ctx.lineWidth=2.2*dpr;ctx.stroke();
+    };
+    wave(h*.43,h*.15,3.2,0);wave(h*.57,h*.15,3.2+beat/30,Math.PI/2);
+    if(state.playing)updateAll();
+    requestAnimationFrame(draw);
+  }
+
+  populateKeys();
+  renderTimeline();
+  updateAll();
+  draw();
+})();
+</script>
+</body>
+</html>
