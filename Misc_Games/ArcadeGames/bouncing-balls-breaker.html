@@ -446,7 +446,7 @@
 
       <div class="note-box howto">
         <div class="panel-title">Help</div>
-        Power-ups are used on the <strong>next turn</strong>. After level 20, power-ups appear more often and fewer bricks are added. Brick-hit bonus: first +1 ball at <strong>200 hits</strong>, then each next bonus needs 25 more hits than the last.
+        Power-ups are used on the <strong>next turn</strong>. After level 20, power-ups appear more often and fewer bricks are added. After level 30, blocks increase by <strong>2%</strong> each level. Brick-hit bonus: first +1 ball at <strong>200 hits</strong>, then each next bonus needs 25 more hits than the last.
       </div>
 
       <div class="tiny">High scores are saved locally in your browser.</div>
@@ -703,6 +703,7 @@
     `).join('')}
       <div class="powerup-card"><b>200 Brick Hits</b>Every 200 brick hits gives you +1 permanent ball.</div>
       <div class="powerup-card"><b>Level 20+</b>Power-ups appear every 1–2 rounds and fewer bricks are added.</div>
+      <div class="powerup-card"><b>Level 30+</b>Blocks increase by 2% each level after level 30. Decimal increases become a chance for one extra block.</div>
       <div class="powerup-card"><b>Rarity</b>Random extra power-ups: Bomb 30%, x2 Damage 30%, Laser 25%, Piercing 15%.</div>
     </div>`;
 
@@ -873,6 +874,17 @@
     if (game.level >= 20 && Math.random() < 0.33) brickCount += 1;
 
     brickCount = game.level >= 20 ? Math.min(4, brickCount) : Math.min(5, brickCount);
+
+    // After level 30, brick count grows by 2% per level.
+    // Decimal growth is handled as a chance to add one extra brick, so the difficulty ramps smoothly.
+    if (game.level > 30) {
+      const growthMultiplier = 1 + ((game.level - 30) * 0.02);
+      const grownCount = brickCount * growthMultiplier;
+      brickCount = Math.floor(grownCount);
+      if (Math.random() < grownCount - brickCount) brickCount += 1;
+    }
+
+    brickCount = Math.max(1, Math.min(game.cols, brickCount));
 
     const cols = shuffledArray([...Array(game.cols).keys()]).slice(0, brickCount);
     for (const col of cols) {
