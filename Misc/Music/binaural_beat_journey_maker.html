@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#0b1020">
   <title>Binaural Beat Journey Maker</title>
   <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <style>
     :root{
       --bg:#09101f;
@@ -280,6 +281,10 @@
           <button class="secondary" id="wavBtn">⬇ Export WAV</button>
           <button class="success" id="mp3Btn">⬇ Export MP3</button>
         </div>
+        <label style="display:flex;align-items:center;justify-content:flex-start;gap:9px;margin-top:12px;color:var(--text);font-size:.9rem;cursor:pointer">
+          <input id="separateChannels" type="checkbox" style="width:auto;accent-color:var(--cyan)">
+          <span>Export left and right channels separately</span>
+        </label>
         <div class="progress-wrap" id="progressWrap">
           <div class="progress"><div id="progressBar"></div></div>
           <div class="progress-text" id="progressText">Preparing audio…</div>
@@ -674,7 +679,7 @@
     };
   }
 
-  function pcmChunk(startFrame,frames,sampleRate,genState){
+  function pcmChunk(startFrame,frames,sampleRate,genState,includeNoise=true){
     const left=new Int16Array(frames),right=new Int16Array(frames);
     const anchor=anchorFrequency(), master=$("masterVolume").value/100;
     const lv=$("leftVolume").value/100,rv=$("rightVolume").value/100;
@@ -691,7 +696,7 @@
       let env=1;
       if(fadeIn>0 && time<fadeIn)env=time/fadeIn;
       if(fadeOut>0 && time>total-fadeOut)env=Math.max(0,(total-time)/fadeOut);
-      const noise=noiseType==="none"?0:noiseSample(noiseType,genState.noise)*nv;
+      const noise=!includeNoise || noiseType==="none"?0:noiseSample(noiseType,genState.noise)*nv;
       const l=(waveSample(genState.phaseL,waveform)*master*lv+noise)*env;
       const r=(waveSample(genState.phaseR,waveform)*master*rv+noise)*env;
       left[i]=Math.max(-32768,Math.min(32767,Math.round(l*32767)));
@@ -700,32 +705,110 @@
     return {left,right};
   }
 
-  function wavHeader(dataBytes,sampleRate){
+  function wavHeader(dataBytes,sampleRate,channels=2){
     const b=new ArrayBuffer(44),v=new DataView(b);
     const w=(o,s)=>[...s].forEach((c,i)=>v.setUint8(o+i,c.charCodeAt(0)));
+    const blockAlign=channels*2;
     w(0,"RIFF");v.setUint32(4,36+dataBytes,true);w(8,"WAVE");w(12,"fmt ");v.setUint32(16,16,true);
-    v.setUint16(20,1,true);v.setUint16(22,2,true);v.setUint32(24,sampleRate,true);v.setUint32(28,sampleRate*4,true);
-    v.setUint16(32,4,true);v.setUint16(34,16,true);w(36,"data");v.setUint32(40,dataBytes,true);return b;
+    v.setUint16(20,1,true);v.setUint16(22,channels,true);v.setUint32(24,sampleRate,true);v.setUint32(28,sampleRate*blockAlign,true);
+    v.setUint16(32,blockAlign,true);v.setUint16(34,16,true);w(36,"data");v.setUint32(40,dataBytes,true);return b;
+  }
+
+  async function buildMonoWavBlobs(sampleRate,totalFrames){
+    const leftChunks=[wavHeader(totalFrames*2,sampleRate,1)];
+    const rightChunks=[wavHeader(totalFrames*2,sampleRate,1)];
+    const genState=createPcmState();
+    const chunkFrames=sampleRate*2;
+
+    for(let start=0;start<totalFrames;start+=chunkFrames){
+      const frames=Math.min(chunkFrames,totalFrames-start);
+      const pcm=pcmChunk(start,frames,sampleRate,genState,false);
+      const leftBuf=new ArrayBuffer(frames*2),rightBuf=new ArrayBuffer(frames*2);
+      const leftView=new DataView(leftBuf),rightView=new DataView(rightBuf);
+      for(let i=0;i<frames;i++){
+        leftView.setInt16(i*2,pcm.left[i],true);
+        rightView.setInt16(i*2,pcm.right[i],true);
+      }
+      leftChunks.push(leftBuf);
+      rightChunks.push(rightBuf);
+      showProgress("Generating separate WAV channels…",Math.round((start+frames)/totalFrames*85));
+      await new Promise(r=>setTimeout(r,0));
+    }
+    return {
+      left:new Blob(leftChunks,{type:"audio/wav"}),
+      right:new Blob(rightChunks,{type:"audio/wav"})
+    };
   }
 
   async function exportWav(){
     const sampleRate=44100,totalFrames=Math.floor(totalSeconds()*sampleRate);
     if(totalFrames<=0)return alert("Add at least one journey stage.");
-    const chunks=[wavHeader(totalFrames*4,sampleRate)];
+
+    if($("separateChannels").checked){
+      if(typeof JSZip==="undefined"){
+        alert("The ZIP encoder could not load. Check your internet connection and reopen the app.");
+        return;
+      }
+      showProgress("Generating separate WAV channels…",0);
+      const files=await buildMonoWavBlobs(sampleRate,totalFrames);
+      const zip=new JSZip();
+      zip.file("binaural-journey-left-channel.wav",files.left);
+      zip.file("binaural-journey-right-channel.wav",files.right);
+      showProgress("Creating ZIP…",90);
+      const blob=await zip.generateAsync(
+        {type:"blob",compression:"DEFLATE"},
+        meta=>showProgress("Creating ZIP…",90+Math.round(meta.percent*.1))
+      );
+      downloadBlob(blob,"binaural-journey-separate-wav-channels.zip");
+      finishProgress("Separate WAV channels ready.");
+      return;
+    }
+
+    const chunks=[wavHeader(totalFrames*4,sampleRate,2)];
     const genState=createPcmState();
     const chunkFrames=sampleRate*2;
     showProgress("Generating WAV…",0);
     for(let start=0;start<totalFrames;start+=chunkFrames){
       const frames=Math.min(chunkFrames,totalFrames-start);
-      const pcm=pcmChunk(start,frames,sampleRate,genState);
+      const pcm=pcmChunk(start,frames,sampleRate,genState,true);
       const buf=new ArrayBuffer(frames*4),view=new DataView(buf);
-      for(let i=0;i<frames;i++){view.setInt16(i*4,pcm.left[i],true);view.setInt16(i*4+2,pcm.right[i],true);}
+      for(let i=0;i<frames;i++){
+        view.setInt16(i*4,pcm.left[i],true);
+        view.setInt16(i*4+2,pcm.right[i],true);
+      }
       chunks.push(buf);
       showProgress("Generating WAV…",Math.round((start+frames)/totalFrames*100));
       await new Promise(r=>setTimeout(r,0));
     }
     downloadBlob(new Blob(chunks,{type:"audio/wav"}),"binaural-journey.wav");
     finishProgress("WAV ready.");
+  }
+
+  async function buildMonoMp3Blobs(sampleRate,totalFrames){
+    const leftEncoder=new lamejs.Mp3Encoder(1,sampleRate,192);
+    const rightEncoder=new lamejs.Mp3Encoder(1,sampleRate,192);
+    const genState=createPcmState();
+    const leftMp3=[],rightMp3=[],chunkFrames=1152*20;
+
+    for(let start=0;start<totalFrames;start+=chunkFrames){
+      const frames=Math.min(chunkFrames,totalFrames-start);
+      const pcm=pcmChunk(start,frames,sampleRate,genState,false);
+      const encodedLeft=leftEncoder.encodeBuffer(pcm.left);
+      const encodedRight=rightEncoder.encodeBuffer(pcm.right);
+      if(encodedLeft.length)leftMp3.push(new Int8Array(encodedLeft));
+      if(encodedRight.length)rightMp3.push(new Int8Array(encodedRight));
+      showProgress("Encoding separate MP3 channels…",Math.round((start+frames)/totalFrames*85));
+      await new Promise(r=>setTimeout(r,0));
+    }
+
+    const leftEnd=leftEncoder.flush();
+    const rightEnd=rightEncoder.flush();
+    if(leftEnd.length)leftMp3.push(new Int8Array(leftEnd));
+    if(rightEnd.length)rightMp3.push(new Int8Array(rightEnd));
+    return {
+      left:new Blob(leftMp3,{type:"audio/mpeg"}),
+      right:new Blob(rightMp3,{type:"audio/mpeg"})
+    };
   }
 
   async function exportMp3(){
@@ -735,19 +818,41 @@
     }
     const sampleRate=44100,totalFrames=Math.floor(totalSeconds()*sampleRate);
     if(totalFrames<=0)return alert("Add at least one journey stage.");
+
+    if($("separateChannels").checked){
+      if(typeof JSZip==="undefined"){
+        alert("The ZIP encoder could not load. Check your internet connection and reopen the app.");
+        return;
+      }
+      showProgress("Encoding separate MP3 channels…",0);
+      const files=await buildMonoMp3Blobs(sampleRate,totalFrames);
+      const zip=new JSZip();
+      zip.file("binaural-journey-left-channel.mp3",files.left);
+      zip.file("binaural-journey-right-channel.mp3",files.right);
+      showProgress("Creating ZIP…",90);
+      const blob=await zip.generateAsync(
+        {type:"blob",compression:"DEFLATE"},
+        meta=>showProgress("Creating ZIP…",90+Math.round(meta.percent*.1))
+      );
+      downloadBlob(blob,"binaural-journey-separate-mp3-channels.zip");
+      finishProgress("Separate MP3 channels ready.");
+      return;
+    }
+
     const encoder=new lamejs.Mp3Encoder(2,sampleRate,192);
     const genState=createPcmState();
     const mp3=[],chunkFrames=1152*20;
     showProgress("Encoding MP3…",0);
     for(let start=0;start<totalFrames;start+=chunkFrames){
       const frames=Math.min(chunkFrames,totalFrames-start);
-      const pcm=pcmChunk(start,frames,sampleRate,genState);
+      const pcm=pcmChunk(start,frames,sampleRate,genState,true);
       const encoded=encoder.encodeBuffer(pcm.left,pcm.right);
       if(encoded.length)mp3.push(new Int8Array(encoded));
       showProgress("Encoding MP3…",Math.round((start+frames)/totalFrames*100));
       await new Promise(r=>setTimeout(r,0));
     }
-    const end=encoder.flush();if(end.length)mp3.push(new Int8Array(end));
+    const end=encoder.flush();
+    if(end.length)mp3.push(new Int8Array(end));
     downloadBlob(new Blob(mp3,{type:"audio/mpeg"}),"binaural-journey.mp3");
     finishProgress("MP3 ready.");
   }
