@@ -440,6 +440,8 @@
       let audioCtx = null;
       let muted = localStorage.getItem(SOUND_KEY) === '1';
       let lastTickSecond = null;
+      let timeExpired = false;
+      let finalizingRun = false;
 
       const $ = id => document.getElementById(id);
       const delay = ms => new Promise(res => setTimeout(res, ms));
@@ -703,7 +705,7 @@
         $('hintCount').textContent = freeHints;
         $('progressFill').style.width = `${Math.min(100, (levelScore / levelGoal) * 100)}%`;
         const paid = freeHints <= 0;
-        $('hintBtn').disabled = paid && totalScore < 5;
+        $('hintBtn').disabled = timeExpired || locked || (paid && totalScore < 5);
         $('hintHelp').innerHTML = paid
           ? '<b>Hint bank:</b> No free hints left. A hint costs 5 total points.'
           : `<b>Hint bank:</b> ${freeHints} free hint${freeHints === 1 ? '' : 's'} available. Free hints can stack up to 3.`;
@@ -901,11 +903,21 @@
           showLevelComplete();
           return;
         }
+        if(timeExpired){
+          endRun();
+          return;
+        }
         await ensurePlayable();
+        if(timeExpired){
+          endRun();
+          return;
+        }
         locked = false;
+        updateUI();
       }
 
       async function ensurePlayable(){
+        if(timeExpired) return;
         if(findMatches(board).groups.length){
           await resolveMatches();
           return;
@@ -947,11 +959,16 @@
           playSound('shuffle');
           showToast('Board shuffled', 1000);
         }
+        if(timeExpired){
+          endRun();
+          return;
+        }
         locked = false;
+        updateUI();
       }
 
       async function handleTileClick(r,c){
-        if(locked) return;
+        if(locked || timeExpired) return;
         clearTimeout(hintTimer);
         hintedCells = [];
         if(!selected){
@@ -990,12 +1007,17 @@
           if(el2) el2.classList.add('invalid');
           await delay(190);
           await animateBoardChange(() => swapInBoard(board, first, second), 230, false);
+          if(timeExpired){
+            endRun();
+            return;
+          }
           locked = false;
+          updateUI();
         }
       }
 
       function useHint(){
-        if(locked) return;
+        if(locked || timeExpired) return;
         const move = findPossibleMove(board);
         if(!move){
           shuffleBoard();
@@ -1034,9 +1056,29 @@
             timeLeft = 0;
             updateUI();
             stopTimer();
-            endRun();
+            handleTimeExpired();
           }
         }, 1000);
+      }
+
+      function handleTimeExpired(){
+        if(timeExpired || finalizingRun) return;
+        const wasLocked = locked;
+        timeExpired = true;
+        selected = null;
+        hintedCells = [];
+        locked = true;
+        render();
+        updateUI();
+        if(findMatches(board).groups.length){
+          showToast('Time is up — finishing combo!', 1500);
+          return;
+        }
+        if(wasLocked){
+          showToast('Time is up!', 900);
+          return;
+        }
+        endRun();
       }
 
       function stopTimer(){
@@ -1046,6 +1088,8 @@
       }
 
       function setupLevel(){
+        timeExpired = false;
+        finalizingRun = false;
         levelGoal = goalForLevel(level);
         levelTime = timeForGoal(levelGoal);
         timeLeft = levelTime;
@@ -1064,6 +1108,8 @@
       function startGame(){
         unlockAudio();
         closeModal();
+        timeExpired = false;
+        finalizingRun = false;
         level = 1;
         totalScore = 0;
         levelScore = 0;
@@ -1095,20 +1141,24 @@
            <div class="scoreline"><span>Total score</span><b>${totalScore}</b></div>`,
           [
             {label:'Keep Playing', cls:'green', action:showLevelComplete},
-            {label:'Main Menu', cls:'danger', action:() => { saveScores(); stopTimer(); closeModal(); showScreen('menu'); locked=false; }}
+            {label:'Main Menu', cls:'danger', action:() => { saveScores(); stopTimer(); closeModal(); timeExpired=false; finalizingRun=false; showScreen('menu'); locked=false; updateUI(); }}
           ]
         );
       }
 
       function endRun(){
+        if(finalizingRun) return;
+        finalizingRun = true;
+        timeExpired = true;
         locked = true;
+        stopTimer();
         saveScores();
         openModal(
           'Time is up!',
           `<p>Your final score was <b>${totalScore}</b> points. You reached stage <b>${level}</b>.</p>
            <p>Scores are saved locally on this device.</p>`,
           [
-            {label:'Main Menu', cls:'primary', action:() => { closeModal(); showScreen('menu'); locked=false; }},
+            {label:'Main Menu', cls:'primary', action:() => { closeModal(); timeExpired=false; finalizingRun=false; showScreen('menu'); locked=false; updateUI(); }},
             {label:'Play Again', cls:'green', action:() => startGame()}
           ]
         );
@@ -1118,8 +1168,11 @@
         stopTimer();
         saveScores();
         closeModal();
+        timeExpired = false;
+        finalizingRun = false;
         showScreen('menu');
         locked = false;
+        updateUI();
       }
 
       function openModal(title, body, actions){
