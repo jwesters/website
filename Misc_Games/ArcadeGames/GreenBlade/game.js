@@ -1,21 +1,15 @@
 (() => {
   'use strict';
 
-  const isUnsupportedMobile = (() => {
+  const isMobileDevice = (() => {
     const ua = navigator.userAgent || '';
     const uaMobile = navigator.userAgentData?.mobile === true;
     const phoneTabletUa = /Android|iPhone|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua);
     const iPadLike = /iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    const compactTouchDevice = navigator.maxTouchPoints > 1 && Math.min(screen.width, screen.height) < 900;
+    const compactTouchDevice = navigator.maxTouchPoints > 1 && Math.min(screen.width, screen.height) < 1000;
     return uaMobile || phoneTabletUa || iPadLike || compactTouchDevice;
   })();
-  if(isUnsupportedMobile){
-    const shell=document.getElementById('gameShell');
-    const notice=document.getElementById('mobileUnsupported');
-    if(shell) shell.hidden=true;
-    if(notice) notice.hidden=false;
-    return;
-  }
+  document.body.classList.toggle('mobile-device', isMobileDevice);
 
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
@@ -28,6 +22,19 @@
   const volumeSlider = document.getElementById('volumeSlider');
   const volumeValue = document.getElementById('volumeValue');
   const helpBtn = document.getElementById('helpBtn');
+  const mobileNewBtn = document.getElementById('mobileNewBtn');
+  const mobilePauseBtn = document.getElementById('mobilePauseBtn');
+  const mobileSoundBtn = document.getElementById('mobileSoundBtn');
+  const mobileHelpBtn = document.getElementById('mobileHelpBtn');
+  const mobileControls = document.getElementById('mobileControls');
+  const moveStick = document.getElementById('moveStick');
+  const moveKnob = document.getElementById('moveKnob');
+  const aimStick = document.getElementById('aimStick');
+  const aimKnob = document.getElementById('aimKnob');
+  const mobileJumpBtn = document.getElementById('mobileJumpBtn');
+  const mobileBombBtn = document.getElementById('mobileBombBtn');
+  const mobileActiveBtn = document.getElementById('mobileActiveBtn');
+  const rotateNotice = document.getElementById('rotateNotice');
   const newRunModal = document.getElementById('newRunModal');
   const newRunClose = document.getElementById('newRunClose');
   const newRunWarning = document.getElementById('newRunWarning');
@@ -175,6 +182,12 @@
   const lastDirectionPress = new Map();
   const RUN_DOUBLE_TAP_MS = 310;
   const RUN_SPEED_MULTIPLIER = 1.7;
+  const mobileMove = {active:false,pointerId:null,x:0,y:0,registered:false};
+  const mobileAim = {active:false,pointerId:null,x:1,y:0};
+  let mobileLastDirection = {name:'',time:0};
+  let mobileOrientationBlocked = false;
+  let orientationPausedGame = false;
+  let orientationWasPaused = false;
 
   soundVolume = loadSavedVolume();
   updateVolumeUi();
@@ -392,7 +405,28 @@
   }
 
   function setMessage(text,time=2){ message=text; messageTimer=time; }
-  function clearInputs(){ for(const k of Object.keys(keys)) keys[k]=false; for(const k of Object.keys(pressed)) pressed[k]=false; }
+  function syncPauseButtons(){
+    const label=paused?'RESUME':'PAUSE';
+    pauseBtn.textContent=label;
+    if(mobilePauseBtn) mobilePauseBtn.textContent=label;
+  }
+  function syncSoundButtons(){
+    soundBtn.textContent=`SOUND: ${soundOn?'ON':'OFF'}`;
+    if(mobileSoundBtn) mobileSoundBtn.textContent=soundOn?'SOUND':'MUTED';
+  }
+  function resetKnob(knob){ if(knob) knob.style.transform='translate(-50%,-50%)'; }
+  function resetMobileControls(){
+    mobileMove.active=false;mobileMove.pointerId=null;mobileMove.x=0;mobileMove.y=0;mobileMove.registered=false;
+    mobileAim.active=false;mobileAim.pointerId=null;mobileAim.x=aimDir.x;mobileAim.y=aimDir.y;
+    resetKnob(moveKnob);resetKnob(aimKnob);
+    moveStick?.classList.remove('is-active');aimStick?.classList.remove('is-active');
+    mobileJumpBtn?.classList.remove('is-pressed');mobileBombBtn?.classList.remove('is-pressed');mobileActiveBtn?.classList.remove('is-pressed');
+  }
+  function clearInputs(){
+    for(const k of Object.keys(keys)) keys[k]=false;
+    for(const k of Object.keys(pressed)) pressed[k]=false;
+    resetMobileControls();
+  }
   function directionFromCode(code){
     if(code==='ArrowUp'||code==='KeyW') return {dx:0,dy:-1};
     if(code==='ArrowDown'||code==='KeyS') return {dx:0,dy:1};
@@ -403,6 +437,11 @@
   function stopAutoRun(){
     autoRun.active=false;autoRun.dx=0;autoRun.dy=0;autoRun.code='';
   }
+  function beginAutoRun(dx,dy,code='touch'){
+    const n=normalize(dx,dy);
+    autoRun={active:true,dx:n.x,dy:n.y,code};
+    setMessage('Running — attack, use an item, or hit an obstacle to stop.',1.4);
+  }
   function handleDirectionPress(code,repeat){
     const dir=directionFromCode(code);
     if(!dir||repeat) return;
@@ -411,18 +450,29 @@
     const isDouble=now-last<=RUN_DOUBLE_TAP_MS;
     lastDirectionPress.set(code,now);
     if(isDouble&&(state==='play'||state==='shop')){
-      autoRun={active:true,dx:dir.dx,dy:dir.dy,code};
-      setMessage('Running — attack, use an item, or hit an obstacle to stop.',1.4);
+      beginAutoRun(dir.dx,dir.dy,code);
     }else if(autoRun.active&&(dir.dx!==autoRun.dx||dir.dy!==autoRun.dy)){
       stopAutoRun();
     }
+  }
+  function nearestAimDirection(x,y){
+    if(Math.hypot(x,y)<.01) return aimDir;
+    return snapAim(x,y);
+  }
+  function registerMobileDirection(x,y){
+    const dir=nearestAimDirection(x,y);
+    const now=performance.now();
+    const isDouble=mobileLastDirection.name===dir.name&&now-mobileLastDirection.time<=RUN_DOUBLE_TAP_MS+60;
+    mobileLastDirection={name:dir.name,time:now};
+    if(isDouble&&(state==='play'||state==='shop')) beginAutoRun(dir.x,dir.y,`touch-${dir.name}`);
+    else if(autoRun.active&&(Math.abs(autoRun.dx-dir.x)>.15||Math.abs(autoRun.dy-dir.y)>.15)) stopAutoRun();
   }
   function togglePause(force){
     if(state!=='play'&&state!=='shop') return;
     paused = force===undefined ? !paused : force;
     stopAutoRun();
     clearInputs();
-    pauseBtn.textContent = paused ? 'RESUME' : 'PAUSE';
+    syncPauseButtons();
   }
   function openOverlay(type){
     if(overlay===type){closeOverlay();return}
@@ -430,13 +480,13 @@
     overlay=type;stopAutoRun();clearInputs();
     overlayWasPaused=paused;overlayPausedGame=false;
     if((type==='help'||type==='powerup')&&(state==='play'||state==='shop')&&!paused){
-      paused=true;overlayPausedGame=true;pauseBtn.textContent='RESUME';
+      paused=true;overlayPausedGame=true;syncPauseButtons();
     }
   }
   function closeOverlay(){
     overlay=null;selectedPowerup=null;clearInputs();
     if(overlayPausedGame&&!overlayWasPaused&&(state==='play'||state==='shop')){
-      paused=false;pauseBtn.textContent='PAUSE';
+      paused=false;syncPauseButtons();
     }
     overlayPausedGame=false;overlayWasPaused=false;
   }
@@ -447,7 +497,7 @@
     const activeRun=(state==='play'||state==='shop'||state==='gameover')&&!!player;
     newRunWarning.hidden=!activeRun||state==='gameover';
     modalWasPaused=paused;modalPausedGame=false;
-    if((state==='play'||state==='shop')&&!paused){paused=true;modalPausedGame=true;pauseBtn.textContent='RESUME';clearInputs()}
+    if((state==='play'||state==='shop')&&!paused){paused=true;modalPausedGame=true;syncPauseButtons();clearInputs()}
     seedInput.value='';seedError.textContent='';
     hideAllModals();
     newRunModal.hidden=false;
@@ -463,7 +513,7 @@
     if(!anyModalOpen()) return;
     hideAllModals();
     if(modalPausedGame&&!modalWasPaused&&(state==='play'||state==='shop')){
-      paused=false;pauseBtn.textContent='PAUSE';
+      paused=false;syncPauseButtons();
     }
     modalPausedGame=false;modalWasPaused=false;clearInputs();
   }
@@ -472,6 +522,116 @@
     if(seedValue&&!normalized){seedError.textContent='Enter at least one letter or number.';seedInput.focus();return}
     hideAllModals();modalPausedGame=false;modalWasPaused=false;
     startRun(normalized);
+  }
+
+  function isLandscapeView(){ return window.innerWidth>window.innerHeight; }
+  function updateMobileOrientation(){
+    if(!isMobileDevice) return;
+    const blocked=!isLandscapeView();
+    mobileOrientationBlocked=blocked;
+    document.body.classList.toggle('orientation-blocked',blocked);
+    rotateNotice.hidden=!blocked;
+    if(blocked){
+      stopAutoRun();clearInputs();
+      if((state==='play'||state==='shop')&&!paused){
+        orientationWasPaused=paused;orientationPausedGame=true;paused=true;syncPauseButtons();
+      }
+    }else if(orientationPausedGame){
+      if(!orientationWasPaused&&(state==='play'||state==='shop')) paused=false;
+      orientationPausedGame=false;orientationWasPaused=false;syncPauseButtons();
+    }
+  }
+  function stickVector(stick,knob,ev){
+    const rect=stick.getBoundingClientRect();
+    const cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;
+    let dx=ev.clientX-cx,dy=ev.clientY-cy;
+    const max=Math.max(18,rect.width*.34),distance=Math.hypot(dx,dy);
+    if(distance>max){dx=dx/distance*max;dy=dy/distance*max}
+    if(knob) knob.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
+    const strength=Math.min(1,distance/max);
+    if(strength<.16) return {x:0,y:0,strength:0};
+    const n=normalize(dx,dy);
+    return {x:n.x*strength,y:n.y*strength,strength};
+  }
+  function updateMoveStick(ev){
+    const v=stickVector(moveStick,moveKnob,ev);
+    mobileMove.x=v.x;mobileMove.y=v.y;
+    if(v.strength>.34&&!mobileMove.registered){mobileMove.registered=true;registerMobileDirection(v.x,v.y)}
+    if(autoRun.active&&v.strength>.25){
+      const n=normalize(v.x,v.y);
+      if(Math.abs(n.x-autoRun.dx)>.2||Math.abs(n.y-autoRun.dy)>.2) stopAutoRun();
+    }
+  }
+  function updateAimStick(ev){
+    const v=stickVector(aimStick,aimKnob,ev);
+    if(v.strength>.18){
+      const d=nearestAimDirection(v.x,v.y);
+      mobileAim.x=d.x;mobileAim.y=d.y;aimDir=d;
+    }
+  }
+  function endMoveStick(ev){
+    if(ev&&mobileMove.pointerId!==null&&ev.pointerId!==mobileMove.pointerId) return;
+    mobileMove.active=false;mobileMove.pointerId=null;mobileMove.x=0;mobileMove.y=0;mobileMove.registered=false;
+    resetKnob(moveKnob);moveStick.classList.remove('is-active');
+  }
+  function endAimStick(ev){
+    if(ev&&mobileAim.pointerId!==null&&ev.pointerId!==mobileAim.pointerId) return;
+    mobileAim.active=false;mobileAim.pointerId=null;
+    resetKnob(aimKnob);aimStick.classList.remove('is-active');
+  }
+  function mobileJump(){
+    unlockSoundAssets();stopAutoRun();
+    if(state==='play') startJump();
+    else if(state==='shop'&&!paused&&player&&player.jumpCooldown<=0){player.jumpTimer=.52;player.jumpCooldown=.82;sfx('jump')}
+  }
+  function updateMobileCombat(){
+    if(!isMobileDevice||mobileOrientationBlocked||paused||overlay||anyModalOpen()) return;
+    if(mobileAim.active&&state==='play'&&!transition){
+      const d=nearestAimDirection(mobileAim.x,mobileAim.y);aimDir=d;attackSword(d);
+    }
+  }
+  function bindPressButton(button,action){
+    if(!button) return;
+    button.addEventListener('pointerdown',ev=>{
+      ev.preventDefault();button.classList.add('is-pressed');try{button.setPointerCapture?.(ev.pointerId)}catch{} action();
+    });
+    const release=()=>button.classList.remove('is-pressed');
+    button.addEventListener('pointerup',release);button.addEventListener('pointercancel',release);button.addEventListener('lostpointercapture',release);
+  }
+  function setupMobileControls(){
+    if(!isMobileDevice) return;
+    const beginMove=ev=>{
+      ev.preventDefault();unlockSoundAssets();
+      mobileMove.active=true;mobileMove.pointerId=ev.pointerId;mobileMove.registered=false;
+      try{moveStick.setPointerCapture?.(ev.pointerId)}catch{} moveStick.classList.add('is-active');updateMoveStick(ev);
+    };
+    moveStick.addEventListener('pointerdown',beginMove);
+    moveStick.addEventListener('pointermove',ev=>{if(mobileMove.active&&ev.pointerId===mobileMove.pointerId){ev.preventDefault();updateMoveStick(ev)}});
+    moveStick.addEventListener('pointerup',endMoveStick);moveStick.addEventListener('pointercancel',endMoveStick);moveStick.addEventListener('lostpointercapture',endMoveStick);
+
+    aimStick.addEventListener('pointerdown',ev=>{
+      ev.preventDefault();unlockSoundAssets();stopAutoRun();
+      mobileAim.active=true;mobileAim.pointerId=ev.pointerId;try{aimStick.setPointerCapture?.(ev.pointerId)}catch{} aimStick.classList.add('is-active');updateAimStick(ev);
+      if(state==='play'&&!paused&&!transition) attackSword(aimDir);
+    });
+    aimStick.addEventListener('pointermove',ev=>{if(mobileAim.active&&ev.pointerId===mobileAim.pointerId){ev.preventDefault();updateAimStick(ev)}});
+    aimStick.addEventListener('pointerup',endAimStick);aimStick.addEventListener('pointercancel',endAimStick);aimStick.addEventListener('lostpointercapture',endAimStick);
+
+    bindPressButton(mobileJumpBtn,mobileJump);
+    bindPressButton(mobileBombBtn,()=>{unlockSoundAssets();placeBomb()});
+    bindPressButton(mobileActiveBtn,()=>{unlockSoundAssets();useActive()});
+
+    mobileNewBtn.addEventListener('click',()=>{unlockSoundAssets();openNewRunModal()});
+    mobilePauseBtn.addEventListener('click',()=>{unlockSoundAssets();if(!anyModalOpen()&&!overlay)togglePause()});
+    mobileHelpBtn.addEventListener('click',()=>{unlockSoundAssets();if(!anyModalOpen())openOverlay('help')});
+    mobileSoundBtn.addEventListener('click',async()=>{
+      soundOn=!soundOn;syncSoundButtons();
+      if(soundOn){await unlockSoundAssets();applySoundVolume();sfx('rupee')}
+    });
+    window.addEventListener('resize',updateMobileOrientation,{passive:true});
+    window.addEventListener('orientationchange',()=>setTimeout(updateMobileOrientation,80),{passive:true});
+    document.addEventListener('contextmenu',ev=>{if(ev.target.closest?.('.mobile-controls'))ev.preventDefault()});
+    updateMobileOrientation();
   }
 
   function getScores(){
@@ -744,7 +904,7 @@
     generateDungeon();
     const start=currentRoom(), size=roomSize(start);
     player.x=size.w/2;player.y=size.h/2;player.lastSafe={x:player.x,y:player.y};
-    state='play';paused=false;overlay=null;overlayPausedGame=false;stageBanner=2.2;clearInputs();pauseBtn.textContent='PAUSE';setMessage(`Seed ${runSeed} · Explore the dungeon.`,3.4);
+    state='play';paused=false;overlay=null;overlayPausedGame=false;stageBanner=2.2;clearInputs();syncPauseButtons();setMessage(`Seed ${runSeed} · Explore the dungeon.`,3.4);
   }
   function beginNextStage(){
     stage++;stopAutoRun();
@@ -914,6 +1074,7 @@
     const room=currentRoom(), size=roomSize(room);
     let manualDx=(keys.ArrowRight||keys.KeyD?1:0)-(keys.ArrowLeft||keys.KeyA?1:0);
     let manualDy=(keys.ArrowDown||keys.KeyS?1:0)-(keys.ArrowUp||keys.KeyW?1:0);
+    if(isMobileDevice&&mobileMove.active){manualDx=mobileMove.x;manualDy=mobileMove.y}
     let dx=manualDx,dy=manualDy;
     if(autoRun.active){
       if((manualDx||manualDy)){
@@ -1588,6 +1749,7 @@
   function updateShop(dt){
     let manualDx=(keys.ArrowRight||keys.KeyD?1:0)-(keys.ArrowLeft||keys.KeyA?1:0);
     let manualDy=(keys.ArrowDown||keys.KeyS?1:0)-(keys.ArrowUp||keys.KeyW?1:0);
+    if(isMobileDevice&&mobileMove.active){manualDx=mobileMove.x;manualDy=mobileMove.y}
     let dx=manualDx,dy=manualDy;
     if(autoRun.active){
       if(manualDx||manualDy){const m=normalize(manualDx,manualDy);if(Math.abs(m.x-autoRun.dx)>.1||Math.abs(m.y-autoRun.dy)>.1)stopAutoRun()}
@@ -1611,14 +1773,14 @@
     gameTime+=dt;
     if(messageTimer>0) messageTimer=Math.max(0,messageTimer-dt);
     shake=Math.max(0,shake-dt*28);flash=Math.max(0,flash-dt);stageBanner=Math.max(0,stageBanner-dt);
-    if(paused||overlay) return;
+    if(mobileOrientationBlocked||paused||overlay) return;
     if(transition){
       transition.t+=dt;
       if(transition.t>=transition.duration) finishRoomTransition();
       return;
     }
     if(state==='play'){
-      movePlayer(dt);swordDamageTick();updateBombs(dt);updateProjectiles(dt);updateEnemies(dt);updateRoomObjects(dt);updateParticles(dt);
+      movePlayer(dt);updateMobileCombat();swordDamageTick();updateBombs(dt);updateProjectiles(dt);updateEnemies(dt);updateRoomObjects(dt);updateParticles(dt);
     }else if(state==='shop'){
       updateShop(dt);updateParticles(dt);
     }
@@ -2138,7 +2300,7 @@
     ctx.fillStyle='#d7c478';ctx.font=`900 44px ${UI_FONT}`;ctx.textAlign='center';ctx.fillText('GREENBLADE',CW/2,165);ctx.fillText('DUNGEON',CW/2,213);
     ctx.fillStyle='#8eb066';ctx.font=`800 16px ${UI_FONT}`;ctx.fillText('A RANDOMIZED RETRO DUNGEON',CW/2,254);
     const fakeCam={ox:CW/2-480,oy:330};const oldPlayer=player;if(!player)player=makePlayer();drawHero(480,0,fakeCam);player=oldPlayer;
-    ctx.fillStyle='#eadca9';ctx.font=`900 18px ${UI_FONT}`;ctx.fillText('CLICK OR PRESS ENTER TO CHOOSE A SEED',CW/2,440);
+    ctx.fillStyle='#eadca9';ctx.font=`900 18px ${UI_FONT}`;ctx.fillText(isMobileDevice?'TAP NEW ABOVE TO CHOOSE A SEED':'CLICK OR PRESS ENTER TO CHOOSE A SEED',CW/2,440);
     ctx.font=`700 13px ${UI_FONT}`;ctx.fillStyle='#aebd91';ctx.fillText('Clear rooms · Find secrets · Defeat bosses · Descend deeper',CW/2,485);
     const scores=getScores();ctx.fillStyle='#d8c786';ctx.font=`800 13px ${UI_FONT}`;
     ctx.fillText(scores.length?`BEST: STAGE ${scores[0].stage} · ${scores[0].seed}`:'NO RUNS RECORDED YET',CW/2,537);ctx.textAlign='left';
@@ -2152,7 +2314,7 @@
       ctx.fillStyle='#1c291f';ctx.font=`900 15px ${UI_FONT}`;ctx.fillText(`${i+1}. STAGE ${s.stage}`,CW/2,y);
       ctx.font=`700 11px ${UI_FONT}`;ctx.fillText(`${s.seed} · ${s.date}`,CW/2,y+20);
     });
-    ctx.fillStyle='#d2c16f';ctx.font=`900 16px ${UI_FONT}`;ctx.fillText('CLICK OR PRESS ENTER FOR A NEW RUN',CW/2,522);ctx.textAlign='left';
+    ctx.fillStyle='#d2c16f';ctx.font=`900 16px ${UI_FONT}`;ctx.fillText(isMobileDevice?'TAP NEW ABOVE FOR A NEW RUN':'CLICK OR PRESS ENTER FOR A NEW RUN',CW/2,522);ctx.textAlign='left';
   }
   function drawOverlay(){
     if(!overlay) return;
@@ -2165,7 +2327,17 @@
       ctx.fillStyle='#d9c98f';ctx.fillRect(132,112,330,402);ctx.fillRect(498,112,330,402);ctx.strokeStyle='#7b704b';ctx.lineWidth=2;ctx.strokeRect(132,112,330,402);ctx.strokeRect(498,112,330,402);
       ctx.fillStyle='#182319';ctx.font=`900 16px ${UI_FONT}`;ctx.fillText('CONTROLS',153,143);ctx.fillText('DUNGEON RULES',519,143);
       ctx.font=`700 14px ${UI_FONT}`;
-      const controls=[
+      const controls=isMobileDevice?[
+        ['Move','Left joystick'],
+        ['Run','Double-tap a direction'],
+        ['Sword','Hold right joystick'],
+        ['Aim','Eight directions'],
+        ['Active item','ITEM button'],
+        ['Bomb','BOMB button'],
+        ['Jump','JUMP button'],
+        ['Pause','Top PAUSE button'],
+        ['Mute','Top SOUND button']
+      ]:[
         ['Move','WASD or Arrow Keys'],
         ['Run','Double-tap one direction'],
         ['Sword','Mouse click toward target'],
@@ -2265,6 +2437,7 @@
     if(state!=='play'||transition) return;
     const powerHit=powerupPanelHit(p.x,p.y);
     if(powerHit){openPowerupDetails(powerHit.kind,powerHit.id);return}
+    if(isMobileDevice) return;
     if(p.x<VIEW.x||p.x>VIEW.x+VIEW.w||p.y<VIEW.y||p.y>VIEW.y+VIEW.h) return;
     const w=screenToWorld(p.x,p.y),d=snapAim(w.x-player.x,w.y-player.y);aimDir=d;attackSword(d);
   }
@@ -2284,7 +2457,7 @@
       return;
     }
     if(blockedCodes.has(e.code)) e.preventDefault();
-    if(e.code==='KeyM'){soundOn=!soundOn;soundBtn.textContent=`SOUND: ${soundOn?'ON':'OFF'}`;if(soundOn){unlockSoundAssets().then(()=>{applySoundVolume();sfx('rupee')})}return}
+    if(e.code==='KeyM'){soundOn=!soundOn;syncSoundButtons();if(soundOn){unlockSoundAssets().then(()=>{applySoundVolume();sfx('rupee')})}return}
     if(overlay){if(e.code==='Escape')closeOverlay();return}
     if(paused){if(e.code==='KeyP'||e.code==='Escape')togglePause(false);return}
     if(state==='title'||state==='gameover'){if(e.code==='Enter'||e.code==='Space')openNewRunModal();return}
@@ -2308,7 +2481,7 @@
 
   newBtn.addEventListener('click',()=>{unlockSoundAssets();openNewRunModal()});
   pauseBtn.addEventListener('click',()=>{unlockSoundAssets();if(!anyModalOpen()&&!overlay)togglePause()});
-  soundBtn.addEventListener('click',async()=>{soundOn=!soundOn;soundBtn.textContent=`SOUND: ${soundOn?'ON':'OFF'}`;if(soundOn){await unlockSoundAssets();applySoundVolume();sfx('rupee')}});
+  soundBtn.addEventListener('click',async()=>{soundOn=!soundOn;syncSoundButtons();if(soundOn){await unlockSoundAssets();applySoundVolume();sfx('rupee')}});
   volumeSlider.addEventListener('input',()=>{soundVolume=clamp(Number(volumeSlider.value||80)/100,0,1);applySoundVolume()});
   volumeSlider.addEventListener('change',async()=>{soundVolume=clamp(Number(volumeSlider.value||80)/100,0,1);applySoundVolume(); if(soundOn){await unlockSoundAssets(); sfx('rupee');}});
   scoresBtn.addEventListener('click',()=>{if(!anyModalOpen())openOverlay('scores')});
@@ -2336,5 +2509,8 @@
   }
   preloadSoundAssets();
   applySoundVolume();
+  syncPauseButtons();
+  syncSoundButtons();
+  setupMobileControls();
   requestAnimationFrame(loop);
 })();
