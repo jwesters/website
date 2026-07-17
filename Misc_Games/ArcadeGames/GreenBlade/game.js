@@ -26,6 +26,15 @@
   const mobilePauseBtn = document.getElementById('mobilePauseBtn');
   const mobileSoundBtn = document.getElementById('mobileSoundBtn');
   const mobileHelpBtn = document.getElementById('mobileHelpBtn');
+  const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+  const mobileGameMenu = document.getElementById('mobileGameMenu');
+  const mobileMenuClose = document.getElementById('mobileMenuClose');
+  const mobileMenuResumeBtn = document.getElementById('mobileMenuResumeBtn');
+  const mobileMenuNewBtn = document.getElementById('mobileMenuNewBtn');
+  const mobileMenuSoundBtn = document.getElementById('mobileMenuSoundBtn');
+  const mobileMenuHelpBtn = document.getElementById('mobileMenuHelpBtn');
+  const mobileMenuVolumeSlider = document.getElementById('mobileMenuVolumeSlider');
+  const mobileMenuVolumeValue = document.getElementById('mobileMenuVolumeValue');
   const mobileControls = document.getElementById('mobileControls');
   const moveStick = document.getElementById('moveStick');
   const moveKnob = document.getElementById('moveKnob');
@@ -264,6 +273,8 @@
     const percent=Math.round(soundVolume*100);
     if(volumeSlider) volumeSlider.value=String(percent);
     if(volumeValue) volumeValue.textContent=`${percent}%`;
+    if(mobileMenuVolumeSlider) mobileMenuVolumeSlider.value=String(percent);
+    if(mobileMenuVolumeValue) mobileMenuVolumeValue.textContent=`${percent}%`;
   }
   function applySoundVolume(){
     if(masterGain) masterGain.gain.value=.48*soundVolume;
@@ -413,6 +424,7 @@
   function syncSoundButtons(){
     soundBtn.textContent=`SOUND: ${soundOn?'ON':'OFF'}`;
     if(mobileSoundBtn) mobileSoundBtn.textContent=soundOn?'SOUND':'MUTED';
+    if(mobileMenuSoundBtn) mobileMenuSoundBtn.textContent=`SOUND: ${soundOn?'ON':'OFF'}`;
   }
   function resetKnob(knob){ if(knob) knob.style.transform='translate(-50%,-50%)'; }
   function resetMobileControls(){
@@ -490,8 +502,35 @@
     }
     overlayPausedGame=false;overlayWasPaused=false;
   }
-  function anyModalOpen(){ return !newRunModal.hidden || !customSeedModal.hidden; }
-  function hideAllModals(){ newRunModal.hidden=true; customSeedModal.hidden=true; seedError.textContent=''; }
+  function anyModalOpen(){ return !newRunModal.hidden || !customSeedModal.hidden || !mobileGameMenu.hidden; }
+  function hideAllModals(){ newRunModal.hidden=true; customSeedModal.hidden=true; mobileGameMenu.hidden=true; seedError.textContent=''; }
+  function openMobileGameMenu(){
+    if(!isMobileDevice||mobileOrientationBlocked||anyModalOpen()||overlay) return;
+    stopAutoRun();clearInputs();
+    modalWasPaused=paused;modalPausedGame=false;
+    if((state==='play'||state==='shop')&&!paused){paused=true;modalPausedGame=true;syncPauseButtons()}
+    hideAllModals();
+    mobileGameMenu.hidden=false;
+    syncSoundButtons();updateVolumeUi();
+  }
+  function resumeFromMobileMenu(){
+    mobileGameMenu.hidden=true;
+    modalPausedGame=false;modalWasPaused=false;
+    if(state==='play'||state==='shop') paused=false;
+    syncPauseButtons();clearInputs();
+  }
+  function openNewRunFromMobileMenu(){
+    mobileGameMenu.hidden=true;
+    const activeRun=(state==='play'||state==='shop'||state==='gameover')&&!!player;
+    newRunWarning.hidden=!activeRun||state==='gameover';
+    seedInput.value='';seedError.textContent='';
+    customSeedModal.hidden=true;newRunModal.hidden=false;
+  }
+  function openHelpFromMobileMenu(){
+    resumeFromMobileMenu();
+    openOverlay('help');
+  }
+
   function openNewRunModal(){
     stopAutoRun();
     const activeRun=(state==='play'||state==='shop'||state==='gameover')&&!!player;
@@ -621,13 +660,25 @@
     bindPressButton(mobileBombBtn,()=>{unlockSoundAssets();placeBomb()});
     bindPressButton(mobileActiveBtn,()=>{unlockSoundAssets();useActive()});
 
-    mobileNewBtn.addEventListener('click',()=>{unlockSoundAssets();openNewRunModal()});
-    mobilePauseBtn.addEventListener('click',()=>{unlockSoundAssets();if(!anyModalOpen()&&!overlay)togglePause()});
-    mobileHelpBtn.addEventListener('click',()=>{unlockSoundAssets();if(!anyModalOpen())openOverlay('help')});
-    mobileSoundBtn.addEventListener('click',async()=>{
+    mobileNewBtn?.addEventListener('click',()=>{unlockSoundAssets();openNewRunModal()});
+    mobilePauseBtn?.addEventListener('click',()=>{unlockSoundAssets();if(!anyModalOpen()&&!overlay)togglePause()});
+    mobileHelpBtn?.addEventListener('click',()=>{unlockSoundAssets();if(!anyModalOpen())openOverlay('help')});
+    mobileSoundBtn?.addEventListener('click',async()=>{
       soundOn=!soundOn;syncSoundButtons();
       if(soundOn){await unlockSoundAssets();applySoundVolume();sfx('rupee')}
     });
+    mobileMenuBtn.addEventListener('click',()=>{unlockSoundAssets();openMobileGameMenu()});
+    mobileMenuResumeBtn.addEventListener('click',resumeFromMobileMenu);
+    mobileMenuClose.addEventListener('click',resumeFromMobileMenu);
+    mobileMenuNewBtn.addEventListener('click',()=>{unlockSoundAssets();openNewRunFromMobileMenu()});
+    mobileMenuHelpBtn.addEventListener('click',()=>{unlockSoundAssets();openHelpFromMobileMenu()});
+    mobileMenuSoundBtn.addEventListener('click',async()=>{
+      soundOn=!soundOn;syncSoundButtons();
+      if(soundOn){await unlockSoundAssets();applySoundVolume();sfx('rupee')}
+    });
+    mobileMenuVolumeSlider.addEventListener('input',()=>{soundVolume=clamp(Number(mobileMenuVolumeSlider.value||80)/100,0,1);applySoundVolume()});
+    mobileMenuVolumeSlider.addEventListener('change',async()=>{soundVolume=clamp(Number(mobileMenuVolumeSlider.value||80)/100,0,1);applySoundVolume();if(soundOn){await unlockSoundAssets();sfx('rupee')}});
+    mobileGameMenu.addEventListener('pointerdown',ev=>{if(ev.target===mobileGameMenu)resumeFromMobileMenu()});
     window.addEventListener('resize',updateMobileOrientation,{passive:true});
     window.addEventListener('orientationchange',()=>setTimeout(updateMobileOrientation,80),{passive:true});
     document.addEventListener('contextmenu',ev=>{if(ev.target.closest?.('.mobile-controls'))ev.preventDefault()});
@@ -2300,7 +2351,7 @@
     ctx.fillStyle='#d7c478';ctx.font=`900 44px ${UI_FONT}`;ctx.textAlign='center';ctx.fillText('GREENBLADE',CW/2,165);ctx.fillText('DUNGEON',CW/2,213);
     ctx.fillStyle='#8eb066';ctx.font=`800 16px ${UI_FONT}`;ctx.fillText('A RANDOMIZED RETRO DUNGEON',CW/2,254);
     const fakeCam={ox:CW/2-480,oy:330};const oldPlayer=player;if(!player)player=makePlayer();drawHero(480,0,fakeCam);player=oldPlayer;
-    ctx.fillStyle='#eadca9';ctx.font=`900 18px ${UI_FONT}`;ctx.fillText(isMobileDevice?'TAP NEW ABOVE TO CHOOSE A SEED':'CLICK OR PRESS ENTER TO CHOOSE A SEED',CW/2,440);
+    ctx.fillStyle='#eadca9';ctx.font=`900 18px ${UI_FONT}`;ctx.fillText(isMobileDevice?'TAP MENU, THEN NEW RUN':'CLICK OR PRESS ENTER TO CHOOSE A SEED',CW/2,440);
     ctx.font=`700 13px ${UI_FONT}`;ctx.fillStyle='#aebd91';ctx.fillText('Clear rooms · Find secrets · Defeat bosses · Descend deeper',CW/2,485);
     const scores=getScores();ctx.fillStyle='#d8c786';ctx.font=`800 13px ${UI_FONT}`;
     ctx.fillText(scores.length?`BEST: STAGE ${scores[0].stage} · ${scores[0].seed}`:'NO RUNS RECORDED YET',CW/2,537);ctx.textAlign='left';
@@ -2314,7 +2365,7 @@
       ctx.fillStyle='#1c291f';ctx.font=`900 15px ${UI_FONT}`;ctx.fillText(`${i+1}. STAGE ${s.stage}`,CW/2,y);
       ctx.font=`700 11px ${UI_FONT}`;ctx.fillText(`${s.seed} · ${s.date}`,CW/2,y+20);
     });
-    ctx.fillStyle='#d2c16f';ctx.font=`900 16px ${UI_FONT}`;ctx.fillText(isMobileDevice?'TAP NEW ABOVE FOR A NEW RUN':'CLICK OR PRESS ENTER FOR A NEW RUN',CW/2,522);ctx.textAlign='left';
+    ctx.fillStyle='#d2c16f';ctx.font=`900 16px ${UI_FONT}`;ctx.fillText(isMobileDevice?'TAP MENU, THEN NEW RUN':'CLICK OR PRESS ENTER FOR A NEW RUN',CW/2,522);ctx.textAlign='left';
   }
   function drawOverlay(){
     if(!overlay) return;
@@ -2450,6 +2501,7 @@
   window.addEventListener('keydown',e=>{
     if(soundOn) unlockSoundAssets();
     if(anyModalOpen()){
+      if(!mobileGameMenu.hidden){if(e.code==='Escape'){e.preventDefault();resumeFromMobileMenu()}return}
       if(!customSeedModal.hidden){
         if(e.code==='Escape'){e.preventDefault();customSeedModal.hidden=true;newRunModal.hidden=false;seedError.textContent=''}
         else if(e.code==='Enter'&&document.activeElement===seedInput){e.preventDefault();beginRunFromModal(seedInput.value)}
