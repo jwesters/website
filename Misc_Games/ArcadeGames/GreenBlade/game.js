@@ -1,6 +1,22 @@
 (() => {
   'use strict';
 
+  const isUnsupportedMobile = (() => {
+    const ua = navigator.userAgent || '';
+    const uaMobile = navigator.userAgentData?.mobile === true;
+    const phoneTabletUa = /Android|iPhone|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua);
+    const iPadLike = /iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const compactTouchDevice = navigator.maxTouchPoints > 1 && Math.min(screen.width, screen.height) < 900;
+    return uaMobile || phoneTabletUa || iPadLike || compactTouchDevice;
+  })();
+  if(isUnsupportedMobile){
+    const shell=document.getElementById('gameShell');
+    const notice=document.getElementById('mobileUnsupported');
+    if(shell) shell.hidden=true;
+    if(notice) notice.hidden=false;
+    return;
+  }
+
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -155,6 +171,10 @@
   let overlayWasPaused = false;
   let modalPausedGame = false;
   let modalWasPaused = false;
+  let autoRun = {active:false,dx:0,dy:0,code:''};
+  const lastDirectionPress = new Map();
+  const RUN_DOUBLE_TAP_MS = 310;
+  const RUN_SPEED_MULTIPLIER = 1.7;
 
   soundVolume = loadSavedVolume();
   updateVolumeUi();
@@ -373,16 +393,41 @@
 
   function setMessage(text,time=2){ message=text; messageTimer=time; }
   function clearInputs(){ for(const k of Object.keys(keys)) keys[k]=false; for(const k of Object.keys(pressed)) pressed[k]=false; }
+  function directionFromCode(code){
+    if(code==='ArrowUp'||code==='KeyW') return {dx:0,dy:-1};
+    if(code==='ArrowDown'||code==='KeyS') return {dx:0,dy:1};
+    if(code==='ArrowLeft'||code==='KeyA') return {dx:-1,dy:0};
+    if(code==='ArrowRight'||code==='KeyD') return {dx:1,dy:0};
+    return null;
+  }
+  function stopAutoRun(){
+    autoRun.active=false;autoRun.dx=0;autoRun.dy=0;autoRun.code='';
+  }
+  function handleDirectionPress(code,repeat){
+    const dir=directionFromCode(code);
+    if(!dir||repeat) return;
+    const now=performance.now();
+    const last=lastDirectionPress.get(code)||0;
+    const isDouble=now-last<=RUN_DOUBLE_TAP_MS;
+    lastDirectionPress.set(code,now);
+    if(isDouble&&(state==='play'||state==='shop')){
+      autoRun={active:true,dx:dir.dx,dy:dir.dy,code};
+      setMessage('Running — attack, use an item, or hit an obstacle to stop.',1.4);
+    }else if(autoRun.active&&(dir.dx!==autoRun.dx||dir.dy!==autoRun.dy)){
+      stopAutoRun();
+    }
+  }
   function togglePause(force){
     if(state!=='play'&&state!=='shop') return;
     paused = force===undefined ? !paused : force;
+    stopAutoRun();
     clearInputs();
     pauseBtn.textContent = paused ? 'RESUME' : 'PAUSE';
   }
   function openOverlay(type){
     if(overlay===type){closeOverlay();return}
     if(overlay) closeOverlay();
-    overlay=type;clearInputs();
+    overlay=type;stopAutoRun();clearInputs();
     overlayWasPaused=paused;overlayPausedGame=false;
     if((type==='help'||type==='powerup')&&(state==='play'||state==='shop')&&!paused){
       paused=true;overlayPausedGame=true;pauseBtn.textContent='RESUME';
@@ -398,6 +443,7 @@
   function anyModalOpen(){ return !newRunModal.hidden || !customSeedModal.hidden; }
   function hideAllModals(){ newRunModal.hidden=true; customSeedModal.hidden=true; seedError.textContent=''; }
   function openNewRunModal(){
+    stopAutoRun();
     const activeRun=(state==='play'||state==='shop'||state==='gameover')&&!!player;
     newRunWarning.hidden=!activeRun||state==='gameover';
     modalWasPaused=paused;modalPausedGame=false;
@@ -694,14 +740,14 @@
   function startRun(seedId=generateSeedId()){
     if((state==='play'||state==='shop')&&!runRecorded) saveRunScore();
     runSeed=normalizeSeed(seedId)||generateSeedId();fxState=hashSeed(`${runSeed}|visuals`);
-    stage=1; player=makePlayer(); projectiles=[]; bombs=[]; particles=[]; blastEffects=[]; transition=null; shop=null; runRecorded=false;
+    stage=1; player=makePlayer(); projectiles=[]; bombs=[]; particles=[]; blastEffects=[]; transition=null; shop=null; runRecorded=false;stopAutoRun();
     generateDungeon();
     const start=currentRoom(), size=roomSize(start);
     player.x=size.w/2;player.y=size.h/2;player.lastSafe={x:player.x,y:player.y};
     state='play';paused=false;overlay=null;overlayPausedGame=false;stageBanner=2.2;clearInputs();pauseBtn.textContent='PAUSE';setMessage(`Seed ${runSeed} · Explore the dungeon.`,3.4);
   }
   function beginNextStage(){
-    stage++;
+    stage++;stopAutoRun();
     player.hp=Math.min(player.maxHp,player.hp+1+(player.passive.secondWind||0));
     player.wardReady=player.passive.ward>0?1:0;
     player.activeCooldown=0;player.orbitNovaTimer=0;
@@ -866,22 +912,32 @@
   function holeAt(room,x,y,r=5){ return room.holes.some(h=>circleRect({x,y,r},h)); }
   function movePlayer(dt){
     const room=currentRoom(), size=roomSize(room);
-    let dx=(keys.ArrowRight||keys.KeyD?1:0)-(keys.ArrowLeft||keys.KeyA?1:0);
-    let dy=(keys.ArrowDown||keys.KeyS?1:0)-(keys.ArrowUp||keys.KeyW?1:0);
+    let manualDx=(keys.ArrowRight||keys.KeyD?1:0)-(keys.ArrowLeft||keys.KeyA?1:0);
+    let manualDy=(keys.ArrowDown||keys.KeyS?1:0)-(keys.ArrowUp||keys.KeyW?1:0);
+    let dx=manualDx,dy=manualDy;
+    if(autoRun.active){
+      if((manualDx||manualDy)){
+        const manual=normalize(manualDx,manualDy);
+        if(Math.abs(manual.x-autoRun.dx)>.1||Math.abs(manual.y-autoRun.dy)>.1) stopAutoRun();
+      }
+      if(autoRun.active){dx=autoRun.dx;dy=autoRun.dy}
+    }
     if(dx||dy){
       const n=normalize(dx,dy);dx=n.x;dy=n.y;
       if(Math.abs(dx)>Math.abs(dy)) player.facing=dx>0?'E':'W'; else player.facing=dy>0?'S':'N';
       player.jumpDir={x:dx,y:dy};
     }
-    const speed=player.speed*(1+player.passive.speed*.09);
+    const speed=player.speed*(1+player.passive.speed*.09)*(autoRun.active?RUN_SPEED_MULTIPLIER:1);
     const jumping=player.jumpTimer>0;
     const tryAxis=(axis,amount)=>{
+      if(Math.abs(amount)<.0001) return true;
       const nx=axis==='x'?player.x+amount:player.x, ny=axis==='y'?player.y+amount:player.y;
-      if(nx<player.r+WALL||nx>size.w-player.r-WALL||ny<player.r+WALL||ny>size.h-player.r-WALL) return;
-      if(!jumping&&solidBlockAt(room,nx,ny,player.r)) return;
-      player[axis]+=amount;
+      if(nx<player.r+WALL||nx>size.w-player.r-WALL||ny<player.r+WALL||ny>size.h-player.r-WALL) return false;
+      if(!jumping&&solidBlockAt(room,nx,ny,player.r)) return false;
+      player[axis]+=amount;return true;
     };
-    tryAxis('x',dx*speed*dt);tryAxis('y',dy*speed*dt);
+    const movedX=tryAxis('x',dx*speed*dt),movedY=tryAxis('y',dy*speed*dt);
+    if(autoRun.active&&(!movedX||!movedY)) stopAutoRun();
 
     if(jumping){
       player.jumpTimer=Math.max(0,player.jumpTimer-dt);
@@ -926,6 +982,7 @@
     player.x=player.lastSafe.x; player.y=player.lastSafe.y;
   }
   function fallInHole(){
+    stopAutoRun();
     sfx('fall');spawnParticles(player.x,player.y,'#151715',14);
     player.x=player.lastSafe.x;player.y=player.lastSafe.y;
     hurtPlayer(.5,true);
@@ -933,7 +990,9 @@
   }
 
   function attackSword(dir){
-    if(paused||state!=='play'||transition||player.attackTimer>0) return;
+    if(paused||state!=='play'||transition) return;
+    stopAutoRun();
+    if(player.attackTimer>0) return;
     player.attackDir=dir;aimDir=dir;player.attackHit=new Set();
     const quick=Math.min(.14,player.passive.quickSword*.035);
     player.attackTimer=.18;player.attackCooldown=Math.max(.16,.32-quick);
@@ -967,6 +1026,7 @@
 
   function useActive(){
     if(paused||state!=='play'||transition||!player.active) return;
+    stopAutoRun();
     if(player.activeCooldown>0){setMessage('Active item is recharging.',.8);return}
     const d=aimDir;
     if(player.active==='boomerang'){
@@ -1019,6 +1079,7 @@
   }
   function placeBomb(){
     if(paused||state!=='play'||transition) return;
+    stopAutoRun();
     if(player.bombCount<=0){sfx('error');setMessage('No bombs remaining.',1);return}
     if(bombs.some(b=>b.roomId===currentRoomId&&dist(b,player)<30)) return;
     player.bombCount--;bombs.push({x:player.x,y:player.y,r:8,timer:1.55,roomId:currentRoomId});sfx('active');
@@ -1443,6 +1504,7 @@
     }
   }
   function hurtPlayer(amount,bypassWard){
+    stopAutoRun();
     if(player.inv>0||state==='gameover') return;
     if(!bypassWard&&player.wardReady>0){player.wardReady=0;player.inv=.65;sfx('error');setMessage('Guardian Charm absorbed the hit.',1.2);return}
     player.hp=Math.max(0,player.hp-amount);player.inv=1;sfx('hurt');shake=5;flash=.08;
@@ -1524,18 +1586,26 @@
   }
 
   function updateShop(dt){
-    let dx=(keys.ArrowRight||keys.KeyD?1:0)-(keys.ArrowLeft||keys.KeyA?1:0);
-    let dy=(keys.ArrowDown||keys.KeyS?1:0)-(keys.ArrowUp||keys.KeyW?1:0);
+    let manualDx=(keys.ArrowRight||keys.KeyD?1:0)-(keys.ArrowLeft||keys.KeyA?1:0);
+    let manualDy=(keys.ArrowDown||keys.KeyS?1:0)-(keys.ArrowUp||keys.KeyW?1:0);
+    let dx=manualDx,dy=manualDy;
+    if(autoRun.active){
+      if(manualDx||manualDy){const m=normalize(manualDx,manualDy);if(Math.abs(m.x-autoRun.dx)>.1||Math.abs(m.y-autoRun.dy)>.1)stopAutoRun()}
+      if(autoRun.active){dx=autoRun.dx;dy=autoRun.dy}
+    }
     if(dx||dy){const n=normalize(dx,dy);dx=n.x;dy=n.y}
-    const sp=player.speed*(1+player.passive.speed*.09);
-    player.x=clamp(player.x+dx*sp*dt,SHOP_VIEW.x+44,SHOP_VIEW.x+SHOP_VIEW.w-44);player.y=clamp(player.y+dy*sp*dt,SHOP_VIEW.y+24,SHOP_VIEW.y+SHOP_VIEW.h-32);
+    const sp=player.speed*(1+player.passive.speed*.09)*(autoRun.active?RUN_SPEED_MULTIPLIER:1);
+    const oldX=player.x,oldY=player.y;
+    player.x=clamp(player.x+dx*sp*dt,SHOP_VIEW.x+44,SHOP_VIEW.x+SHOP_VIEW.w-44);
+    player.y=clamp(player.y+dy*sp*dt,SHOP_VIEW.y+24,SHOP_VIEW.y+SHOP_VIEW.h-32);
+    if(autoRun.active&&((dx&&Math.abs(player.x-oldX)<.001)||(dy&&Math.abs(player.y-oldY)<.001)))stopAutoRun();
     player.jumpTimer=Math.max(0,player.jumpTimer-dt);player.jumpCooldown=Math.max(0,player.jumpCooldown-dt);player.inv=Math.max(0,player.inv-dt);
     player.orbitAngle+=dt*3.2;
     const dropped=shop.droppedItems||[];
     for(const p of dropped){ p.bob=(p.bob||0)+dt*3; if(Math.hypot(player.x-p.x,player.y-p.y)<player.r+p.r+4){ collectPickup(null,p); } }
     shop.droppedItems=dropped.filter(p=>!p.collected);
-    if(Math.hypot(player.x-shop.backExit.x,player.y-shop.backExit.y)<player.r+shop.backExit.r){sfx('stairs');state='play';currentRoomId=shopReturnRoomId;const room=currentRoom();player.x=room.stairs.x;player.y=room.stairs.y+42;player.lastSafe={x:player.x,y:player.y};projectiles=[];bombs=[];particles=[];blastEffects=[];player.attackTimer=0;setMessage('You climb back to the boss room.',1.7);return}
-    if(Math.hypot(player.x-shop.exit.x,player.y-shop.exit.y)<player.r+shop.exit.r){sfx('stairs');beginNextStage()}
+    if(Math.hypot(player.x-shop.backExit.x,player.y-shop.backExit.y)<player.r+shop.backExit.r){stopAutoRun();sfx('stairs');state='play';currentRoomId=shopReturnRoomId;const room=currentRoom();player.x=room.stairs.x;player.y=room.stairs.y+42;player.lastSafe={x:player.x,y:player.y};projectiles=[];bombs=[];particles=[];blastEffects=[];player.attackTimer=0;setMessage('You climb back to the boss room.',1.7);return}
+    if(Math.hypot(player.x-shop.exit.x,player.y-shop.exit.y)<player.r+shop.exit.r){stopAutoRun();sfx('stairs');beginNextStage()}
   }
   function update(dt){
     gameTime+=dt;
@@ -2097,6 +2167,7 @@
       ctx.font=`700 14px ${UI_FONT}`;
       const controls=[
         ['Move','WASD or Arrow Keys'],
+        ['Run','Double-tap one direction'],
         ['Sword','Mouse click toward target'],
         ['Aim','Attacks snap to 8 directions'],
         ['Active item','X'],
@@ -2105,9 +2176,10 @@
         ['Pause','P or Escape'],
         ['Mute','M']
       ];
-      let y=174;for(const [label,value] of controls){ctx.fillStyle='#173522';ctx.font=`900 13px ${UI_FONT}`;ctx.fillText(`${label}:`,153,y);ctx.fillStyle='#263329';ctx.font=`700 13px ${UI_FONT}`;ctx.fillText(value,235,y);y+=40}
+      let y=174;for(const [label,value] of controls){ctx.fillStyle='#173522';ctx.font=`900 13px ${UI_FONT}`;ctx.fillText(`${label}:`,153,y);ctx.fillStyle='#263329';ctx.font=`700 13px ${UI_FONT}`;ctx.fillText(value,235,y);y+=35}
       ctx.fillStyle='#263329';ctx.font=`700 13px ${UI_FONT}`;
       const rules=[
+        'Double-tap a movement direction to run until blocked or attacking.',
         'Clear every enemy to unlock normal doors and chests.',
         'Hit a shield twice to stun its guard for one second.',
         'Jump over enemies, projectiles, blocks, and gaps.',
@@ -2120,7 +2192,7 @@
         'Boss stairs lead to a six-item merchant shop.',
         'Death restarts the run from Stage 1.'
       ];
-      y=170;for(const line of rules){wrapText(`• ${line}`,519,y,286,18);y+=36}
+      y=166;for(const line of rules){wrapText(`• ${line}`,519,y,286,17);y+=32}
     }else if(overlay==='scores'){
       const scores=getScores();
       if(!scores.length){ctx.fillStyle='#354336';ctx.textAlign='center';ctx.font=`800 16px ${UI_FONT}`;ctx.fillText('No runs have been recorded yet.',CW/2,250);ctx.textAlign='left'}
@@ -2225,6 +2297,7 @@
     }
     if(e.code==='KeyX'){useActive();return}
     if(e.code==='KeyC'){placeBomb();return}
+    if(directionFromCode(e.code)) handleDirectionPress(e.code,e.repeat);
     keys[e.code]=true;
   });
   window.addEventListener('keyup',e=>{keys[e.code]=false});
