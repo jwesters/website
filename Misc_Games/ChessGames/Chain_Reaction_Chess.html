@@ -1,9 +1,10 @@
 <!DOCTYPE html>
+<!-- Build: stable board layout; captured pieces under board; undo recolored; flip/clear removed -->
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Local Chess</title>
+<title>Chain Reaction Chess</title>
 <style>
   :root{
     --bg:#f7f3e8;
@@ -26,7 +27,7 @@
     color:var(--ink);
     min-height:100vh;
     display:flex;
-    align-items:center;
+    align-items:flex-start;
     justify-content:center;
     padding:18px;
   }
@@ -36,6 +37,7 @@
     grid-template-columns: minmax(300px, 640px) minmax(250px, 320px);
     gap:18px;
     align-items:start;
+    margin-block:clamp(0px,4vh,36px);
   }
   .board-wrap,.side{
     background:var(--panel);
@@ -99,6 +101,19 @@
     border-radius:50%;
   }
   .square.check{box-shadow:inset 0 0 0 999px rgba(239,71,111,.35)}
+  .square.blocked{box-shadow:inset 0 0 0 5px rgba(82,70,155,.78)}
+  .square.blocked::before{
+    content:"×";
+    position:absolute;
+    right:5px;
+    top:1px;
+    z-index:3;
+    color:#51469b;
+    font-size:clamp(18px,3vw,28px);
+    line-height:1;
+    font-weight:900;
+    text-shadow:0 1px 0 rgba(255,255,255,.8);
+  }
   .coord{
     position:absolute;
     font-size:11px;
@@ -121,7 +136,11 @@
     font-weight:800;
     margin-bottom:6px;
   }
-  .message{color:#384152; min-height:1.4em}
+  .message{
+    color:#384152;
+    min-height:2.9em;
+    line-height:1.45;
+  }
   .buttons,.settings{
     display:grid;
     gap:10px;
@@ -151,6 +170,12 @@
   button:hover{background:#fff1cf; transform:translateY(-1px)}
   button.danger{background:#fff0f0;border-color:#e7aaaa}
   button.danger:hover{background:#ffe2e2}
+  button.undo{
+    background:#eef2ff;
+    border-color:#9aa8df;
+    color:#33417f;
+  }
+  button.undo:hover{background:#dde4ff}
   .small{
     color:var(--muted);
     font-size:.88rem;
@@ -159,56 +184,9 @@
   .captured{
     margin-top:14px;
     display:grid;
-    gap:8px;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px;
   }
-  .history{
-    margin:12px 0;
-    background:#faf3e5;
-    border:1px solid var(--border);
-    border-radius:16px;
-    padding:12px;
-  }
-  .history-head{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:10px;
-    margin-bottom:8px;
-  }
-  .history-head .label{margin:0}
-  .history-head button{
-    padding:8px 10px;
-    font-size:.85rem;
-    white-space:nowrap;
-  }
-  button:disabled, select:disabled{
-    opacity:.55;
-    cursor:not-allowed;
-    transform:none;
-  }
-  button:disabled:hover{
-    background:#fffaf0;
-    transform:none;
-  }
-  .move-history{
-    min-height:70px;
-    max-height:170px;
-    overflow:auto;
-    background:#fffdf7;
-    border:1px dashed #cdb891;
-    border-radius:12px;
-    padding:8px;
-    font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-    font-size:.9rem;
-    line-height:1.55;
-  }
-  .move-row{
-    display:grid;
-    grid-template-columns:42px 1fr 1fr;
-    gap:8px;
-  }
-  .move-num{color:var(--muted);font-weight:800}
-  .empty-history{color:var(--muted);font-family:inherit}
   .capbox{
     min-height:45px;
     background:#faf3e5;
@@ -223,7 +201,7 @@
     color:#5d4630;
     margin-bottom:4px;
   }
-  .promotion-modal,.confirm-modal{
+  .promotion-modal,.confirm-modal,.game-over-modal,.rules-modal{
     position:fixed;
     inset:0;
     background:rgba(0,0,0,.42);
@@ -257,9 +235,22 @@
     gap:10px;
     margin-top:14px;
   }
+  .game-over-actions,.rules-actions{
+    display:grid;
+    margin-top:14px;
+  }
+  .rules-copy{
+    text-align:left;
+    line-height:1.55;
+    margin:10px 0 0;
+  }
+  .rules-copy p{
+    margin:0 0 10px;
+  }
+  .rules-copy p:last-child{margin-bottom:0}
   @media (max-width:760px){
     body{padding:10px; align-items:start}
-    .app{grid-template-columns:1fr}
+    .app{grid-template-columns:1fr; margin-block:0}
     .side{order:-1}
     .board-wrap,.side{padding:12px;border-radius:16px}
     .board{border-width:2px}
@@ -267,16 +258,29 @@
     .buttons{grid-template-columns:1fr 1fr}
     .buttons .wide{grid-column:1/-1}
   }
+  @media (max-width:520px){
+    .captured{grid-template-columns:1fr}
+  }
 </style>
 </head>
 <body>
 <div class="app">
   <div class="board-wrap">
     <div id="board" class="board" aria-label="Chess board"></div>
+    <div class="captured">
+      <div>
+        <div class="label">White captured</div>
+        <div id="whiteCaptured" class="capbox"></div>
+      </div>
+      <div>
+        <div class="label">Black captured</div>
+        <div id="blackCaptured" class="capbox"></div>
+      </div>
+    </div>
   </div>
   <aside class="side">
-    <h1>Local Chess</h1>
-    <p class="sub">Two-player classroom chess or play against the CPU as White or Black.</p>
+    <h1>Chain Reaction Chess</h1>
+    <p class="sub">Capture to move again—but never with the same piece twice in a row.</p>
     <div class="settings">
       <div class="setting-row">
         <label for="modeSelect">Game mode</label>
@@ -305,31 +309,10 @@
       <div id="turn" class="turn">White to move</div>
       <div id="message" class="message">Game ready.</div>
     </div>
-    <div class="history">
-      <div class="history-head">
-        <div class="label">Move history</div>
-        <button id="exportPGN" type="button" disabled>Export PGN</button>
-      </div>
-      <div id="moveHistory" class="move-history" aria-live="polite"></div>
-    </div>
     <div class="buttons">
       <button id="newGame" class="danger wide">New Game</button>
-      <button id="flipBoard">Flip Board</button>
-      <button id="clearSave">Clear Saved Game</button>
-    </div>
-    <p class="small">
-      Legal moves are enforced, including check, checkmate, stalemate, castling, en passant, pawn promotion, threefold repetition, and the 50-move rule.
-      Your game saves automatically on this device.
-    </p>
-    <div class="captured">
-      <div>
-        <div class="label">White captured</div>
-        <div id="whiteCaptured" class="capbox"></div>
-      </div>
-      <div>
-        <div class="label">Black captured</div>
-        <div id="blackCaptured" class="capbox"></div>
-      </div>
+      <button id="undoMove" class="undo" disabled>Undo Move</button>
+      <button id="rulesButton">Rules</button>
     </div>
   </aside>
 </div>
@@ -347,8 +330,34 @@
     <h2>Start a new game?</h2>
     <p class="small">This will replace the current saved game.</p>
     <div class="confirm-actions">
-      <button id="confirmNo">No</button>
       <button id="confirmYes" class="danger">Yes</button>
+      <button id="confirmNo">No</button>
+    </div>
+  </div>
+</div>
+
+<div id="gameOverModal" class="game-over-modal" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
+  <div class="modal-card">
+    <h2 id="gameOverTitle">Game over</h2>
+    <p id="gameOverMessage" class="small">The game has ended.</p>
+    <div class="game-over-actions">
+      <button id="gameOverOk" type="button">OK</button>
+    </div>
+  </div>
+</div>
+
+<div id="rulesModal" class="rules-modal" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+  <div class="modal-card">
+    <h2 id="rulesTitle">Rules</h2>
+    <div class="rules-copy small">
+      <p>A capture without check earns another move.</p>
+      <p>The piece that just captured is temporarily blocked.</p>
+      <p>A capture that gives check immediately passes the turn.</p>
+      <p>Legal chess moves, castling, en passant, promotion, checkmate, stalemate, and insufficient-material draws are enforced.</p>
+      <p>Your game saves automatically on this device.</p>
+    </div>
+    <div class="rules-actions">
+      <button id="rulesOk" type="button">OK</button>
     </div>
   </div>
 </div>
@@ -360,9 +369,14 @@
     bK:"♚",bQ:"♛",bR:"♜",bB:"♝",bN:"♞",bP:"♟"
   };
   const VALUES = {P:100,N:320,B:330,R:500,Q:900,K:20000};
-  const SAVE_KEY = "simpleLocalChessSaveV2";
+  const PIECE_NAMES = {K:"king",Q:"queen",R:"rook",B:"bishop",N:"knight",P:"pawn"};
+  const SAVE_KEY = "chainReactionChessSaveV1";
+  const UNDO_KEY = "chainReactionChessUndoV1";
+  const MAX_UNDO_STATES = 200;
 
-  let state, selected = null, legalForSelected = [], flipped = false, pendingPromotion = null, cpuThinking = false;
+  let state, selected = null, legalForSelected = [], flipped = false;
+  let pendingPromotion = null, cpuThinking = false, undoStack = [];
+  let gameOverAcknowledged = false;
 
   const boardEl = document.getElementById("board");
   const turnEl = document.getElementById("turn");
@@ -370,14 +384,19 @@
   const promoModal = document.getElementById("promotionModal");
   const promoChoices = document.getElementById("promoChoices");
   const confirmModal = document.getElementById("confirmModal");
+  const gameOverModal = document.getElementById("gameOverModal");
+  const gameOverMessage = document.getElementById("gameOverMessage");
+  const gameOverOk = document.getElementById("gameOverOk");
+  const rulesModal = document.getElementById("rulesModal");
+  const rulesButton = document.getElementById("rulesButton");
+  const rulesOk = document.getElementById("rulesOk");
   const modeSelect = document.getElementById("modeSelect");
   const difficultySelect = document.getElementById("difficultySelect");
   const playerColorSelect = document.getElementById("playerColorSelect");
-  const moveHistoryEl = document.getElementById("moveHistory");
-  const exportPGNBtn = document.getElementById("exportPGN");
+  const undoMoveBtn = document.getElementById("undoMove");
 
   function newState(){
-    const fresh = {
+    return {
       board:[
         ["bR","bN","bB","bQ","bK","bB","bN","bR"],
         ["bP","bP","bP","bP","bP","bP","bP","bP"],
@@ -394,19 +413,17 @@
       playerColor:"w",
       castling:{wK:true,wQ:true,bK:true,bQ:true},
       enPassant:null,
-      halfmove:0,
       fullmove:1,
       gameOver:false,
-      result:"*",
-      moveHistory:[],
-      positionCounts:{},
-      startedAt:new Date().toISOString(),
+      gameOverSummary:"",
       capturedByWhite:[],
       capturedByBlack:[],
-      lastMessage:"Game ready."
+      chainActive:false,
+      blockedSquare:null,
+      blockedPiece:null,
+      chainLength:0,
+      lastMessage:"Game ready. Capture to begin a chain."
     };
-    recordCurrentPosition(fresh);
-    return fresh;
   }
 
   function inBounds(r,c){return r>=0&&r<8&&c>=0&&c<8}
@@ -415,47 +432,21 @@
   function enemy(color){return color==="w"?"b":"w"}
   function clone(obj){return JSON.parse(JSON.stringify(obj))}
   function coord(r,c){return String.fromCharCode(97+c)+(8-r)}
-  function sameSq(a,b){return a&&b&&a.r===b.r&&a.c===b.c}
+  function sameSq(a,b){return !!(a&&b&&a.r===b.r&&a.c===b.c)}
+  function colorName(color){return color==="w"?"White":"Black"}
   function cpuColor(){return enemy(state.playerColor || "w")}
   function isCPUturn(){return state.mode==="cpu" && state.turn===cpuColor() && !state.gameOver}
   function randItem(arr){return arr[Math.floor(Math.random()*arr.length)]}
-
-  function hasLegalEnPassantCapture(st){
-    if(!st.enPassant) return false;
-    const color = st.turn;
-    const pawnRow = st.enPassant.r + (color === "w" ? 1 : -1);
-    if(!inBounds(pawnRow, st.enPassant.c)) return false;
-
-    for(const dc of [-1, 1]){
-      const pawnCol = st.enPassant.c + dc;
-      if(!inBounds(pawnRow, pawnCol) || st.board[pawnRow][pawnCol] !== color + "P") continue;
-      const moves = legalMovesForPiece(st, pawnRow, pawnCol);
-      if(moves.some(m => m.enPassantCapture && m.to.r === st.enPassant.r && m.to.c === st.enPassant.c)) return true;
-    }
-    return false;
+  function isCaptureMove(move){return !!(move.capture || move.enPassantCapture)}
+  function pieceName(piece){return PIECE_NAMES[typeOf(piece)] || "piece"}
+  function isBlockedSquare(st,r,c){
+    return !!(st.chainActive && st.blockedSquare && st.turn===colorOf(st.board[r][c]) && sameSq(st.blockedSquare,{r,c}));
   }
-
-  function positionKey(st){
-    const boardPart = st.board.map(row => row.map(piece => piece || "--").join(",")).join("/");
-    const castlingPart = ["wK","wQ","bK","bQ"].filter(key => st.castling && st.castling[key]).join("") || "-";
-    const enPassantPart = st.enPassant && hasLegalEnPassantCapture(st)
-      ? coord(st.enPassant.r, st.enPassant.c)
-      : "-";
-    return `${boardPart} ${st.turn} ${castlingPart} ${enPassantPart}`;
-  }
-
-  function recordCurrentPosition(st){
-    if(!st.positionCounts || typeof st.positionCounts !== "object" || Array.isArray(st.positionCounts)){
-      st.positionCounts = {};
-    }
-    const key = positionKey(st);
-    st.positionCounts[key] = (st.positionCounts[key] || 0) + 1;
-    return st.positionCounts[key];
-  }
-
-  function currentPositionCount(st){
-    if(!st.positionCounts || typeof st.positionCounts !== "object") return 0;
-    return st.positionCounts[positionKey(st)] || 0;
+  function clearChain(st){
+    st.chainActive = false;
+    st.blockedSquare = null;
+    st.blockedPiece = null;
+    st.chainLength = 0;
   }
 
   function load(){
@@ -467,22 +458,89 @@
           if(!parsed.mode) parsed.mode = "local";
           if(!parsed.difficulty) parsed.difficulty = "easy";
           if(!parsed.playerColor) parsed.playerColor = "w";
-          if(!Array.isArray(parsed.moveHistory)) parsed.moveHistory = [];
-          if(!parsed.result) parsed.result = parsed.gameOver ? "*" : "*";
-          if(!parsed.startedAt) parsed.startedAt = new Date().toISOString();
-          if(!parsed.castling) parsed.castling = {wK:false,wQ:false,bK:false,bQ:false};
-          if(typeof parsed.halfmove !== "number") parsed.halfmove = 0;
-          if(!parsed.positionCounts || typeof parsed.positionCounts !== "object" || Array.isArray(parsed.positionCounts)){
-            parsed.positionCounts = {};
-            recordCurrentPosition(parsed);
+          if(!parsed.castling) parsed.castling = {wK:true,wQ:true,bK:true,bQ:true};
+          if(!Array.isArray(parsed.capturedByWhite)) parsed.capturedByWhite = [];
+          if(!Array.isArray(parsed.capturedByBlack)) parsed.capturedByBlack = [];
+          if(typeof parsed.chainActive !== "boolean") parsed.chainActive = false;
+          if(!parsed.chainActive){
+            parsed.blockedSquare = null;
+            parsed.blockedPiece = null;
+            parsed.chainLength = 0;
           }
+          if(typeof parsed.chainLength !== "number") parsed.chainLength = parsed.chainActive ? 1 : 0;
+          if(typeof parsed.fullmove !== "number") parsed.fullmove = 1;
+          if(typeof parsed.gameOver !== "boolean") parsed.gameOver = false;
+          if(typeof parsed.gameOverSummary !== "string") parsed.gameOverSummary = "";
           return parsed;
         }
       }
     }catch(e){}
     return newState();
   }
-  function save(){ localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
+  function loadUndo(){
+    try{
+      const raw = localStorage.getItem(UNDO_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.slice(-MAX_UNDO_STATES) : [];
+    }catch(e){
+      return [];
+    }
+  }
+
+  function save(){
+    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    localStorage.setItem(UNDO_KEY, JSON.stringify(undoStack.slice(-MAX_UNDO_STATES)));
+  }
+
+  function rememberUndoState(){
+    undoStack.push(clone(state));
+    if(undoStack.length > MAX_UNDO_STATES) undoStack.shift();
+  }
+
+  function canUndo(){
+    if(cpuThinking || !undoStack.length) return false;
+    if(state.mode !== "cpu") return true;
+    return undoStack.some(snapshot=>snapshot && snapshot.turn===state.playerColor);
+  }
+
+  function undoMove(){
+    if(!canUndo()) return;
+    const currentSettings = {
+      mode:state.mode,
+      difficulty:state.difficulty,
+      playerColor:state.playerColor
+    };
+    let restored = null;
+
+    if(state.mode === "cpu"){
+      while(undoStack.length){
+        const snapshot = undoStack.pop();
+        if(snapshot && snapshot.turn===state.playerColor){
+          restored = snapshot;
+          break;
+        }
+      }
+    }else{
+      restored = undoStack.pop() || null;
+    }
+
+    if(!restored) return;
+    state = restored;
+    state.mode = currentSettings.mode;
+    state.difficulty = currentSettings.difficulty;
+    state.playerColor = currentSettings.playerColor;
+    state.lastMessage = state.mode === "cpu"
+      ? "Move undone. Choose a different move."
+      : "Last move undone.";
+    selected = null;
+    legalForSelected = [];
+    pendingPromotion = null;
+    promoModal.style.display = "none";
+    gameOverAcknowledged = false;
+    gameOverModal.style.display = "none";
+    save();
+    render();
+  }
 
   function render(){
     boardEl.innerHTML = "";
@@ -504,6 +562,10 @@
         const lm = legalForSelected.find(m=>m.to.r===r&&m.to.c===c);
         if(lm) sq.classList.add(state.board[r][c] || lm.enPassantCapture ? "capture" : "move");
         if(checkKing && checkKing.r===r && checkKing.c===c) sq.classList.add("check");
+        if(state.chainActive && sameSq(state.blockedSquare,{r,c})){
+          sq.classList.add("blocked");
+          sq.title = "This piece captured last and cannot move again immediately.";
+        }
 
         if(!flipped && r===7){ const f=document.createElement("span"); f.className="coord file"; f.textContent=String.fromCharCode(97+c); sq.appendChild(f); }
         if(!flipped && c===0){ const rk=document.createElement("span"); rk.className="coord rank"; rk.textContent=8-r; sq.appendChild(rk); }
@@ -515,9 +577,10 @@
           const piece = document.createElement("span");
           piece.className = "piece";
           piece.textContent = SYMBOLS[p];
-          piece.draggable = colorOf(p) === state.turn && !state.gameOver && !isCPUturn();
+          const canSelect = colorOf(p)===state.turn && !state.gameOver && !isCPUturn() && !isBlockedSquare(state,r,c);
+          piece.draggable = canSelect;
           piece.addEventListener("dragstart", e=>{
-            if(colorOf(p)!==state.turn || state.gameOver || isCPUturn()){ e.preventDefault(); return; }
+            if(!canSelect){ e.preventDefault(); return; }
             selected = {r,c};
             legalForSelected = legalMovesForPiece(state, r, c);
             e.dataTransfer.setData("text/plain", JSON.stringify({r,c}));
@@ -538,22 +601,35 @@
       });
     });
     updateSide();
+    syncGameOverModal();
+  }
+
+  function syncGameOverModal(){
+    if(state.gameOver && !gameOverAcknowledged){
+      gameOverMessage.textContent = state.gameOverSummary || state.lastMessage || "The game has ended.";
+      gameOverModal.style.display = "flex";
+    }else if(!state.gameOver){
+      gameOverModal.style.display = "none";
+    }
   }
 
   function updateSide(){
     if(state.gameOver){
       turnEl.textContent = "Game Over";
     }else if(isCPUturn()){
-      turnEl.textContent = "CPU thinking...";
+      turnEl.textContent = state.chainActive ? "CPU continues its chain..." : "CPU thinking...";
+    }else if(state.chainActive){
+      turnEl.textContent = colorName(state.turn) + " moves again";
     }else{
-      turnEl.textContent = state.turn==="w" ? "White to move" : "Black to move";
+      turnEl.textContent = colorName(state.turn) + " to move";
     }
     msgEl.textContent = state.lastMessage || "";
     document.getElementById("whiteCaptured").textContent = state.capturedByWhite.map(p=>SYMBOLS[p]).join(" ");
     document.getElementById("blackCaptured").textContent = state.capturedByBlack.map(p=>SYMBOLS[p]).join(" ");
-    renderMoveHistory();
-    exportPGNBtn.disabled = !state.gameOver;
-    exportPGNBtn.title = state.gameOver ? "Download this game as a PGN file" : "PGN export is available when the game is finished";
+    undoMoveBtn.disabled = !canUndo();
+    undoMoveBtn.title = undoMoveBtn.disabled
+      ? "There is no move available to undo."
+      : (state.mode === "cpu" ? "Undo your last decision and the CPU response." : "Undo the most recent move.");
   }
 
   function handleClick(r,c){
@@ -562,13 +638,13 @@
     if(selected){
       const move = legalForSelected.find(m=>m.to.r===r&&m.to.c===c);
       if(move){ doMove(move); return; }
-      if(p && colorOf(p)===state.turn){
+      if(p && colorOf(p)===state.turn && !isBlockedSquare(state,r,c)){
         selected = {r,c};
         legalForSelected = legalMovesForPiece(state,r,c);
       }else{
         selected = null; legalForSelected = [];
       }
-    }else if(p && colorOf(p)===state.turn){
+    }else if(p && colorOf(p)===state.turn && !isBlockedSquare(state,r,c)){
       selected = {r,c};
       legalForSelected = legalMovesForPiece(state,r,c);
     }
@@ -585,7 +661,7 @@
 
   function legalMovesForPiece(st,r,c){
     const p = st.board[r][c];
-    if(!p || colorOf(p)!==st.turn) return [];
+    if(!p || colorOf(p)!==st.turn || isBlockedSquare(st,r,c)) return [];
     const pseudo = pseudoMoves(st,r,c,false);
     return pseudo.filter(m=>{
       const next = applyMove(clone(st), m, "Q", true);
@@ -716,58 +792,6 @@
     promoModal.style.display = "flex";
   }
 
-  function playMove(move, promoType){
-    const notation = moveToSAN(state, move, promoType);
-    const moveNumber = state.fullmove;
-    const moveColor = colorOf(move.piece);
-    state = applyMove(state, move, promoType, false);
-    if(!Array.isArray(state.moveHistory)) state.moveHistory = [];
-    state.moveHistory.push({number:moveNumber, color:moveColor, san:notation});
-    recordCurrentPosition(state);
-    afterMove();
-  }
-
-  function moveToSAN(st, move, promoType){
-    const piece = move.piece;
-    const color = colorOf(piece);
-    const type = typeOf(piece);
-    const capture = !!(move.capture || move.enPassantCapture);
-    let san = "";
-
-    if(move.castle){
-      san = move.castle === "K" ? "O-O" : "O-O-O";
-    }else if(type === "P"){
-      if(capture) san += String.fromCharCode(97 + move.from.c) + "x";
-      san += coord(move.to.r, move.to.c);
-      if(move.promotion) san += "=" + (promoType || "Q");
-    }else{
-      san += type;
-      const others = [];
-      for(let r=0;r<8;r++) for(let c=0;c<8;c++){
-        if(r===move.from.r && c===move.from.c) continue;
-        if(st.board[r][c] === piece){
-          const candidateMoves = legalMovesForPiece(st, r, c);
-          if(candidateMoves.some(m=>m.to.r===move.to.r && m.to.c===move.to.c)) others.push({r,c});
-        }
-      }
-      if(others.length){
-        const sameFile = others.some(o=>o.c===move.from.c);
-        const sameRank = others.some(o=>o.r===move.from.r);
-        if(!sameFile) san += String.fromCharCode(97 + move.from.c);
-        else if(!sameRank) san += (8 - move.from.r);
-        else san += coord(move.from.r, move.from.c);
-      }
-      if(capture) san += "x";
-      san += coord(move.to.r, move.to.c);
-    }
-
-    const next = applyMove(clone(st), move, promoType, true);
-    const opponent = next.turn;
-    const replies = allLegalMoves(next, opponent);
-    if(isInCheck(next, opponent)) san += replies.length ? "+" : "#";
-    return san;
-  }
-
   function applyMove(st, move, promoType, simulation){
     const b = st.board;
     const piece = move.piece;
@@ -786,12 +810,10 @@
       b[move.to.r][0] = null;
     }
 
-    if(!simulation){
-      if(target){
-        if(color==="w") st.capturedByWhite.push(target);
-        else st.capturedByBlack.push(target);
-        st[color==="w"?"capturedByWhite":"capturedByBlack"].sort((a,b)=>VALUES[typeOf(a)]-VALUES[typeOf(b)]);
-      }
+    if(!simulation && target){
+      if(color==="w") st.capturedByWhite.push(target);
+      else st.capturedByBlack.push(target);
+      st[color==="w"?"capturedByWhite":"capturedByBlack"].sort((a,b)=>VALUES[typeOf(a)]-VALUES[typeOf(b)]);
     }
 
     if(typeOf(piece)==="K"){
@@ -805,54 +827,105 @@
       if(color==="b" && move.from.r===0 && move.from.c===7) st.castling.bK=false;
     }
     if(target && typeOf(target)==="R"){
-      if(target==="wR" && move.to.r===7 && move.to.c===0) st.castling.wQ=false;
-      if(target==="wR" && move.to.r===7 && move.to.c===7) st.castling.wK=false;
-      if(target==="bR" && move.to.r===0 && move.to.c===0) st.castling.bQ=false;
-      if(target==="bR" && move.to.r===0 && move.to.c===7) st.castling.bK=false;
+      const captureR = move.enPassantCapture ? move.enPassantCapture.r : move.to.r;
+      const captureC = move.enPassantCapture ? move.enPassantCapture.c : move.to.c;
+      if(target==="wR" && captureR===7 && captureC===0) st.castling.wQ=false;
+      if(target==="wR" && captureR===7 && captureC===7) st.castling.wK=false;
+      if(target==="bR" && captureR===0 && captureC===0) st.castling.bQ=false;
+      if(target==="bR" && captureR===0 && captureC===7) st.castling.bK=false;
     }
 
     st.enPassant = move.doublePawn ? {r:(move.from.r+move.to.r)/2,c:move.from.c} : null;
-    if(typeOf(piece)==="P" || target) st.halfmove = 0; else st.halfmove++;
     if(color==="b") st.fullmove++;
-    st.turn = enemy(st.turn);
+    st.turn = enemy(color);
     return st;
   }
 
-  function afterMove(){
+  function applyVariantMove(st, move, promoType, simulation){
+    const mover = colorOf(move.piece);
+    const captured = isCaptureMove(move);
+    const previousChainLength = st.chainActive && st.turn===mover ? st.chainLength : 0;
+    applyMove(st, move, promoType, simulation);
+    const opponent = enemy(mover);
+    const givesCheck = isInCheck(st, opponent);
+    let chainContinues = false;
+    let chainEndedNoMove = false;
+
+    if(captured && !givesCheck){
+      st.turn = mover;
+      st.chainActive = true;
+      st.blockedSquare = {r:move.to.r,c:move.to.c};
+      st.blockedPiece = st.board[move.to.r][move.to.c];
+      st.chainLength = previousChainLength + 1;
+      const bonusMoves = allLegalMoves(st, mover);
+      if(bonusMoves.length){
+        chainContinues = true;
+      }else{
+        chainEndedNoMove = true;
+        st.turn = opponent;
+        clearChain(st);
+      }
+    }else{
+      st.turn = opponent;
+      clearChain(st);
+    }
+
+    return {mover,captured,givesCheck,chainContinues,chainEndedNoMove};
+  }
+
+  function playMove(move, promoType){
+    rememberUndoState();
+    const outcome = applyVariantMove(state, move, promoType, false);
+    afterMove(outcome);
+  }
+
+  function afterMove(outcome){
     selected = null;
     legalForSelected = [];
+    state.gameOver = false;
+    state.gameOverSummary = "";
+
+    if(isInsufficientMaterial(state)){
+      state.gameOver = true;
+      clearChain(state);
+      state.gameOverSummary = "Draw by insufficient material.";
+      state.lastMessage = state.gameOverSummary;
+      gameOverAcknowledged = false;
+      save(); render();
+      return;
+    }
+
+    if(outcome.chainContinues){
+      const blocked = state.blockedPiece || state.board[state.blockedSquare.r][state.blockedSquare.c];
+      state.lastMessage = colorName(outcome.mover) + " captured and moves again. The " + pieceName(blocked) +
+        " on " + coord(state.blockedSquare.r,state.blockedSquare.c) + " cannot move immediately.";
+      save(); render(); maybeCPUMove();
+      return;
+    }
+
     const color = state.turn;
     const legal = allLegalMoves(state, color);
     const checked = isInCheck(state, color);
-    state.result = state.result || "*";
     if(legal.length===0 && checked){
       state.gameOver = true;
-      state.result = color === "w" ? "0-1" : "1-0";
-      state.lastMessage = (color==="w" ? "White" : "Black") + " is checkmated. " + (color==="w" ? "Black" : "White") + " wins!";
+      state.gameOverSummary = colorName(enemy(color)) + " wins by checkmate.";
+      state.lastMessage = colorName(color) + " is checkmated. " + colorName(enemy(color)) + " wins!";
+      gameOverAcknowledged = false;
     }else if(legal.length===0){
       state.gameOver = true;
-      state.result = "1/2-1/2";
-      state.lastMessage = "Stalemate. The game is a draw.";
-    }else if(state.halfmove >= 100){
-      state.gameOver = true;
-      state.result = "1/2-1/2";
-      state.lastMessage = "Draw by the 50-move rule.";
-    }else if(currentPositionCount(state) >= 3){
-      state.gameOver = true;
-      state.result = "1/2-1/2";
-      state.lastMessage = "Draw by threefold repetition.";
-    }else if(isInsufficientMaterial(state)){
-      state.gameOver = true;
-      state.result = "1/2-1/2";
-      state.lastMessage = "Draw by insufficient material.";
+      state.gameOverSummary = "Stalemate. The game is a draw.";
+      state.lastMessage = state.gameOverSummary;
+      gameOverAcknowledged = false;
     }else if(checked){
-      state.gameOver = false;
-      state.result = "*";
-      state.lastMessage = (color==="w" ? "White" : "Black") + " is in check.";
+      state.lastMessage = outcome.captured && outcome.givesCheck
+        ? colorName(outcome.mover) + " captured with check, so " + colorName(color) + " must respond."
+        : colorName(color) + " is in check.";
+    }else if(outcome.chainEndedNoMove){
+      state.lastMessage = colorName(outcome.mover) + " has no eligible bonus move, so the chain ends. " + colorName(color) + " to move.";
+    }else if(outcome.captured){
+      state.lastMessage = colorName(color) + " to move.";
     }else{
-      state.gameOver = false;
-      state.result = "*";
-      state.lastMessage = isCPUturn() ? "CPU is thinking..." : "Move played.";
+      state.lastMessage = isCPUturn() ? "CPU is thinking..." : colorName(color) + " to move.";
     }
     save();
     render();
@@ -875,7 +948,6 @@
     return false;
   }
 
-
   function evaluateBoard(st, perspective){
     let score = 0;
     for(let r=0;r<8;r++) for(let c=0;c<8;c++){
@@ -884,168 +956,134 @@
       const sign = colorOf(p)===perspective ? 1 : -1;
       let val = VALUES[typeOf(p)];
       if(typeOf(p)==="P") val += colorOf(p)==="b" ? r*8 : (7-r)*8;
-      if(typeOf(p)==="N" || typeOf(p)==="B") val += (3.5 - Math.abs(3.5-r) + 3.5 - Math.abs(3.5-c))*6;
+      if(typeOf(p)==="N" || typeOf(p)==="B") val += (3.5-Math.abs(3.5-r)+3.5-Math.abs(3.5-c))*6;
       score += sign * val;
     }
-    if(isInCheck(st,enemy(perspective))) score += 35;
-    if(isInCheck(st,perspective)) score -= 35;
+    if(isInCheck(st,enemy(perspective))) score += 45;
+    if(isInCheck(st,perspective)) score -= 55;
+    const myMobility = allLegalMoves(st,perspective).length;
+    const theirMobility = allLegalMoves(st,enemy(perspective)).length;
+    score += (myMobility-theirMobility)*1.5;
+    if(st.chainActive){
+      score += st.turn===perspective ? 28 : -28;
+    }
     return score;
   }
 
-  function scoreMove(st, move, depth, perspective){
-    const next = applyMove(clone(st), move, move.promotion ? "Q" : null, true);
-    let score = evaluateBoard(next, perspective);
-    if(move.capture) score += VALUES[typeOf(move.capture)] || 0;
-    if(move.enPassantCapture) score += VALUES.P;
-    if(move.promotion) score += VALUES.Q - VALUES.P;
-    const replies = allLegalMoves(next, next.turn);
-    if(replies.length===0){
-      if(isInCheck(next,next.turn)) score += next.turn===perspective ? -999999 : 999999;
-      else score -= 20;
+  function terminalScore(st,perspective,depth){
+    const moves = allLegalMoves(st,st.turn);
+    if(moves.length) return null;
+    if(isInCheck(st,st.turn)) return st.turn===perspective ? -1000000-depth : 1000000+depth;
+    return 0;
+  }
+
+  function immediateMoveScore(st,move,perspective){
+    const next = clone(st);
+    const outcome = applyVariantMove(next,move,move.promotion?"Q":null,true);
+    let score = evaluateBoard(next,perspective);
+    const sign = colorOf(move.piece)===perspective ? 1 : -1;
+    const capturedPiece = move.capture || (move.enPassantCapture ? enemy(colorOf(move.piece))+"P" : null);
+    if(capturedPiece) score += sign*(VALUES[typeOf(capturedPiece)]||0)*0.55;
+    if(move.promotion) score += sign*(VALUES.Q-VALUES.P)*0.7;
+    if(outcome.givesCheck) score += sign*55;
+    if(outcome.chainContinues) score += sign*40;
+    return score;
+  }
+
+  function orderedMoves(st,perspective,limit){
+    const moves = allLegalMoves(st,st.turn);
+    return moves
+      .map(m=>({m,s:immediateMoveScore(st,m,perspective)+Math.random()*0.01}))
+      .sort((a,b)=>st.turn===perspective ? b.s-a.s : a.s-b.s)
+      .slice(0,limit)
+      .map(x=>x.m);
+  }
+
+  function searchPosition(st,depth,perspective,alpha,beta,limit){
+    const terminal = terminalScore(st,perspective,depth);
+    if(terminal!==null) return terminal;
+    if(depth<=0 || isInsufficientMaterial(st)) return evaluateBoard(st,perspective);
+
+    const maximizing = st.turn===perspective;
+    const moves = orderedMoves(st,perspective,limit);
+    if(maximizing){
+      let best = -Infinity;
+      for(const move of moves){
+        const next = clone(st);
+        applyVariantMove(next,move,move.promotion?"Q":null,true);
+        best = Math.max(best,searchPosition(next,depth-1,perspective,alpha,beta,limit));
+        alpha = Math.max(alpha,best);
+        if(beta<=alpha) break;
+      }
+      return best;
     }
-    if(depth > 1 && replies.length){
-      const replyScores = replies.map(rm=>evaluateBoard(applyMove(clone(next), rm, rm.promotion ? "Q" : null, true), perspective));
-      score = Math.min(...replyScores);
+    let best = Infinity;
+    for(const move of moves){
+      const next = clone(st);
+      applyVariantMove(next,move,move.promotion?"Q":null,true);
+      best = Math.min(best,searchPosition(next,depth-1,perspective,alpha,beta,limit));
+      beta = Math.min(beta,best);
+      if(beta<=alpha) break;
     }
-    return score + Math.random()*8;
+    return best;
   }
 
   function chooseCPUMove(){
     const perspective = cpuColor();
-    const moves = allLegalMoves(state, perspective);
+    const moves = allLegalMoves(state,perspective);
     if(!moves.length) return null;
     const diff = state.difficulty || "easy";
+
     if(diff==="easy"){
-      const captures = moves.filter(m=>m.capture || m.enPassantCapture);
-      if(captures.length && Math.random()<0.55) return randItem(captures);
+      const captures = moves.filter(isCaptureMove);
+      if(captures.length && Math.random()<0.62) return randItem(captures);
       return randItem(moves);
     }
-    const depth = diff==="hard" ? 2 : 1;
-    const scored = moves.map(m=>({m, s:scoreMove(state,m,depth,perspective)})).sort((a,b)=>b.s-a.s);
-    if(diff==="medium") return (Math.random()<0.72 ? scored[0] : randItem(scored.slice(0, Math.min(5, scored.length)))).m;
-    return (Math.random()<0.9 ? scored[0] : randItem(scored.slice(0, Math.min(3, scored.length)))).m;
+
+    const depth = diff==="hard" ? 3 : 2;
+    const limit = diff==="hard" ? 12 : 8;
+    const candidates = moves
+      .map(m=>({m,quick:immediateMoveScore(state,m,perspective)}))
+      .sort((a,b)=>b.quick-a.quick)
+      .slice(0,limit);
+
+    const scored = candidates.map(({m})=>{
+      const next = clone(state);
+      applyVariantMove(next,m,m.promotion?"Q":null,true);
+      return {m,s:searchPosition(next,depth-1,perspective,-Infinity,Infinity,limit)};
+    }).sort((a,b)=>b.s-a.s);
+
+    if(diff==="medium" && scored.length>1 && Math.random()<0.22){
+      return randItem(scored.slice(0,Math.min(3,scored.length))).m;
+    }
+    if(diff==="hard" && scored.length>1 && Math.random()<0.06){
+      return randItem(scored.slice(0,Math.min(2,scored.length))).m;
+    }
+    return scored[0].m;
   }
 
   function maybeCPUMove(){
     if(!isCPUturn() || cpuThinking) return;
     cpuThinking = true;
+    render();
     setTimeout(()=>{
+      if(!isCPUturn()){
+        cpuThinking = false;
+        render();
+        return;
+      }
       const move = chooseCPUMove();
       cpuThinking = false;
-      if(move){
-        playMove(move, move.promotion ? "Q" : null);
-      }
-    }, 450);
+      if(move) playMove(move,move.promotion?"Q":null);
+      else render();
+    }, state.chainActive ? 900 : 450);
   }
-
-  function renderMoveHistory(){
-    const history = Array.isArray(state.moveHistory) ? state.moveHistory : [];
-    moveHistoryEl.innerHTML = "";
-    if(!history.length){
-      const empty = document.createElement("div");
-      empty.className = "empty-history";
-      empty.textContent = "No moves yet.";
-      moveHistoryEl.appendChild(empty);
-      return;
-    }
-    const byNumber = [];
-    history.forEach(m=>{
-      let row = byNumber.find(x=>x.number===m.number);
-      if(!row){ row = {number:m.number, w:"", b:""}; byNumber.push(row); }
-      row[m.color] = m.san;
-    });
-    byNumber.forEach(row=>{
-      const div = document.createElement("div");
-      div.className = "move-row";
-      const num = document.createElement("span");
-      num.className = "move-num";
-      num.textContent = row.number + ".";
-      const white = document.createElement("span");
-      white.textContent = row.w || "";
-      const black = document.createElement("span");
-      black.textContent = row.b || "";
-      div.append(num, white, black);
-      moveHistoryEl.appendChild(div);
-    });
-    moveHistoryEl.scrollTop = moveHistoryEl.scrollHeight;
-  }
-
-  function pgnDate(){
-    const d = state.startedAt ? new Date(state.startedAt) : new Date();
-    if(Number.isNaN(d.getTime())) return new Date().toISOString().slice(0,10).replace(/-/g,".");
-    return d.toISOString().slice(0,10).replace(/-/g,".");
-  }
-
-  function pgnPlayers(){
-    if(state.mode === "cpu"){
-      return state.playerColor === "w"
-        ? {white:"Player", black:"CPU"}
-        : {white:"CPU", black:"Player"};
-    }
-    return {white:"White", black:"Black"};
-  }
-
-  function buildPGN(){
-    const players = pgnPlayers();
-    const result = state.result || (state.gameOver ? "1/2-1/2" : "*");
-    const headers = [
-      `[Event "Local Chess"]`,
-      `[Site "Local Browser"]`,
-      `[Date "${pgnDate()}"]`,
-      `[Round "-"]`,
-      `[White "${players.white}"]`,
-      `[Black "${players.black}"]`,
-      `[Result "${result}"]`
-    ];
-    if(state.mode === "cpu") {
-      headers.push(`[Mode "Player vs CPU"]`);
-      headers.push(`[Difficulty "${state.difficulty || "easy"}"]`);
-    }
-
-    const history = Array.isArray(state.moveHistory) ? state.moveHistory : [];
-    const grouped = [];
-    history.forEach(m=>{
-      let row = grouped.find(x=>x.number===m.number);
-      if(!row){ row = {number:m.number, w:"", b:""}; grouped.push(row); }
-      row[m.color] = m.san;
-    });
-    const bodyParts = [];
-    grouped.forEach(row=>{
-      if(row.w){
-        bodyParts.push(`${row.number}. ${row.w}`);
-        if(row.b) bodyParts.push(row.b);
-      }else if(row.b){
-        bodyParts.push(`${row.number}... ${row.b}`);
-      }
-    });
-    bodyParts.push(result);
-    return headers.join("\n") + "\n\n" + bodyParts.join(" ") + "\n";
-  }
-
-  function exportPGN(){
-    if(!state.gameOver){
-      state.lastMessage = "Finish the game first, then export the PGN.";
-      render();
-      return;
-    }
-    const blob = new Blob([buildPGN()], {type:"application/x-chess-pgn;charset=utf-8"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const stamp = new Date().toISOString().slice(0,10);
-    a.href = url;
-    a.download = `local-chess-${stamp}.pgn`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }
-
-  exportPGNBtn.onclick = exportPGN;
 
   modeSelect.onchange = ()=>{
     state.mode = modeSelect.value;
+    undoStack = [];
     selected = null; legalForSelected = [];
-    if(isCPUturn()) state.lastMessage = "CPU is thinking...";
+    state.lastMessage = isCPUturn() ? "CPU is thinking..." : colorName(state.turn) + " to move.";
     save(); render(); maybeCPUMove();
   };
   difficultySelect.onchange = ()=>{
@@ -1054,13 +1092,20 @@
   };
   playerColorSelect.onchange = ()=>{
     state.playerColor = playerColorSelect.value;
+    undoStack = [];
     selected = null; legalForSelected = [];
-    if(isCPUturn()) state.lastMessage = "CPU is thinking...";
-    else state.lastMessage = "You are playing as " + (state.playerColor==="w" ? "White" : "Black") + ".";
+    state.lastMessage = isCPUturn() ? "CPU is thinking..." : "You are playing as " + colorName(state.playerColor) + ".";
     save(); render(); maybeCPUMove();
   };
 
   document.getElementById("newGame").onclick = ()=>{ confirmModal.style.display="flex"; };
+  undoMoveBtn.onclick = undoMove;
+  rulesButton.onclick = ()=>{ rulesModal.style.display="flex"; };
+  rulesOk.onclick = ()=>{ rulesModal.style.display="none"; };
+  gameOverOk.onclick = ()=>{
+    gameOverAcknowledged = true;
+    gameOverModal.style.display = "none";
+  };
   document.getElementById("confirmNo").onclick = ()=>{ confirmModal.style.display="none"; };
   document.getElementById("confirmYes").onclick = ()=>{
     confirmModal.style.display="none";
@@ -1071,17 +1116,14 @@
     state.mode = mode;
     state.difficulty = difficulty;
     state.playerColor = playerColor;
+    undoStack = [];
     selected = null; legalForSelected = [];
+    gameOverAcknowledged = false;
+    gameOverModal.style.display = "none";
     save(); render(); maybeCPUMove();
   };
-  document.getElementById("flipBoard").onclick = ()=>{ flipped = !flipped; render(); };
-  document.getElementById("clearSave").onclick = ()=>{
-    localStorage.removeItem(SAVE_KEY);
-    state.lastMessage = "Saved game cleared. Current board is still active.";
-    render();
-  };
-
   state = load();
+  undoStack = loadUndo();
   render();
   maybeCPUMove();
 })();
