@@ -127,6 +127,7 @@ h1 span{color:var(--pink-dark)}
 }
 .level-btn.completed{background:#e7f8f1;color:#24765f}
 .level-btn.completed:after{content:"✓";position:absolute;right:5px;top:3px;font-size:.7rem}
+.level-help-badge{position:absolute;left:3px;bottom:3px;width:34px;height:34px;object-fit:contain;pointer-events:none;filter:drop-shadow(0 2px 2px rgba(56,47,61,.18))}
 .level-btn:hover{transform:translateY(-2px)}
 .level-summary{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px}
 .chip{background:#fff;border-radius:999px;padding:8px 12px;font-weight:800;box-shadow:0 6px 14px rgba(82,54,75,.08)}
@@ -239,6 +240,7 @@ h1 span{color:var(--pink-dark)}
   .rules-intro{grid-template-columns:88px 1fr;gap:12px}
   .rules-cat-photo{height:105px}
   .level-grid{grid-template-columns:repeat(5,1fr)}
+  .level-help-badge{width:28px;height:28px;left:2px;bottom:2px}
   .game-toolbar{align-items:flex-start}
   .game-title{width:100%;justify-content:space-between}
   .toolbar-actions{width:100%;justify-content:space-between}
@@ -434,6 +436,7 @@ const SAVE_KEY = "meowdoku-save-v2";
 const state = {
   screen:"home", difficulty:null, levelIndex:0, puzzle:null,
   lives:3, userMarks:new Set(), cats:new Set(), autoMarks:new Set(), lockedWrong:new Set(),
+  assistUsedThisAttempt:false,
   drag:null, tapTimer:null, lastTap:{index:-1,time:0},
   audio:null, musicTimer:null
 };
@@ -442,12 +445,13 @@ let save = loadSave();
 function difficultyKeys(){return Object.keys(PUZZLES)}
 function totalLevels(difficulty){return PUZZLES[difficulty]?.length||0}
 function loadSave(){
-  const fallback={completed:{easy:[],medium:[],hard:[],veryhard:[]},states:{},lastPlayed:null,assist:false,autoX:false,muted:false};
+  const fallback={completed:{easy:[],medium:[],hard:[],veryhard:[]},assistUsed:{easy:[],medium:[],hard:[],veryhard:[]},states:{},lastPlayed:null,assist:false,autoX:false,muted:false};
   try{
     const parsed=JSON.parse(localStorage.getItem(SAVE_KEY));
     return {
       ...fallback,...parsed,
       completed:{...fallback.completed,...(parsed?.completed||{})},
+      assistUsed:{...fallback.assistUsed,...(parsed?.assistUsed||{})},
       states:parsed?.states||{}
     };
   }catch{return fallback}
@@ -490,6 +494,7 @@ function openLevels(difficulty){
   const sizes=[...new Set(levels.map(puzzle=>puzzle.size))];
   document.getElementById("levelSizeChip").textContent=sizes.length===1?`${sizes[0]} × ${sizes[0]}`:`${Math.min(...sizes)} × ${Math.min(...sizes)} to ${Math.max(...sizes)} × ${Math.max(...sizes)}`;
   const completed=new Set(save.completed[difficulty]||[]);
+  const assistUsed=new Set(save.assistUsed[difficulty]||[]);
   document.getElementById("levelCompleteChip").textContent=completed.size+" completed";
   const grid=document.getElementById("levelGrid");
   grid.innerHTML="";
@@ -497,14 +502,26 @@ function openLevels(difficulty){
     const btn=document.createElement("button");
     btn.type="button";btn.className="level-btn"+(completed.has(index)?" completed":"");
     btn.textContent=index+1;
-    btn.setAttribute("aria-label",LABELS[difficulty]+" level "+(index+1)+", "+puzzle.size+" by "+puzzle.size+(completed.has(index)?", completed":""));
-    btn.title=puzzle.size+" × "+puzzle.size;
+    if(assistUsed.has(index)){
+      const badge=document.createElement("img");
+      badge.className="level-help-badge";badge.src="assets/help-used.png";badge.alt="";badge.setAttribute("aria-hidden","true");
+      btn.appendChild(badge);
+    }
+    btn.setAttribute("aria-label",LABELS[difficulty]+" level "+(index+1)+", "+puzzle.size+" by "+puzzle.size+(completed.has(index)?", completed":"")+(assistUsed.has(index)?", assistance used":""));
+    btn.title=puzzle.size+" × "+puzzle.size+(assistUsed.has(index)?" · Assistance used":"");
     btn.addEventListener("click",()=>startLevel(difficulty,index));
     grid.appendChild(btn);
   });
   showScreen("level");
 }
 function stateKey(difficulty,index){return difficulty+"-"+index}
+function markAssistUsed(){
+  if(!state.puzzle||!state.difficulty)return;
+  state.assistUsedThisAttempt=true;
+  const used=save.assistUsed[state.difficulty]||(save.assistUsed[state.difficulty]=[]);
+  if(!used.includes(state.levelIndex))used.push(state.levelIndex);
+  saveCurrent();
+}
 function startLevel(difficulty,index,fresh=false){
   const puzzle=PUZZLES[difficulty]?.[index];
   if(!puzzle){openDifficulty();return}
@@ -516,11 +533,16 @@ function startLevel(difficulty,index,fresh=false){
   state.cats=new Set(stored?.cats||[]);
   state.lockedWrong=new Set(stored?.lockedWrong||[]);
   state.autoMarks=new Set();
+  state.assistUsedThisAttempt=stored?.assistUsedThisAttempt===true;
   state.lockedWrong.forEach(tile=>state.userMarks.add(tile));
   save.lastPlayed={difficulty,index};
+  // Assists are deliberately opt-in for every puzzle session. This prevents a
+  // switch left on during the previous level from marking the next level as assisted.
+  save.assist=false;
+  save.autoX=false;
   persist();
-  document.getElementById("assistToggle").checked=save.assist===true;
-  document.getElementById("autoXToggle").checked=save.autoX===true;
+  document.getElementById("assistToggle").checked=false;
+  document.getElementById("autoXToggle").checked=false;
   document.getElementById("gameDifficulty").textContent=LABELS[difficulty];
   document.getElementById("gameLevel").textContent="Level "+(index+1)+" of "+totalLevels(difficulty)+" · "+puzzle.size+" × "+puzzle.size;
   document.getElementById("seedLabel").textContent="Puzzle ID: "+puzzle.seed;
@@ -533,7 +555,7 @@ function startLevel(difficulty,index,fresh=false){
 function saveCurrent(){
   if(!state.puzzle)return;
   const key=stateKey(state.difficulty,state.levelIndex);
-  save.states[key]={lives:state.lives,userMarks:[...state.userMarks],cats:[...state.cats],lockedWrong:[...state.lockedWrong]};
+  save.states[key]={lives:state.lives,userMarks:[...state.userMarks],cats:[...state.cats],lockedWrong:[...state.lockedWrong],assistUsedThisAttempt:state.assistUsedThisAttempt};
   persist();
 }
 function renderBoard(){
@@ -696,6 +718,12 @@ function updateHUD(){
 function completeLevel(){
   const difficulty=state.difficulty,index=state.levelIndex;
   if(!save.completed[difficulty].includes(index))save.completed[difficulty].push(index);
+  const used=save.assistUsed[difficulty]||(save.assistUsed[difficulty]=[]);
+  if(state.assistUsedThisAttempt){
+    if(!used.includes(index))used.push(index);
+  }else{
+    save.assistUsed[difficulty]=used.filter(levelIndex=>levelIndex!==index);
+  }
   delete save.states[stateKey(difficulty,index)];
   persist();updateProgress();sound("win");
   document.getElementById("resultCat").textContent="😻";
@@ -773,8 +801,8 @@ document.querySelectorAll("[data-back]").forEach(button=>button.addEventListener
 document.getElementById("gameMenuBtn").addEventListener("click",()=>openLevels(state.difficulty));
 document.getElementById("resetBtn").addEventListener("click",restartLevel);
 document.getElementById("nextBtn").addEventListener("click",()=>{if(state.levelIndex<totalLevels(state.difficulty)-1)startLevel(state.difficulty,state.levelIndex+1)});
-document.getElementById("assistToggle").addEventListener("change",event=>{save.assist=event.target.checked;persist();updateAssists();toast(save.assist?"Logic assist on":"Logic assist off")});
-document.getElementById("autoXToggle").addEventListener("change",event=>{save.autoX=event.target.checked;persist();updateAssists();toast(save.autoX?"Automatic X marks on":"Automatic X marks off")});
+document.getElementById("assistToggle").addEventListener("change",event=>{save.assist=event.target.checked;if(save.assist)markAssistUsed();persist();updateAssists();toast(save.assist?"Logic assist on":"Logic assist off")});
+document.getElementById("autoXToggle").addEventListener("change",event=>{save.autoX=event.target.checked;if(save.autoX)markAssistUsed();persist();updateAssists();toast(save.autoX?"Automatic X marks on":"Automatic X marks off")});
 document.getElementById("rulesBtn").addEventListener("click",()=>openModal("rulesModal"));
 document.getElementById("muteBtn").addEventListener("click",()=>{save.muted=!save.muted;persist();if(!save.muted)ensureAudio();updateMute()});
 document.querySelectorAll("[data-close-modal]").forEach(button=>button.addEventListener("click",()=>closeModal(button.dataset.closeModal)));
