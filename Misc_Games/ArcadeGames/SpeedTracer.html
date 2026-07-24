@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Speed Tracer</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1f2937;
+      --muted: #667085;
+      --panel: rgba(255,255,255,0.92);
+      --line: #23324a;
+      --accent: #5b6cff;
+      --accent-dark: #4051df;
+      --success: #15803d;
+      --warning: #b45309;
+      --danger: #b42318;
+      --shadow: 0 18px 50px rgba(31, 41, 55, 0.16);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+      overscroll-behavior: none;
+      touch-action: pan-y;
+      font-family: Inter, ui-rounded, "Segoe UI", system-ui, -apple-system, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% 12%, rgba(91,108,255,0.18), transparent 32%),
+        radial-gradient(circle at 86% 84%, rgba(52,211,153,0.17), transparent 35%),
+        linear-gradient(145deg, #f7f8ff 0%, #eef6ff 48%, #f6fbf9 100%);
+    }
+    body {
+      display: grid;
+      place-items: center;
+      padding: 18px;
+    }
+    .app {
+      width: min(1120px, 100%);
+      display: grid;
+      gap: 14px;
+    }
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      align-items: start;
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.9);
+      border-radius: 22px;
+      padding: 16px 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(1.35rem, 3vw, 2rem);
+      letter-spacing: -0.04em;
+    }
+    .subtitle {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .top-right {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      padding-top: 16px;
+    }
+    .pill {
+      min-width: 166px;
+      min-height: 48px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 0.78rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .mode-badge {
+      background: #eef1ff;
+      color: #3b4bc7;
+    }
+    .timer-wrap {
+      width: 166px;
+      min-height: 48px;
+      position: relative;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+    }
+    .timer-label {
+      position: absolute;
+      top: -14px;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+    .timer {
+      width: 166px;
+      min-height: 48px;
+      padding: 9px 16px;
+      border-radius: 999px;
+      background: #eef0ff;
+      color: #3847c8;
+      font-size: 1.35rem;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .timer.running { background: #fff3dd; color: #9a5a00; }
+    .timer.urgent { background: #fee4e2; color: var(--danger); animation: pulse 0.6s infinite alternate; }
+    .timer.done { background: #e7f8ee; color: var(--success); }
+    @keyframes pulse { to { transform: scale(1.04); } }
+    .game-card {
+      position: relative;
+      overflow: hidden;
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.92);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+    .canvas-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 3 / 2;
+      min-height: 330px;
+      overflow: hidden;
+      border-radius: 20px;
+      background:
+        linear-gradient(rgba(99,102,241,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99,102,241,0.04) 1px, transparent 1px),
+        #fbfcff;
+      background-size: 28px 28px;
+      border: 1px solid #e4e7ec;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: crosshair;
+      touch-action: none;
+    }
+    .instruction {
+      position: absolute;
+      left: 50%;
+      top: 18px;
+      transform: translateX(-50%);
+      width: min(92%, 760px);
+      text-align: center;
+      pointer-events: none;
+      padding: 9px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.86);
+      border: 1px solid rgba(208,213,221,0.9);
+      box-shadow: 0 8px 22px rgba(31,41,55,0.09);
+      color: #475467;
+      font-weight: 750;
+      font-size: clamp(0.78rem, 2vw, 0.95rem);
+      backdrop-filter: blur(8px);
+    }
+    .seed-badge {
+      position: absolute;
+      right: 12px;
+      bottom: 10px;
+      z-index: 2;
+      pointer-events: none;
+      padding: 6px 9px;
+      border-radius: 9px;
+      background: rgba(255,255,255,0.82);
+      border: 1px solid rgba(208,213,221,0.88);
+      color: #667085;
+      font-size: 0.72rem;
+      font-weight: 850;
+      letter-spacing: 0.05em;
+      font-variant-numeric: tabular-nums;
+      box-shadow: 0 5px 14px rgba(31,41,55,0.08);
+      backdrop-filter: blur(7px);
+    }
+    .status-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 13px 4px 1px;
+    }
+    .status {
+      min-height: 24px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .status.success { color: var(--success); }
+    .status.warning { color: var(--warning); }
+    .status.danger { color: var(--danger); }
+    .button-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    button {
+      appearance: none;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      border: 0;
+      border-radius: 14px;
+      min-height: 44px;
+      padding: 11px 18px;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      font: inherit;
+      font-weight: 850;
+      cursor: pointer;
+      transition: transform 0.14s ease, filter 0.14s ease, background 0.14s ease;
+    }
+    @media (hover: hover) and (pointer: fine) {
+      button:hover { transform: translateY(-1px); filter: brightness(1.03); }
+    }
+    button:active { transform: translateY(1px); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; filter: none; }
+    .primary {
+      color: white;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      box-shadow: 0 8px 20px rgba(91,108,255,0.28);
+    }
+    .secondary {
+      background: #eef1f6;
+      color: #344054;
+    }
+    .ghost {
+      background: rgba(255,255,255,0.78);
+      color: #344054;
+      border: 1px solid #d0d5dd;
+    }
+    .screen-overlay[hidden] { display: none !important; }
+
+    .screen-overlay, .result-overlay {
+      position: fixed;
+      visibility: hidden;
+      touch-action: pan-y;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      touch-action: pan-y;
+      background: rgba(16,24,40,0.42);
+      backdrop-filter: blur(7px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      z-index: 40;
+    }
+    .result-overlay {
+      position: absolute;
+      z-index: 5;
+    }
+    .screen-overlay.show, .result-overlay.show {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+    .screen-card, .result-card, .summary-card {
+      width: min(660px, 96%);
+      background: rgba(255,255,255,0.98);
+      border-radius: 24px;
+      padding: 25px;
+      box-shadow: 0 24px 70px rgba(16,24,40,0.28);
+      transform: translateY(10px) scale(0.98);
+      transition: transform 0.2s ease;
+      text-align: center;
+    }
+    .result-card { width: min(480px, 94%); }
+    .summary-card { width: min(760px, 96%); text-align: left; }
+    .screen-overlay.show .screen-card,
+    .screen-overlay.show .summary-card,
+    .result-overlay.show .result-card { transform: translateY(0) scale(1); }
+    .screen-kicker, .result-kicker {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 0.75rem;
+      font-weight: 900;
+    }
+    .screen-title, .result-title {
+      margin: 7px 0 2px;
+      font-size: clamp(1.8rem, 6vw, 3rem);
+      letter-spacing: -0.06em;
+    }
+    .screen-note {
+      margin: 8px auto 20px;
+      max-width: 560px;
+      color: var(--muted);
+      line-height: 1.55;
+      font-weight: 600;
+    }
+    .mode-row {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 2px 0 8px;
+    }
+    .mode-chip {
+      min-width: 150px;
+      border: 1px solid #d0d5dd;
+      background: #f8fafc;
+      color: #475467;
+    }
+    .mode-chip.active {
+      color: white;
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      box-shadow: 0 8px 20px rgba(91,108,255,0.22);
+    }
+    .seed-panel {
+      margin: 10px auto 4px;
+      max-width: 560px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid #dbe1ea;
+      background: #f8fbff;
+      text-align: left;
+    }
+    .seed-panel.hidden { display: none; }
+    .seed-panel label {
+      display: block;
+      margin-bottom: 8px;
+      color: #344054;
+      font-size: 0.9rem;
+      font-weight: 800;
+    }
+    .seed-panel input {
+      width: 100%;
+      touch-action: manipulation;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid #cfd6e1;
+      font: inherit;
+      font-weight: 700;
+      color: #101828;
+      background: white;
+    }
+    .seed-panel p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 0.9rem;
+    }
+
+    .seed-error {
+      min-height: 20px;
+      margin-top: 8px;
+      color: var(--danger);
+      font-size: 0.86rem;
+      font-weight: 800;
+    }
+    .screen-footer {
+      display: flex;
+      justify-content: center;
+      margin-top: 14px;
+    }
+    .back-button {
+      min-width: 130px;
+    }
+    .difficulty-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .difficulty-card {
+      display: flex;
+      flex-direction: column;
+      min-height: 188px;
+      text-align: left;
+      border: 1px solid #dbe1ea;
+      background: #fbfcff;
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+    }
+    .difficulty-card h3 {
+      margin: 0 0 6px;
+      font-size: 1.08rem;
+    }
+    .difficulty-card p {
+      margin: 0 0 12px;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 0.92rem;
+    }
+    .difficulty-button {
+      margin-top: auto;
+      align-self: flex-start;
+      min-width: 138px;
+    }
+    .summary-top, .result-meta {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin: 16px 0;
+    }
+    .meta-box {
+      padding: 12px;
+      border-radius: 16px;
+      background: #f8fafc;
+      border: 1px solid #eaecf0;
+    }
+    .meta-label {
+      display: block;
+      color: var(--muted);
+      font-size: 0.74rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .meta-value {
+      display: block;
+      margin-top: 4px;
+      font-size: 1.15rem;
+      font-weight: 950;
+    }
+    .summary-seed {
+      display: block;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid #eaecf0;
+      background: #f8fafc;
+      color: #344054;
+      font-weight: 900;
+      font-size: 1rem;
+      letter-spacing: 0.03em;
+      word-break: break-word;
+      margin-bottom: 16px;
+    }
+    .summary-list {
+      display: grid;
+      gap: 8px;
+      margin: 16px 0 20px;
+    }
+    .summary-item {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: #f8fafc;
+      border: 1px solid #eaecf0;
+    }
+    .summary-item strong { color: #101828; }
+    .summary-item span { color: var(--muted); }
+    .summary-item em { font-style: normal; font-weight: 900; color: #344054; }
+    .split {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin: 16px 0;
+      font-size: clamp(1.2rem, 4vw, 1.85rem);
+      font-weight: 950;
+      font-variant-numeric: tabular-nums;
+      flex-wrap: wrap;
+    }
+    .split span {
+      min-width: 128px;
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: #f2f4f7;
+    }
+    .result-note {
+      margin: 0 0 18px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .result-actions {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    @media (max-width: 800px) {
+      .difficulty-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 820px) {
+      body { padding: 8px; display: block; }
+      .app { gap: 8px; width: 100%; }
+      .screen-overlay { place-items: start center; padding: 10px; }
+      .screen-card, .summary-card { width: 100%; margin: auto; padding: 18px; border-radius: 20px; }
+      .screen-title { font-size: clamp(1.7rem, 10vw, 2.5rem); }
+      .screen-note { margin-bottom: 15px; font-size: 0.93rem; }
+      .mode-row { display: grid; grid-template-columns: 1fr; width: 100%; }
+      .mode-chip, .back-button { width: 100%; min-width: 0; min-height: 52px; }
+      .difficulty-card { min-height: 150px; }
+      .difficulty-button { width: 100%; min-width: 0; min-height: 50px; }
+      .seed-panel { margin-top: 8px; padding: 12px; }
+      .seed-panel input { min-height: 48px; font-size: 16px; }
+      .topbar { border-radius: 17px; padding: 11px 13px; grid-template-columns: 1fr; }
+      .subtitle { font-size: 0.78rem; }
+      .top-right { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); width: 100%; gap: 8px; padding-top: 14px; }
+      .pill, .timer-wrap, .timer { width: 100%; min-width: 0; }
+      .game-card { border-radius: 19px; padding: 7px; }
+      .canvas-wrap { min-height: 310px; border-radius: 14px; }
+      .instruction { top: 10px; border-radius: 16px; line-height: 1.25; }
+      .status-row { grid-template-columns: 1fr; padding: 9px 4px 3px; }
+      .button-row { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+      .button-row button { width: 100%; min-width: 0; }
+      .split { gap: 7px; }
+      .split span { min-width: 0; width: 100%; }
+      .summary-item { grid-template-columns: 1fr auto; }
+      .summary-item span { grid-column: 1 / -1; }
+    }
+    
+    @media (max-width: 520px) {
+      body { padding: 6px; }
+      .topbar { padding: 10px 12px; }
+      .pill, .timer, .timer-wrap { width: 100%; min-width: 0; }
+      .top-right { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .instruction { width: calc(100% - 14px); font-size: 0.74rem; padding: 8px 10px; }
+      .screen-card, .result-card, .summary-card { padding: 18px; }
+      .difficulty-button, .mode-chip, .primary, .secondary, .ghost { min-height: 48px; }
+      .button-row { grid-template-columns: 1fr; }
+      .summary-item { grid-template-columns: 1fr; }
+      .summary-top, .result-meta { grid-template-columns: 1fr; }
+      .split span { min-width: 0; width: 100%; }
+    }
+@media (max-height: 650px) and (orientation: landscape) {
+      body { padding: 6px; }
+      .app { max-width: 980px; gap: 6px; margin: 0 auto; }
+      .screen-overlay { place-items: start center; padding: 8px; }
+      .screen-card, .summary-card { margin: auto; padding: 16px; }
+      .screen-note { margin-bottom: 10px; line-height: 1.35; }
+      .difficulty-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .difficulty-card { min-height: 132px; padding: 12px; }
+      .topbar { padding: 8px 12px; }
+      h1 { font-size: 1.2rem; }
+      .subtitle { margin-top: 1px; font-size: 0.72rem; }
+      .game-card { padding: 6px; }
+      .canvas-wrap { min-height: 0; height: calc(100vh - 125px); aspect-ratio: auto; }
+      .result-card { padding: 16px; max-height: calc(100vh - 16px); overflow-y: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div id="startScreen" class="screen-overlay show" role="dialog" aria-modal="true" aria-labelledby="startTitle">
+    <div class="screen-card">
+      <div class="screen-kicker">Choose a mode</div>
+      <h2 id="startTitle" class="screen-title">Speed Tracer</h2>
+      <p class="screen-note">
+        Trace the outline as accurately as you can in just 5 seconds. The more of the outline you cover,
+        the closer your red tracing stays to it, and the less extra scribbling you do, the higher your score.
+      </p>
+      <div class="mode-row">
+        <button id="casualModeButton" class="primary mode-chip" type="button">Casual Mode</button>
+        <button id="competitiveModeButton" class="mode-chip" type="button">Competitive Mode</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="difficultyScreen" class="screen-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="difficultyTitle">
+    <div class="screen-card">
+      <div id="difficultyKicker" class="screen-kicker">Casual mode</div>
+      <h2 id="difficultyTitle" class="screen-title">Choose a difficulty</h2>
+      <p id="difficultyNote" class="screen-note">Pick Easy or Hard to begin tracing.</p>
+      <div id="competitiveSeedPanel" class="seed-panel hidden">
+        <label for="competitiveSeedInput">Optional competitive seed</label>
+        <input id="competitiveSeedInput" type="text" maxlength="32" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="Leave blank for a new challenge seed" />
+        <p>Leave this empty to create a new 5-shape challenge. Enter an existing seed to trace the exact same challenge as someone else.</p>
+        <div id="seedError" class="seed-error" aria-live="polite"></div>
+      </div>
+      <div class="difficulty-grid">
+        <div class="difficulty-card">
+          <h3>Easy</h3>
+          <p>Shapes are built from <strong>1–2</strong> connected simple parts.</p>
+          <button class="primary difficulty-button" data-difficulty="easy" type="button">Play Easy</button>
+        </div>
+        <div class="difficulty-card">
+          <h3>Hard</h3>
+          <p>Shapes are built from <strong>3–4</strong> connected simple parts.</p>
+          <button class="primary difficulty-button" data-difficulty="hard" type="button">Play Hard</button>
+        </div>
+      </div>
+      <div class="screen-footer">
+        <button id="difficultyBackButton" class="ghost back-button" type="button">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="summaryScreen" class="screen-overlay" role="dialog" aria-modal="true" aria-labelledby="summaryTitle">
+    <div class="summary-card">
+      <div class="screen-kicker">Competitive results</div>
+      <h2 id="summaryTitle" class="screen-title">Challenge complete</h2>
+      <div class="summary-top">
+        <div class="meta-box">
+          <span class="meta-label">Total score</span>
+          <span id="summaryScore" class="meta-value">0 / 5000</span>
+        </div>
+        <div class="meta-box">
+          <span class="meta-label">Difficulty</span>
+          <span id="summaryDifficulty" class="meta-value">Easy</span>
+        </div>
+      </div>
+      <div class="meta-box">
+        <span class="meta-label">Challenge seed</span>
+      </div>
+      <span id="summarySeed" class="summary-seed">ST-E-ABCDEFGH</span>
+      <div id="summaryList" class="summary-list"></div>
+      <div class="result-actions">
+        <button id="summaryReplayButton" class="primary" type="button">Play Again</button>
+        <button id="summaryMenuButton" class="secondary" type="button">Main Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <h1>Speed Tracer</h1>
+        <div class="subtitle">Trace the outline in red before the 5-second timer runs out.</div>
+      </div>
+      <div class="top-right">
+        <div id="modeBadge" class="pill mode-badge">Casual: Easy</div>
+        <div class="timer-wrap">
+          <div class="timer-label">Time</div>
+          <div id="timer" class="timer">Ready</div>
+        </div>
+      </div>
+    </header>
+
+    <section class="game-card">
+      <div class="canvas-wrap">
+        <canvas id="gameCanvas" width="900" height="600" aria-label="Speed Tracer game"></canvas>
+        <div id="instruction" class="instruction">Trace right on top of the outline. The timer starts on your first movement and you can use multiple strokes.</div>
+        <div id="seedBadge" class="seed-badge">Seed ID: ---- ----</div>
+
+        <div id="resultOverlay" class="result-overlay" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+          <div class="result-card">
+            <div class="result-kicker">Round result</div>
+            <h2 id="resultTitle" class="result-title">Nice tracing!</h2>
+            <div class="split">
+              <span id="coverageValue">Coverage 0%</span>
+              <span id="precisionValue">Precision 0%</span>
+              <span id="cleanValue">Clean 0%</span>
+            </div>
+            <div class="result-meta">
+              <div class="meta-box">
+                <span class="meta-label">Score</span>
+                <span id="scoreValue" class="meta-value">0</span>
+              </div>
+              <div class="meta-box">
+                <span class="meta-label">Extra drawing</span>
+                <span id="penaltyValue" class="meta-value">0%</span>
+              </div>
+            </div>
+            <p id="resultNote" class="result-note">Trace more of the outline and keep your red line close to it.</p>
+            <div class="result-actions">
+              <button id="nextButton" class="primary" type="button">Next Shape</button>
+              <button id="retryButton" class="secondary" type="button">Retry Shape</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="status-row">
+        <div id="status" class="status">Choose a mode and difficulty to begin.</div>
+        <div class="button-row">
+          <button id="clearButton" class="secondary" type="button">Clear Tracing</button>
+          <button id="menuButton" class="ghost" type="button">Menu</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      const startScreenEl = document.getElementById('startScreen');
+      const difficultyScreenEl = document.getElementById('difficultyScreen');
+      const difficultyKickerEl = document.getElementById('difficultyKicker');
+      const difficultyTitleEl = document.getElementById('difficultyTitle');
+      const difficultyNoteEl = document.getElementById('difficultyNote');
+      const difficultyBackButton = document.getElementById('difficultyBackButton');
+      const seedErrorEl = document.getElementById('seedError');
+      const summaryScreenEl = document.getElementById('summaryScreen');
+      const casualModeButton = document.getElementById('casualModeButton');
+      const competitiveModeButton = document.getElementById('competitiveModeButton');
+      const competitiveSeedPanel = document.getElementById('competitiveSeedPanel');
+      const competitiveSeedInput = document.getElementById('competitiveSeedInput');
+      const difficultyButtons = Array.from(document.querySelectorAll('.difficulty-button'));
+      const modeBadgeEl = document.getElementById('modeBadge');
+      const timerEl = document.getElementById('timer');
+      const statusEl = document.getElementById('status');
+      const instructionEl = document.getElementById('instruction');
+      const seedBadgeEl = document.getElementById('seedBadge');
+      const clearButton = document.getElementById('clearButton');
+      const menuButton = document.getElementById('menuButton');
+      const overlay = document.getElementById('resultOverlay');
+      const nextButton = document.getElementById('nextButton');
+      const retryButton = document.getElementById('retryButton');
+      const resultTitleEl = document.getElementById('resultTitle');
+      const resultNoteEl = document.getElementById('resultNote');
+      const coverageValueEl = document.getElementById('coverageValue');
+      const precisionValueEl = document.getElementById('precisionValue');
+      const cleanValueEl = document.getElementById('cleanValue');
+      const scoreValueEl = document.getElementById('scoreValue');
+      const penaltyValueEl = document.getElementById('penaltyValue');
+      const summaryScoreEl = document.getElementById('summaryScore');
+      const summaryDifficultyEl = document.getElementById('summaryDifficulty');
+      const summarySeedEl = document.getElementById('summarySeed');
+      const summaryListEl = document.getElementById('summaryList');
+      const summaryReplayButton = document.getElementById('summaryReplayButton');
+      const summaryMenuButton = document.getElementById('summaryMenuButton');
+
+      const WIDTH = canvas.width;
+      const HEIGHT = canvas.height;
+      const ROUND_MS = 5000;
+      const DRAW_WIDTH = 11;
+      const EVAL_SCALE = window.matchMedia('(max-width: 700px)').matches ? 0.45 : 0.6;
+      const GENERATION_SCALE = 0.5;
+      const DISPLAY_SUPERSAMPLE = 1;
+      const MIN_MOVE_SQ = 7;
+      const TRACE_COLOR = '#dc2626';
+      const OUTLINE_COLOR = '#23324a';
+      const COMPETITIVE_ROUNDS = 5;
+
+      const DIFFICULTIES = {
+        easy: { label: 'Easy', minParts: 1, maxParts: 2 },
+        hard: { label: 'Hard', minParts: 3, maxParts: 4 }
+      };
+
+      const SHAPE_PROFILES = {
+        easy: {
+          types: ['circle', 'rectangle', 'square', 'capsule', 'triangle', 'diamond', 'hexagon', 'octagon', 'cloud', 'shield'],
+          spreadRange: [18, 32],
+          scaleRange: [0.86, 1.06]
+        },
+        hard: {
+          types: ['circle', 'rectangle', 'square', 'capsule', 'triangle', 'diamond', 'hexagon', 'octagon', 'cloud', 'shield'],
+          spreadRange: [26, 58],
+          scaleRange: [0.72, 1.02]
+        }
+      };
+
+      let gameMode = 'casual';
+      let difficulty = 'easy';
+      let competitiveState = null;
+      let shape = null;
+      let currentSeedId = '';
+      let rng = Math.random;
+      let strokes = [];
+      let currentStroke = [];
+      let drawing = false;
+      let roundStarted = false;
+      let roundEnded = false;
+      let startTime = 0;
+      let animationFrame = 0;
+
+      function hashSeed(value) {
+        let hash = 2166136261;
+        for (let i = 0; i < value.length; i++) {
+          hash ^= value.charCodeAt(i);
+          hash = Math.imul(hash, 16777619);
+        }
+        return hash >>> 0;
+      }
+
+      function mulberry32(seed) {
+        return function seededRandom() {
+          let t = seed += 0x6D2B79F5;
+          t = Math.imul(t ^ (t >>> 15), t | 1);
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      function createSeedId() {
+        const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        const bytes = new Uint8Array(8);
+        if (globalThis.crypto?.getRandomValues) {
+          globalThis.crypto.getRandomValues(bytes);
+        } else {
+          for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+        }
+        let id = '';
+        for (let i = 0; i < bytes.length; i++) {
+          if (i === 4) id += '-';
+          id += alphabet[bytes[i] % alphabet.length];
+        }
+        return id;
+      }
+
+      function createToken(length = 8) {
+        const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let value = '';
+        if (globalThis.crypto?.getRandomValues) {
+          const bytes = new Uint8Array(length);
+          globalThis.crypto.getRandomValues(bytes);
+          for (let i = 0; i < length; i++) value += alphabet[bytes[i] % alphabet.length];
+        } else {
+          for (let i = 0; i < length; i++) value += alphabet[Math.floor(Math.random() * alphabet.length)];
+        }
+        return value;
+      }
+
+      function normalizeChallengeSeed(seed) {
+        return String(seed || '').toUpperCase().replace(/[^A-Z0-9-]/g, '');
+      }
+      function difficultyCode(diff) { return diff === 'hard' ? 'H' : 'E'; }
+      function difficultyFromCode(code) { return code === 'H' ? 'hard' : 'easy'; }
+      function formatChallengeSeed(diff, token) { return `ST-${difficultyCode(diff)}-${token}`; }
+      function parseChallengeSeed(seed) {
+        const normalized = normalizeChallengeSeed(seed);
+        const match = normalized.match(/^ST-([EH])-([A-Z0-9]{6,16})$/);
+        if (!match) return null;
+        return { normalized, difficulty: difficultyFromCode(match[1]), token: match[2] };
+      }
+
+      function createCompetitiveChallenge(seed, selectedDifficulty) {
+        let parsed = parseChallengeSeed(seed);
+        if (!parsed) {
+          const token = seed && normalizeChallengeSeed(seed) ? normalizeChallengeSeed(seed).replace(/-/g, '').slice(0, 12) : createToken(8);
+          parsed = parseChallengeSeed(formatChallengeSeed(selectedDifficulty, token)) || {
+            normalized: formatChallengeSeed(selectedDifficulty, token),
+            difficulty: selectedDifficulty,
+            token
+          };
+        }
+        const challengeRng = mulberry32(hashSeed(parsed.normalized));
+        const rounds = [];
+        const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        for (let round = 0; round < COMPETITIVE_ROUNDS; round++) {
+          let shapeToken = '';
+          for (let i = 0; i < 8; i++) shapeToken += alphabet[Math.floor(challengeRng() * alphabet.length)];
+          rounds.push({ shapeSeed: `R${round + 1}-${shapeToken}` });
+        }
+        return { seed: parsed.normalized, difficulty: parsed.difficulty, rounds, currentRound: 0, results: [] };
+      }
+
+      function randomBetween(min, max) { return min + rng() * (max - min); }
+      function randomInt(min, max) { return Math.floor(randomBetween(min, max + 1)); }
+      function randomChoice(list) { return list[Math.floor(rng() * list.length)]; }
+      function weightedChoice(entries) {
+        const total = entries.reduce((sum, e) => sum + e.weight, 0);
+        let roll = rng() * total;
+        for (const entry of entries) {
+          if (roll < entry.weight) return entry.value;
+          roll -= entry.weight;
+        }
+        return entries[entries.length - 1].value;
+      }
+
+      function setStatus(message, tone = '') {
+        statusEl.textContent = message;
+        statusEl.className = `status ${tone}`.trim();
+      }
+
+      function showScreenImmediately(screen) {
+        screen.hidden = false;
+        screen.classList.remove('show');
+        requestAnimationFrame(() => screen.classList.add('show'));
+      }
+
+      function hideScreenImmediately(screen) {
+        screen.classList.remove('show');
+        screen.hidden = true;
+      }
+
+      function setMode(mode) {
+        if (mode !== 'casual' && mode !== 'competitive') return;
+        gameMode = mode;
+        seedErrorEl.textContent = '';
+        competitiveSeedPanel.classList.toggle('hidden', mode !== 'competitive');
+        difficultyKickerEl.textContent = mode === 'competitive' ? 'Competitive mode' : 'Casual mode';
+        difficultyTitleEl.textContent = 'Choose a difficulty';
+        difficultyNoteEl.textContent = mode === 'competitive'
+          ? 'Choose Easy or Hard. You will trace 5 shapes and receive a total score.'
+          : 'Choose Easy or Hard, then trace as many shapes as you like.';
+        hideScreenImmediately(startScreenEl);
+        showScreenImmediately(difficultyScreenEl);
+      }
+      function isCompetitiveRound() { return gameMode === 'competitive' && !!competitiveState; }
+
+      function updateHeaderPill() {
+        const mode = gameMode === 'competitive' ? 'Competitive' : 'Casual';
+        modeBadgeEl.textContent = `${mode}: ${DIFFICULTIES[difficulty].label}`;
+      }
+
+      function openMainMenu() {
+        cancelAnimationFrame(animationFrame);
+        drawing = false;
+        roundStarted = false;
+        roundEnded = false;
+        competitiveState = null;
+        timerEl.textContent = 'Ready';
+        timerEl.className = 'timer';
+        overlay.classList.remove('show');
+        summaryScreenEl.classList.remove('show');
+        hideScreenImmediately(difficultyScreenEl);
+        seedErrorEl.textContent = '';
+        showScreenImmediately(startScreenEl);
+        setStatus('Choose a mode to begin.');
+      }
+
+      function clonePoint(point) { return { x: point.x, y: point.y }; }
+      function createPointsRegular(sides, rx, ry) {
+        const points = [];
+        for (let i = 0; i < sides; i++) {
+          const angle = -Math.PI / 2 + i * Math.PI * 2 / sides;
+          points.push({ x: Math.cos(angle) * rx, y: Math.sin(angle) * ry });
+        }
+        return points;
+      }
+      function addPolygonPath(targetCtx, points) {
+        targetCtx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) targetCtx.lineTo(points[i].x, points[i].y);
+        targetCtx.closePath();
+      }
+      function addRoundedRectPath(targetCtx, x, y, w, h, r) {
+        const radius = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
+        targetCtx.moveTo(x + radius, y);
+        targetCtx.lineTo(x + w - radius, y);
+        targetCtx.quadraticCurveTo(x + w, y, x + w, y + radius);
+        targetCtx.lineTo(x + w, y + h - radius);
+        targetCtx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+        targetCtx.lineTo(x + radius, y + h);
+        targetCtx.quadraticCurveTo(x, y + h, x, y + h - radius);
+        targetCtx.lineTo(x, y + radius);
+        targetCtx.quadraticCurveTo(x, y, x + radius, y);
+        targetCtx.closePath();
+      }
+      function addCloudPath(targetCtx, w, h) {
+        const hw = w / 2;
+        const hh = h / 2;
+        targetCtx.moveTo(-hw * 0.82, hh * 0.3);
+        targetCtx.bezierCurveTo(-hw * 1.04, hh * 0.18, -hw * 1.02, -hh * 0.18, -hw * 0.79, -hh * 0.28);
+        targetCtx.bezierCurveTo(-hw * 0.72, -hh * 0.58, -hw * 0.44, -hh * 0.72, -hw * 0.2, -hh * 0.55);
+        targetCtx.bezierCurveTo(-hw * 0.02, -hh * 0.92, hw * 0.36, -hh * 0.86, hw * 0.47, -hh * 0.5);
+        targetCtx.bezierCurveTo(hw * 0.73, -hh * 0.58, hw * 0.94, -hh * 0.34, hw * 0.9, -hh * 0.05);
+        targetCtx.bezierCurveTo(hw * 1.07, hh * 0.08, hw * 1.0, hh * 0.38, hw * 0.78, hh * 0.49);
+        targetCtx.bezierCurveTo(hw * 0.5, hh * 0.72, -hw * 0.58, hh * 0.74, -hw * 0.82, hh * 0.3);
+        targetCtx.closePath();
+      }
+      function addShieldPath(targetCtx, w, h) {
+        const hw = w / 2;
+        const hh = h / 2;
+        targetCtx.moveTo(0, -hh);
+        targetCtx.lineTo(hw * 0.82, -hh * 0.72);
+        targetCtx.lineTo(hw * 0.82, hh * 0.02);
+        targetCtx.quadraticCurveTo(hw * 0.78, hh * 0.58, 0, hh);
+        targetCtx.quadraticCurveTo(-hw * 0.78, hh * 0.58, -hw * 0.82, hh * 0.02);
+        targetCtx.lineTo(-hw * 0.82, -hh * 0.72);
+        targetCtx.closePath();
+      }
+
+      function createPrimitiveCandidate(profile) {
+        const type = randomChoice(profile.types);
+        const candidate = {
+          type,
+          cx: WIDTH / 2,
+          cy: HEIGHT / 2 + 18,
+          rotation: randomBetween(-Math.PI / 7, Math.PI / 7),
+          scale: randomBetween(0.94, 1.05)
+        };
+        switch (type) {
+          case 'circle':
+            candidate.r = randomBetween(130, 170);
+            break;
+          case 'square':
+            candidate.w = randomBetween(250, 310);
+            candidate.h = candidate.w;
+            break;
+          case 'rectangle':
+            candidate.w = randomBetween(260, 380);
+            candidate.h = randomBetween(180, 280);
+            break;
+          case 'capsule':
+            candidate.w = randomBetween(250, 350);
+            candidate.h = randomBetween(110, 165);
+            break;
+          case 'triangle':
+            candidate.points = [{ x: 0, y: -168 }, { x: 162, y: 122 }, { x: -162, y: 122 }];
+            break;
+          case 'diamond':
+            candidate.points = [{ x: 0, y: -170 }, { x: 165, y: 0 }, { x: 0, y: 170 }, { x: -165, y: 0 }];
+            break;
+          case 'hexagon':
+            candidate.points = createPointsRegular(6, randomBetween(136, 170), randomBetween(136, 170));
+            break;
+          case 'octagon':
+            candidate.points = createPointsRegular(8, randomBetween(136, 170), randomBetween(136, 170));
+            break;
+          case 'cloud':
+            candidate.w = randomBetween(290, 350);
+            candidate.h = randomBetween(170, 214);
+            break;
+          case 'shield':
+            candidate.w = randomBetween(220, 275);
+            candidate.h = randomBetween(280, 330);
+            break;
+        }
+        return candidate;
+      }
+
+      function buildPrimitivePath(targetCtx, candidate, scale = 1) {
+        const s = candidate;
+        targetCtx.beginPath();
+        targetCtx.save();
+        targetCtx.translate(s.cx * scale, s.cy * scale);
+        targetCtx.rotate(s.rotation);
+        targetCtx.scale(s.scale * scale, s.scale * scale);
+        switch (s.type) {
+          case 'circle':
+            targetCtx.arc(0, 0, s.r, 0, Math.PI * 2);
+            break;
+          case 'square':
+          case 'rectangle':
+            targetCtx.rect(-s.w / 2, -s.h / 2, s.w, s.h);
+            break;
+          case 'capsule':
+            addRoundedRectPath(targetCtx, -s.w / 2, -s.h / 2, s.w, s.h, s.h / 2);
+            break;
+          case 'triangle':
+          case 'diamond':
+          case 'hexagon':
+          case 'octagon':
+            addPolygonPath(targetCtx, s.points);
+            break;
+          case 'cloud':
+            addCloudPath(targetCtx, s.w, s.h);
+            break;
+          case 'shield':
+            addShieldPath(targetCtx, s.w, s.h);
+            break;
+        }
+        targetCtx.restore();
+      }
+
+      function transformComponent(candidate, count, index, profile) {
+        const copy = structuredClone(candidate);
+        if (index === 0) return copy;
+        const [spreadMin, spreadMax] = profile.spreadRange;
+        const spread = count <= 2 ? spreadMin : spreadMax;
+        const direction = randomChoice([
+          { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 },
+          { x: 0.78, y: 0.62 }, { x: -0.78, y: 0.62 }, { x: 0.78, y: -0.62 }, { x: -0.78, y: -0.62 }
+        ]);
+        const overlap = randomBetween(0.48, 0.74);
+        copy.scale *= randomBetween(profile.scaleRange[0], profile.scaleRange[1]);
+        copy.rotation += randomBetween(-Math.PI / 4, Math.PI / 4);
+        copy.cx += direction.x * spread * overlap + randomBetween(-12, 12);
+        copy.cy += direction.y * spread * overlap + randomBetween(-12, 12);
+        return copy;
+      }
+
+      function rasterizePart(candidate, scale = 1) {
+        const width = Math.round(WIDTH * scale);
+        const height = Math.round(HEIGHT * scale);
+        const c = document.createElement('canvas');
+        c.width = width;
+        c.height = height;
+        const cctx = c.getContext('2d', { willReadFrequently: true });
+        cctx.fillStyle = '#000';
+        cctx.fillRect(0, 0, width, height);
+        buildPrimitivePath(cctx, candidate, scale);
+        cctx.fillStyle = '#fff';
+        cctx.fill();
+        const data = cctx.getImageData(0, 0, width, height).data;
+        const mask = new Uint8Array(width * height);
+        for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+          if (data[i] > 200) mask[p] = 1;
+        }
+        return { width, height, mask };
+      }
+
+      function unionMasks(a, b) {
+        const out = new Uint8Array(a.length);
+        for (let i = 0; i < a.length; i++) out[i] = a[i] || b[i] ? 1 : 0;
+        return out;
+      }
+
+      function getComponentSizes(mask, width, height, targetValue = 1, minSize = 1) {
+        const visited = new Uint8Array(mask.length);
+        const queue = new Int32Array(mask.length);
+        const sizes = [];
+        for (let start = 0; start < mask.length; start++) {
+          if (mask[start] !== targetValue || visited[start]) continue;
+          let head = 0, tail = 0, size = 0;
+          queue[tail++] = start;
+          visited[start] = 1;
+          while (head < tail) {
+            const index = queue[head++];
+            size++;
+            const x = index % width;
+            const left = index - 1;
+            const right = index + 1;
+            const up = index - width;
+            const down = index + width;
+            if (x > 0 && mask[left] === targetValue && !visited[left]) { visited[left] = 1; queue[tail++] = left; }
+            if (x < width - 1 && mask[right] === targetValue && !visited[right]) { visited[right] = 1; queue[tail++] = right; }
+            if (up >= 0 && mask[up] === targetValue && !visited[up]) { visited[up] = 1; queue[tail++] = up; }
+            if (down < mask.length && mask[down] === targetValue && !visited[down]) { visited[down] = 1; queue[tail++] = down; }
+          }
+          if (size >= minSize) sizes.push(size);
+        }
+        return sizes;
+      }
+
+      function analyzeMask(mask, width, height) {
+        let area = 0;
+        let minX = width, maxX = -1, minY = height, maxY = -1;
+        for (let i = 0; i < mask.length; i++) {
+          if (!mask[i]) continue;
+          area++;
+          const x = i % width;
+          const y = Math.floor(i / width);
+          minX = Math.min(minX, x);
+          maxX = Math.max(maxX, x);
+          minY = Math.min(minY, y);
+          maxY = Math.max(maxY, y);
+        }
+        return { area, bounds: { minX, maxX, minY, maxY, width: maxX - minX + 1, height: maxY - minY + 1 } };
+      }
+
+      function validateShapeMask(mask, width, height, partCount, scale = 1) {
+        const info = analyzeMask(mask, width, height);
+        const comps = getComponentSizes(mask, width, height, 1, 40);
+        if (comps.length !== 1) return false;
+        const areaScale = scale * scale;
+        if (info.area < 9000 * areaScale || info.area > 70000 * areaScale) return false;
+        const margin = 24 * scale;
+        if (info.bounds.minX < margin || info.bounds.minY < margin || info.bounds.maxX >= width - margin || info.bounds.maxY >= height - margin) return false;
+        if (info.bounds.width < 140 * scale || info.bounds.height < 120 * scale) return false;
+        const boxArea = info.bounds.width * info.bounds.height;
+        const fillRatio = info.area / Math.max(1, boxArea);
+        if (fillRatio < 0.2 || fillRatio > 0.9) return false;
+        if (partCount >= 3 && (info.bounds.width < 200 * scale || info.bounds.height < 180 * scale)) return false;
+        return true;
+      }
+
+      function buildAlphaCanvasFromMask(mask, width, height) {
+        const c = document.createElement('canvas');
+        c.width = width;
+        c.height = height;
+        const cctx = c.getContext('2d');
+        const image = cctx.createImageData(width, height);
+        for (let i = 0, p = 0; p < mask.length; p++, i += 4) {
+          if (mask[p]) {
+            image.data[i] = 255;
+            image.data[i + 1] = 255;
+            image.data[i + 2] = 255;
+            image.data[i + 3] = 255;
+          }
+        }
+        cctx.putImageData(image, 0, 0);
+        return c;
+      }
+
+      function buildOutlineCanvas(alphaCanvas) {
+        const width = alphaCanvas.width;
+        const height = alphaCanvas.height;
+        const c = document.createElement('canvas');
+        c.width = width;
+        c.height = height;
+        const cctx = c.getContext('2d');
+        cctx.drawImage(alphaCanvas, 0, 0);
+        cctx.globalCompositeOperation = 'source-in';
+        const grad = cctx.createLinearGradient(180, 100, 720, 520);
+        grad.addColorStop(0, '#edf2ff');
+        grad.addColorStop(0.55, '#d7f4ec');
+        grad.addColorStop(1, '#ffe9d6');
+        cctx.fillStyle = grad;
+        cctx.fillRect(0, 0, width, height);
+
+        const outline = document.createElement('canvas');
+        outline.width = width;
+        outline.height = height;
+        const octx = outline.getContext('2d');
+        for (let dx = -2; dx <= 2; dx++) {
+          for (let dy = -2; dy <= 2; dy++) {
+            if (dx === 0 && dy === 0) continue;
+            octx.drawImage(alphaCanvas, dx, dy);
+          }
+        }
+        octx.drawImage(alphaCanvas, 0, 0);
+        octx.globalCompositeOperation = 'destination-out';
+        octx.drawImage(alphaCanvas, 0, 0);
+
+        const border = document.createElement('canvas');
+        border.width = width;
+        border.height = height;
+        const bctx = border.getContext('2d');
+        bctx.fillStyle = OUTLINE_COLOR;
+        bctx.fillRect(0, 0, width, height);
+        bctx.globalCompositeOperation = 'destination-in';
+        bctx.drawImage(outline, 0, 0);
+
+        const display = document.createElement('canvas');
+        display.width = width;
+        display.height = height;
+        const dctx = display.getContext('2d');
+        dctx.drawImage(c, 0, 0);
+        dctx.drawImage(border, 0, 0);
+
+        const outlineMaskCanvas = document.createElement('canvas');
+        outlineMaskCanvas.width = width;
+        outlineMaskCanvas.height = height;
+        const omctx = outlineMaskCanvas.getContext('2d');
+        omctx.drawImage(border, 0, 0);
+
+        return { display, outlineMaskCanvas };
+      }
+
+      function createShape(seedId, diff) {
+        rng = mulberry32(hashSeed(`${seedId}-${diff}`));
+        const profile = SHAPE_PROFILES[diff];
+        const config = DIFFICULTIES[diff];
+        const attemptLimit = 90;
+
+        for (let attempt = 0; attempt < attemptLimit; attempt++) {
+          const partCount = randomInt(config.minParts, config.maxParts);
+          const parts = [];
+          for (let i = 0; i < partCount; i++) {
+            const base = createPrimitiveCandidate(profile);
+            parts.push(transformComponent(base, partCount, i, profile));
+          }
+
+          const checkWidth = Math.round(WIDTH * GENERATION_SCALE);
+          const checkHeight = Math.round(HEIGHT * GENERATION_SCALE);
+          let checkMask = new Uint8Array(checkWidth * checkHeight);
+          for (const part of parts) {
+            const raster = rasterizePart(part, GENERATION_SCALE);
+            checkMask = unionMasks(checkMask, raster.mask);
+          }
+          if (!validateShapeMask(checkMask, checkWidth, checkHeight, partCount, GENERATION_SCALE)) continue;
+
+          const width = Math.round(WIDTH * DISPLAY_SUPERSAMPLE);
+          const height = Math.round(HEIGHT * DISPLAY_SUPERSAMPLE);
+          let finalMask = new Uint8Array(width * height);
+          for (const part of parts) {
+            const raster = rasterizePart(part, DISPLAY_SUPERSAMPLE);
+            finalMask = unionMasks(finalMask, raster.mask);
+          }
+
+          const alphaCanvas = buildAlphaCanvasFromMask(finalMask, width, height);
+          const { display, outlineMaskCanvas } = buildOutlineCanvas(alphaCanvas);
+          return {
+            seedId,
+            partCount,
+            alphaCanvas,
+            displayCanvas: display,
+            outlineCanvas: outlineMaskCanvas
+          };
+        }
+        return createFallbackShape(seedId);
+      }
+
+      function createFallbackShape(seedId) {
+        const candidate = { type: 'circle', cx: WIDTH / 2, cy: HEIGHT / 2 + 18, rotation: 0, scale: 1, r: 160 };
+        const raster = rasterizePart(candidate, DISPLAY_SUPERSAMPLE);
+        const alphaCanvas = buildAlphaCanvasFromMask(raster.mask, raster.width, raster.height);
+        const { display, outlineMaskCanvas } = buildOutlineCanvas(alphaCanvas);
+        return { seedId, partCount: 1, alphaCanvas, displayCanvas: display, outlineCanvas: outlineMaskCanvas };
+      }
+
+      function setCanvasPoint(event) {
+        const rect = canvas.getBoundingClientRect();
+        return { x: (event.clientX - rect.left) * (WIDTH / rect.width), y: (event.clientY - rect.top) * (HEIGHT / rect.height) };
+      }
+
+      function drawStroke(targetCtx, points, width, color, scale = 1, alpha = 1) {
+        if (points.length < 2) return;
+        targetCtx.save();
+        targetCtx.beginPath();
+        targetCtx.moveTo(points[0].x * scale, points[0].y * scale);
+        for (let i = 1; i < points.length; i++) {
+          const prev = points[i - 1];
+          const point = points[i];
+          const midX = (prev.x + point.x) * 0.5 * scale;
+          const midY = (prev.y + point.y) * 0.5 * scale;
+          targetCtx.quadraticCurveTo(prev.x * scale, prev.y * scale, midX, midY);
+        }
+        const last = points[points.length - 1];
+        targetCtx.lineTo(last.x * scale, last.y * scale);
+        targetCtx.lineCap = 'round';
+        targetCtx.lineJoin = 'round';
+        targetCtx.lineWidth = width * scale;
+        targetCtx.strokeStyle = color;
+        targetCtx.globalAlpha = alpha;
+        targetCtx.stroke();
+        targetCtx.restore();
+      }
+      function drawStrokeSet(targetCtx, strokeSet, width, color, scale = 1, alpha = 1) {
+        for (const stroke of strokeSet) drawStroke(targetCtx, stroke, width, color, scale, alpha);
+      }
+
+      function drawCurrentShape() {
+        ctx.clearRect(0, 0, WIDTH, HEIGHT);
+        if (!shape) return;
+        ctx.save();
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.shadowColor = 'rgba(31, 41, 55, 0.14)';
+        ctx.shadowBlur = 22;
+        ctx.shadowOffsetY = 12;
+        ctx.drawImage(shape.displayCanvas, 0, 0, WIDTH, HEIGHT);
+        ctx.restore();
+        if (strokes.length) drawStrokeSet(ctx, strokes, DRAW_WIDTH, TRACE_COLOR, 1, 0.95);
+        if (drawing && currentStroke.length > 1) drawStroke(ctx, currentStroke, DRAW_WIDTH, TRACE_COLOR, 1, 0.95);
+      }
+
+      function updateHeaderState() {
+        updateHeaderPill();
+        if (isCompetitiveRound()) {
+          seedBadgeEl.textContent = `Round ${competitiveState.currentRound + 1}/${competitiveState.rounds.length}`;
+          setStatus(`Competitive Mode — trace as accurately as you can. Round ${competitiveState.currentRound + 1} of ${competitiveState.rounds.length}.`);
+        } else {
+          seedBadgeEl.textContent = `Seed ID: ${currentSeedId}`;
+          setStatus('Trace the outline as accurately as you can. You have 5 seconds, and the timer begins on your first movement.');
+        }
+      }
+
+      function applyRoundState() {
+        strokes = [];
+        currentStroke = [];
+        drawing = false;
+        roundStarted = false;
+        roundEnded = false;
+        startTime = 0;
+        clearButton.disabled = false;
+        timerEl.textContent = 'Ready';
+        timerEl.className = 'timer';
+        overlay.classList.remove('show');
+        summaryScreenEl.classList.remove('show');
+        instructionEl.textContent = 'Trace right on top of the outline. The timer starts on your first movement and you can use multiple strokes.';
+        updateHeaderState();
+        drawCurrentShape();
+      }
+
+      function startCasualRound(useNewShape) {
+        if (useNewShape || !shape) {
+          currentSeedId = createSeedId();
+          shape = createShape(currentSeedId, difficulty);
+        }
+        applyRoundState();
+      }
+
+      function startCompetitiveChallenge(seed) {
+        competitiveState = createCompetitiveChallenge(seed, difficulty);
+        difficulty = competitiveState.difficulty;
+        loadCompetitiveRound(0);
+      }
+
+      function loadCompetitiveRound(index) {
+        competitiveState.currentRound = index;
+        const round = competitiveState.rounds[index];
+        currentSeedId = round.shapeSeed;
+        shape = createShape(currentSeedId, difficulty);
+        applyRoundState();
+      }
+
+      function showCompetitiveSummary() {
+        const total = competitiveState.results.reduce((sum, item) => sum + item.score, 0);
+        summaryScoreEl.textContent = `${total} / ${COMPETITIVE_ROUNDS * 1000}`;
+        summaryDifficultyEl.textContent = DIFFICULTIES[competitiveState.difficulty].label;
+        summarySeedEl.textContent = competitiveState.seed;
+        summaryListEl.innerHTML = competitiveState.results.map((item, idx) => {
+          const detail = item.valid ? `${Math.round(item.coverage * 100)}% cov • ${Math.round(item.precision * 100)}% prec • ${Math.round(item.cleanliness * 100)}% clean` : 'No trace recorded';
+          return `<div class="summary-item"><strong>Shape ${idx + 1}</strong><span>${detail}</span><em>${item.score} pts</em></div>`;
+        }).join('');
+        summaryScreenEl.classList.add('show');
+      }
+
+      function startRoundClock() {
+        if (roundStarted || roundEnded) return;
+        roundStarted = true;
+        startTime = performance.now();
+        updateTimer();
+      }
+
+      function updateTimer(now = performance.now()) {
+        if (!roundStarted || roundEnded) return;
+        const elapsed = now - startTime;
+        const remaining = Math.max(0, ROUND_MS - elapsed);
+        timerEl.textContent = `${(remaining / 1000).toFixed(1)}s`;
+        timerEl.className = `timer running${remaining <= 1000 ? ' urgent' : ''}`;
+        if (remaining <= 0) {
+          finishRound(evaluateTracing());
+          return;
+        }
+        animationFrame = requestAnimationFrame(updateTimer);
+      }
+
+      function onPointerDown(event) {
+        if (roundEnded || startScreenEl.classList.contains('show') || difficultyScreenEl.classList.contains('show') || summaryScreenEl.classList.contains('show')) return;
+        event.preventDefault();
+        canvas.setPointerCapture?.(event.pointerId);
+        drawing = true;
+        currentStroke = [setCanvasPoint(event)];
+      }
+
+      function onPointerMove(event) {
+        if (!drawing || roundEnded) return;
+        event.preventDefault();
+        const point = setCanvasPoint(event);
+        const last = currentStroke[currentStroke.length - 1];
+        const dx = point.x - last.x;
+        const dy = point.y - last.y;
+        if ((dx * dx + dy * dy) >= MIN_MOVE_SQ) {
+          if (!roundStarted) startRoundClock();
+          currentStroke.push(point);
+          drawCurrentShape();
+        }
+      }
+
+      function onPointerUp(event) {
+        if (!drawing || roundEnded) return;
+        event.preventDefault();
+        drawing = false;
+        currentStroke.push(setCanvasPoint(event));
+        if (currentStroke.length > 1) strokes.push(currentStroke.slice());
+        currentStroke = [];
+        drawCurrentShape();
+      }
+
+      function createStrokeMask(width, height, scale) {
+        const off = document.createElement('canvas');
+        off.width = width;
+        off.height = height;
+        const octx = off.getContext('2d', { willReadFrequently: true });
+        octx.fillStyle = '#000';
+        octx.fillRect(0, 0, width, height);
+        drawStrokeSet(octx, strokes, DRAW_WIDTH, '#fff', scale, 1);
+        const data = octx.getImageData(0, 0, width, height).data;
+        const mask = new Uint8Array(width * height);
+        for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+          if (data[i] > 200) mask[p] = 1;
+        }
+        return mask;
+      }
+
+      function createMaskFromCanvas(sourceCanvas, width, height) {
+        const off = document.createElement('canvas');
+        off.width = width;
+        off.height = height;
+        const octx = off.getContext('2d', { willReadFrequently: true });
+        octx.drawImage(sourceCanvas, 0, 0, width, height);
+        const data = octx.getImageData(0, 0, width, height).data;
+        const mask = new Uint8Array(width * height);
+        for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+          if (data[i + 3] > 10) mask[p] = 1;
+        }
+        return mask;
+      }
+
+      function dilateMask(mask, width, height, radius) {
+        const out = new Uint8Array(mask.length);
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            let hit = 0;
+            for (let dy = -radius; dy <= radius && !hit; dy++) {
+              const yy = y + dy;
+              if (yy < 0 || yy >= height) continue;
+              for (let dx = -radius; dx <= radius; dx++) {
+                const xx = x + dx;
+                if (xx < 0 || xx >= width) continue;
+                if (dx * dx + dy * dy > radius * radius) continue;
+                if (mask[yy * width + xx]) { hit = 1; break; }
+              }
+            }
+            out[y * width + x] = hit;
+          }
+        }
+        return out;
+      }
+
+      function countMask(mask) {
+        let total = 0;
+        for (let i = 0; i < mask.length; i++) total += mask[i];
+        return total;
+      }
+      function countIntersection(a, b) {
+        let total = 0;
+        for (let i = 0; i < a.length; i++) if (a[i] && b[i]) total++;
+        return total;
+      }
+
+      function evaluateTracing() {
+        const evalWidth = Math.round(WIDTH * EVAL_SCALE);
+        const evalHeight = Math.round(HEIGHT * EVAL_SCALE);
+        const outlineMask = createMaskFromCanvas(shape.outlineCanvas, evalWidth, evalHeight);
+        const traceMask = createStrokeMask(evalWidth, evalHeight, EVAL_SCALE);
+        const tracePixels = countMask(traceMask);
+        if (!tracePixels) {
+          return { valid: false, score: 0, coverage: 0, precision: 0, cleanliness: 0, penalty: 1 };
+        }
+        const closeTrace = dilateMask(traceMask, evalWidth, evalHeight, 2);
+        const closeOutline = dilateMask(outlineMask, evalWidth, evalHeight, 3);
+        const wideOutline = dilateMask(outlineMask, evalWidth, evalHeight, 7);
+        const outlinePixels = countMask(outlineMask);
+        const coverage = countIntersection(outlineMask, closeTrace) / Math.max(1, outlinePixels);
+        const precision = countIntersection(traceMask, closeOutline) / Math.max(1, tracePixels);
+        const insideWide = countIntersection(traceMask, wideOutline) / Math.max(1, tracePixels);
+        const penalty = 1 - insideWide;
+        const cleanliness = insideWide;
+        const score = Math.max(0, Math.min(1000, Math.round(1000 * (0.55 * coverage + 0.30 * precision + 0.15 * cleanliness))));
+        return { valid: true, score, coverage, precision, cleanliness, penalty };
+      }
+
+      function finishRound(result) {
+        if (roundEnded) return;
+        roundEnded = true;
+        drawing = false;
+        cancelAnimationFrame(animationFrame);
+        timerEl.textContent = 'Done';
+        timerEl.className = 'timer done';
+        clearButton.disabled = true;
+        instructionEl.textContent = 'Round complete.';
+        if (isCompetitiveRound()) {
+          competitiveState.results[competitiveState.currentRound] = result;
+          setStatus(`Competitive round recorded: ${result.score} points on round ${competitiveState.currentRound + 1}.`, result.score >= 700 ? 'success' : result.score >= 450 ? 'warning' : 'danger');
+          showResult(result, true);
+          return;
+        }
+        setStatus(`Round scored: ${result.score} points.`, result.score >= 700 ? 'success' : result.score >= 450 ? 'warning' : 'danger');
+        showResult(result, false);
+      }
+
+      function showResult(result, competitive) {
+        coverageValueEl.textContent = `Coverage ${Math.round(result.coverage * 100)}%`;
+        precisionValueEl.textContent = `Precision ${Math.round(result.precision * 100)}%`;
+        cleanValueEl.textContent = `Clean ${Math.round(result.cleanliness * 100)}%`;
+        scoreValueEl.textContent = String(result.score);
+        penaltyValueEl.textContent = `${Math.round(result.penalty * 100)}%`;
+        if (result.score >= 850) {
+          resultTitleEl.textContent = 'Amazing trace!';
+          resultNoteEl.textContent = 'You covered most of the outline and stayed very close to it.';
+        } else if (result.score >= 700) {
+          resultTitleEl.textContent = 'Great job!';
+          resultNoteEl.textContent = 'Strong outline coverage with good accuracy.';
+        } else if (result.score >= 450) {
+          resultTitleEl.textContent = 'Nice tracing!';
+          resultNoteEl.textContent = 'You are on the right track. Try covering more of the outline next time.';
+        } else {
+          resultTitleEl.textContent = 'Keep tracing!';
+          resultNoteEl.textContent = 'Try staying closer to the outline and avoiding extra drawing away from it.';
+        }
+        if (competitive) {
+          nextButton.style.display = '';
+          nextButton.textContent = competitiveState.currentRound === competitiveState.rounds.length - 1 ? 'View Final Score' : 'Continue';
+          retryButton.style.display = 'none';
+        } else {
+          nextButton.style.display = '';
+          nextButton.textContent = 'Next Shape';
+          retryButton.style.display = '';
+          retryButton.textContent = 'Retry Shape';
+        }
+        overlay.classList.add('show');
+      }
+
+      function resetRound(useNewShape) {
+        cancelAnimationFrame(animationFrame);
+        if (isCompetitiveRound()) {
+          if (useNewShape) {
+            const nextIndex = competitiveState.currentRound + 1;
+            if (nextIndex >= competitiveState.rounds.length) {
+              overlay.classList.remove('show');
+              showCompetitiveSummary();
+            } else {
+              loadCompetitiveRound(nextIndex);
+            }
+          } else {
+            loadCompetitiveRound(competitiveState.currentRound);
+          }
+          return;
+        }
+        startCasualRound(useNewShape);
+      }
+
+      function clearTracing() {
+        if (roundEnded || startScreenEl.classList.contains('show') || difficultyScreenEl.classList.contains('show') || summaryScreenEl.classList.contains('show')) return;
+        strokes = [];
+        currentStroke = [];
+        drawing = false;
+        drawCurrentShape();
+        if (roundStarted) setStatus('Tracing cleared. Keep going before time runs out.');
+        else setStatus('Trace the outline as accurately as you can. You have 5 seconds, and the timer begins on your first movement.');
+      }
+
+      let lastDifficultyTouchActivation = -Infinity;
+
+      function activateDifficulty(button) {
+        if (!difficultyScreenEl.classList.contains('show') || button.disabled) return;
+        button.disabled = true;
+        difficulty = button.dataset.difficulty;
+        seedErrorEl.textContent = '';
+
+        let launchRound;
+        if (gameMode === 'competitive') {
+          const enteredSeed = competitiveSeedInput.value.trim();
+          const parsed = enteredSeed ? parseChallengeSeed(enteredSeed) : null;
+          if (enteredSeed && !parsed) {
+            seedErrorEl.textContent = 'Use a seed such as ST-E-ABCDEFGH or ST-H-ABCDEFGH.';
+            button.disabled = false;
+            competitiveSeedInput.focus();
+            return;
+          }
+          const challengeSeed = parsed ? parsed.normalized : formatChallengeSeed(difficulty, createToken(8));
+          launchRound = () => startCompetitiveChallenge(challengeSeed);
+        } else {
+          competitiveState = null;
+          launchRound = () => startCasualRound(true);
+        }
+
+        hideScreenImmediately(difficultyScreenEl);
+        updateHeaderPill();
+        timerEl.textContent = 'Ready';
+        timerEl.className = 'timer';
+        setStatus('Preparing your shape…');
+
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            try {
+              launchRound();
+            } finally {
+              button.disabled = false;
+            }
+          }, 0);
+        });
+      }
+
+      difficultyButtons.forEach(button => {
+        button.addEventListener('click', () => activateDifficulty(button));
+      });
+
+      casualModeButton.addEventListener('click', () => setMode('casual'));
+      competitiveModeButton.addEventListener('click', () => setMode('competitive'));
+      difficultyBackButton.addEventListener('click', () => {
+        hideScreenImmediately(difficultyScreenEl);
+        seedErrorEl.textContent = '';
+        showScreenImmediately(startScreenEl);
+      });
+      canvas.addEventListener('pointerdown', onPointerDown);
+      canvas.addEventListener('pointermove', onPointerMove);
+      canvas.addEventListener('pointerup', onPointerUp);
+      canvas.addEventListener('pointercancel', onPointerUp);
+      clearButton.addEventListener('click', clearTracing);
+      menuButton.addEventListener('click', openMainMenu);
+      nextButton.addEventListener('click', () => resetRound(true));
+      retryButton.addEventListener('click', () => resetRound(false));
+      summaryReplayButton.addEventListener('click', () => {
+        const seed = competitiveState ? competitiveState.seed : competitiveSeedInput.value.trim();
+        summaryScreenEl.classList.remove('show');
+        startCompetitiveChallenge(seed);
+      });
+      summaryMenuButton.addEventListener('click', openMainMenu);
+      window.addEventListener('resize', drawCurrentShape);
+
+      gameMode = 'casual';
+      competitiveSeedPanel.classList.add('hidden');
+      updateHeaderPill();
+      drawCurrentShape();
+    })();
+  </script>
+</body>
+</html>
