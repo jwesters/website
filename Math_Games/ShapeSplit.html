@@ -1,0 +1,2461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Shape Split</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1f2937;
+      --muted: #667085;
+      --panel: rgba(255,255,255,0.92);
+      --line: #26344a;
+      --accent: #5b6cff;
+      --accent-dark: #4051df;
+      --success: #15803d;
+      --warning: #b45309;
+      --danger: #b42318;
+      --shadow: 0 18px 50px rgba(31, 41, 55, 0.16);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+      overscroll-behavior: none;
+      touch-action: none;
+      font-family: Inter, ui-rounded, "Segoe UI", system-ui, -apple-system, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 12%, rgba(91,108,255,0.18), transparent 31%),
+        radial-gradient(circle at 88% 82%, rgba(52,211,153,0.17), transparent 34%),
+        linear-gradient(145deg, #f7f8ff 0%, #eef6ff 48%, #f6fbf9 100%);
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      padding: 18px;
+    }
+
+    .app {
+      width: min(1120px, 100%);
+      display: grid;
+      gap: 14px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      align-items: start;
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.9);
+      border-radius: 22px;
+      padding: 16px 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.35rem, 3vw, 2rem);
+      letter-spacing: -0.04em;
+    }
+
+    .subtitle {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .top-right {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      padding-top: 16px;
+    }
+
+    .difficulty-badge {
+      min-width: 160px;
+      min-height: 48px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      background: #eef1ff;
+      color: #3b4bc7;
+      font-size: 0.78rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .timer-wrap {
+      width: 160px;
+      min-height: 48px;
+      position: relative;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+    }
+
+    .timer-label {
+      position: absolute;
+      top: -14px;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+
+    .timer {
+      width: 160px;
+      min-height: 48px;
+      text-align: center;
+      padding: 9px 16px;
+      border-radius: 999px;
+      background: #eef0ff;
+      color: #3847c8;
+      font-size: 1.35rem;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .timer.running { background: #fff3dd; color: #9a5a00; }
+    .timer.urgent { background: #fee4e2; color: var(--danger); animation: pulse 0.6s infinite alternate; }
+    .timer.done { background: #e7f8ee; color: var(--success); }
+
+    @keyframes pulse { to { transform: scale(1.04); } }
+
+    .game-card {
+      position: relative;
+      overflow: hidden;
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.92);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 3 / 2;
+      min-height: 330px;
+      overflow: hidden;
+      border-radius: 20px;
+      background:
+        linear-gradient(rgba(99,102,241,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99,102,241,0.04) 1px, transparent 1px),
+        #fbfcff;
+      background-size: 28px 28px;
+      border: 1px solid #e4e7ec;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    .instruction {
+      position: absolute;
+      left: 50%;
+      top: 18px;
+      transform: translateX(-50%);
+      width: min(92%, 760px);
+      text-align: center;
+      pointer-events: none;
+      padding: 9px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.86);
+      border: 1px solid rgba(208,213,221,0.9);
+      box-shadow: 0 8px 22px rgba(31,41,55,0.09);
+      color: #475467;
+      font-weight: 750;
+      font-size: clamp(0.78rem, 2vw, 0.95rem);
+      backdrop-filter: blur(8px);
+    }
+
+    .seed-badge {
+      position: absolute;
+      right: 12px;
+      bottom: 10px;
+      z-index: 2;
+      pointer-events: none;
+      padding: 6px 9px;
+      border-radius: 9px;
+      background: rgba(255,255,255,0.82);
+      border: 1px solid rgba(208,213,221,0.88);
+      color: #667085;
+      font-size: 0.72rem;
+      font-weight: 850;
+      letter-spacing: 0.05em;
+      font-variant-numeric: tabular-nums;
+      box-shadow: 0 5px 14px rgba(31,41,55,0.08);
+      backdrop-filter: blur(7px);
+    }
+
+    .status-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 13px 4px 1px;
+    }
+
+    .status {
+      min-height: 24px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .status.success { color: var(--success); }
+    .status.warning { color: var(--warning); }
+    .status.danger { color: var(--danger); }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 14px;
+      padding: 11px 18px;
+      font: inherit;
+      font-weight: 850;
+      cursor: pointer;
+      transition: transform 0.14s ease, filter 0.14s ease, background 0.14s ease;
+    }
+
+    button:hover { transform: translateY(-1px); filter: brightness(1.03); }
+    button:active { transform: translateY(1px); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; filter: none; }
+
+    .primary {
+      color: white;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      box-shadow: 0 8px 20px rgba(91,108,255,0.28);
+    }
+
+    .secondary {
+      background: #eef1f6;
+      color: #344054;
+    }
+
+    .ghost {
+      background: rgba(255,255,255,0.78);
+      color: #344054;
+      border: 1px solid #d0d5dd;
+    }
+
+    .result-overlay, .screen-overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(16,24,40,0.36);
+      backdrop-filter: blur(7px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .screen-overlay {
+      position: fixed;
+      z-index: 50;
+      background: rgba(16,24,40,0.42);
+    }
+
+    .result-overlay.show, .screen-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .result-card, .screen-card {
+      width: min(460px, 94%);
+      text-align: center;
+      background: rgba(255,255,255,0.98);
+      border-radius: 24px;
+      padding: 25px;
+      box-shadow: 0 24px 70px rgba(16,24,40,0.28);
+      transform: translateY(10px) scale(0.98);
+      transition: transform 0.2s ease;
+    }
+
+    .screen-card { width: min(660px, 96%); }
+
+    .result-overlay.show .result-card,
+    .screen-overlay.show .screen-card { transform: translateY(0) scale(1); }
+
+    .result-kicker, .screen-kicker {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 0.75rem;
+      font-weight: 900;
+    }
+
+    .result-title, .screen-title {
+      margin: 7px 0 2px;
+      font-size: clamp(1.8rem, 6vw, 3rem);
+      letter-spacing: -0.06em;
+    }
+
+    .screen-note {
+      margin: 8px auto 20px;
+      max-width: 560px;
+      color: var(--muted);
+      line-height: 1.55;
+      font-weight: 600;
+    }
+
+    .difficulty-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      align-items: stretch;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .difficulty-card {
+      display: flex;
+      flex-direction: column;
+      min-height: 182px;
+      text-align: left;
+      border: 1px solid #dbe1ea;
+      background: #fbfcff;
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+    }
+
+    .difficulty-card h3 {
+      margin: 0 0 6px;
+      font-size: 1.08rem;
+    }
+
+    .difficulty-card p {
+      margin: 0 0 12px;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 0.92rem;
+    }
+
+    .difficulty-card .difficulty-button {
+      margin-top: auto;
+      align-self: flex-start;
+      min-width: 132px;
+    }
+
+    .split {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin: 16px 0;
+      font-size: clamp(1.45rem, 5vw, 2.25rem);
+      font-weight: 950;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .split span {
+      min-width: 120px;
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: #f2f4f7;
+    }
+
+    .result-meta {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .meta-box {
+      padding: 12px;
+      border-radius: 16px;
+      background: #f8fafc;
+      border: 1px solid #eaecf0;
+    }
+
+    .meta-label {
+      display: block;
+      color: var(--muted);
+      font-size: 0.74rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .meta-value {
+      display: block;
+      margin-top: 4px;
+      font-size: 1.15rem;
+      font-weight: 950;
+    }
+
+    .result-note {
+      margin: 0 0 18px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+
+    .target-value {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 150px;
+      padding: 12px 20px;
+      border-radius: 18px;
+      background: #eef1ff;
+      color: #3447cb;
+      font-size: clamp(2rem, 6vw, 3rem);
+      font-weight: 950;
+      letter-spacing: -0.05em;
+      margin: 6px 0 10px;
+    }
+
+    .target-helper {
+      margin: 0 auto 18px;
+      max-width: 520px;
+      color: var(--muted);
+      line-height: 1.55;
+      font-weight: 600;
+    }
+
+    .result-actions {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+
+    .mode-row {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 2px 0 8px;
+    }
+
+    .mode-chip {
+      min-width: 150px;
+      border: 1px solid #d0d5dd;
+      background: #f8fafc;
+      color: #475467;
+    }
+
+    .mode-chip.active {
+      color: white;
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      box-shadow: 0 8px 20px rgba(91,108,255,0.22);
+    }
+
+    .seed-panel {
+      margin: 10px auto 4px;
+      max-width: 560px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid #dbe1ea;
+      background: #f8fbff;
+      text-align: left;
+    }
+
+    .seed-panel.hidden { display: none; }
+
+    .seed-panel label {
+      display: block;
+      margin-bottom: 8px;
+      color: #344054;
+      font-size: 0.9rem;
+      font-weight: 800;
+    }
+
+    .seed-panel input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid #cfd6e1;
+      font: inherit;
+      font-weight: 700;
+      color: #101828;
+      background: white;
+    }
+
+    .seed-panel p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 0.9rem;
+    }
+
+    .summary-card {
+      width: min(720px, 96%);
+      text-align: left;
+      background: rgba(255,255,255,0.98);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 24px 70px rgba(16,24,40,0.28);
+    }
+
+    .summary-top {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }
+
+    .summary-seed {
+      display: block;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid #eaecf0;
+      background: #f8fafc;
+      color: #344054;
+      font-weight: 900;
+      font-size: 1rem;
+      letter-spacing: 0.03em;
+      word-break: break-word;
+    }
+
+    .summary-list {
+      display: grid;
+      gap: 8px;
+      margin: 16px 0 20px;
+    }
+
+    .summary-item {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: #f8fafc;
+      border: 1px solid #eaecf0;
+    }
+
+    .summary-item strong { color: #101828; }
+    .summary-item span { color: var(--muted); }
+    .summary-item em { font-style: normal; font-weight: 900; color: #344054; }
+
+    @media (max-width: 800px) {
+      .difficulty-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 700px) {
+      body { padding: 8px; }
+      .app { gap: 8px; }
+      .topbar { border-radius: 17px; padding: 11px 13px; grid-template-columns: 1fr; }
+      .subtitle { font-size: 0.78rem; }
+      .top-right { justify-content: flex-start; }
+      .game-card { border-radius: 19px; padding: 7px; }
+      .canvas-wrap { min-height: 300px; border-radius: 14px; }
+      .instruction { top: 10px; }
+      .status-row { grid-template-columns: 1fr; padding: 9px 4px 3px; }
+      .button-row button { width: 100%; }
+      .timer-wrap { width: 160px; }
+      .timer { min-width: 85px; font-size: 1.1rem; }
+    }
+
+    @media (max-height: 650px) and (orientation: landscape) {
+      body { padding: 6px; }
+      .app { max-width: 970px; gap: 6px; }
+      .topbar { padding: 8px 12px; }
+      h1 { font-size: 1.2rem; }
+      .subtitle { margin-top: 1px; font-size: 0.72rem; }
+      .game-card { padding: 6px; }
+      .canvas-wrap { min-height: 0; height: calc(100vh - 125px); aspect-ratio: auto; }
+      .status-row { padding-top: 6px; }
+      .result-card, .screen-card { padding: 18px; }
+      .split { margin: 10px 0; }
+    }
+  </style>
+</head>
+<body>
+  <div id="startScreen" class="screen-overlay show" role="dialog" aria-modal="true" aria-labelledby="startTitle">
+    <div class="screen-card">
+      <div class="screen-kicker">Game mode</div>
+      <h2 id="startTitle" class="screen-title">Shape Split</h2>
+      <p class="screen-note">
+        Pick a mode, then choose a difficulty. In Competitive Mode you will play 5 shapes, your total score is added up,
+        and you can share or enter a challenge seed so other players get the same set.
+      </p>
+      <div class="mode-row">
+        <button id="casualModeButton" class="mode-chip active" type="button">Casual Mode</button>
+        <button id="competitiveModeButton" class="mode-chip" type="button">Competitive Mode</button>
+      </div>
+      <div id="competitiveSeedPanel" class="seed-panel hidden">
+        <label for="competitiveSeedInput">Optional competitive seed</label>
+        <input id="competitiveSeedInput" type="text" maxlength="32" placeholder="Leave blank for a new challenge seed" />
+        <p>Leave this empty to create a new 5-shape challenge. Enter an existing seed to play the exact same challenge as someone else.</p>
+      </div>
+      <div class="difficulty-grid">
+        <div class="difficulty-card">
+          <h3>Easy</h3>
+          <p>Compound shapes use <strong>1&ndash;2</strong> generated parts.</p>
+          <button class="primary difficulty-button" data-difficulty="easy" type="button">Play Easy</button>
+        </div>
+        <div class="difficulty-card">
+          <h3>Medium</h3>
+          <p>Compound shapes use <strong>2&ndash;4</strong> generated parts.</p>
+          <button class="primary difficulty-button" data-difficulty="medium" type="button">Play Medium</button>
+        </div>
+        <div class="difficulty-card">
+          <h3>Hard</h3>
+          <p>Compound shapes use <strong>3&ndash;6</strong> generated parts for much wilder silhouettes.</p>
+          <button class="primary difficulty-button" data-difficulty="hard" type="button">Play Hard</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="targetScreen" class="screen-overlay" role="dialog" aria-modal="true" aria-labelledby="targetTitle">
+    <div class="screen-card">
+      <div class="screen-kicker">Round target</div>
+      <h2 id="targetTitle" class="screen-title">Split this shape into</h2>
+      <div id="targetValue" class="target-value">1/2</div>
+      <p id="targetBody" class="target-helper">Make one side of the shape equal to the target fraction. The timer will begin on your first stroke.</p>
+      <div class="result-actions">
+        <button id="targetStartButton" class="primary" type="button">Start</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="summaryScreen" class="screen-overlay" role="dialog" aria-modal="true" aria-labelledby="summaryTitle">
+    <div class="summary-card">
+      <div class="screen-kicker">Competitive results</div>
+      <h2 id="summaryTitle" class="screen-title">Challenge complete</h2>
+      <div class="summary-top">
+        <div class="meta-box">
+          <span class="meta-label">Total score</span>
+          <span id="summaryScore" class="meta-value">0 / 5000</span>
+        </div>
+        <div class="meta-box">
+          <span class="meta-label">Difficulty</span>
+          <span id="summaryDifficulty" class="meta-value">Easy</span>
+        </div>
+      </div>
+      <div class="meta-box" style="margin-bottom:14px;">
+        <span class="meta-label">Challenge seed</span>
+        <span id="summarySeed" class="summary-seed">SS-E-ABCDEFGH</span>
+      </div>
+      <div id="summaryList" class="summary-list"></div>
+      <div class="result-actions">
+        <button id="summaryReplayButton" class="primary" type="button">Play Again</button>
+        <button id="summaryMenuButton" class="secondary" type="button">Main Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <h1>Shape Split</h1>
+        <div class="subtitle">Draw connected strokes that split the shape so one side matches the requested fraction.</div>
+      </div>
+      <div class="top-right">
+        <div id="difficultyBadge" class="difficulty-badge">Difficulty: Medium</div>
+        <div class="timer-wrap">
+          <div class="timer-label">Time</div>
+          <div id="timer" class="timer">Ready</div>
+        </div>
+      </div>
+    </header>
+
+    <section class="game-card">
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="gameCanvas" width="900" height="600" aria-label="Shape splitting game"></canvas>
+        <div id="instruction" class="instruction">Start drawing anywhere. Connect strokes together until they split the shape into exactly two pieces.</div>
+        <div id="seedBadge" class="seed-badge">Seed ID: ---- ----</div>
+
+        <div id="resultOverlay" class="result-overlay" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+          <div class="result-card">
+            <div class="result-kicker">Final split</div>
+            <h2 id="resultTitle" class="result-title">Nice cut!</h2>
+            <div class="split">
+              <span id="leftPercent">50.0%</span>
+              <strong>/</strong>
+              <span id="rightPercent">50.0%</span>
+            </div>
+            <div class="result-meta">
+              <div class="meta-box">
+                <span class="meta-label">Score</span>
+                <span id="scoreValue" class="meta-value">1000</span>
+              </div>
+              <div class="meta-box">
+                <span class="meta-label">Off by</span>
+                <span id="errorValue" class="meta-value">0.0%</span>
+              </div>
+            </div>
+            <p id="resultNote" class="result-note">A perfect 50/50 split.</p>
+            <div class="result-actions">
+              <button id="nextButton" class="primary" type="button">Next Shape</button>
+              <button id="retryButton" class="secondary" type="button">Retry Shape</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="status-row">
+        <div id="status" class="status">Choose a difficulty to begin.</div>
+        <div class="button-row">
+          <button id="clearButton" class="secondary" type="button">Clear Lines</button>
+          <button id="menuButton" class="ghost" type="button">Menu</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      const startScreenEl = document.getElementById('startScreen');
+      const difficultyButtons = Array.from(document.querySelectorAll('.difficulty-button'));
+      const casualModeButton = document.getElementById('casualModeButton');
+      const competitiveModeButton = document.getElementById('competitiveModeButton');
+      const competitiveSeedPanel = document.getElementById('competitiveSeedPanel');
+      const competitiveSeedInput = document.getElementById('competitiveSeedInput');
+      const difficultyBadgeEl = document.getElementById('difficultyBadge');
+      const targetScreenEl = document.getElementById('targetScreen');
+      const targetValueEl = document.getElementById('targetValue');
+      const targetBodyEl = document.getElementById('targetBody');
+      const targetStartButton = document.getElementById('targetStartButton');
+      const summaryScreenEl = document.getElementById('summaryScreen');
+      const summaryScoreEl = document.getElementById('summaryScore');
+      const summaryDifficultyEl = document.getElementById('summaryDifficulty');
+      const summarySeedEl = document.getElementById('summarySeed');
+      const summaryListEl = document.getElementById('summaryList');
+      const summaryReplayButton = document.getElementById('summaryReplayButton');
+      const summaryMenuButton = document.getElementById('summaryMenuButton');
+      const timerEl = document.getElementById('timer');
+      const statusEl = document.getElementById('status');
+      const instructionEl = document.getElementById('instruction');
+      const seedBadgeEl = document.getElementById('seedBadge');
+      const clearButton = document.getElementById('clearButton');
+      const menuButton = document.getElementById('menuButton');
+      const overlay = document.getElementById('resultOverlay');
+      const nextButton = document.getElementById('nextButton');
+      const retryButton = document.getElementById('retryButton');
+      const leftPercentEl = document.getElementById('leftPercent');
+      const rightPercentEl = document.getElementById('rightPercent');
+      const scoreValueEl = document.getElementById('scoreValue');
+      const errorValueEl = document.getElementById('errorValue');
+      const resultTitleEl = document.getElementById('resultTitle');
+      const resultNoteEl = document.getElementById('resultNote');
+
+      const WIDTH = canvas.width;
+      const HEIGHT = canvas.height;
+      const ROUND_MS = 5000;
+      const COMPETITIVE_ROUNDS = 5;
+      const DRAW_WIDTH = 13;
+      const EVAL_SCALE = 0.7;
+      const DISPLAY_SUPERSAMPLE = 2;
+      const MIN_MOVE_SQ = 9;
+      const CONNECT_DISTANCE = 20;
+      const OUTLINE_COLOR = '#26344a';
+
+      const DIFFICULTIES = {
+        easy: { label: 'Easy', minParts: 1, maxParts: 2 },
+        medium: { label: 'Medium', minParts: 2, maxParts: 4 },
+        hard: { label: 'Hard', minParts: 3, maxParts: 6 }
+      };
+
+      const TARGET_OPTIONS = [
+        { label: '1/2', value: 1 / 2, percentText: '50%' },
+        { label: '1/3', value: 1 / 3, percentText: '33.3%' },
+        { label: '1/4', value: 1 / 4, percentText: '25%' },
+        { label: '1/5', value: 1 / 5, percentText: '20%' }
+      ];
+
+      const SHAPE_PROFILES = {
+        easy: {
+          types: ['square', 'rectangle', 'circle', 'triangle', 'diamond', 'hexagon', 'octagon', 'trapezoid', 'capsule', 'cloud', 'shield', 'sideDoubleLobe', 'topTripleKnob', 'pawn', 'balloon', 'bulbRect', 'steppedBulb'],
+          allowHoles: false,
+          partCountWeights: [
+            { value: 1, weight: 7 },
+            { value: 2, weight: 3 }
+          ],
+          opWeights: [{ value: 'union', weight: 1 }],
+          spreadRange: [16, 34],
+          extraRotation: Math.PI / 10,
+          scaleMultiplier: [0.84, 1.02]
+        },
+        medium: {
+          types: ['square', 'rectangle', 'circle', 'triangle', 'diamond', 'hexagon', 'octagon', 'trapezoid', 'capsule', 'star', 'burst', 'cloud', 'crescent', 'ring', 'frame', 'shield', 'speech', 'notched', 'sideDoubleLobe', 'topTripleKnob', 'pawn', 'balloon', 'bulbRect', 'steppedBulb', 'randomConvex', 'randomConcave'],
+          allowHoles: true,
+          partCountWeights: [
+            { value: 2, weight: 3 },
+            { value: 3, weight: 4 },
+            { value: 4, weight: 3 }
+          ],
+          opWeights: [
+            { value: 'union', weight: 6 },
+            { value: 'subtract', weight: 2 },
+            { value: 'xor', weight: 1 }
+          ],
+          spreadRange: [26, 58],
+          extraRotation: Math.PI / 5,
+          scaleMultiplier: [0.72, 0.98]
+        },
+        hard: {
+          types: ['square', 'rectangle', 'circle', 'triangle', 'diamond', 'hexagon', 'octagon', 'trapezoid', 'capsule', 'star', 'burst', 'cloud', 'crescent', 'ring', 'frame', 'shield', 'speech', 'notched', 'sideDoubleLobe', 'topTripleKnob', 'pawn', 'balloon', 'bulbRect', 'steppedBulb', 'crossedPolygon', 'crossedBurst', 'randomConvex', 'randomConcave'],
+          allowHoles: true,
+          partCountWeights: [
+            { value: 3, weight: 2 },
+            { value: 4, weight: 3 },
+            { value: 5, weight: 3 },
+            { value: 6, weight: 2 }
+          ],
+          opWeights: [
+            { value: 'union', weight: 4 },
+            { value: 'subtract', weight: 3 },
+            { value: 'xor', weight: 3 }
+          ],
+          spreadRange: [38, 92],
+          extraRotation: Math.PI / 3,
+          scaleMultiplier: [0.56, 0.92]
+        }
+      };
+
+      let rng = Math.random;
+      let difficulty = 'medium';
+      let gameMode = 'casual';
+      let competitiveState = null;
+      let shape = null;
+      let currentSeedId = '';
+      let currentTarget = TARGET_OPTIONS[0];
+      let lastShapeSignature = '';
+      let currentStroke = [];
+      let strokes = [];
+      let roundStarted = false;
+      let roundEnded = false;
+      let drawing = false;
+      let startTime = 0;
+      let animationFrame = 0;
+
+      function hashSeed(value) {
+        let hash = 2166136261;
+        for (let i = 0; i < value.length; i++) {
+          hash ^= value.charCodeAt(i);
+          hash = Math.imul(hash, 16777619);
+        }
+        return hash >>> 0;
+      }
+
+      function mulberry32(seed) {
+        return function seededRandom() {
+          let t = seed += 0x6D2B79F5;
+          t = Math.imul(t ^ (t >>> 15), t | 1);
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      function createSeedId() {
+        const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        const bytes = new Uint8Array(8);
+        if (globalThis.crypto?.getRandomValues) {
+          globalThis.crypto.getRandomValues(bytes);
+        } else {
+          for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+        }
+        let id = '';
+        for (let i = 0; i < bytes.length; i++) {
+          if (i === 4) id += '-';
+          id += alphabet[bytes[i] % alphabet.length];
+        }
+        return id;
+      }
+
+      function createToken(length = 8) {
+        const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let value = '';
+        if (globalThis.crypto?.getRandomValues) {
+          const bytes = new Uint8Array(length);
+          globalThis.crypto.getRandomValues(bytes);
+          for (let i = 0; i < length; i++) value += alphabet[bytes[i] % alphabet.length];
+        } else {
+          for (let i = 0; i < length; i++) value += alphabet[Math.floor(Math.random() * alphabet.length)];
+        }
+        return value;
+      }
+
+      function difficultyCode(diff) {
+        return ({ easy: 'E', medium: 'M', hard: 'H' })[diff] || 'M';
+      }
+
+      function difficultyFromCode(code) {
+        return ({ E: 'easy', M: 'medium', H: 'hard' })[code] || 'medium';
+      }
+
+      function normalizeChallengeSeed(seed) {
+        return String(seed || '').toUpperCase().replace(/[^A-Z0-9-]/g, '');
+      }
+
+      function formatChallengeSeed(diff, token) {
+        return `SS-${difficultyCode(diff)}-${token}`;
+      }
+
+      function parseChallengeSeed(seed) {
+        const normalized = normalizeChallengeSeed(seed);
+        const match = normalized.match(/^SS-([EMH])-([A-Z0-9]{6,16})$/);
+        if (!match) return null;
+        return {
+          normalized,
+          difficulty: difficultyFromCode(match[1]),
+          token: match[2]
+        };
+      }
+
+      function createCompetitiveChallenge(seed, selectedDifficulty) {
+        let parsed = parseChallengeSeed(seed);
+        if (!parsed) {
+          const token = seed && normalizeChallengeSeed(seed) ? normalizeChallengeSeed(seed).replace(/-/g, '').slice(0, 12) : createToken(8);
+          parsed = parseChallengeSeed(formatChallengeSeed(selectedDifficulty, token)) || {
+            normalized: formatChallengeSeed(selectedDifficulty, token),
+            difficulty: selectedDifficulty,
+            token
+          };
+        }
+        const challengeRng = mulberry32(hashSeed(parsed.normalized));
+        const rounds = [];
+        const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        for (let round = 0; round < COMPETITIVE_ROUNDS; round++) {
+          let shapeToken = '';
+          for (let i = 0; i < 8; i++) shapeToken += alphabet[Math.floor(challengeRng() * alphabet.length)];
+          rounds.push({
+            shapeSeed: `C${round + 1}-${shapeToken}`,
+            targetIndex: Math.floor(challengeRng() * TARGET_OPTIONS.length)
+          });
+        }
+        return {
+          seed: parsed.normalized,
+          difficulty: parsed.difficulty,
+          rounds,
+          currentRound: 0,
+          results: []
+        };
+      }
+
+      function randomBetween(min, max) {
+        return min + rng() * (max - min);
+      }
+
+      function randomInt(min, max) {
+        return Math.floor(randomBetween(min, max + 1));
+      }
+
+      function randomChoice(list) {
+        return list[Math.floor(rng() * list.length)];
+      }
+
+      function weightedChoice(entries) {
+        const total = entries.reduce((sum, entry) => sum + entry.weight, 0);
+        let roll = rng() * total;
+        for (const entry of entries) {
+          if (roll < entry.weight) return entry.value;
+          roll -= entry.weight;
+        }
+        return entries[entries.length - 1].value;
+      }
+
+      function chooseRandomTarget() {
+        return TARGET_OPTIONS[Math.floor(Math.random() * TARGET_OPTIONS.length)];
+      }
+
+      function targetPercent() {
+        return currentTarget.value * 100;
+      }
+
+      function targetDisplayText() {
+        return `${currentTarget.label} (${currentTarget.percentText})`;
+      }
+
+      function targetInstructionText() {
+        return `Split the shape so one side is ${targetDisplayText()} of the total area.`;
+      }
+
+      function gcd(a, b) {
+        while (b !== 0) {
+          const t = b;
+          b = a % b;
+          a = t;
+        }
+        return Math.abs(a);
+      }
+
+      function setStatus(message, tone = '') {
+        statusEl.textContent = message;
+        statusEl.className = `status ${tone}`.trim();
+      }
+
+      function updateDifficultyBadge() {
+        const modeLabel = gameMode === 'competitive' ? 'Competitive' : 'Casual';
+        difficultyBadgeEl.textContent = `${modeLabel}: ${DIFFICULTIES[difficulty].label}`;
+      }
+
+      function setMode(mode) {
+        gameMode = mode;
+        casualModeButton.classList.toggle('active', mode === 'casual');
+        competitiveModeButton.classList.toggle('active', mode === 'competitive');
+        competitiveSeedPanel.classList.toggle('hidden', mode !== 'competitive');
+      }
+
+      function isCompetitiveRound() {
+        return gameMode === 'competitive' && !!competitiveState;
+      }
+
+      function openMainMenu() {
+        cancelAnimationFrame(animationFrame);
+        roundStarted = false;
+        drawing = false;
+        competitiveState = null;
+        lastShapeSignature = '';
+        timerEl.textContent = 'Ready';
+        timerEl.className = 'timer';
+        overlay.classList.remove('show');
+        hideTargetPrompt();
+        summaryScreenEl.classList.remove('show');
+        startScreenEl.classList.add('show');
+        setStatus('Choose a mode and difficulty to begin.', '');
+      }
+
+      function closeMainMenu() {
+        startScreenEl.classList.remove('show');
+      }
+
+      function showTargetPrompt() {
+        targetValueEl.textContent = targetDisplayText();
+        const prefix = isCompetitiveRound() ? `Round ${competitiveState.currentRound + 1} of ${competitiveState.rounds.length}. ` : '';
+        targetBodyEl.textContent = `${prefix}Make one side of the shape equal to ${targetDisplayText()} of the total area. The five-second timer begins when you start drawing.`;
+        targetScreenEl.classList.add('show');
+      }
+
+      function hideTargetPrompt() {
+        targetScreenEl.classList.remove('show');
+      }
+
+
+      function applyRoundState() {
+        updateDifficultyBadge();
+        currentStroke = [];
+        strokes = [];
+        roundStarted = false;
+        roundEnded = false;
+        drawing = false;
+        startTime = 0;
+        clearButton.disabled = false;
+        timerEl.textContent = 'Ready';
+        timerEl.className = 'timer';
+        instructionEl.textContent = targetInstructionText();
+        overlay.classList.remove('show');
+        hideTargetPrompt();
+        summaryScreenEl.classList.remove('show');
+        if (isCompetitiveRound()) {
+          seedBadgeEl.textContent = `Round ${competitiveState.currentRound + 1}/${competitiveState.rounds.length}`;
+          setStatus(`Competitive Mode — Round ${competitiveState.currentRound + 1} of ${competitiveState.rounds.length}. Target: ${targetDisplayText()}. Click Start when ready.`);
+        } else {
+          seedBadgeEl.textContent = `Seed ID: ${currentSeedId}`;
+          setStatus(`Target: make one side ${targetDisplayText()} of the shape. Click Start when you are ready.`);
+        }
+        drawScene();
+        showTargetPrompt();
+      }
+
+      function startCasualRound(useNewShape) {
+        if (useNewShape || !shape) {
+          currentSeedId = createSeedId();
+          currentTarget = chooseRandomTarget();
+          shape = createRandomShape(currentSeedId);
+        }
+        applyRoundState();
+      }
+
+      function startCompetitiveChallenge(seed) {
+        competitiveState = createCompetitiveChallenge(seed, difficulty);
+        difficulty = competitiveState.difficulty;
+        // Reset the shape anti-repeat state so the same competitive seed
+        // always reproduces the exact same five-shape challenge.
+        lastShapeSignature = '';
+        loadCompetitiveRound(0);
+      }
+
+      function loadCompetitiveRound(index) {
+        competitiveState.currentRound = index;
+        const round = competitiveState.rounds[index];
+        currentSeedId = round.shapeSeed;
+        currentTarget = TARGET_OPTIONS[round.targetIndex];
+        shape = createRandomShape(currentSeedId);
+        applyRoundState();
+      }
+
+      function showCompetitiveSummary() {
+        const total = competitiveState.results.reduce((sum, item) => sum + item.score, 0);
+        summaryScoreEl.textContent = `${total} / ${COMPETITIVE_ROUNDS * 1000}`;
+        summaryDifficultyEl.textContent = DIFFICULTIES[competitiveState.difficulty].label;
+        summarySeedEl.textContent = competitiveState.seed;
+        summaryListEl.innerHTML = competitiveState.results.map((item, idx) => {
+          const target = `${item.targetLabel} (${item.targetPercentText})`;
+          const detail = item.valid ? `${item.percentages[0].toFixed(1)}% / ${item.percentages[1].toFixed(1)}%` : 'No valid split';
+          return `<div class="summary-item"><strong>Shape ${idx + 1}</strong><span>${target} • ${detail}</span><em>${item.score} pts</em></div>`;
+        }).join('');
+        summaryScreenEl.classList.add('show');
+      }
+
+      function clonePoint(point) {
+        return { x: point.x, y: point.y };
+      }
+
+      function createPointsRegular(sides, rx, ry) {
+        const points = [];
+        for (let i = 0; i < sides; i++) {
+          const angle = -Math.PI / 2 + i * Math.PI * 2 / sides;
+          points.push({ x: Math.cos(angle) * rx, y: Math.sin(angle) * ry });
+        }
+        return points;
+      }
+
+      function createStarPoints(outerR, innerR, pointsCount, jitter = 0) {
+        const points = [];
+        for (let i = 0; i < pointsCount * 2; i++) {
+          const angle = -Math.PI / 2 + i * Math.PI / pointsCount;
+          const base = i % 2 === 0 ? outerR : innerR;
+          const radius = base * (1 + randomBetween(-jitter, jitter));
+          points.push({ x: Math.cos(angle) * radius, y: Math.sin(angle) * radius });
+        }
+        return points;
+      }
+
+      function createRandomPolygon(outerR, vertices, concave = false) {
+        const points = [];
+        for (let i = 0; i < vertices; i++) {
+          const angle = -Math.PI / 2 + i * Math.PI * 2 / vertices;
+          let radius = outerR * randomBetween(0.72, 1.04);
+          if (concave && i % 2 === 1) radius *= randomBetween(0.48, 0.72);
+          points.push({ x: Math.cos(angle) * radius, y: Math.sin(angle) * radius });
+        }
+        return points;
+      }
+
+      function createCrossingPolygon(outerR, vertices, step) {
+        const raw = [];
+        for (let i = 0; i < vertices; i++) {
+          const angle = -Math.PI / 2 + i * Math.PI * 2 / vertices;
+          const radius = outerR * randomBetween(0.82, 1.06);
+          raw.push({ x: Math.cos(angle) * radius, y: Math.sin(angle) * radius });
+        }
+        const ordered = [];
+        let index = 0;
+        const seen = new Set();
+        while (!seen.has(index)) {
+          seen.add(index);
+          ordered.push(raw[index]);
+          index = (index + step) % vertices;
+        }
+        return ordered;
+      }
+
+      function createShapeCandidate(profile) {
+        const cx = WIDTH / 2;
+        const cy = HEIGHT / 2 + 18;
+        const scale = randomBetween(0.86, 1.08);
+
+        const type = randomChoice(profile.types);
+        const limitedRotation = new Set(['cloud', 'shield', 'speech', 'topTripleKnob', 'pawn', 'balloon', 'steppedBulb']);
+        const moderateRotation = new Set(['crescent', 'frame', 'sideDoubleLobe', 'bulbRect', 'crossedPolygon', 'crossedBurst']);
+        let rotation = randomBetween(-Math.PI / 2, Math.PI / 2);
+        if (limitedRotation.has(type)) rotation = randomBetween(-Math.PI / 14, Math.PI / 14);
+        if (moderateRotation.has(type)) rotation = randomBetween(-Math.PI / 6, Math.PI / 6);
+
+        const candidate = { type, cx, cy, rotation, scale, mirrorX: 1, mirrorY: 1 };
+
+        switch (type) {
+          case 'square':
+            candidate.w = randomBetween(250, 320);
+            candidate.h = candidate.w;
+            break;
+          case 'rectangle':
+            candidate.w = randomBetween(280, 410);
+            candidate.h = randomBetween(190, 300);
+            break;
+          case 'circle':
+            candidate.r = randomBetween(130, 182);
+            break;
+          case 'triangle':
+            candidate.points = [{ x: 0, y: -165 }, { x: 160, y: 120 }, { x: -160, y: 120 }];
+            break;
+          case 'diamond':
+            candidate.points = [{ x: 0, y: -170 }, { x: 165, y: 0 }, { x: 0, y: 170 }, { x: -165, y: 0 }];
+            break;
+          case 'hexagon':
+            candidate.points = createPointsRegular(6, randomBetween(140, 175), randomBetween(140, 175));
+            break;
+          case 'octagon':
+            candidate.points = createPointsRegular(8, randomBetween(140, 175), randomBetween(140, 175));
+            break;
+          case 'trapezoid':
+            candidate.points = [{ x: -175, y: 115 }, { x: -105, y: -125 }, { x: 105, y: -125 }, { x: 175, y: 115 }];
+            break;
+          case 'capsule':
+            candidate.w = randomBetween(280, 360);
+            candidate.h = randomBetween(110, 165);
+            break;
+          case 'star':
+            candidate.points = createStarPoints(randomBetween(138, 176), randomBetween(60, 90), randomInt(5, 7), 0.05);
+            break;
+          case 'burst':
+            candidate.points = createStarPoints(randomBetween(135, 168), randomBetween(88, 118), randomInt(10, 14), 0.12);
+            break;
+          case 'cloud':
+            candidate.w = randomBetween(300, 355);
+            candidate.h = randomBetween(175, 215);
+            break;
+          case 'crescent':
+            candidate.outerR = randomBetween(138, 178);
+            candidate.innerR = candidate.outerR * randomBetween(0.7, 0.8);
+            candidate.offsetX = candidate.outerR * randomBetween(0.34, 0.44);
+            break;
+          case 'ring':
+            candidate.outerR = randomBetween(145, 182);
+            candidate.innerR = candidate.outerR * randomBetween(0.34, 0.5);
+            break;
+          case 'frame':
+            candidate.w = randomBetween(280, 340);
+            candidate.h = randomBetween(210, 290);
+            candidate.innerW = candidate.w * randomBetween(0.34, 0.48);
+            candidate.innerH = candidate.h * randomBetween(0.28, 0.4);
+            break;
+          case 'shield':
+            candidate.w = randomBetween(220, 275);
+            candidate.h = randomBetween(280, 335);
+            break;
+          case 'speech':
+            candidate.w = randomBetween(275, 335);
+            candidate.h = randomBetween(190, 240);
+            break;
+          case 'notched':
+            candidate.w = randomBetween(250, 315);
+            candidate.h = randomBetween(250, 315);
+            candidate.holeR = randomBetween(42, 62);
+            candidate.notchSide = randomChoice(['top', 'right', 'bottom', 'left']);
+            break;
+          case 'sideDoubleLobe':
+            candidate.w = randomBetween(265, 335);
+            candidate.h = randomBetween(210, 270);
+            candidate.mirrorX = rng() < 0.5 ? -1 : 1;
+            break;
+          case 'topTripleKnob':
+            candidate.w = randomBetween(270, 330);
+            candidate.h = randomBetween(210, 265);
+            break;
+          case 'pawn':
+            candidate.topW = randomBetween(140, 180);
+            candidate.topH = randomBetween(120, 155);
+            candidate.neckW = randomBetween(42, 65);
+            candidate.neckH = randomBetween(58, 82);
+            candidate.bulbR = randomBetween(34, 52);
+            break;
+          case 'balloon':
+            candidate.outerR = randomBetween(132, 172);
+            candidate.stemW = randomBetween(54, 82);
+            candidate.stemH = randomBetween(48, 78);
+            break;
+          case 'bulbRect':
+            candidate.circleR = randomBetween(118, 150);
+            candidate.rectW = randomBetween(150, 220);
+            candidate.rectH = randomBetween(132, 180);
+            candidate.mirrorX = rng() < 0.5 ? -1 : 1;
+            break;
+          case 'steppedBulb':
+            candidate.headR = randomBetween(42, 58);
+            candidate.topW = randomBetween(122, 158);
+            candidate.midW = randomBetween(165, 210);
+            candidate.bottomW = randomBetween(240, 300);
+            candidate.bodyH = randomBetween(150, 210);
+            candidate.mirrorX = rng() < 0.5 ? -1 : 1;
+            break;
+          case 'crossedPolygon': {
+            let vertices = randomChoice([5, 7, 8]);
+            let step = vertices === 8 ? 3 : 2;
+            if (gcd(vertices, step) !== 1) step = 3;
+            candidate.points = createCrossingPolygon(randomBetween(138, 170), vertices, step);
+            break;
+          }
+          case 'crossedBurst': {
+            const vertices = randomChoice([7, 9]);
+            candidate.points = createCrossingPolygon(randomBetween(145, 176), vertices, randomChoice([2, 3, 4].filter(v => gcd(vertices, v) === 1)));
+            if (profile.allowHoles && rng() < 0.28) {
+              candidate.hasHole = true;
+              candidate.holeR = randomBetween(22, 42);
+              candidate.holeOffsetX = randomBetween(-12, 12);
+              candidate.holeOffsetY = randomBetween(-12, 12);
+            }
+            break;
+          }
+          case 'randomConvex':
+            candidate.points = createRandomPolygon(randomBetween(145, 175), randomInt(6, 10), false);
+            if (profile.allowHoles && rng() < 0.25) {
+              candidate.hasHole = true;
+              candidate.holeR = randomBetween(32, 55);
+              candidate.holeOffsetX = randomBetween(-24, 24);
+              candidate.holeOffsetY = randomBetween(-24, 24);
+            }
+            break;
+          case 'randomConcave':
+            candidate.points = createRandomPolygon(randomBetween(145, 172), randomInt(8, 12), true);
+            if (profile.allowHoles && rng() < 0.3) {
+              candidate.hasHole = true;
+              candidate.holeR = randomBetween(26, 48);
+              candidate.holeOffsetX = randomBetween(-20, 20);
+              candidate.holeOffsetY = randomBetween(-20, 20);
+            }
+            break;
+        }
+
+        return candidate;
+      }
+
+      function primitiveSignature(candidate) {
+        return candidate.type;
+      }
+
+      function addPolygonPath(targetCtx, points) {
+        if (!points || !points.length) return;
+        targetCtx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) targetCtx.lineTo(points[i].x, points[i].y);
+        targetCtx.closePath();
+      }
+
+      function addRoundedRectPath(targetCtx, x, y, w, h, r) {
+        const radius = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
+        targetCtx.moveTo(x + radius, y);
+        targetCtx.lineTo(x + w - radius, y);
+        targetCtx.quadraticCurveTo(x + w, y, x + w, y + radius);
+        targetCtx.lineTo(x + w, y + h - radius);
+        targetCtx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+        targetCtx.lineTo(x + radius, y + h);
+        targetCtx.quadraticCurveTo(x, y + h, x, y + h - radius);
+        targetCtx.lineTo(x, y + radius);
+        targetCtx.quadraticCurveTo(x, y, x + radius, y);
+        targetCtx.closePath();
+      }
+
+      function addCloudPath(targetCtx, w, h) {
+        const hw = w / 2;
+        const hh = h / 2;
+        targetCtx.moveTo(-hw * 0.82, hh * 0.3);
+        targetCtx.bezierCurveTo(-hw * 1.04, hh * 0.18, -hw * 1.02, -hh * 0.18, -hw * 0.79, -hh * 0.28);
+        targetCtx.bezierCurveTo(-hw * 0.72, -hh * 0.58, -hw * 0.44, -hh * 0.72, -hw * 0.2, -hh * 0.55);
+        targetCtx.bezierCurveTo(-hw * 0.02, -hh * 0.92, hw * 0.36, -hh * 0.86, hw * 0.47, -hh * 0.5);
+        targetCtx.bezierCurveTo(hw * 0.73, -hh * 0.58, hw * 0.94, -hh * 0.34, hw * 0.9, -hh * 0.05);
+        targetCtx.bezierCurveTo(hw * 1.07, hh * 0.08, hw * 1.0, hh * 0.38, hw * 0.78, hh * 0.49);
+        targetCtx.bezierCurveTo(hw * 0.5, hh * 0.72, -hw * 0.58, hh * 0.74, -hw * 0.82, hh * 0.3);
+        targetCtx.closePath();
+      }
+
+      function addShieldPath(targetCtx, w, h) {
+        const hw = w / 2;
+        const hh = h / 2;
+        targetCtx.moveTo(0, -hh);
+        targetCtx.lineTo(hw * 0.82, -hh * 0.72);
+        targetCtx.lineTo(hw * 0.82, hh * 0.02);
+        targetCtx.quadraticCurveTo(hw * 0.78, hh * 0.58, 0, hh);
+        targetCtx.quadraticCurveTo(-hw * 0.78, hh * 0.58, -hw * 0.82, hh * 0.02);
+        targetCtx.lineTo(-hw * 0.82, -hh * 0.72);
+        targetCtx.closePath();
+      }
+
+      function addSpeechPath(targetCtx, w, h) {
+        const hw = w / 2;
+        const hh = h / 2;
+        const r = Math.min(w, h) * 0.18;
+        targetCtx.moveTo(-hw + r, -hh);
+        targetCtx.lineTo(hw - r, -hh);
+        targetCtx.quadraticCurveTo(hw, -hh, hw, -hh + r);
+        targetCtx.lineTo(hw, hh - r);
+        targetCtx.quadraticCurveTo(hw, hh, hw - r, hh);
+        targetCtx.lineTo(hw * 0.42, hh);
+        targetCtx.lineTo(hw * 0.6, hh * 1.22);
+        targetCtx.lineTo(hw * 0.04, hh);
+        targetCtx.lineTo(-hw + r, hh);
+        targetCtx.quadraticCurveTo(-hw, hh, -hw, hh - r);
+        targetCtx.lineTo(-hw, -hh + r);
+        targetCtx.quadraticCurveTo(-hw, -hh, -hw + r, -hh);
+        targetCtx.closePath();
+      }
+
+      function addNotchedShapePath(targetCtx, w, h, side) {
+        const hw = w / 2;
+        const hh = h / 2;
+        const notch = Math.min(w, h) * 0.22;
+        if (side === 'top') {
+          targetCtx.moveTo(-hw, -hh);
+          targetCtx.lineTo(-notch, -hh);
+          targetCtx.lineTo(0, -hh + notch);
+          targetCtx.lineTo(notch, -hh);
+          targetCtx.lineTo(hw, -hh);
+          targetCtx.lineTo(hw, hh);
+          targetCtx.lineTo(-hw, hh);
+        } else if (side === 'right') {
+          targetCtx.moveTo(-hw, -hh);
+          targetCtx.lineTo(hw, -hh);
+          targetCtx.lineTo(hw, -notch);
+          targetCtx.lineTo(hw - notch, 0);
+          targetCtx.lineTo(hw, notch);
+          targetCtx.lineTo(hw, hh);
+          targetCtx.lineTo(-hw, hh);
+        } else if (side === 'bottom') {
+          targetCtx.moveTo(-hw, -hh);
+          targetCtx.lineTo(hw, -hh);
+          targetCtx.lineTo(hw, hh);
+          targetCtx.lineTo(notch, hh);
+          targetCtx.lineTo(0, hh - notch);
+          targetCtx.lineTo(-notch, hh);
+          targetCtx.lineTo(-hw, hh);
+        } else {
+          targetCtx.moveTo(-hw, -notch);
+          targetCtx.lineTo(-hw + notch, 0);
+          targetCtx.lineTo(-hw, notch);
+          targetCtx.lineTo(-hw, hh);
+          targetCtx.lineTo(hw, hh);
+          targetCtx.lineTo(hw, -hh);
+          targetCtx.lineTo(-hw, -hh);
+        }
+        targetCtx.closePath();
+      }
+
+      function addCrescentPath(targetCtx, outerR, innerR, offsetX) {
+        const d = offsetX;
+        const x = (outerR * outerR - innerR * innerR + d * d) / (2 * d);
+        const y = Math.sqrt(Math.max(0, outerR * outerR - x * x));
+        const outerTheta = Math.atan2(y, x);
+        const innerTheta = Math.atan2(y, x - d);
+        targetCtx.arc(0, 0, outerR, -outerTheta, -Math.PI * 2 + outerTheta, true);
+        targetCtx.arc(d, 0, innerR, innerTheta, Math.PI * 2 - innerTheta, false);
+        targetCtx.closePath();
+      }
+
+      function addSideDoubleLobePath(targetCtx, w, h) {
+        const hw = w / 2;
+        const hh = h / 2;
+        targetCtx.moveTo(-hw, -hh);
+        targetCtx.lineTo(hw * 0.24, -hh);
+        targetCtx.quadraticCurveTo(hw * 0.38, -hh, hw * 0.43, -hh * 0.84);
+        targetCtx.bezierCurveTo(hw * 0.47, -hh * 1.04, hw * 0.79, -hh * 1.04, hw * 0.88, -hh * 0.72);
+        targetCtx.bezierCurveTo(hw * 0.97, -hh * 0.35, hw * 0.73, -hh * 0.12, hw * 0.48, -hh * 0.08);
+        targetCtx.quadraticCurveTo(hw * 0.3, -hh * 0.03, hw * 0.3, hh * 0.04);
+        targetCtx.quadraticCurveTo(hw * 0.3, hh * 0.08, hw * 0.48, hh * 0.12);
+        targetCtx.bezierCurveTo(hw * 0.76, hh * 0.2, hw * 0.99, hh * 0.42, hw * 0.88, hh * 0.78);
+        targetCtx.bezierCurveTo(hw * 0.78, hh * 1.06, hw * 0.42, hh * 1.04, hw * 0.28, hh * 0.84);
+        targetCtx.quadraticCurveTo(hw * 0.18, hh, 0, hh);
+        targetCtx.lineTo(-hw, hh);
+        targetCtx.closePath();
+      }
+
+      function addTopTripleKnobPath(targetCtx, w, h) {
+        const hw = w / 2;
+        const hh = h / 2;
+        targetCtx.moveTo(-hw * 0.72, hh * 0.66);
+        targetCtx.lineTo(hw * 0.72, hh * 0.66);
+        targetCtx.quadraticCurveTo(hw * 0.8, hh * 0.66, hw * 0.8, hh * 0.56);
+        targetCtx.lineTo(hw * 0.8, hh * 0.08);
+        targetCtx.bezierCurveTo(hw * 1.06, hh * 0.08, hw * 1.06, -hh * 0.24, hw * 0.72, -hh * 0.24);
+        targetCtx.lineTo(hw * 0.72, -hh * 0.52);
+        targetCtx.lineTo(hw * 0.28, -hh * 0.52);
+        targetCtx.bezierCurveTo(hw * 0.28, -hh * 0.96, -hw * 0.28, -hh * 0.96, -hw * 0.28, -hh * 0.52);
+        targetCtx.lineTo(-hw * 0.72, -hh * 0.52);
+        targetCtx.lineTo(-hw * 0.72, -hh * 0.24);
+        targetCtx.bezierCurveTo(-hw * 1.06, -hh * 0.24, -hw * 1.06, hh * 0.08, -hw * 0.8, hh * 0.08);
+        targetCtx.lineTo(-hw * 0.8, hh * 0.56);
+        targetCtx.quadraticCurveTo(-hw * 0.8, hh * 0.66, -hw * 0.72, hh * 0.66);
+        targetCtx.closePath();
+      }
+
+      function addPawnPath(targetCtx, topW, topH, neckW, neckH, bulbR) {
+        const tw = topW / 2;
+        const topY = -topH * 0.95;
+        const bottomY = topY + topH;
+        const r = Math.min(topW, topH) * 0.18;
+        const stemBottom = bottomY + neckH;
+        const bulbCY = stemBottom + bulbR * 0.42;
+        targetCtx.moveTo(-tw + r, topY);
+        targetCtx.lineTo(tw - r, topY);
+        targetCtx.quadraticCurveTo(tw, topY, tw, topY + r);
+        targetCtx.lineTo(tw, bottomY - r);
+        targetCtx.quadraticCurveTo(tw, bottomY, tw - r, bottomY);
+        targetCtx.lineTo(neckW / 2, bottomY);
+        targetCtx.lineTo(neckW / 2, stemBottom - bulbR * 0.25);
+        targetCtx.quadraticCurveTo(neckW / 2, stemBottom, bulbR * 0.74, stemBottom);
+        targetCtx.quadraticCurveTo(bulbR, stemBottom + bulbR * 0.05, bulbR, bulbCY);
+        targetCtx.arc(0, bulbCY, bulbR, 0, Math.PI, true);
+        targetCtx.quadraticCurveTo(-bulbR, stemBottom + bulbR * 0.05, -bulbR * 0.74, stemBottom);
+        targetCtx.quadraticCurveTo(-neckW / 2, stemBottom, -neckW / 2, stemBottom - bulbR * 0.25);
+        targetCtx.lineTo(-neckW / 2, bottomY);
+        targetCtx.lineTo(-tw + r, bottomY);
+        targetCtx.quadraticCurveTo(-tw, bottomY, -tw, bottomY - r);
+        targetCtx.lineTo(-tw, topY + r);
+        targetCtx.quadraticCurveTo(-tw, topY, -tw + r, topY);
+        targetCtx.closePath();
+      }
+
+      function addBalloonPath(targetCtx, outerR, stemW, stemH) {
+        const topY = -outerR * 1.16;
+        const stemTopY = outerR * 0.94;
+        const stemBottomY = stemTopY + stemH;
+        targetCtx.moveTo(-outerR * 0.94, -outerR * 0.1);
+        targetCtx.bezierCurveTo(-outerR * 1.08, -outerR * 0.92, -outerR * 0.45, topY, 0, -outerR * 1.05);
+        targetCtx.bezierCurveTo(outerR * 0.45, topY, outerR * 1.08, -outerR * 0.92, outerR * 0.94, -outerR * 0.1);
+        targetCtx.bezierCurveTo(outerR * 1.02, outerR * 0.52, outerR * 0.58, stemTopY, stemW / 2, stemTopY);
+        targetCtx.lineTo(stemW / 2, stemBottomY);
+        targetCtx.quadraticCurveTo(stemW / 2, stemBottomY + 12, stemW / 2 - 10, stemBottomY + 12);
+        targetCtx.lineTo(-stemW / 2 + 10, stemBottomY + 12);
+        targetCtx.quadraticCurveTo(-stemW / 2, stemBottomY + 12, -stemW / 2, stemBottomY);
+        targetCtx.lineTo(-stemW / 2, stemTopY);
+        targetCtx.bezierCurveTo(-outerR * 0.58, stemTopY, -outerR * 1.02, outerR * 0.52, -outerR * 0.94, -outerR * 0.1);
+        targetCtx.closePath();
+      }
+
+      function addBulbRectPath(targetCtx, circleR, rectW, rectH) {
+        const halfRectW = rectW / 2;
+        const halfRectH = rectH / 2;
+        targetCtx.moveTo(0, -circleR * 0.78);
+        targetCtx.lineTo(halfRectW, -circleR * 0.78);
+        targetCtx.quadraticCurveTo(halfRectW + halfRectH * 0.2, -circleR * 0.78, halfRectW + halfRectH * 0.2, -circleR * 0.58);
+        targetCtx.lineTo(halfRectW + halfRectH * 0.2, circleR * 0.78);
+        targetCtx.quadraticCurveTo(halfRectW + halfRectH * 0.2, circleR, halfRectW, circleR);
+        targetCtx.lineTo(0, circleR);
+        targetCtx.bezierCurveTo(-circleR * 0.58, circleR, -circleR * 1.04, circleR * 0.46, -circleR, 0);
+        targetCtx.bezierCurveTo(-circleR * 1.04, -circleR * 0.56, -circleR * 0.58, -circleR, 0, -circleR * 0.78);
+        targetCtx.closePath();
+      }
+
+      function addSteppedBulbPath(targetCtx, headR, topW, midW, bottomW, bodyH) {
+        const halfTop = topW / 2;
+        const halfMid = midW / 2;
+        const halfBottom = bottomW / 2;
+        const bodyTopY = headR * 0.68;
+        const bodyMidY = bodyTopY + bodyH * 0.38;
+        const bodyBottomY = bodyTopY + bodyH;
+        targetCtx.moveTo(0, -headR * 1.15);
+        targetCtx.bezierCurveTo(headR * 0.64, -headR * 1.15, headR * 1.02, -headR * 0.62, headR * 1.02, 0);
+        targetCtx.bezierCurveTo(headR * 1.02, headR * 0.48, headR * 0.74, bodyTopY, halfTop, bodyTopY);
+        targetCtx.lineTo(halfTop, bodyMidY);
+        targetCtx.lineTo(halfMid, bodyMidY);
+        targetCtx.lineTo(halfMid, bodyBottomY * 0.78);
+        targetCtx.lineTo(halfBottom, bodyBottomY * 0.78);
+        targetCtx.lineTo(halfBottom, bodyBottomY);
+        targetCtx.lineTo(-halfBottom, bodyBottomY);
+        targetCtx.lineTo(-halfBottom, bodyTopY);
+        targetCtx.lineTo(-halfTop, bodyTopY);
+        targetCtx.bezierCurveTo(-headR * 0.74, bodyTopY, -headR * 1.02, headR * 0.48, -headR * 1.02, 0);
+        targetCtx.bezierCurveTo(-headR * 1.02, -headR * 0.62, -headR * 0.64, -headR * 1.15, 0, -headR * 1.15);
+        targetCtx.closePath();
+      }
+
+      function buildPrimitivePath(targetCtx, candidate, scale = 1) {
+        const s = candidate;
+        targetCtx.beginPath();
+        targetCtx.save();
+        targetCtx.translate(s.cx * scale, s.cy * scale);
+        targetCtx.rotate(s.rotation);
+        targetCtx.scale((s.mirrorX ?? 1) * s.scale * scale, (s.mirrorY ?? 1) * s.scale * scale);
+
+        switch (s.type) {
+          case 'square':
+          case 'rectangle':
+            targetCtx.rect(-s.w / 2, -s.h / 2, s.w, s.h);
+            break;
+          case 'circle':
+            targetCtx.arc(0, 0, s.r, 0, Math.PI * 2);
+            break;
+          case 'triangle':
+          case 'diamond':
+          case 'hexagon':
+          case 'octagon':
+          case 'trapezoid':
+          case 'star':
+          case 'burst':
+          case 'crossedPolygon':
+          case 'crossedBurst':
+          case 'randomConvex':
+          case 'randomConcave':
+            addPolygonPath(targetCtx, s.points);
+            if (s.hasHole) {
+              targetCtx.moveTo(s.holeOffsetX + s.holeR, s.holeOffsetY);
+              targetCtx.arc(s.holeOffsetX, s.holeOffsetY, s.holeR, 0, Math.PI * 2);
+            }
+            break;
+          case 'capsule':
+            addRoundedRectPath(targetCtx, -s.w / 2, -s.h / 2, s.w, s.h, s.h / 2);
+            break;
+          case 'cloud':
+            addCloudPath(targetCtx, s.w, s.h);
+            break;
+          case 'crescent':
+            addCrescentPath(targetCtx, s.outerR, s.innerR, s.offsetX);
+            break;
+          case 'ring':
+            targetCtx.arc(0, 0, s.outerR, 0, Math.PI * 2);
+            targetCtx.moveTo(s.innerR, 0);
+            targetCtx.arc(0, 0, s.innerR, 0, Math.PI * 2);
+            break;
+          case 'frame':
+            addRoundedRectPath(targetCtx, -s.w / 2, -s.h / 2, s.w, s.h, Math.min(s.w, s.h) * 0.16);
+            addRoundedRectPath(targetCtx, -s.innerW / 2, -s.innerH / 2, s.innerW, s.innerH, Math.min(s.innerW, s.innerH) * 0.18);
+            break;
+          case 'shield':
+            addShieldPath(targetCtx, s.w, s.h);
+            break;
+          case 'speech':
+            addSpeechPath(targetCtx, s.w, s.h);
+            break;
+          case 'notched':
+            addNotchedShapePath(targetCtx, s.w, s.h, s.notchSide);
+            targetCtx.moveTo(s.holeR, 0);
+            targetCtx.arc(0, 0, s.holeR, 0, Math.PI * 2);
+            break;
+          case 'sideDoubleLobe':
+            addSideDoubleLobePath(targetCtx, s.w, s.h);
+            break;
+          case 'topTripleKnob':
+            addTopTripleKnobPath(targetCtx, s.w, s.h);
+            break;
+          case 'pawn':
+            addPawnPath(targetCtx, s.topW, s.topH, s.neckW, s.neckH, s.bulbR);
+            break;
+          case 'balloon':
+            addBalloonPath(targetCtx, s.outerR, s.stemW, s.stemH);
+            break;
+          case 'bulbRect':
+            addBulbRectPath(targetCtx, s.circleR, s.rectW, s.rectH);
+            break;
+          case 'steppedBulb':
+            addSteppedBulbPath(targetCtx, s.headR, s.topW, s.midW, s.bottomW, s.bodyH);
+            break;
+        }
+
+        targetCtx.restore();
+      }
+
+      function transformComponent(candidate, count, index, profile) {
+        const copy = structuredClone(candidate);
+        const [spreadMin, spreadMax] = profile.spreadRange;
+        const spread = count <= 2 ? spreadMin : count <= 4 ? (spreadMin + spreadMax) * 0.5 : spreadMax;
+        const [scaleMin, scaleMax] = profile.scaleMultiplier;
+        const scaleFactor = index === 0 ? randomBetween(0.96, 1.04) : randomBetween(scaleMin, scaleMax);
+        copy.cx += index === 0 ? randomBetween(-10, 10) : randomBetween(-spread, spread);
+        copy.cy += index === 0 ? randomBetween(-10, 10) : randomBetween(-spread * 0.82, spread * 0.82);
+        copy.scale *= scaleFactor;
+        copy.rotation += randomBetween(-profile.extraRotation, profile.extraRotation);
+        if (index > 0 && difficulty !== 'easy' && rng() < 0.35) copy.mirrorY = -1;
+        return copy;
+      }
+
+      function rasterizeCandidate(candidate, scale = 1) {
+        const width = Math.round(WIDTH * scale);
+        const height = Math.round(HEIGHT * scale);
+        const c = document.createElement('canvas');
+        c.width = width;
+        c.height = height;
+        const cctx = c.getContext('2d', { willReadFrequently: true });
+        cctx.fillStyle = '#000';
+        cctx.fillRect(0, 0, width, height);
+        buildPrimitivePath(cctx, candidate, scale);
+        cctx.fillStyle = '#fff';
+        cctx.fill('evenodd');
+        const image = cctx.getImageData(0, 0, width, height).data;
+        const mask = new Uint8Array(width * height);
+        for (let i = 0, p = 0; i < image.length; i += 4, p++) {
+          if (image[i] > 200) mask[p] = 1;
+        }
+        return { width, height, mask };
+      }
+
+      function combineMasks(baseMask, addMask, op) {
+        const result = new Uint8Array(baseMask.length);
+        for (let i = 0; i < baseMask.length; i++) {
+          const a = baseMask[i];
+          const b = addMask[i];
+          if (op === 'union' || op === 'base') result[i] = a || b ? 1 : 0;
+          else if (op === 'subtract') result[i] = a && !b ? 1 : 0;
+          else if (op === 'xor') result[i] = a !== b ? 1 : 0;
+        }
+        return result;
+      }
+
+      function getComponentSizes(mask, width, height, targetValue = 1, minSize = 1, previsited = null) {
+        const visited = previsited || new Uint8Array(mask.length);
+        const queue = new Int32Array(mask.length);
+        const sizes = [];
+        for (let start = 0; start < mask.length; start++) {
+          if (mask[start] !== targetValue || visited[start]) continue;
+          let head = 0;
+          let tail = 0;
+          let size = 0;
+          queue[tail++] = start;
+          visited[start] = 1;
+          while (head < tail) {
+            const index = queue[head++];
+            size++;
+            const x = index % width;
+            const left = index - 1;
+            const right = index + 1;
+            const up = index - width;
+            const down = index + width;
+            if (x > 0 && mask[left] === targetValue && !visited[left]) { visited[left] = 1; queue[tail++] = left; }
+            if (x < width - 1 && mask[right] === targetValue && !visited[right]) { visited[right] = 1; queue[tail++] = right; }
+            if (up >= 0 && mask[up] === targetValue && !visited[up]) { visited[up] = 1; queue[tail++] = up; }
+            if (down < mask.length && mask[down] === targetValue && !visited[down]) { visited[down] = 1; queue[tail++] = down; }
+          }
+          if (size >= minSize) sizes.push(size);
+        }
+        return sizes;
+      }
+
+      function countInteriorHoles(mask, width, height) {
+        const background = new Uint8Array(mask.length);
+        for (let i = 0; i < mask.length; i++) background[i] = mask[i] ? 0 : 1;
+        const visited = new Uint8Array(mask.length);
+        const queue = new Int32Array(mask.length);
+
+        function flood(start) {
+          let head = 0;
+          let tail = 0;
+          queue[tail++] = start;
+          visited[start] = 1;
+          while (head < tail) {
+            const index = queue[head++];
+            const x = index % width;
+            const left = index - 1;
+            const right = index + 1;
+            const up = index - width;
+            const down = index + width;
+            if (x > 0 && background[left] && !visited[left]) { visited[left] = 1; queue[tail++] = left; }
+            if (x < width - 1 && background[right] && !visited[right]) { visited[right] = 1; queue[tail++] = right; }
+            if (up >= 0 && background[up] && !visited[up]) { visited[up] = 1; queue[tail++] = up; }
+            if (down < background.length && background[down] && !visited[down]) { visited[down] = 1; queue[tail++] = down; }
+          }
+        }
+
+        for (let x = 0; x < width; x++) {
+          const top = x;
+          const bottom = (height - 1) * width + x;
+          if (background[top] && !visited[top]) flood(top);
+          if (background[bottom] && !visited[bottom]) flood(bottom);
+        }
+        for (let y = 0; y < height; y++) {
+          const left = y * width;
+          const right = y * width + (width - 1);
+          if (background[left] && !visited[left]) flood(left);
+          if (background[right] && !visited[right]) flood(right);
+        }
+
+        return getComponentSizes(background, width, height, 1, 40, visited).length;
+      }
+
+      function analyzeMask(mask, width, height) {
+        let area = 0;
+        let minX = width;
+        let maxX = -1;
+        let minY = height;
+        let maxY = -1;
+        for (let i = 0; i < mask.length; i++) {
+          if (!mask[i]) continue;
+          area++;
+          const x = i % width;
+          const y = Math.floor(i / width);
+          minX = Math.min(minX, x);
+          maxX = Math.max(maxX, x);
+          minY = Math.min(minY, y);
+          maxY = Math.max(maxY, y);
+        }
+        const bounds = { minX, maxX, minY, maxY, width: maxX - minX + 1, height: maxY - minY + 1 };
+        const components = getComponentSizes(mask, width, height, 1, 40);
+        const holes = countInteriorHoles(mask, width, height);
+        return { area, bounds, components, holes };
+      }
+
+      function validateCombinedMask(mask, width, height, partCount) {
+        const info = analyzeMask(mask, width, height);
+        const scaleX = width / WIDTH;
+        const scaleY = height / HEIGHT;
+        const areaScale = scaleX * scaleY;
+        const areaMin = (partCount <= 2 ? 6500 : partCount <= 4 ? 7000 : 7600) * areaScale;
+        const areaMax = (partCount <= 2 ? 52000 : partCount <= 4 ? 62000 : 72000) * areaScale;
+        if (info.area < areaMin || info.area > areaMax) return false;
+        if (info.components.length !== 1) return false;
+        const margin = Math.max(6, Math.round(18 * Math.min(scaleX, scaleY)));
+        if (info.bounds.minX < margin || info.bounds.minY < margin || info.bounds.maxX >= width - margin || info.bounds.maxY >= height - margin) return false;
+        if (info.bounds.width < 90 * scaleX || info.bounds.height < 90 * scaleY) return false;
+        if (info.holes > (partCount >= 5 ? 6 : 4)) return false;
+        const boxArea = info.bounds.width * info.bounds.height;
+        const fillRatio = info.area / Math.max(1, boxArea);
+        if (fillRatio < 0.18 || fillRatio > 0.88) return false;
+        return true;
+      }
+
+      function downsampleMask(mask, width, height, factor = 2) {
+        const outWidth = Math.max(1, Math.floor(width / factor));
+        const outHeight = Math.max(1, Math.floor(height / factor));
+        const outMask = new Uint8Array(outWidth * outHeight);
+        const threshold = Math.max(1, Math.floor((factor * factor) * 0.35));
+        for (let y = 0; y < outHeight; y++) {
+          for (let x = 0; x < outWidth; x++) {
+            let count = 0;
+            for (let yy = 0; yy < factor; yy++) {
+              const srcY = y * factor + yy;
+              if (srcY >= height) continue;
+              for (let xx = 0; xx < factor; xx++) {
+                const srcX = x * factor + xx;
+                if (srcX >= width) continue;
+                count += mask[srcY * width + srcX];
+              }
+            }
+            if (count >= threshold) outMask[y * outWidth + x] = 1;
+          }
+        }
+        return { mask: outMask, width: outWidth, height: outHeight };
+      }
+
+      function erodeMask(mask, width, height, iterations = 1) {
+        let current = mask;
+        for (let iter = 0; iter < iterations; iter++) {
+          const next = new Uint8Array(current.length);
+          for (let y = 1; y < height - 1; y++) {
+            for (let x = 1; x < width - 1; x++) {
+              const idx = y * width + x;
+              if (!current[idx]) continue;
+              if (
+                current[idx - 1] && current[idx + 1] && current[idx - width] && current[idx + width] &&
+                current[idx - width - 1] && current[idx - width + 1] &&
+                current[idx + width - 1] && current[idx + width + 1]
+              ) {
+                next[idx] = 1;
+              }
+            }
+          }
+          current = next;
+        }
+        return current;
+      }
+
+      function sumMask(mask) {
+        let total = 0;
+        for (let i = 0; i < mask.length; i++) total += mask[i];
+        return total;
+      }
+
+      function validateFinalShapeMask(mask, width, height, partCount) {
+        if (!validateCombinedMask(mask, width, height, partCount)) return false;
+
+        const half = downsampleMask(mask, width, height, 2);
+        if (!validateCombinedMask(half.mask, half.width, half.height, partCount)) return false;
+
+        const quarter = downsampleMask(half.mask, half.width, half.height, 2);
+        const quarterInfo = analyzeMask(quarter.mask, quarter.width, quarter.height);
+        if (quarterInfo.components.length !== 1) return false;
+
+        const eroded = erodeMask(mask, width, height, 1);
+        const erodedArea = sumMask(eroded);
+        if (erodedArea > 0) {
+          const erodedComponents = getComponentSizes(eroded, width, height, 1, Math.max(12, Math.round((width * height) * 0.00003)));
+          if (erodedComponents.length > 1) return false;
+        }
+
+        return true;
+      }
+
+      function buildAlphaCanvasFromMask(mask, width, height) {
+        const c = document.createElement('canvas');
+        c.width = width;
+        c.height = height;
+        const cctx = c.getContext('2d');
+        const image = cctx.createImageData(width, height);
+        for (let i = 0, p = 0; p < mask.length; p++, i += 4) {
+          if (mask[p]) {
+            image.data[i] = 255;
+            image.data[i + 1] = 255;
+            image.data[i + 2] = 255;
+            image.data[i + 3] = 255;
+          }
+        }
+        cctx.putImageData(image, 0, 0);
+        return c;
+      }
+
+      function buildDisplayCanvas(alphaCanvas) {
+        const width = alphaCanvas.width;
+        const height = alphaCanvas.height;
+
+        const fillCanvas = document.createElement('canvas');
+        fillCanvas.width = width;
+        fillCanvas.height = height;
+        const fillCtx = fillCanvas.getContext('2d');
+        const gradient = fillCtx.createLinearGradient(220, 130, 700, 500);
+        gradient.addColorStop(0, '#dfe6ff');
+        gradient.addColorStop(0.55, '#c9f0ea');
+        gradient.addColorStop(1, '#fde4cd');
+        fillCtx.fillStyle = gradient;
+        fillCtx.fillRect(0, 0, width, height);
+        fillCtx.globalCompositeOperation = 'destination-in';
+        fillCtx.drawImage(alphaCanvas, 0, 0);
+
+        const expanded = document.createElement('canvas');
+        expanded.width = width;
+        expanded.height = height;
+        const ectx = expanded.getContext('2d');
+        const offsets = [-2, -1, 0, 1, 2];
+        for (const dx of offsets) {
+          for (const dy of offsets) {
+            if (dx === 0 && dy === 0) continue;
+            ectx.drawImage(alphaCanvas, dx, dy);
+          }
+        }
+        ectx.drawImage(alphaCanvas, 0, 0);
+
+        const borderCanvas = document.createElement('canvas');
+        borderCanvas.width = width;
+        borderCanvas.height = height;
+        const bctx = borderCanvas.getContext('2d');
+        bctx.fillStyle = OUTLINE_COLOR;
+        bctx.fillRect(0, 0, width, height);
+        bctx.globalCompositeOperation = 'destination-in';
+        bctx.drawImage(expanded, 0, 0);
+        bctx.globalCompositeOperation = 'destination-out';
+        bctx.drawImage(alphaCanvas, 0, 0);
+
+        const display = document.createElement('canvas');
+        display.width = width;
+        display.height = height;
+        const dctx = display.getContext('2d');
+        dctx.drawImage(borderCanvas, 0, 0);
+        dctx.drawImage(fillCanvas, 0, 0);
+        return display;
+      }
+
+      function buildShapeFromParts(parts, signature) {
+        const width = WIDTH * DISPLAY_SUPERSAMPLE;
+        const height = HEIGHT * DISPLAY_SUPERSAMPLE;
+        let mask = new Uint8Array(width * height);
+        parts.forEach((part, index) => {
+          const raster = rasterizeCandidate(part.candidate, DISPLAY_SUPERSAMPLE);
+          mask = combineMasks(mask, raster.mask, index === 0 ? 'base' : part.op);
+        });
+        const alphaCanvas = buildAlphaCanvasFromMask(mask, width, height);
+        const displayCanvas = buildDisplayCanvas(alphaCanvas);
+        return { alphaCanvas, displayCanvas, signature, partCount: parts.length, parts, mask, width, height };
+      }
+
+      function buildScaledMaskFromParts(parts, scale) {
+        const width = Math.round(WIDTH * scale);
+        const height = Math.round(HEIGHT * scale);
+        let mask = new Uint8Array(width * height);
+        parts.forEach((part, index) => {
+          const raster = rasterizeCandidate(part.candidate, scale);
+          mask = combineMasks(mask, raster.mask, index === 0 ? 'base' : part.op);
+        });
+        return { width, height, mask };
+      }
+
+      function createFallbackShape() {
+        const candidate = { type: 'circle', cx: WIDTH / 2, cy: HEIGHT / 2 + 18, rotation: 0, scale: 1, mirrorX: 1, mirrorY: 1, r: 165 };
+        return buildShapeFromParts([{ candidate, op: 'base' }], 'fallback-circle');
+      }
+
+      function createRandomShape(seedId) {
+        rng = mulberry32(hashSeed(`${seedId}-${difficulty}`));
+        const config = DIFFICULTIES[difficulty];
+        const profile = SHAPE_PROFILES[difficulty];
+        const attemptLimit = 220;
+
+        for (let attempt = 0; attempt < attemptLimit; attempt++) {
+          let partCount = weightedChoice(profile.partCountWeights);
+          partCount = Math.max(config.minParts, Math.min(config.maxParts, partCount));
+          const parts = [];
+          const signatureBits = [];
+
+          for (let i = 0; i < partCount; i++) {
+            const primitive = transformComponent(createShapeCandidate(profile), partCount, i, profile);
+            const op = i === 0 ? 'base' : weightedChoice(profile.opWeights);
+            parts.push({ candidate: primitive, op });
+            signatureBits.push(i === 0 ? primitiveSignature(primitive) : `${op}:${primitiveSignature(primitive)}`);
+          }
+
+          const signature = `${difficulty}|${signatureBits.join('|')}|${partCount}`;
+          if (signature === lastShapeSignature) continue;
+
+          const preview = buildScaledMaskFromParts(parts, 0.5);
+          if (!validateCombinedMask(preview.mask, preview.width, preview.height, partCount)) continue;
+
+          const finalShape = buildShapeFromParts(parts, signature);
+          if (!validateFinalShapeMask(finalShape.mask, finalShape.width, finalShape.height, partCount)) continue;
+
+          lastShapeSignature = signature;
+          return finalShape;
+        }
+
+        return createFallbackShape();
+      }
+
+      function drawStroke(targetCtx, points, width, color, scale = 1) {
+        if (points.length < 2) return;
+        targetCtx.save();
+        targetCtx.beginPath();
+        targetCtx.moveTo(points[0].x * scale, points[0].y * scale);
+        for (let i = 1; i < points.length; i++) {
+          const prev = points[i - 1];
+          const point = points[i];
+          const midX = (prev.x + point.x) * 0.5 * scale;
+          const midY = (prev.y + point.y) * 0.5 * scale;
+          targetCtx.quadraticCurveTo(prev.x * scale, prev.y * scale, midX, midY);
+        }
+        const last = points[points.length - 1];
+        targetCtx.lineTo(last.x * scale, last.y * scale);
+        targetCtx.lineCap = 'round';
+        targetCtx.lineJoin = 'round';
+        targetCtx.lineWidth = width * scale;
+        targetCtx.strokeStyle = color;
+        targetCtx.stroke();
+        targetCtx.restore();
+      }
+
+      function drawStrokeSet(targetCtx, strokeSet, width, color, scale = 1) {
+        for (const stroke of strokeSet) drawStroke(targetCtx, stroke, width, color, scale);
+      }
+
+      function drawCurrentShape(targetCtx, width = WIDTH, height = HEIGHT) {
+        if (!shape) return;
+        const scaledAlpha = shape.alphaCanvas;
+        const scaledDisplay = shape.displayCanvas;
+        targetCtx.save();
+        targetCtx.imageSmoothingEnabled = true;
+        targetCtx.imageSmoothingQuality = 'high';
+        targetCtx.shadowColor = 'rgba(31, 41, 55, 0.16)';
+        targetCtx.shadowBlur = 24 * (width / WIDTH);
+        targetCtx.shadowOffsetY = 12 * (height / HEIGHT);
+        targetCtx.drawImage(scaledAlpha, 0, 0, width, height);
+        targetCtx.restore();
+        targetCtx.save();
+        targetCtx.imageSmoothingEnabled = true;
+        targetCtx.imageSmoothingQuality = 'high';
+        targetCtx.drawImage(scaledDisplay, 0, 0, width, height);
+        targetCtx.restore();
+      }
+
+      function drawScene() {
+        ctx.clearRect(0, 0, WIDTH, HEIGHT);
+        drawCurrentShape(ctx);
+        if (strokes.length) {
+          drawStrokeSet(ctx, strokes, DRAW_WIDTH, OUTLINE_COLOR);
+          drawStrokeSet(ctx, strokes, 3, '#ffffff');
+        }
+        if (drawing && currentStroke.length > 1) {
+          drawStroke(ctx, currentStroke, DRAW_WIDTH, OUTLINE_COLOR);
+          drawStroke(ctx, currentStroke, 3, '#ffffff');
+        }
+      }
+
+      function canvasPoint(event) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+          x: (event.clientX - rect.left) * (WIDTH / rect.width),
+          y: (event.clientY - rect.top) * (HEIGHT / rect.height)
+        };
+      }
+
+      function startRoundClock() {
+        if (roundStarted || roundEnded || startScreenEl.classList.contains('show')) return;
+        roundStarted = true;
+        startTime = performance.now();
+        instructionEl.textContent = 'Keep connecting strokes. As soon as you make a valid split, the round locks.';
+        updateTimer();
+      }
+
+      function updateTimer(now = performance.now()) {
+        if (!roundStarted || roundEnded) return;
+        const elapsed = now - startTime;
+        const remaining = Math.max(0, ROUND_MS - elapsed);
+        timerEl.textContent = `${(remaining / 1000).toFixed(1)}s`;
+        timerEl.className = `timer running${remaining <= 1800 ? ' urgent' : ''}`;
+        if (remaining <= 0) {
+          finishRound(null);
+          return;
+        }
+        animationFrame = requestAnimationFrame(updateTimer);
+      }
+
+      function flattenStrokePoints(strokeSet) {
+        return strokeSet.flat();
+      }
+
+      function strokesTouch(existingStrokes, newStroke) {
+        if (!existingStrokes.length) return true;
+        const existingPoints = flattenStrokePoints(existingStrokes);
+        const thresholdSq = CONNECT_DISTANCE * CONNECT_DISTANCE;
+        for (let i = 0; i < newStroke.length; i += 1) {
+          const p = newStroke[i];
+          for (let j = 0; j < existingPoints.length; j += 2) {
+            const q = existingPoints[j];
+            const dx = p.x - q.x;
+            const dy = p.y - q.y;
+            if ((dx * dx + dy * dy) <= thresholdSq) return true;
+          }
+        }
+        return false;
+      }
+
+      function onPointerDown(event) {
+        if (roundEnded || startScreenEl.classList.contains('show') || targetScreenEl.classList.contains('show')) return;
+        event.preventDefault();
+        canvas.setPointerCapture?.(event.pointerId);
+        startRoundClock();
+        drawing = true;
+        currentStroke = [canvasPoint(event)];
+        drawScene();
+      }
+
+      function onPointerMove(event) {
+        if (!drawing || roundEnded) return;
+        event.preventDefault();
+        const point = canvasPoint(event);
+        const last = currentStroke[currentStroke.length - 1];
+        const dx = point.x - last.x;
+        const dy = point.y - last.y;
+        if ((dx * dx + dy * dy) >= MIN_MOVE_SQ) {
+          currentStroke.push(point);
+          drawScene();
+        }
+      }
+
+      function onPointerUp(event) {
+        if (!drawing || roundEnded) return;
+        event.preventDefault();
+        drawing = false;
+        currentStroke.push(canvasPoint(event));
+        const stroke = currentStroke.slice();
+        currentStroke = [];
+        if (stroke.length < 2) {
+          drawScene();
+          return;
+        }
+        if (!strokesTouch(strokes, stroke)) {
+          setStatus('Each new stroke must touch or overlap your existing line.', 'warning');
+          drawScene();
+          return;
+        }
+        strokes.push(stroke);
+        drawScene();
+        assessCombinedStrokes();
+      }
+
+      function evaluateStrokeSet(strokeSet) {
+        const evalWidth = Math.round(WIDTH * EVAL_SCALE);
+        const evalHeight = Math.round(HEIGHT * EVAL_SCALE);
+        const offscreen = document.createElement('canvas');
+        offscreen.width = evalWidth;
+        offscreen.height = evalHeight;
+        const offCtx = offscreen.getContext('2d', { willReadFrequently: true });
+        offCtx.fillStyle = '#000';
+        offCtx.fillRect(0, 0, evalWidth, evalHeight);
+        offCtx.drawImage(shape.alphaCanvas, 0, 0, evalWidth, evalHeight);
+        drawStrokeSet(offCtx, strokeSet, DRAW_WIDTH + 5, '#000', EVAL_SCALE);
+
+        const data = offCtx.getImageData(0, 0, evalWidth, evalHeight).data;
+        const open = new Uint8Array(evalWidth * evalHeight);
+        for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+          if (data[i] > 200) open[p] = 1;
+        }
+
+        const componentSizes = getComponentSizes(open, evalWidth, evalHeight, 1, 70).sort((a, b) => b - a);
+        if (componentSizes.length !== 2) {
+          return {
+            valid: false,
+            pieces: componentSizes.length,
+            strokeSet: strokeSet.map(stroke => stroke.map(clonePoint))
+          };
+        }
+
+        const total = componentSizes[0] + componentSizes[1];
+        const a = componentSizes[0] / total * 100;
+        const b = componentSizes[1] / total * 100;
+        const target = targetPercent();
+        const errorA = Math.abs(target - a);
+        const errorB = Math.abs(target - b);
+        const matchedSide = errorA <= errorB ? 0 : 1;
+        const error = Math.min(errorA, errorB);
+        const pass = error <= 10;
+        const score = Math.max(0, Math.round(1000 * (1 - Math.min(error, 25) / 25)));
+        return {
+          valid: true,
+          percentages: [a, b],
+          target,
+          targetLabel: currentTarget.label,
+          targetPercentText: currentTarget.percentText,
+          matchedSide,
+          error,
+          pass,
+          score,
+          strokeSet: strokeSet.map(stroke => stroke.map(clonePoint))
+        };
+      }
+
+      function assessCombinedStrokes() {
+        const result = evaluateStrokeSet(strokes);
+        if (!result.valid) {
+          if (result.pieces > 2) {
+            setStatus(`So far the connected line makes ${result.pieces} pieces. Keep it to one divider that ends with exactly two pieces.`, 'warning');
+          } else {
+            setStatus('Connected strokes saved. Keep drawing until the shape is split into exactly two pieces.', 'warning');
+          }
+          return;
+        }
+        finishRound(result);
+      }
+
+      function finishRound(result) {
+        if (roundEnded) return;
+        roundEnded = true;
+        drawing = false;
+        cancelAnimationFrame(animationFrame);
+        timerEl.textContent = 'Done';
+        timerEl.className = 'timer done';
+        clearButton.disabled = true;
+        instructionEl.textContent = 'Round complete.';
+
+        if (isCompetitiveRound()) {
+          const recorded = result ? result : {
+            valid: false,
+            percentages: [0, 0],
+            targetLabel: currentTarget.label,
+            targetPercentText: currentTarget.percentText,
+            error: 100,
+            score: 0,
+            pass: false,
+            strokeSet: []
+          };
+          if (result) {
+            strokes = result.strokeSet.map(stroke => stroke.map(clonePoint));
+            drawScene();
+            competitiveState.results[competitiveState.currentRound] = recorded;
+            setStatus(`Competitive round recorded: ${recorded.score} points on round ${competitiveState.currentRound + 1}.`, 'success');
+          } else {
+            competitiveState.results[competitiveState.currentRound] = recorded;
+            setStatus(`Competitive round recorded: 0 points on round ${competitiveState.currentRound + 1}.`, 'warning');
+          }
+          showResult(recorded);
+          return;
+        }
+
+        if (!result) {
+          setStatus(`Time is up. Retry and aim for ${targetDisplayText()} of the shape.`, 'danger');
+          showNoValidResult();
+          return;
+        }
+
+        strokes = result.strokeSet.map(stroke => stroke.map(clonePoint));
+        drawScene();
+        const [a, b] = result.percentages;
+        if (result.pass) {
+          const title = result.error <= 5 ? 'Excellent job!' : 'Good job!';
+          setStatus(`${title} Final split: ${a.toFixed(1)}% / ${b.toFixed(1)}% for a ${result.targetLabel} (${result.targetPercentText}) target.`, 'success');
+        } else {
+          setStatus(`That was more than 10% off the ${result.targetLabel} (${result.targetPercentText}) target. Retry the same shape.`, 'danger');
+        }
+        showResult(result);
+      }
+
+      function showNoValidResult() {
+        resultTitleEl.textContent = 'No valid split';
+        leftPercentEl.textContent = '—';
+        rightPercentEl.textContent = '—';
+        scoreValueEl.textContent = '0';
+        errorValueEl.textContent = '—';
+        resultNoteEl.textContent = `You need exactly two pieces, with one side aiming for ${targetDisplayText()} of the shape.`;
+        nextButton.textContent = 'Next Shape';
+        nextButton.style.display = 'none';
+        retryButton.style.display = '';
+        retryButton.textContent = 'Retry Shape';
+        overlay.classList.add('show');
+      }
+
+      function showResult(result) {
+        if (!result.valid) {
+          leftPercentEl.textContent = '—';
+          rightPercentEl.textContent = '—';
+          scoreValueEl.textContent = String(result.score || 0);
+          errorValueEl.textContent = '—';
+          if (isCompetitiveRound()) {
+            resultTitleEl.textContent = 'Round recorded';
+            resultNoteEl.textContent = `No valid split was completed. This round scores 0 points. Target was ${result.targetLabel} (${result.targetPercentText}).`;
+            nextButton.style.display = '';
+            nextButton.textContent = competitiveState.currentRound === competitiveState.rounds.length - 1 ? 'View Final Score' : 'Continue';
+            retryButton.style.display = 'none';
+          } else {
+            showNoValidResult();
+            return;
+          }
+          overlay.classList.add('show');
+          return;
+        }
+
+        const [a, b] = result.percentages;
+        leftPercentEl.textContent = `${a.toFixed(1)}%`;
+        rightPercentEl.textContent = `${b.toFixed(1)}%`;
+        scoreValueEl.textContent = String(result.score);
+        errorValueEl.textContent = `${result.error.toFixed(1)}%`;
+
+        if (isCompetitiveRound()) {
+          nextButton.style.display = '';
+          retryButton.style.display = 'none';
+          nextButton.textContent = competitiveState.currentRound === competitiveState.rounds.length - 1 ? 'View Final Score' : 'Continue';
+          if (result.error <= 5) {
+            resultTitleEl.textContent = 'Excellent job!';
+            resultNoteEl.textContent = `One side landed within 5% of the ${result.targetLabel} (${result.targetPercentText}) target.`;
+          } else if (result.error <= 10) {
+            resultTitleEl.textContent = 'Good job!';
+            resultNoteEl.textContent = `One side landed within 10% of the ${result.targetLabel} (${result.targetPercentText}) target.`;
+          } else {
+            resultTitleEl.textContent = 'Round recorded';
+            resultNoteEl.textContent = `You were more than 10% off the ${result.targetLabel} (${result.targetPercentText}) target, but this score still counts in Competitive Mode.`;
+          }
+          overlay.classList.add('show');
+          return;
+        }
+
+        if (result.pass) {
+          nextButton.style.display = '';
+          nextButton.textContent = 'Next Shape';
+          retryButton.style.display = '';
+          retryButton.textContent = 'Retry Shape';
+          if (result.error <= 5) {
+            resultTitleEl.textContent = 'Excellent job!';
+            resultNoteEl.textContent = `One side landed within 5% of the ${result.targetLabel} (${result.targetPercentText}) target.`;
+          } else {
+            resultTitleEl.textContent = 'Good job!';
+            resultNoteEl.textContent = `One side landed within 10% of the ${result.targetLabel} (${result.targetPercentText}) target.`;
+          }
+        } else {
+          nextButton.style.display = 'none';
+          retryButton.style.display = '';
+          retryButton.textContent = 'Retry Shape';
+          resultTitleEl.textContent = 'Try again';
+          resultNoteEl.textContent = `You were more than 10% off the ${result.targetLabel} (${result.targetPercentText}) target. Redo this same shape.`;
+        }
+        overlay.classList.add('show');
+      }
+
+      function resetRound(useNewShape) {
+        cancelAnimationFrame(animationFrame);
+        if (isCompetitiveRound()) {
+          if (useNewShape) {
+            const nextIndex = competitiveState.currentRound + 1;
+            if (nextIndex >= competitiveState.rounds.length) {
+              overlay.classList.remove('show');
+              showCompetitiveSummary();
+            } else {
+              loadCompetitiveRound(nextIndex);
+            }
+          } else {
+            loadCompetitiveRound(competitiveState.currentRound);
+          }
+          return;
+        }
+        startCasualRound(useNewShape);
+      }
+
+      function clearLines() {
+        if (roundEnded || startScreenEl.classList.contains('show') || targetScreenEl.classList.contains('show')) return;
+        currentStroke = [];
+        strokes = [];
+        drawing = false;
+        drawScene();
+        if (roundStarted) setStatus('All connected strokes cleared. Draw again before time runs out.');
+        else setStatus(`Target: make one side ${targetDisplayText()} of the shape. The timer begins on your first stroke.`);
+      }
+
+      difficultyButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          difficulty = button.dataset.difficulty;
+          closeMainMenu();
+          if (gameMode === 'competitive') {
+            const enteredSeed = competitiveSeedInput.value.trim();
+            const parsed = enteredSeed ? parseChallengeSeed(enteredSeed) : null;
+            if (enteredSeed && !parsed) {
+              startScreenEl.classList.add('show');
+              setStatus('Competitive seeds must look like SS-E-ABCDEFGH.', 'warning');
+              return;
+            }
+            startCompetitiveChallenge(parsed ? parsed.normalized : formatChallengeSeed(difficulty, createToken(8)));
+          } else {
+            competitiveState = null;
+            startCasualRound(true);
+          }
+        });
+      });
+
+      casualModeButton.addEventListener('click', () => setMode('casual'));
+      competitiveModeButton.addEventListener('click', () => setMode('competitive'));
+
+      canvas.addEventListener('pointerdown', onPointerDown);
+      canvas.addEventListener('pointermove', onPointerMove);
+      canvas.addEventListener('pointerup', onPointerUp);
+      canvas.addEventListener('pointercancel', onPointerUp);
+      clearButton.addEventListener('click', clearLines);
+      menuButton.addEventListener('click', openMainMenu);
+      targetStartButton.addEventListener('click', () => {
+        hideTargetPrompt();
+        if (isCompetitiveRound()) {
+          setStatus(`Competitive Mode — Round ${competitiveState.currentRound + 1} of ${competitiveState.rounds.length}. Target: ${targetDisplayText()}. The timer begins on your first stroke.`);
+        } else {
+          setStatus(`Target: make one side ${targetDisplayText()} of the shape. The timer begins on your first stroke.`);
+        }
+      });
+      nextButton.addEventListener('click', () => resetRound(true));
+      retryButton.addEventListener('click', () => resetRound(false));
+      summaryReplayButton.addEventListener('click', () => {
+        const seed = competitiveState ? competitiveState.seed : competitiveSeedInput.value.trim();
+        summaryScreenEl.classList.remove('show');
+        startCompetitiveChallenge(seed);
+      });
+      summaryMenuButton.addEventListener('click', openMainMenu);
+      window.addEventListener('resize', drawScene);
+
+      setMode('casual');
+      updateDifficultyBadge();
+      drawScene();
+    })();
+  </script>
+</body>
+</html>
