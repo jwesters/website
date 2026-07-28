@@ -1,0 +1,1082 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<title>Steady Stream — Balance Prototype</title>
+<style>
+  :root {
+    --ink:#193044;
+    --panel:rgba(255,255,255,.94);
+    --accent:#efb648;
+    --accent-dark:#bd7920;
+    --shadow:0 18px 45px rgba(18,38,54,.24);
+  }
+  *{box-sizing:border-box}
+  html,body{width:100%;min-height:100%;margin:0}
+  body{
+    overflow-x:hidden;
+    background:radial-gradient(circle at 12% 10%, rgba(255,255,255,.95), transparent 32%), linear-gradient(135deg,#b7d4da,#7da6b4 52%,#527486);
+    color:var(--ink);
+    font-family:Inter,ui-rounded,"Segoe UI",system-ui,sans-serif;
+    touch-action:manipulation;
+  }
+  button{font:inherit}
+  .page{min-height:100svh;display:grid;place-items:center;padding:12px}
+  .shell{width:min(1140px,100%);background:rgba(236,247,249,.78);border:1px solid rgba(255,255,255,.8);border-radius:24px;box-shadow:var(--shadow);padding:14px;backdrop-filter:blur(10px)}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:2px 4px 12px}
+  .brand{display:flex;align-items:center;gap:10px;min-width:0}
+  .brand-mark{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(145deg,#ffd56a,#e99a27);box-shadow:inset 0 0 0 2px rgba(255,255,255,.45),0 7px 14px rgba(112,73,20,.18);font-weight:1000}
+  .brand-copy strong{display:block;font-size:clamp(18px,2.4vw,24px);line-height:1}
+  .brand-copy span{display:block;opacity:.72;font-size:12px;margin-top:4px}
+  .top-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  .small-btn{border:0;border-radius:11px;padding:9px 12px;background:rgba(255,255,255,.88);color:var(--ink);cursor:pointer;box-shadow:0 4px 11px rgba(25,48,68,.12);font-weight:800}
+  .game-wrap{position:relative}
+  .canvas-frame{position:relative;width:100%;aspect-ratio:16/10;max-height:calc(100svh - 178px);overflow:hidden;background:#dce9ea;border-radius:18px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.7),0 8px 20px rgba(25,48,68,.15)}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  .hud{position:absolute;inset:12px 12px auto 12px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;pointer-events:none}
+  .stat{min-width:0;background:rgba(255,255,255,.88);border:1px solid rgba(255,255,255,.75);border-radius:13px;padding:8px 11px;box-shadow:0 5px 13px rgba(25,48,68,.12)}
+  .stat-label{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;opacity:.65}
+  .stat-value{margin-top:2px;font-size:clamp(15px,2.75vw,24px);font-weight:1000;line-height:1}
+  .bars{position:absolute;left:12px;right:12px;bottom:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px;pointer-events:none}
+  .bar-card{background:rgba(255,255,255,.9);border-radius:13px;padding:8px 10px;box-shadow:0 5px 13px rgba(25,48,68,.12)}
+  .bar-title{display:flex;justify-content:space-between;gap:10px;font-weight:900;font-size:11px;margin-bottom:5px}
+  .track{height:10px;border-radius:999px;background:#d9e2e4;overflow:hidden;box-shadow:inset 0 1px 3px rgba(25,48,68,.16)}
+  .fill{height:100%;width:50%;border-radius:inherit;transform-origin:left center}
+  #balanceFill{background:linear-gradient(90deg,#d45656,#edbd51 38%,#4d9b72 50%,#edbd51 62%,#d45656)}
+  #cleanFill{background:linear-gradient(90deg,#4d9b72,#efba49 75%,#cf5959)}
+  .toast,.center-toast{position:absolute;left:50%;transform:translateX(-50%) translateY(-14px);border-radius:999px;pointer-events:none;z-index:4;opacity:0;transition:opacity .22s ease, transform .22s ease;text-align:center}
+  .toast{top:84px;min-width:240px;max-width:min(82%,460px);background:rgba(27,48,59,.84);color:#fff8e2;padding:12px 18px;font-weight:900;box-shadow:0 12px 24px rgba(12,24,31,.25)}
+  .center-toast{top:44%;background:rgba(255,255,255,.92);color:var(--ink);padding:16px 24px;box-shadow:0 18px 35px rgba(16,34,43,.2);border:1px solid rgba(255,255,255,.85)}
+  .center-toast b{display:block;font-size:clamp(18px,3vw,26px)}
+  .center-toast span{display:block;margin-top:4px;font-size:13px;font-weight:800;opacity:.74}
+  .toast.show,.center-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .mobile-controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding-top:10px}
+  .control-btn{border:0;border-radius:14px;min-height:54px;color:var(--ink);background:rgba(255,255,255,.92);box-shadow:0 6px 14px rgba(25,48,68,.15), inset 0 0 0 1px rgba(255,255,255,.75);font-weight:1000;cursor:pointer;user-select:none;-webkit-user-select:none}
+  .control-btn small{display:block;font-size:10px;opacity:.62;margin-top:2px}
+  .control-btn.active{transform:translateY(2px);background:#ffd676;box-shadow:inset 0 2px 7px rgba(118,70,11,.22)}
+  .overlay{position:absolute;inset:0;display:grid;place-items:center;padding:18px;background:rgba(32,58,70,.38);backdrop-filter:blur(3px);z-index:5}
+  .overlay.hidden{display:none}
+  .card{width:min(600px,100%);background:var(--panel);border:1px solid rgba(255,255,255,.8);border-radius:22px;padding:clamp(20px,4vw,34px);text-align:center;box-shadow:0 22px 58px rgba(14,35,49,.28)}
+  .kicker{text-transform:uppercase;letter-spacing:.14em;font-size:11px;font-weight:1000;color:var(--accent-dark)}
+  h1,h2{margin:7px 0 8px;line-height:.98}
+  h1{font-size:clamp(38px,8vw,70px)}
+  h2{font-size:clamp(30px,6vw,48px)}
+  .lead{margin:0 auto 18px;max-width:44ch;line-height:1.45;opacity:.78}
+  .primary{border:0;border-radius:15px;padding:14px 22px;background:linear-gradient(145deg,#ffd16a,#ec9e2b);color:#2c2a22;font-weight:1000;font-size:18px;cursor:pointer;min-width:190px;box-shadow:0 8px 0 #b96f1a,0 15px 25px rgba(113,69,18,.22)}
+  .primary:active{transform:translateY(4px);box-shadow:0 4px 0 #b96f1a,0 10px 18px rgba(113,69,18,.18)}
+  .secondary{border:0;border-radius:13px;padding:12px 17px;background:#e6eff1;color:var(--ink);font-weight:900;cursor:pointer}
+  .button-row{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin-top:16px}
+  .instructions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0;text-align:left}
+  .instruction{background:#edf4f5;border-radius:13px;padding:11px 12px;font-size:13px;line-height:1.35}
+  .instruction b{display:block;margin-bottom:3px}
+  .key{display:inline-grid;place-items:center;min-width:27px;height:25px;padding:0 6px;margin:0 2px;border-radius:7px;background:#fff;box-shadow:0 2px 0 #b8c5c8;font-weight:1000}
+  .results{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:17px 0}
+  .result-box{background:#edf4f5;border-radius:13px;padding:12px 8px}
+  .result-box span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.09em;font-weight:900;opacity:.62}
+  .result-box strong{display:block;margin-top:4px;font-size:25px}
+  .tip{font-size:12px;opacity:.66;margin-top:14px}
+  @media (max-width:900px){.hud{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  @media (max-width:620px){
+    .page{padding:6px;align-items:start}
+    .shell{padding:8px;border-radius:18px}
+    .topbar{padding-bottom:8px}
+    .brand-copy span{display:none}
+    .small-btn{padding:8px 10px}
+    .canvas-frame{max-height:none;border-radius:14px}
+    .hud{inset:7px 7px auto 7px;gap:5px;grid-template-columns:repeat(2,minmax(0,1fr))}
+    .stat{padding:6px 8px;border-radius:10px}
+    .bars{left:7px;right:7px;bottom:7px;gap:6px}
+    .bar-card{padding:6px 8px;border-radius:10px}
+    .mobile-controls{padding-top:7px;gap:6px}
+    .control-btn{min-height:50px;border-radius:12px;font-size:13px}
+    .instructions{grid-template-columns:1fr}
+    .card{padding:20px 16px}
+    .toast{top:96px;min-width:0;width:calc(100% - 18px)}
+  }
+  @media (max-height:670px) and (orientation:landscape){
+    .page{padding:5px}
+    .shell{width:min(1060px,100%);padding:7px}
+    .topbar{padding-bottom:6px}
+    .brand-mark{width:32px;height:32px}
+    .brand-copy span{display:none}
+    .canvas-frame{max-height:calc(100svh - 116px)}
+    .mobile-controls{position:absolute;left:12px;right:12px;bottom:13px;z-index:3;padding:0;grid-template-columns:repeat(4,90px);justify-content:center;pointer-events:none}
+    .control-btn{min-height:40px;opacity:.86;pointer-events:auto}
+    .bars{bottom:60px}
+    .toast{top:54px}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <main class="shell" aria-label="Steady Stream game prototype">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">SS</div>
+        <div class="brand-copy"><strong>Steady Stream</strong><span>Prototype: balance, aim, awkward physics, and poor choices</span></div>
+      </div>
+      <div class="top-actions">
+        <button class="small-btn" id="pauseBtn">Pause</button>
+        <button class="small-btn" id="helpBtn">Rules</button>
+        <button class="small-btn" id="muteBtn" aria-pressed="false">Sound: On</button>
+      </div>
+    </header>
+
+    <section class="game-wrap">
+      <div class="canvas-frame">
+        <canvas id="game" width="960" height="600" aria-label="Balance game"></canvas>
+
+        <div class="hud">
+          <div class="stat"><div class="stat-label">Time</div><div class="stat-value" id="timeValue">0.0s</div></div>
+          <div class="stat"><div class="stat-label">Level</div><div class="stat-value" id="levelValue">1</div></div>
+          <div class="stat"><div class="stat-label">Beers</div><div class="stat-value" id="beerValue">1</div></div>
+          <div class="stat"><div class="stat-label">Accuracy</div><div class="stat-value" id="accuracyValue">100%</div></div>
+          <div class="stat"><div class="stat-label">Score</div><div class="stat-value" id="scoreValue">0</div></div>
+        </div>
+
+        <div class="toast" id="beerToast">Beer chugged. That definitely did not help.</div>
+        <div class="center-toast" id="levelToast"><b>Level 2</b><span>Things are getting worse.</span></div>
+
+        <div class="bars">
+          <div class="bar-card">
+            <div class="bar-title"><span>Balance</span><span id="balanceText">Steady</span></div>
+            <div class="track"><div class="fill" id="balanceFill"></div></div>
+          </div>
+          <div class="bar-card">
+            <div class="bar-title"><span>Mess meter</span><span id="cleanText">Clean</span></div>
+            <div class="track"><div class="fill" id="cleanFill"></div></div>
+          </div>
+        </div>
+
+        <div class="overlay" id="menuOverlay">
+          <div class="card">
+            <div class="kicker">Quick web-game prototype</div>
+            <h1>Steady<br>Stream</h1>
+            <p class="lead">Stay upright, keep the stream in the toilet, deal with random leg-lifts, and survive each 20-second level before you click in to start the next beer-fueled disaster.</p>
+            <button class="primary" id="playBtn">Start balancing</button>
+            <div class="instructions">
+              <div class="instruction"><b>Feet balance</b><span class="key">Q</span> push left · <span class="key">W</span> push right</div>
+              <div class="instruction"><b>Hip control</b><span class="key">A</span> shift hips left · <span class="key">S</span> shift hips right</div>
+              <div class="instruction"><b>Pause</b>Press <span class="key">P</span> or <span class="key">Esc</span> to pause.</div>
+              <div class="instruction"><b>Levels</b>Every 20 seconds you clear the level, then click to start the next one with more beer and more wobble.</div>
+            </div>
+            <div class="tip">Uses custom assets, keeps the stream on screen, and leaves light stains when you miss.</div>
+          </div>
+        </div>
+
+        <div class="overlay hidden" id="helpOverlay">
+          <div class="card">
+            <div class="kicker">How to play</div>
+            <h2>Control the wobble.</h2>
+            <p class="lead">The body is a wobbly pendulum. A and S shift the hips independently from the planted legs, changing both balance and where the stream lands. Sometimes one leg lifts on its own, forcing you to shift weight and settle it back down.</p>
+            <div class="instructions">
+              <div class="instruction"><b>Strong correction</b><span class="key">Q</span> left foot pressure · <span class="key">W</span> right foot pressure</div>
+              <div class="instruction"><b>Hip aiming</b><span class="key">A</span> shift hips left · <span class="key">S</span> shift hips right</div>
+              <div class="instruction"><b>Misses</b>Missed shots splatter, stain the room lightly, and build the mess meter.</div>
+              <div class="instruction"><b>Game over</b>You lose by falling or by filling the mess meter.</div>
+            </div>
+            <button class="secondary" id="closeHelpBtn">Back</button>
+          </div>
+        </div>
+
+        <div class="overlay hidden" id="pauseOverlay">
+          <div class="card">
+            <div class="kicker">Paused</div>
+            <h2>Take a breath.</h2>
+            <p class="lead">Press <span class="key">P</span>, <span class="key">Esc</span>, or use the button below to continue.</p>
+            <div class="button-row">
+              <button class="primary" id="resumeBtn">Resume</button>
+              <button class="secondary" id="pauseMenuBtn">Main menu</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="overlay hidden" id="betweenOverlay">
+          <div class="card">
+            <div class="kicker">Level cleared</div>
+            <h2 id="betweenTitle">Level 2</h2>
+            <p class="lead" id="betweenLead">Another beer has been added. Click below when you're ready to start the next level.</p>
+            <div class="results">
+              <div class="result-box"><span>Current level</span><strong id="betweenLevel">2</strong></div>
+              <div class="result-box"><span>Total beers</span><strong id="betweenBeers">2</strong></div>
+              <div class="result-box"><span>Score</span><strong id="betweenScore">0</strong></div>
+            </div>
+            <div class="button-row">
+              <button class="primary" id="nextLevelBtn">Start next level</button>
+              <button class="secondary" id="betweenMenuBtn">Main menu</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="overlay hidden" id="gameOverOverlay">
+          <div class="card">
+            <div class="kicker" id="gameOverReason">You toppled over</div>
+            <h2>Shift complete.</h2>
+            <div class="results">
+              <div class="result-box"><span>Time</span><strong id="finalTime">0.0s</strong></div>
+              <div class="result-box"><span>Accuracy</span><strong id="finalAccuracy">0%</strong></div>
+              <div class="result-box"><span>Score</span><strong id="finalScore">0</strong></div>
+            </div>
+            <p class="lead" id="resultComment">A brave attempt.</p>
+            <div class="button-row">
+              <button class="primary" id="replayBtn">Try again</button>
+              <button class="secondary" id="menuBtn">Main menu</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mobile-controls" aria-label="Touch controls">
+        <button class="control-btn" data-key="KeyQ">Q<small>Feet left</small></button>
+        <button class="control-btn" data-key="KeyW">W<small>Feet right</small></button>
+        <button class="control-btn" data-key="KeyA">A<small>Hips left</small></button>
+        <button class="control-btn" data-key="KeyS">S<small>Hips right</small></button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+
+  const MAN = { x: 232, y: 536 };
+  const TOILET = { x: 678, y: 146, w: 228, h: 264 };
+  const BOWL = { x: 765, y: 291, rx: 82, ry: 50 };
+
+  const els = {
+    menu: document.getElementById('menuOverlay'),
+    help: document.getElementById('helpOverlay'),
+    pause: document.getElementById('pauseOverlay'),
+    between: document.getElementById('betweenOverlay'),
+    over: document.getElementById('gameOverOverlay'),
+    play: document.getElementById('playBtn'),
+    replay: document.getElementById('replayBtn'),
+    menuBtn: document.getElementById('menuBtn'),
+    pauseMenuBtn: document.getElementById('pauseMenuBtn'),
+    betweenMenuBtn: document.getElementById('betweenMenuBtn'),
+    nextLevelBtn: document.getElementById('nextLevelBtn'),
+    resumeBtn: document.getElementById('resumeBtn'),
+    helpBtn: document.getElementById('helpBtn'),
+    pauseBtn: document.getElementById('pauseBtn'),
+    closeHelpBtn: document.getElementById('closeHelpBtn'),
+    muteBtn: document.getElementById('muteBtn'),
+    time: document.getElementById('timeValue'),
+    level: document.getElementById('levelValue'),
+    beers: document.getElementById('beerValue'),
+    accuracy: document.getElementById('accuracyValue'),
+    score: document.getElementById('scoreValue'),
+    balanceFill: document.getElementById('balanceFill'),
+    cleanFill: document.getElementById('cleanFill'),
+    balanceText: document.getElementById('balanceText'),
+    cleanText: document.getElementById('cleanText'),
+    finalTime: document.getElementById('finalTime'),
+    finalAccuracy: document.getElementById('finalAccuracy'),
+    finalScore: document.getElementById('finalScore'),
+    gameOverReason: document.getElementById('gameOverReason'),
+    resultComment: document.getElementById('resultComment'),
+    beerToast: document.getElementById('beerToast'),
+    levelToast: document.getElementById('levelToast'),
+    betweenTitle: document.getElementById('betweenTitle'),
+    betweenLead: document.getElementById('betweenLead'),
+    betweenLevel: document.getElementById('betweenLevel'),
+    betweenBeers: document.getElementById('betweenBeers'),
+    betweenScore: document.getElementById('betweenScore')
+  };
+
+  const sprites = {
+    background: loadImage('assets/bathroom_bg.svg'),
+    toilet: loadImage('assets/toilet_approved.png'),
+    man: loadImage('assets/man_approved.png')
+  };
+
+  const keys = Object.create(null);
+  let state = 'menu';
+  let muted = false;
+  let audio = null;
+  let musicTimer = null;
+  let musicStep = 0;
+  let musicNextTime = 0;
+  let last = performance.now();
+
+  let totalTime = 0;
+  let levelTime = 0;
+  let score = 0;
+  let accuracyIntegral = 0;
+  let accuracySamples = 0;
+  let mess = 0;
+  let lean = 0;
+  let leanVel = 0;
+  let torso = 0;
+  let torsoVel = 0;
+  let beers = 1;
+  let level = 1;
+  let blurAmount = 0;
+  let targetAimX = BOWL.x;
+  let targetAimY = BOWL.y;
+  let aimX = BOWL.x;
+  let aimY = BOWL.y;
+  let actualAimX = BOWL.x;
+  let actualAimY = BOWL.y;
+  let currentAccuracy = 1;
+  let nextBump = 1.8;
+  let bump = 0;
+  let nextLegLift = 4.8;
+  let legLiftSide = 0;
+  let legLiftAmount = 0;
+  let particles = [];
+  let stains = [];
+  let startGrace = 0.8;
+  let missSoundCooldown = 0;
+  let toastTimer = 0;
+  let levelToastTimer = 0;
+
+  function loadImage(src) {
+    const img = new Image();
+    img.src = src;
+    return img;
+  }
+  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function rand(min, max) { return min + Math.random() * (max - min); }
+  function roundRect(x, y, w, h, r) {
+    const rr = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
+  }
+
+  function initAudio() {
+    if (audio || muted) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    audio = new AC();
+  }
+  function oneShot(freq, duration = 0.08, volume = 0.03, type = 'sine', when = null) {
+    if (muted) return;
+    initAudio();
+    if (!audio) return;
+    if (audio.state === 'suspended') audio.resume();
+    const t = when ?? audio.currentTime;
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(volume, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+    osc.connect(gain).connect(audio.destination);
+    osc.start(t);
+    osc.stop(t + duration);
+  }
+  function noiseBurst(duration = 0.11, volume = 0.028, freq = 1050) {
+    if (muted) return;
+    initAudio();
+    if (!audio) return;
+    if (audio.state === 'suspended') audio.resume();
+    const length = Math.max(1, Math.floor(audio.sampleRate * duration));
+    const buffer = audio.createBuffer(1, length, audio.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / length);
+    const src = audio.createBufferSource();
+    src.buffer = buffer;
+    const filter = audio.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = freq;
+    filter.Q.value = 0.75;
+    const gain = audio.createGain();
+    gain.gain.value = volume;
+    src.connect(filter).connect(gain).connect(audio.destination);
+    src.start();
+    src.stop(audio.currentTime + duration + 0.02);
+  }
+  function kickAt(when) {
+    if (muted || !audio) return;
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(140, when);
+    osc.frequency.exponentialRampToValueAtTime(48, when + 0.14);
+    gain.gain.setValueAtTime(0.08, when);
+    gain.gain.exponentialRampToValueAtTime(0.0001, when + 0.16);
+    osc.connect(gain).connect(audio.destination);
+    osc.start(when);
+    osc.stop(when + 0.17);
+  }
+  function snareAt(when) {
+    if (muted || !audio) return;
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(240, when);
+    osc.frequency.exponentialRampToValueAtTime(110, when + 0.1);
+    gain.gain.setValueAtTime(0.03, when);
+    gain.gain.exponentialRampToValueAtTime(0.0001, when + 0.11);
+    osc.connect(gain).connect(audio.destination);
+    osc.start(when);
+    osc.stop(when + 0.12);
+  }
+  function noteAt(freq, when, duration = 0.15, volume = 0.032, type = 'triangle') {
+    if (muted || !audio || !freq) return;
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, when);
+    gain.gain.setValueAtTime(volume, when);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, volume * 0.7), when + duration * 0.45);
+    gain.gain.exponentialRampToValueAtTime(0.0001, when + duration);
+    osc.connect(gain).connect(audio.destination);
+    osc.start(when);
+    osc.stop(when + duration + 0.01);
+  }
+  function startMusic() {
+    if (muted) return;
+    initAudio();
+    if (!audio) return;
+    if (audio.state === 'suspended') audio.resume();
+    stopMusic();
+    musicStep = 0;
+    musicNextTime = audio.currentTime + 0.05;
+    scheduleMusic();
+    musicTimer = setInterval(scheduleMusic, 120);
+  }
+  function stopMusic() {
+    if (musicTimer) {
+      clearInterval(musicTimer);
+      musicTimer = null;
+    }
+  }
+  function scheduleMusic() {
+    if (!audio || muted || !['playing', 'between'].includes(state)) return;
+    const melody = [523.25,659.25,783.99,659.25,523.25,659.25,880,659.25,493.88,587.33,783.99,587.33,523.25,587.33,659.25,null];
+    const bass = [130.81,null,130.81,null,146.83,null,146.83,null,110,null,110,null,130.81,null,146.83,null];
+    const stepDur = 60 / 132 / 2;
+    while (musicNextTime < audio.currentTime + 0.45) {
+      const idx = musicStep % 16;
+      if (idx % 2 === 0) kickAt(musicNextTime);
+      if (idx === 4 || idx === 12) snareAt(musicNextTime);
+      if (melody[idx]) noteAt(melody[idx], musicNextTime, stepDur * 0.9, 0.03, 'triangle');
+      if (bass[idx]) noteAt(bass[idx], musicNextTime, stepDur * 0.95, 0.018, 'square');
+      musicNextTime += stepDur;
+      musicStep++;
+    }
+  }
+
+  function hideOverlays() {
+    els.menu.classList.add('hidden');
+    els.help.classList.add('hidden');
+    els.pause.classList.add('hidden');
+    els.between.classList.add('hidden');
+    els.over.classList.add('hidden');
+  }
+  function clearKeys() {
+    Object.keys(keys).forEach(k => keys[k] = false);
+    document.querySelectorAll('.control-btn').forEach(btn => btn.classList.remove('active'));
+  }
+  function resetGame() {
+    totalTime = 0;
+    levelTime = 0;
+    score = 0;
+    accuracyIntegral = 0;
+    accuracySamples = 0;
+    mess = 0;
+    lean = rand(-0.03, 0.03);
+    leanVel = 0;
+    torso = 0;
+    torsoVel = 0;
+    beers = 1;
+    level = 1;
+    blurAmount = 0;
+    targetAimX = aimX = actualAimX = BOWL.x;
+    targetAimY = aimY = actualAimY = BOWL.y;
+    currentAccuracy = 1;
+    nextBump = rand(1.4, 2.1);
+    bump = 0;
+    nextLegLift = rand(3.6, 5.4);
+    legLiftSide = 0;
+    legLiftAmount = 0;
+    particles = [];
+    stains = [];
+    startGrace = 0.9;
+    missSoundCooldown = 0;
+    toastTimer = 0;
+    levelToastTimer = 0;
+    updateHud();
+    hideOverlays();
+    els.beerToast.classList.remove('show');
+    els.levelToast.classList.remove('show');
+  }
+  function startGame() {
+    initAudio();
+    resetGame();
+    state = 'playing';
+    oneShot(440, 0.08, 0.035, 'triangle');
+    setTimeout(() => oneShot(660, 0.08, 0.025, 'triangle'), 80);
+    startMusic();
+  }
+  function showMenu() {
+    state = 'menu';
+    hideOverlays();
+    els.menu.classList.remove('hidden');
+    els.beerToast.classList.remove('show');
+    els.levelToast.classList.remove('show');
+    stopMusic();
+    clearKeys();
+  }
+  function pauseGame() {
+    if (state !== 'playing') return;
+    state = 'paused';
+    hideOverlays();
+    els.pause.classList.remove('hidden');
+    clearKeys();
+  }
+  function resumeGame() {
+    if (state !== 'paused') return;
+    state = 'playing';
+    hideOverlays();
+  }
+  function showBeerToast(msg) {
+    els.beerToast.textContent = msg;
+    els.beerToast.classList.add('show');
+    toastTimer = 2.0;
+  }
+  function showLevelToast(title, subtitle) {
+    els.levelToast.innerHTML = `<b>${title}</b><span>${subtitle}</span>`;
+    els.levelToast.classList.add('show');
+    levelToastTimer = 1.3;
+  }
+  function openBetweenLevel() {
+    state = 'between';
+    hideOverlays();
+    els.betweenTitle.textContent = `Level ${level}`;
+    els.betweenLead.textContent = `Beer #${beers} has been added. Click below when you're ready to start the next level.`;
+    els.betweenLevel.textContent = String(level);
+    els.betweenBeers.textContent = String(beers);
+    els.betweenScore.textContent = Math.round(score).toLocaleString('en-GB');
+    els.between.classList.remove('hidden');
+    clearKeys();
+  }
+  function finishLevel() {
+    level += 1;
+    beers += 1;
+    levelTime = 0;
+    mess = clamp(mess + 0.04, 0, 1);
+    bump += rand(-0.4, 0.4);
+    showBeerToast(`Level clear. Beer #${beers} ready.`);
+    openBetweenLevel();
+    oneShot(330, 0.08, 0.04, 'square');
+    setTimeout(() => oneShot(247, 0.08, 0.03, 'square'), 80);
+    setTimeout(() => oneShot(196, 0.14, 0.03, 'triangle'), 160);
+  }
+  function startNextLevel() {
+    if (state !== 'between') return;
+    state = 'playing';
+    hideOverlays();
+    levelTime = 0;
+    startGrace = 0.7;
+    leanVel *= 0.6;
+    torsoVel *= 0.6;
+    bump += rand(-0.3, 0.3);
+    showBeerToast(`Beer #${beers} down. Level ${level} begins.`);
+    showLevelToast(`Level ${level}`, `More wobble. Slightly more blur.`);
+  }
+  function endGame(reason) {
+    if (state !== 'playing') return;
+    state = 'gameover';
+    clearKeys();
+    hideOverlays();
+    stopMusic();
+    const avg = accuracySamples > 0 ? accuracyIntegral / accuracySamples : 0;
+    els.finalTime.textContent = `${totalTime.toFixed(1)}s`;
+    els.finalAccuracy.textContent = `${Math.round(avg * 100)}%`;
+    els.finalScore.textContent = Math.round(score).toLocaleString('en-GB');
+    els.gameOverReason.textContent = reason === 'fall' ? 'You toppled over' : 'The mess meter overflowed';
+    if (avg > 0.82 && totalTime > 25) els.resultComment.textContent = 'Suspiciously impressive bathroom composure.';
+    else if (avg > 0.65) els.resultComment.textContent = 'Pretty steady. The cleaner would approve.';
+    else if (totalTime > 20) els.resultComment.textContent = 'Excellent balance. Questionable aim.';
+    else els.resultComment.textContent = 'A brave attempt under difficult circumstances.';
+    els.over.classList.remove('hidden');
+    oneShot(180, 0.28, 0.05, 'sawtooth');
+  }
+
+  function addStain(x, y, scale = 1) {
+    const count = 1 + Math.floor(rand(1, 4));
+    for (let i = 0; i < count; i++) {
+      stains.push({ x: x + rand(-8, 8), y: y + rand(-6, 6), rx: rand(6, 18) * scale, ry: rand(3, 10) * scale, rot: rand(0, Math.PI * 2), alpha: rand(0.06, 0.12) });
+    }
+    if (stains.length > 180) stains.splice(0, stains.length - 180);
+  }
+  function spawnMissParticles(x, y, strength = 1) {
+    const count = 8 + Math.floor(strength * 7);
+    for (let i = 0; i < count; i++) {
+      const ang = rand(-Math.PI * 0.96, Math.PI * 0.96);
+      const speed = rand(28, 72) * strength;
+      particles.push({ x, y, vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed - rand(6, 26), life: rand(0.18, 0.42), r: rand(1.6, 4.8), color: Math.random() < 0.78 ? 'rgba(245,214,92,0.85)' : 'rgba(226,160,64,0.8)' });
+    }
+  }
+  function updateParticles(dt) {
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.life -= dt;
+      p.vy += 130 * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+  }
+  function inBowl(x, y) {
+    const dx = (x - BOWL.x) / BOWL.rx;
+    const dy = (y - BOWL.y) / BOWL.ry;
+    return dx * dx + dy * dy <= 1;
+  }
+  function updateLegLift(dt, foot, torsoControl) {
+    nextLegLift -= dt;
+    if (legLiftAmount <= 0.02 && nextLegLift <= 0) {
+      legLiftSide = Math.random() < 0.5 ? -1 : 1;
+      legLiftAmount = rand(0.42, 0.82);
+      nextLegLift = rand(Math.max(2.1, 5.0 - level * 0.15 - beers * 0.08), Math.max(3.7, 7.0 - level * 0.18));
+      showLevelToast(legLiftSide < 0 ? 'Left leg lifting!' : 'Right leg lifting!', 'Shift your weight and settle it down.');
+    }
+    if (legLiftAmount > 0) {
+      const correction = legLiftSide < 0 ? foot + torsoControl * 0.6 - lean * 0.45 : -foot - torsoControl * 0.6 + lean * 0.45;
+      legLiftAmount += dt * (0.18 + beers * 0.015 + level * 0.01);
+      legLiftAmount -= dt * Math.max(0, correction) * 1.25;
+      legLiftAmount = clamp(legLiftAmount, 0, 1);
+      if (legLiftAmount <= 0.03) {
+        legLiftAmount = 0;
+        legLiftSide = 0;
+      }
+    }
+  }
+
+  function update(dt) {
+    updateParticles(dt);
+    missSoundCooldown = Math.max(0, missSoundCooldown - dt);
+    toastTimer = Math.max(0, toastTimer - dt);
+    levelToastTimer = Math.max(0, levelToastTimer - dt);
+    if (toastTimer <= 0) els.beerToast.classList.remove('show');
+    if (levelToastTimer <= 0) els.levelToast.classList.remove('show');
+    if (state !== 'playing') return;
+
+    totalTime += dt;
+    levelTime += dt;
+    startGrace = Math.max(0, startGrace - dt);
+    if (levelTime >= 20) {
+      finishLevel();
+      return;
+    }
+
+    const foot = (keys.KeyW ? 1 : 0) - (keys.KeyQ ? 1 : 0);
+    const torsoControl = (keys.KeyS ? 1 : 0) - (keys.KeyA ? 1 : 0);
+    const booze = beers - 1;
+
+    updateLegLift(dt, foot, torsoControl);
+
+    torsoVel += (torsoControl * 6.6 - torso * 3.8 - torsoVel * 2.55) * dt;
+    torso += torsoVel * dt;
+    torso = clamp(torso, -0.98, 0.98);
+
+    nextBump -= dt;
+    if (nextBump <= 0) {
+      bump += rand(-0.58, 0.58) * clamp(0.72 + totalTime / 46 + booze * 0.13, 0.72, 2.2);
+      nextBump = rand(Math.max(0.45, 1.06 - booze * 0.05), Math.max(0.95, 2.0 - booze * 0.05));
+      if (Math.abs(bump) > 0.18) oneShot(105, 0.045, 0.012, 'square');
+    }
+    bump *= Math.pow(0.18, dt);
+
+    const difficulty = clamp(0.78 + level * 0.12 + booze * 0.07, 0.78, 2.4);
+    const microNoise = Math.sin(totalTime * (2.1 + booze * 0.1)) * (0.018 + booze * 0.0025) + Math.sin(totalTime * 3.77 + 1.2) * (0.011 + booze * 0.0025);
+    const legTorque = legLiftSide * legLiftAmount * 0.28;
+    const leanAccel = lean * (1.06 * difficulty) + foot * 1.58 - torso * 1.08 + bump + microNoise + legTorque - leanVel * 0.64;
+    leanVel += leanAccel * dt;
+    lean += leanVel * dt;
+
+    aimX = lerp(aimX, targetAimX, 1 - Math.pow(0.002, dt));
+    aimY = lerp(aimY, targetAimY, 1 - Math.pow(0.002, dt));
+    const instability = Math.abs(lean) + Math.abs(leanVel) * 0.45 + Math.abs(torso) * 0.52 + booze * 0.11 + level * 0.025 + legLiftAmount * 0.25;
+    const drunkenDrift = Math.sin(totalTime * (2.8 + booze * 0.22) + booze * 0.7) * booze * 7;
+    const hipAimX = torso * 86 + torso * Math.abs(torso) * 34;
+    const hipAimY = torso * 72 + torso * Math.abs(torso) * 42;
+    const wobbleX = lean * (78 + booze * 10 + level * 2) + hipAimX + Math.sin(totalTime * 8.1) * instability * (16 + booze * 3) + drunkenDrift + legLiftSide * legLiftAmount * 18;
+    const wobbleY = Math.cos(totalTime * 6.3 + booze * 0.3) * instability * (9 + booze * 1.8) + leanVel * 16 + hipAimY + Math.sin(totalTime * 1.8) * booze * 2.2;
+    actualAimX = aimX + wobbleX;
+    actualAimY = aimY + wobbleY;
+
+    const dx = (actualAimX - BOWL.x) / BOWL.rx;
+    const dy = (actualAimY - BOWL.y) / BOWL.ry;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    currentAccuracy = clamp(1 - dist, 0, 1);
+    accuracyIntegral += currentAccuracy * dt;
+    accuracySamples += dt;
+
+    const inside = inBowl(actualAimX, actualAimY);
+    const outside = 1 - currentAccuracy;
+    if (inside) mess -= dt * (0.14 + currentAccuracy * 0.12);
+    else mess += dt * (0.12 + outside * (0.26 + booze * 0.045 + level * 0.012));
+    mess = clamp(mess, 0, 1);
+
+    const cleanMultiplier = 0.2 + currentAccuracy * 0.8;
+    const survivalMultiplier = 1 + Math.min(totalTime / 75, 0.65);
+    const levelMultiplier = 1 + (level - 1) * 0.13;
+    score += dt * 100 * cleanMultiplier * survivalMultiplier * levelMultiplier;
+
+    blurAmount = clamp((beers - 1) * 0.26 + Math.max(0, level - 1) * 0.07, 0, 1.95);
+
+    if (!inside && missSoundCooldown <= 0 && currentAccuracy < 0.52) {
+      missSoundCooldown = 0.18;
+      noiseBurst(0.09, 0.026 + Math.min(0.028, beers * 0.0018), 900 + Math.random() * 420);
+      spawnMissParticles(actualAimX, actualAimY, 0.9 + (1 - currentAccuracy));
+      addStain(actualAimX, actualAimY, 0.8 + (1 - currentAccuracy));
+    }
+
+    if (startGrace <= 0 && Math.abs(lean) > 1.02) endGame('fall');
+    else if (mess >= 1) endGame('mess');
+
+    updateHud();
+  }
+
+  function updateHud() {
+    const avg = accuracySamples > 0 ? accuracyIntegral / accuracySamples : 1;
+    els.time.textContent = `${totalTime.toFixed(1)}s`;
+    els.level.textContent = String(level);
+    els.beers.textContent = String(beers);
+    els.accuracy.textContent = `${Math.round(avg * 100)}%`;
+    els.score.textContent = Math.round(score).toLocaleString('en-GB');
+    const balance = clamp(Math.abs(lean) / 1.02, 0, 1);
+    const marker = 50 + clamp(lean / 1.02, -1, 1) * 50;
+    els.balanceFill.style.width = `${marker}%`;
+    els.cleanFill.style.width = `${mess * 100}%`;
+    els.balanceText.textContent = balance < 0.35 ? 'Steady' : balance < 0.68 ? 'Wobbling' : 'Critical';
+    els.cleanText.textContent = mess < 0.3 ? 'Clean' : mess < 0.7 ? 'Getting messy' : 'Danger';
+  }
+
+  function drawBackground() {
+    if (sprites.background.complete) ctx.drawImage(sprites.background, 0, 0, W, H);
+    else { ctx.fillStyle = '#d6e2e6'; ctx.fillRect(0, 0, W, H); }
+  }
+  function drawToilet() {
+    if (sprites.toilet.complete) ctx.drawImage(sprites.toilet, TOILET.x, TOILET.y, TOILET.w, TOILET.h);
+  }
+  function getCharacterPose() {
+    const baseX = MAN.x;
+    const footY = MAN.y;
+    const w = 146;
+    const h = 480;
+    const liftVisual = legLiftAmount * 10;
+    const legSway = legLiftSide * legLiftAmount * 7;
+    const sw = sprites.man.naturalWidth || 282;
+    const sh = sprites.man.naturalHeight || 928;
+    const splitSrc = 575;
+    const overlapSrc = 34;
+    const upperSrcH = splitSrc + overlapSrc;
+    const lowerSrcY = splitSrc - overlapSrc;
+    const lowerSrcH = sh - lowerSrcY;
+    const upperDestH = h * (upperSrcH / sh);
+    const lowerDestY = -h + h * (lowerSrcY / sh);
+    const lowerDestH = h * (lowerSrcH / sh);
+    const upperTilt = torso * 0.17;
+    const baseRot = lean * 0.18;
+    const rootX = baseX + legSway;
+    const rootY = footY - liftVisual * 0.28;
+    const waistPivotY = -h + upperDestH - 10;
+    return { baseX, footY, w, h, legSway, liftVisual, sw, sh, upperDestH, lowerDestY, lowerDestH, upperTilt, baseRot, rootX, rootY, waistPivotY };
+  }
+
+  function transformUpperPoint(localX, localY) {
+    const pose = getCharacterPose();
+    const relX = localX;
+    const relY = localY - pose.waistPivotY;
+    const cu = Math.cos(pose.upperTilt);
+    const su = Math.sin(pose.upperTilt);
+    const upperX = relX * cu - relY * su;
+    const upperY = relX * su + relY * cu + pose.waistPivotY;
+    const cb = Math.cos(pose.baseRot);
+    const sb = Math.sin(pose.baseRot);
+    return {
+      x: pose.rootX + upperX * cb - upperY * sb,
+      y: pose.rootY + upperX * sb + upperY * cb
+    };
+  }
+
+  function drawStains() {
+    ctx.save();
+    for (const s of stains) {
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(s.rot);
+      ctx.fillStyle = `rgba(212, 184, 78, ${s.alpha})`;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, s.rx, s.ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+  function drawCharacter() {
+    const pose = getCharacterPose();
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(28,46,54,.18)';
+    ctx.beginPath();
+    ctx.ellipse(pose.baseX + pose.legSway * 0.35, 548, 92, 14, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    if (!sprites.man.complete || !sprites.man.naturalWidth) return;
+
+    ctx.save();
+    ctx.translate(pose.rootX, pose.rootY);
+    ctx.rotate(pose.baseRot);
+
+    // Lower half: mostly planted.
+    ctx.drawImage(
+      sprites.man,
+      0, 575 - 34, pose.sw, pose.sh - (575 - 34),
+      -pose.w / 2, pose.lowerDestY, pose.w, pose.lowerDestH
+    );
+
+    // Upper half: gentle tilt around the waist so it remains attached.
+    ctx.save();
+    ctx.translate(0, pose.waistPivotY);
+    ctx.rotate(pose.upperTilt);
+    ctx.drawImage(
+      sprites.man,
+      0, 0, pose.sw, 575 + 34,
+      -pose.w / 2, -pose.upperDestH + 10, pose.w, pose.upperDestH
+    );
+    ctx.restore();
+
+    ctx.restore();
+  }
+  function streamOrigin() {
+    // Anchor the stream near the visible right-hand / crotch area on the upper body,
+    // using the same body transforms so it stays attached visually.
+    return transformUpperPoint(40, -262);
+  }
+  function drawStream() {
+    if (state !== 'playing') return;
+    const origin = streamOrigin();
+    const x2 = actualAimX;
+    const y2 = actualAimY;
+    const c1x = origin.x + 38 + Math.max(0, torso) * 8;
+    const c1y = origin.y - 5 - torso * 4;
+    const c2x = lerp(origin.x, x2, 0.58) + torso * 10;
+    const arc = 28 + Math.abs(x2 - origin.x) * 0.017 + beers * 2.1;
+    const c2y = lerp(origin.y, y2, 0.52) - arc;
+    const width = 4 + (beers - 1) * 0.5;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(255,225,91,.24)';
+    ctx.lineWidth = width + 6;
+    ctx.beginPath();
+    ctx.moveTo(origin.x, origin.y);
+    ctx.bezierCurveTo(c1x, c1y, c2x, c2y, x2, y2);
+    ctx.stroke();
+    ctx.strokeStyle = '#f4d44f';
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    ctx.moveTo(origin.x, origin.y);
+    ctx.bezierCurveTo(c1x, c1y, c2x, c2y, x2, y2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  function drawImpact() {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(25,53,65,.78)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(targetAimX, targetAimY, 13, 0, Math.PI * 2);
+    ctx.moveTo(targetAimX - 19, targetAimY); ctx.lineTo(targetAimX + 19, targetAimY);
+    ctx.moveTo(targetAimX, targetAimY - 19); ctx.lineTo(targetAimX, targetAimY + 19);
+    ctx.stroke();
+
+    const inside = inBowl(actualAimX, actualAimY);
+    const ripple = 8 + Math.sin(totalTime * 11) * 1.5;
+    if (inside) {
+      ctx.strokeStyle = 'rgba(255,255,255,.92)';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(actualAimX, actualAimY, ripple, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath(); ctx.arc(actualAimX, actualAimY, ripple + 10, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#f8fffe';
+      ctx.beginPath(); ctx.arc(actualAimX, actualAimY, 4.2, 0, Math.PI * 2); ctx.fill();
+    } else {
+      ctx.strokeStyle = 'rgba(218,111,94,.82)';
+      ctx.lineWidth = 2.2;
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI * 2 / 6) * i + Math.sin(totalTime * 8) * 0.06;
+        const r1 = 5;
+        const r2 = 14 + (i % 2) * 4;
+        ctx.beginPath();
+        ctx.moveTo(actualAimX + Math.cos(a) * r1, actualAimY + Math.sin(a) * r1);
+        ctx.lineTo(actualAimX + Math.cos(a) * r2, actualAimY + Math.sin(a) * r2);
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#f0cf54';
+      ctx.beginPath(); ctx.arc(actualAimX, actualAimY, 5.4, 0, Math.PI * 2); ctx.fill();
+    }
+
+    for (const p of particles) {
+      ctx.globalAlpha = clamp(p.life / 0.42, 0, 1);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+  function drawBalanceGuide() {
+    if (state !== 'playing') return;
+    const x = MAN.x + 2;
+    const y = H - 118;
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,.86)';
+    roundRect(x - 150, y - 18, 300, 36, 18); ctx.fill();
+    ctx.strokeStyle = 'rgba(31,61,75,.22)'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = '#5c7782'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x - 126, y); ctx.lineTo(x + 126, y); ctx.stroke();
+    for (const px of [-126, -63, 0, 63, 126]) {
+      ctx.beginPath(); ctx.moveTo(x + px, y - 6); ctx.lineTo(x + px, y + 6); ctx.stroke();
+    }
+    const marker = x + clamp(lean / 1.02, -1, 1) * 126;
+    ctx.fillStyle = Math.abs(lean) < 0.45 ? '#4d9b72' : Math.abs(lean) < 0.75 ? '#e1a93d' : '#c85757';
+    ctx.beginPath(); ctx.arc(marker, y, 10, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  function drawTipsyOverlay() {
+    if (state !== 'playing') return;
+    const v = clamp((beers - 1) / 5, 0, 1);
+    if (v <= 0) return;
+    const vignette = ctx.createRadialGradient(W / 2, H / 2, 180, W / 2, H / 2, 580);
+    vignette.addColorStop(0, 'rgba(255,255,255,0)');
+    vignette.addColorStop(1, `rgba(255,235,180,${0.1 * v})`);
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, W, H);
+  }
+  function drawIdleOverlay() {
+    if (state !== 'menu') return;
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,.18)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+  function renderScene() {
+    drawBackground();
+    drawToilet();
+    drawStains();
+    drawCharacter();
+    drawStream();
+    drawImpact();
+  }
+  function render() {
+    ctx.clearRect(0, 0, W, H);
+    ctx.save();
+    ctx.filter = `blur(${state === 'playing' ? blurAmount.toFixed(2) : '0'}px)`;
+    renderScene();
+    ctx.restore();
+    drawTipsyOverlay();
+    drawBalanceGuide();
+    drawIdleOverlay();
+  }
+
+  function setAimFromEvent(e) {
+    if (state !== 'playing') return;
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.clientX ?? (e.touches && e.touches[0]?.clientX);
+    const clientY = e.clientY ?? (e.touches && e.touches[0]?.clientY);
+    if (clientX == null || clientY == null) return;
+    const x = (clientX - rect.left) * (W / rect.width);
+    const y = (clientY - rect.top) * (H / rect.height);
+    targetAimX = clamp(x, 684, 856);
+    targetAimY = clamp(y, 232, 350);
+  }
+  function frame(now) {
+    const dt = Math.min(0.032, (now - last) / 1000 || 0);
+    last = now;
+    update(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener('keydown', e => {
+    if (['KeyQ','KeyW','KeyA','KeyS','KeyP','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Escape'].includes(e.code)) e.preventDefault();
+    if (e.repeat) return;
+    if (e.code === 'KeyP' || e.code === 'Escape') {
+      if (state === 'playing') pauseGame();
+      else if (state === 'paused') resumeGame();
+      return;
+    }
+    keys[e.code] = true;
+    if (state === 'playing') {
+      if (e.code === 'ArrowLeft') targetAimX -= 12;
+      if (e.code === 'ArrowRight') targetAimX += 12;
+      if (e.code === 'ArrowUp') targetAimY -= 12;
+      if (e.code === 'ArrowDown') targetAimY += 12;
+      targetAimX = clamp(targetAimX, 684, 856);
+      targetAimY = clamp(targetAimY, 232, 350);
+    }
+  }, { passive:false });
+  window.addEventListener('keyup', e => { keys[e.code] = false; });
+  window.addEventListener('blur', () => { clearKeys(); if (state === 'playing') pauseGame(); });
+  canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture?.(e.pointerId); setAimFromEvent(e); });
+  canvas.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' || e.buttons) setAimFromEvent(e); });
+
+  document.querySelectorAll('.control-btn').forEach(btn => {
+    const code = btn.dataset.key;
+    const down = e => { e.preventDefault(); keys[code] = true; btn.classList.add('active'); btn.setPointerCapture?.(e.pointerId); };
+    const up = e => { e.preventDefault(); keys[code] = false; btn.classList.remove('active'); };
+    btn.addEventListener('pointerdown', down);
+    btn.addEventListener('pointerup', up);
+    btn.addEventListener('pointercancel', up);
+    btn.addEventListener('lostpointercapture', up);
+  });
+
+  els.play.addEventListener('click', startGame);
+  els.replay.addEventListener('click', startGame);
+  els.menuBtn.addEventListener('click', showMenu);
+  els.pauseMenuBtn.addEventListener('click', showMenu);
+  els.betweenMenuBtn.addEventListener('click', showMenu);
+  els.nextLevelBtn.addEventListener('click', startNextLevel);
+  els.resumeBtn.addEventListener('click', resumeGame);
+  els.pauseBtn.addEventListener('click', () => { if (state === 'playing') pauseGame(); else if (state === 'paused') resumeGame(); });
+  els.helpBtn.addEventListener('click', () => {
+    if (state === 'playing') return;
+    hideOverlays();
+    els.help.classList.remove('hidden');
+  });
+  els.closeHelpBtn.addEventListener('click', () => {
+    hideOverlays();
+    if (state === 'gameover') els.over.classList.remove('hidden');
+    else if (state === 'between') els.between.classList.remove('hidden');
+    else if (state === 'paused') els.pause.classList.remove('hidden');
+    else els.menu.classList.remove('hidden');
+  });
+  els.muteBtn.addEventListener('click', () => {
+    muted = !muted;
+    els.muteBtn.textContent = `Sound: ${muted ? 'Off' : 'On'}`;
+    els.muteBtn.setAttribute('aria-pressed', String(muted));
+    if (muted) stopMusic();
+    else {
+      initAudio();
+      oneShot(520, 0.05, 0.025, 'triangle');
+      if (['playing', 'between'].includes(state)) startMusic();
+    }
+  });
+
+  updateHud();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
