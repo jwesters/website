@@ -52,9 +52,18 @@
   .center-toast span{display:block;margin-top:4px;font-size:13px;font-weight:800;opacity:.74}
   .toast.show,.center-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   .mobile-controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding-top:10px}
+  body:not(.mobile-device) .mobile-controls{display:none}
   .control-btn{border:0;border-radius:14px;min-height:54px;color:var(--ink);background:rgba(255,255,255,.92);box-shadow:0 6px 14px rgba(25,48,68,.15), inset 0 0 0 1px rgba(255,255,255,.75);font-weight:1000;cursor:pointer;user-select:none;-webkit-user-select:none}
-  .control-btn small{display:block;font-size:10px;opacity:.62;margin-top:2px}
+  .control-btn .arrow{display:block;font-size:20px;line-height:1;font-weight:1000}
+  .control-btn small{display:block;font-size:10px;opacity:.62;margin-top:3px}
   .control-btn.active{transform:translateY(2px);background:#ffd676;box-shadow:inset 0 2px 7px rgba(118,70,11,.22)}
+  
+  .rotate-overlay{position:absolute;inset:0;display:none;place-items:center;padding:18px;background:rgba(24,44,56,.82);backdrop-filter:blur(6px);z-index:8}
+  .rotate-overlay.show{display:grid}
+  .rotate-card{width:min(460px,100%);background:rgba(255,255,255,.95);border-radius:22px;padding:24px 22px;text-align:center;box-shadow:0 22px 58px rgba(14,35,49,.28)}
+  .rotate-card h2{margin:6px 0 8px;font-size:clamp(26px,5vw,40px)}
+  .rotate-card p{margin:0;line-height:1.4;opacity:.8}
+  .rotate-icon{font-size:44px;line-height:1;margin-bottom:10px}
   .overlay{position:absolute;inset:0;display:grid;place-items:center;padding:18px;background:rgba(32,58,70,.38);backdrop-filter:blur(3px);z-index:5}
   .overlay.hidden{display:none}
   .card{width:min(600px,100%);background:var(--panel);border:1px solid rgba(255,255,255,.8);border-radius:22px;padding:clamp(20px,4vw,34px);text-align:center;box-shadow:0 22px 58px rgba(14,35,49,.28)}
@@ -94,6 +103,23 @@
     .card{padding:20px 16px}
     .toast{top:96px;min-width:0;width:calc(100% - 18px)}
   }
+  body.mobile-device .shell{width:min(100svw,100%)}
+  body.mobile-device .canvas-frame{aspect-ratio:16/9}
+  body.mobile-device.landscape-mode .page{padding:4px;align-items:start}
+  body.mobile-device.landscape-mode .shell{padding:6px;border-radius:16px}
+  body.mobile-device.landscape-mode .topbar{padding:2px 2px 6px}
+  body.mobile-device.landscape-mode .brand-mark{width:30px;height:30px;border-radius:10px}
+  body.mobile-device.landscape-mode .brand-copy strong{font-size:20px}
+  body.mobile-device.landscape-mode .brand-copy span{display:none}
+  body.mobile-device.landscape-mode .top-actions{gap:6px}
+  body.mobile-device.landscape-mode .small-btn{padding:7px 10px;border-radius:10px}
+  body.mobile-device.landscape-mode .canvas-frame{max-height:calc(100svh - 150px)}
+  body.mobile-device.landscape-mode .mobile-controls{position:static;left:auto;right:auto;bottom:auto;z-index:auto;padding-top:6px;grid-template-columns:repeat(4,1fr);gap:6px;justify-content:stretch;pointer-events:auto}
+  body.mobile-device.landscape-mode .control-btn{min-height:54px;font-size:13px;pointer-events:auto;opacity:1}
+  body.mobile-device.landscape-mode .control-btn .arrow{font-size:22px}
+  body.mobile-device.landscape-mode .stat{padding:6px 8px}
+  body.mobile-device.landscape-mode .bars{gap:6px}
+
   @media (max-height:670px) and (orientation:landscape){
     .page{padding:5px}
     .shell{width:min(1060px,100%);padding:7px}
@@ -225,13 +251,21 @@
             </div>
           </div>
         </div>
+
+        <div class="rotate-overlay" id="rotateOverlay" aria-live="polite">
+          <div class="rotate-card">
+            <div class="rotate-icon">↻</div>
+            <h2>Rotate to landscape</h2>
+            <p>On mobile, Steady Stream uses landscape mode with touch buttons underneath and aiming on the right side of the play area.</p>
+          </div>
+        </div>
       </div>
 
       <div class="mobile-controls" aria-label="Touch controls">
-        <button class="control-btn" data-key="KeyQ">Q<small>Feet left</small></button>
-        <button class="control-btn" data-key="KeyW">W<small>Feet right</small></button>
-        <button class="control-btn" data-key="KeyA">A<small>Hips left</small></button>
-        <button class="control-btn" data-key="KeyS">S<small>Hips right</small></button>
+        <button class="control-btn" data-key="KeyQ"><span class="arrow">←</span><small>Legs left</small></button>
+        <button class="control-btn" data-key="KeyW"><span class="arrow">→</span><small>Legs right</small></button>
+        <button class="control-btn" data-key="KeyA"><span class="arrow">←</span><small>Hips left</small></button>
+        <button class="control-btn" data-key="KeyS"><span class="arrow">→</span><small>Hips right</small></button>
       </div>
     </section>
   </main>
@@ -287,7 +321,8 @@
     betweenLead: document.getElementById('betweenLead'),
     betweenLevel: document.getElementById('betweenLevel'),
     betweenBeers: document.getElementById('betweenBeers'),
-    betweenScore: document.getElementById('betweenScore')
+    betweenScore: document.getElementById('betweenScore'),
+    rotateOverlay: document.getElementById('rotateOverlay')
   };
 
   const sprites = {
@@ -336,6 +371,31 @@
   let missSoundCooldown = 0;
   let toastTimer = 0;
   let levelToastTimer = 0;
+  let isMobileDevice = false;
+  let lastNonRotateState = null;
+
+
+  function detectMobileDevice() {
+    return /Android|iPhone|iPad|iPod|Mobile|Windows Phone|webOS/i.test(navigator.userAgent) || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  }
+  function updateDeviceMode() {
+    isMobileDevice = detectMobileDevice();
+    const landscape = window.innerWidth > window.innerHeight;
+    document.body.classList.toggle('mobile-device', isMobileDevice);
+    document.body.classList.toggle('landscape-mode', isMobileDevice && landscape);
+    const shouldRotate = isMobileDevice && !landscape;
+    els.rotateOverlay.classList.toggle('show', shouldRotate);
+    if (shouldRotate) {
+      if (state !== 'rotate') {
+        lastNonRotateState = state;
+        state = 'rotate';
+        clearKeys();
+      }
+    } else if (state === 'rotate') {
+      state = lastNonRotateState || 'menu';
+      lastNonRotateState = null;
+    }
+  }
 
   function loadImage(src) {
     const img = new Image();
@@ -998,6 +1058,7 @@
     if (clientX == null || clientY == null) return;
     const x = (clientX - rect.left) * (W / rect.width);
     const y = (clientY - rect.top) * (H / rect.height);
+    if (isMobileDevice && x < W * 0.5) return;
     targetAimX = clamp(x, 684, 856);
     targetAimY = clamp(y, 232, 350);
   }
@@ -1029,6 +1090,8 @@
   }, { passive:false });
   window.addEventListener('keyup', e => { keys[e.code] = false; });
   window.addEventListener('blur', () => { clearKeys(); if (state === 'playing') pauseGame(); });
+  window.addEventListener('resize', updateDeviceMode);
+  window.addEventListener('orientationchange', updateDeviceMode);
   canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture?.(e.pointerId); setAimFromEvent(e); });
   canvas.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' || e.buttons) setAimFromEvent(e); });
 
@@ -1074,6 +1137,7 @@
     }
   });
 
+  updateDeviceMode();
   updateHud();
   requestAnimationFrame(frame);
 })();
