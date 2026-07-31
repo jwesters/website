@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Juggling</title>
+<style>
+  :root {
+    --bg1:#f7efe4;
+    --bg2:#dce8f2;
+    --ink:#1d2732;
+    --panel:rgba(255,255,255,.94);
+    --shadow:0 18px 50px rgba(20,30,40,.18);
+  }
+  * { box-sizing:border-box; }
+  html, body {
+    width:100%; height:100%; margin:0; overflow:hidden;
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    background:#dce8f2; color:var(--ink); touch-action:none;
+  }
+  body { user-select:none; }
+  #gameWrap { position:relative; width:100vw; height:100vh; }
+  canvas { display:block; width:100%; height:100%; cursor:none; }
+
+  .overlay {
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(20,27,35,.20); backdrop-filter:blur(5px); z-index:10;
+    padding:18px;
+  }
+  .panel {
+    width:min(720px, calc(100vw - 36px));
+    padding:28px 30px; border-radius:24px; text-align:center;
+    background:var(--panel); box-shadow:var(--shadow); border:1px solid rgba(255,255,255,.9);
+  }
+  h1 { margin:0 0 10px; font-size:clamp(34px,6vw,64px); line-height:.95; letter-spacing:-.04em; }
+  h2 { margin:0 0 8px; font-size:clamp(26px,4vw,40px); line-height:1; letter-spacing:-.03em; }
+  p { margin:10px auto; max-width:620px; line-height:1.45; font-size:16px; }
+  .small { font-size:14px; opacity:.74; }
+  .mainHighScore {
+    display:inline-block; margin:4px auto 2px; padding:8px 14px; border-radius:12px;
+    background:rgba(235,240,245,.78); font-size:15px; font-weight:900;
+  }
+
+  .legend {
+    display:grid; grid-template-columns:1fr 1fr; gap:14px 20px;
+    text-align:left; margin:20px auto 8px; max-width:620px;
+  }
+  .legend div {
+    background:rgba(235,240,245,.75); border-radius:14px; padding:12px 16px;
+    min-height:86px;
+  }
+  .controlKeys { display:inline-flex; align-items:center; gap:4px; flex-wrap:wrap; }
+  kbd {
+    background:#edf0f3; border:1px solid #d1d7de; border-bottom-width:3px;
+    border-radius:6px; padding:1px 6px; font-family:inherit; font-weight:800;
+  }
+
+  .skinPicker {
+    margin:20px auto 8px; padding:15px 16px 13px; max-width:540px;
+    background:rgba(235,240,245,.72); border-radius:16px;
+  }
+  .skinPickerTitle { font-size:15px; font-weight:850; margin-bottom:11px; }
+  .skinTones { display:flex; justify-content:center; align-items:center; gap:12px; flex-wrap:wrap; }
+  button.skinTone {
+    min-width:0; width:42px; height:42px; padding:0; border-radius:50%;
+    border:3px solid rgba(255,255,255,.95); box-shadow:0 2px 8px rgba(20,30,40,.18); position:relative;
+  }
+  button.skinTone:hover { transform:scale(1.08); }
+  button.skinTone.selected { outline:4px solid #283847; outline-offset:3px; }
+  button.skinTone.selected::after {
+    content:'✓'; position:absolute; inset:0; display:grid; place-items:center;
+    font-weight:950; font-size:20px; color:white; text-shadow:0 1px 3px rgba(0,0,0,.8);
+  }
+
+  .rowButtons, .modeRow { display:flex; gap:12px; margin:20px auto 12px; justify-content:center; flex-wrap:wrap; }
+  button {
+    appearance:none; border:0; border-radius:14px; padding:13px 20px;
+    font-size:16px; font-weight:800; cursor:pointer;
+    box-shadow:0 8px 22px rgba(20,30,40,.12);
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  button:hover { transform:translateY(-2px); box-shadow:0 12px 26px rgba(20,30,40,.16); }
+  button:active { transform:translateY(0); }
+  .start { background:#caefcf; color:#173c20; min-width:220px; }
+  .secondary { background:#e6ecf1; color:#233240; }
+  .restart { background:#dce8ff; color:#1d3157; }
+  .menu { background:#e8eef4; color:#1d3157; }
+
+  #hud {
+    position:absolute; z-index:4; top:14px; left:16px; right:16px; display:none;
+    min-height:44px; pointer-events:none;
+  }
+  .pill {
+    background:rgba(255,255,255,.88); border:1px solid rgba(255,255,255,.95);
+    box-shadow:0 8px 28px rgba(20,30,40,.10); border-radius:14px;
+    padding:10px 14px; font-weight:800; backdrop-filter:blur(6px);
+  }
+  #hudLeft, #hudRight, #hudCenter { position:absolute; top:0; }
+  #hudLeft { left:0; display:flex; gap:8px; pointer-events:auto; }
+  #hudRight { right:0; }
+  #hudCenter { left:50%; transform:translateX(-50%); }
+  #progress { text-align:right; white-space:nowrap; }
+  .hudBtn {
+    pointer-events:auto; background:rgba(255,255,255,.88); border:1px solid rgba(255,255,255,.95);
+    box-shadow:0 8px 28px rgba(20,30,40,.10); border-radius:14px; padding:10px 14px;
+    font-weight:800; font-size:15px;
+  }
+
+  #pauseOverlay, #gameOver, #rotateOverlay { display:none; }
+  #rotateOverlay .panel { max-width:520px; }
+
+  @media (max-width:780px) {
+    .panel { width:min(96vw,720px); padding:22px 18px; }
+    .legend { grid-template-columns:1fr; max-width:100%; }
+    #hudLeft { display:flex; gap:6px; }
+    .hudBtn, .pill { padding:9px 10px; font-size:14px; }
+    #progress { max-width:42vw; white-space:normal; line-height:1.2; }
+  }
+
+  @media (orientation:landscape) and (max-height:600px) {
+    .overlay { padding:8px; overflow:auto; align-items:flex-start; }
+    .panel { width:min(96vw,820px); max-height:calc(100vh - 16px); overflow-y:auto; margin:auto; padding:13px 16px; border-radius:18px; }
+    h1 { font-size:34px; margin-bottom:5px; }
+    h2 { font-size:28px; }
+    p { font-size:13px; line-height:1.28; margin:6px auto; }
+    .small { font-size:11.5px; line-height:1.25; }
+    .mainHighScore { margin:2px auto; padding:5px 11px; font-size:13px; }
+    .legend { grid-template-columns:1fr 1fr; gap:8px 12px; margin:8px auto 5px; }
+    .legend div { min-height:0; padding:8px 10px; font-size:12.5px; line-height:1.25; }
+    kbd { padding:0 5px; }
+    .skinPicker { margin:8px auto 4px; padding:8px 10px; }
+    .skinPickerTitle { font-size:12.5px; margin-bottom:7px; }
+    .skinTones { gap:9px; }
+    button.skinTone { width:34px; height:34px; }
+    .rowButtons, .modeRow { margin:8px auto 5px; gap:8px; }
+    button { padding:9px 14px; font-size:13px; }
+    .start { min-width:180px; }
+    #hud { top:6px; left:8px; right:8px; min-height:36px; }
+    .hudBtn, .pill { padding:7px 9px; font-size:12px; border-radius:10px; }
+    #hudLeft { gap:5px; }
+    #progress { max-width:40vw; line-height:1.15; }
+  }
+</style>
+</head>
+<body>
+<div id="gameWrap">
+  <canvas id="game"></canvas>
+
+  <div id="hud">
+    <div id="hudLeft">
+      <button id="pauseHudBtn" class="hudBtn" type="button">Pause</button>
+      <button id="musicHudBtn" class="hudBtn" type="button">Music: On</button>
+    </div>
+    <div id="hudCenter"><div class="pill">JUGGLING</div></div>
+    <div id="hudRight"><div class="pill" id="progress">Bounces: 0 · High Score: 0 · 1 ball</div></div>
+  </div>
+
+  <div id="startScreen" class="overlay">
+    <div class="panel">
+      <h1>JUGGLE</h1>
+      <p>Keep at least one ball alive by moving the two hands underneath the juggling balls. Hand movement changes the bounce: meet a ball while moving upward for a stronger throw, or move downward to soften it.</p>
+      <div class="mainHighScore" id="mainHighScore">High Score: 0</div>
+      <div class="legend">
+        <div>
+          <strong>Left hand</strong><br>
+          <span class="controlKeys"><kbd>A</kbd>/<kbd>D</kbd> or <kbd>←</kbd>/<kbd>→</kbd> · <kbd>W</kbd>/<kbd>S</kbd> or <kbd>↑</kbd>/<kbd>↓</kbd></span>
+        </div>
+        <div>
+          <strong>Right hand</strong><br>
+          Follow the mouse. Fast upward movement adds extra lift.
+        </div>
+      </div>
+      <div class="skinPicker" aria-label="Choose hand skin tone">
+        <div class="skinPickerTitle">Choose hand skin tone</div>
+        <div class="skinTones">
+          <button class="skinTone" type="button" data-tone="light" aria-label="Light skin tone" title="Light" style="background:#f6c7a3"></button>
+          <button class="skinTone" type="button" data-tone="warm" aria-label="Warm light skin tone" title="Warm light" style="background:#e2a174"></button>
+          <button class="skinTone" type="button" data-tone="tan" aria-label="Tan skin tone" title="Tan" style="background:#c88150"></button>
+          <button class="skinTone" type="button" data-tone="medium" aria-label="Medium skin tone" title="Medium" style="background:#a8643d"></button>
+          <button class="skinTone" type="button" data-tone="dark" aria-label="Dark skin tone" title="Dark" style="background:#77452f"></button>
+          <button class="skinTone" type="button" data-tone="deep" aria-label="Deep skin tone" title="Deep" style="background:#4b2b21"></button>
+        </div>
+      </div>
+      <div class="rowButtons">
+        <button id="menuMusicBtn" class="secondary" type="button">Music: On</button>
+      </div>
+      <div class="modeRow">
+        <button class="start" id="startBtn" type="button">Start Juggling</button>
+      </div>
+      <p class="small">Balls bounce off the side walls. Every 10 successful hand-bounces adds another ball. If one drops, keep juggling the others: the next ball arrives after 10 more hand-bounces. The run ends only when no balls remain. The first speed increase happens at 50 bounces, then the speed increases slightly every 30 bounces after that.</p>
+    </div>
+  </div>
+
+  <div id="pauseOverlay" class="overlay">
+    <div class="panel">
+      <h2>Paused</h2>
+      <p>Press <kbd>Esc</kbd> or <kbd>P</kbd> to resume, or use the button below.</p>
+      <div class="modeRow">
+        <button id="resumeBtn" class="start" type="button">Resume</button>
+        <button id="pauseMusicBtn" class="secondary" type="button">Music: On</button>
+      </div>
+      <div class="modeRow">
+        <button id="pauseMenuBtn" class="menu" type="button">Main Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="gameOver" class="overlay">
+    <div class="panel">
+      <h2>DROPPED!</h2>
+      <p id="gameOverText">No balls left.</p>
+      <div class="modeRow">
+        <button class="restart" id="restartBtn" type="button">Play Again</button>
+        <button class="menu" id="menuBtn" type="button">Main Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="rotateOverlay" class="overlay">
+    <div class="panel">
+      <h2>Rotate Device</h2>
+      <p>Please turn your device to <strong>landscape</strong> to play. On mobile, touch the left side of the play area to control the left hand and the right side to control the right hand.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const startScreen = document.getElementById('startScreen');
+  const pauseOverlay = document.getElementById('pauseOverlay');
+  const rotateOverlay = document.getElementById('rotateOverlay');
+  const gameOver = document.getElementById('gameOver');
+  const gameOverText = document.getElementById('gameOverText');
+  const hud = document.getElementById('hud');
+  const progress = document.getElementById('progress');
+  const mainHighScore = document.getElementById('mainHighScore');
+
+  const pauseHudBtn = document.getElementById('pauseHudBtn');
+  const musicHudBtn = document.getElementById('musicHudBtn');
+  const menuMusicBtn = document.getElementById('menuMusicBtn');
+  const pauseMusicBtn = document.getElementById('pauseMusicBtn');
+
+  const SKIN_FILES = {
+    light:'assets/hand_light.png',
+    warm:'assets/hand_warm.png',
+    tan:'assets/hand_tan.png',
+    medium:'assets/hand_medium.png',
+    dark:'assets/hand_dark.png',
+    deep:'assets/hand_deep.png'
+  };
+
+  const isMobile = (() => {
+    const ua = navigator.userAgent || '';
+    const touchCapable = navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
+    return /Android|iPhone|iPad|iPod|IEMobile|Opera Mini|Mobile/i.test(ua) || (touchCapable && Math.min(screen.width, screen.height) < 900);
+  })();
+
+  let selectedSkin = localStorage.getItem('juggleSkinTone') || 'light';
+  if (!SKIN_FILES[selectedSkin]) selectedSkin = 'light';
+  let musicEnabled = localStorage.getItem('juggleMusicEnabled');
+  musicEnabled = musicEnabled === null ? true : musicEnabled === 'true';
+
+  const handImg = new Image();
+  handImg.src = SKIN_FILES[selectedSkin];
+
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+  const BASE_GRAVITY = 980;
+  const BALL_RADIUS = 36;
+  const HAND_RADIUS_X = 108;
+  const HAND_RADIUS_Y = 40;
+  const FLOOR_RATIO = 0.86;
+  const LEFT_SPEED = 1500;
+  const LEFT_VERTICAL_SPEED = 1360;
+  const WALL_RESTITUTION = 0.87;
+  const RESTITUTION_BALL = 0.94;
+  const HAND_BASE_BOUNCE = 540;
+  const MAX_BOUNCE = 1050;
+  const MIN_BOUNCE = 280;
+
+  let W = innerWidth, H = innerHeight;
+  let floorY = H * FLOOR_RATIO;
+  let playLeft = 0, playRight = W, arenaWidth = W;
+  let arenaTop = 24;
+  let running = false;
+  let paused = false;
+  let bounceCount = 0;
+  let nextBallAt = 10;
+  let elapsed = 0;
+  let lastT = 0;
+  let highScore = Number(localStorage.getItem('juggleHighScore') || 0);
+  let balls = [];
+  let particles = [];
+  const keys = new Set();
+  const touchRoles = new Map();
+  let leftTouchActive = false;
+  let rightTouchActive = false;
+
+  const left = { x: W*0.40, y:H*0.72, vx:0, vy:0, prevX:0, prevY:0, targetX:0, targetY:0 };
+  const right = { x: W*0.60, y:H*0.72, vx:0, vy:0, prevX:0, prevY:0, targetX:W*0.60, targetY:H*0.72, initialized:false };
+
+  // Simple generated circus-style music.
+  let audioCtx = null;
+  let musicTimer = null;
+  let musicStep = 0;
+  let nextNoteTime = 0;
+  const melody = [523.25,659.25,783.99,659.25,523.25,659.25,783.99,880,783.99,659.25,523.25,440,523.25,659.25,523.25,392];
+  const bass = [130.81,130.81,164.81,164.81,146.83,146.83,196.00,196.00];
+
+  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+  function rand(a,b){ return a + Math.random() * (b-a); }
+  function gameSpeedMultiplier(){
+    if (bounceCount < 50) return 1;
+    const speedSteps = 1 + Math.floor((bounceCount - 50) / 30);
+    return 1 + speedSteps * 0.035;
+  }
+  function needsRotate(){ return isMobile && innerHeight > innerWidth; }
+  function handMinY(){ return H * (isMobile ? 0.58 : 0.56); }
+  function handMaxY(){ return floorY - 58; }
+
+  function updateMusicButtons() {
+    const label = `Music: ${musicEnabled ? 'On' : 'Off'}`;
+    musicHudBtn.textContent = label;
+    menuMusicBtn.textContent = label;
+    pauseMusicBtn.textContent = label;
+  }
+
+  function ensureAudio() {
+    if (audioCtx) return;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    audioCtx = new Ctx();
+    nextNoteTime = audioCtx.currentTime;
+  }
+
+  function scheduleTone(freq, startTime, duration, volume, type='triangle') {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, startTime);
+    gain.gain.setValueAtTime(0.0001, startTime);
+    gain.gain.linearRampToValueAtTime(volume, startTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.02);
+  }
+
+  function musicTick() {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    const ahead = 0.28;
+    const beat = 0.22;
+    while (nextNoteTime < audioCtx.currentTime + ahead) {
+      const m = melody[musicStep % melody.length];
+      const b = bass[musicStep % bass.length];
+      scheduleTone(m, nextNoteTime, 0.15, 0.045, 'triangle');
+      scheduleTone(m*2, nextNoteTime + 0.01, 0.08, 0.015, 'sine');
+      if (musicStep % 2 === 0) scheduleTone(b, nextNoteTime, 0.18, 0.035, 'square');
+      else scheduleTone(b*1.5, nextNoteTime, 0.12, 0.018, 'square');
+      nextNoteTime += beat;
+      musicStep += 1;
+    }
+  }
+
+  function updateMusicState() {
+    updateMusicButtons();
+    if (!musicEnabled) {
+      if (audioCtx && audioCtx.state === 'running') audioCtx.suspend();
+      if (musicTimer) { clearInterval(musicTimer); musicTimer = null; }
+      return;
+    }
+    if (!running || paused || needsRotate()) {
+      if (audioCtx && audioCtx.state === 'running') audioCtx.suspend();
+      if (musicTimer) { clearInterval(musicTimer); musicTimer = null; }
+      return;
+    }
+    ensureAudio();
+    if (!audioCtx) return;
+    audioCtx.resume();
+    nextNoteTime = Math.max(nextNoteTime, audioCtx.currentTime);
+    if (!musicTimer) musicTimer = setInterval(musicTick, 120);
+  }
+
+  function toggleMusic() {
+    musicEnabled = !musicEnabled;
+    localStorage.setItem('juggleMusicEnabled', String(musicEnabled));
+    updateMusicState();
+  }
+
+  function selectSkinTone(tone) {
+    if (!SKIN_FILES[tone]) return;
+    selectedSkin = tone;
+    handImg.src = SKIN_FILES[tone];
+    localStorage.setItem('juggleSkinTone', tone);
+    document.querySelectorAll('.skinTone').forEach(btn => {
+      const active = btn.dataset.tone === tone;
+      btn.classList.toggle('selected', active);
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+  }
+
+  function resize() {
+    W = innerWidth; H = innerHeight;
+    floorY = H * FLOOR_RATIO;
+    arenaTop = Math.max(24, H * 0.05);
+    arenaWidth = W <= 820 ? W - 18 : clamp(W - 24, 860, 1420);
+    playLeft = (W - arenaWidth) * 0.5;
+    playRight = playLeft + arenaWidth;
+
+    canvas.width = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+
+    left.x = clamp(left.x, playLeft + HAND_RADIUS_X, playRight - HAND_RADIUS_X);
+    right.x = clamp(right.x, playLeft + HAND_RADIUS_X, playRight - HAND_RADIUS_X);
+    left.y = clamp(left.y, handMinY(), handMaxY());
+    right.y = clamp(right.y, handMinY(), handMaxY());
+
+    updateRotateState();
+  }
+
+  function updateRotateState() {
+    const rotate = needsRotate();
+    rotateOverlay.style.display = rotate ? 'flex' : 'none';
+    if (rotate && running && !paused) {
+      paused = true;
+      pauseOverlay.style.display = 'none';
+    }
+    if (!rotate && running && paused && pauseOverlay.style.display === 'none') {
+      // stay paused silently; user can resume explicitly
+    }
+    updateMusicState();
+  }
+
+  function resetHands() {
+    left.x = playLeft + arenaWidth * 0.36;
+    left.y = H * 0.71;
+    left.vx = left.vy = 0;
+    left.prevX = left.x;
+    left.prevY = left.y;
+    left.targetX = left.x;
+    left.targetY = left.y;
+
+    right.x = playLeft + arenaWidth * 0.64;
+    right.y = H * 0.71;
+    right.vx = right.vy = 0;
+    right.prevX = right.x;
+    right.prevY = right.y;
+    right.targetX = right.x;
+    right.targetY = right.y;
+    right.initialized = false;
+  }
+
+  function makeBall(x, y, vx, vy, hue) {
+    return { x, y, vx, vy, r: BALL_RADIUS, hue, spin: rand(-4,4), angle: rand(0, Math.PI*2), justHitL:0, justHitR:0 };
+  }
+
+  function initialBall() {
+    const fromLeft = Math.random() < 0.5;
+    const x = fromLeft ? left.x : right.x;
+    const target = fromLeft ? right.x : left.x;
+    balls.push(makeBall(x, Math.min(left.y, right.y) - 55, (target - x) * 0.72, -690, 24));
+  }
+
+  function addBall(number) {
+    const side = number % 2 === 0 ? left : right;
+    const other = side === left ? right : left;
+    const hue = (24 + (number - 1) * 71) % 360;
+    const separation = 0.36 + Math.min(0.18, number * 0.012);
+    balls.push(makeBall(
+      side.x + rand(-18,18),
+      side.y - HAND_RADIUS_Y - BALL_RADIUS - 10,
+      (other.x - side.x) * separation + rand(-55,55),
+      -700 - Math.min(180, number * 12),
+      hue
+    ));
+    burst(side.x, side.y - 32, hue, 14);
+  }
+
+  function startGame() {
+    startScreen.style.display = 'none';
+    gameOver.style.display = 'none';
+    pauseOverlay.style.display = 'none';
+    hud.style.display = 'block';
+    balls = [];
+    particles = [];
+    elapsed = 0;
+    bounceCount = 0;
+    nextBallAt = 10;
+    paused = false;
+    resetHands();
+    initialBall();
+    running = true;
+    lastT = performance.now();
+    ensureAudio();
+    updateMusicState();
+    updateProgress();
+  }
+
+  function returnToMenu() {
+    running = false;
+    paused = false;
+    gameOver.style.display = 'none';
+    pauseOverlay.style.display = 'none';
+    hud.style.display = 'none';
+    updateProgress();
+    startScreen.style.display = 'flex';
+    updateMusicState();
+  }
+
+  function endGame(reason) {
+    if (!running) return;
+    running = false;
+    paused = false;
+    if (bounceCount > highScore) {
+      highScore = bounceCount;
+      localStorage.setItem('juggleHighScore', String(highScore));
+    }
+    updateProgress();
+    gameOverText.textContent = `${reason || 'The last ball hit the floor.'} Bounces: ${bounceCount} · High score: ${highScore}.`;
+    gameOver.style.display = 'flex';
+    pauseOverlay.style.display = 'none';
+    updateMusicState();
+  }
+
+  function setPaused(value) {
+    if (!running) return;
+    paused = value;
+    pauseOverlay.style.display = paused ? 'flex' : 'none';
+    lastT = performance.now();
+    updateMusicState();
+  }
+
+  function togglePause() {
+    if (!running || needsRotate()) return;
+    setPaused(!paused);
+  }
+
+  function loseBall(index, reason) {
+    const b = balls[index];
+    if (!b) return false;
+    burst(clamp(b.x, 0, W), Math.min(floorY-4, Math.max(20, b.y)), b.hue, 18);
+    balls.splice(index, 1);
+    if (balls.length === 0) {
+      endGame(reason || 'No balls left.');
+      return true;
+    }
+    nextBallAt = bounceCount + 10;
+    return false;
+  }
+
+  function updateProgress() {
+    const untilNext = Math.max(0, nextBallAt - bounceCount);
+    progress.textContent = `Bounces: ${bounceCount} · High Score: ${highScore} · ${balls.length} ball${balls.length===1?'':'s'} · Next +1 in ${untilNext}`;
+    if (mainHighScore) mainHighScore.textContent = `High Score: ${highScore}`;
+  }
+
+  function handleTouchTargets(touch, side) {
+    const tx = clamp(touch.clientX, playLeft + HAND_RADIUS_X, playRight - HAND_RADIUS_X);
+    const ty = clamp(touch.clientY, handMinY(), handMaxY());
+    if (side === 'left') {
+      left.targetX = tx;
+      left.targetY = ty;
+      leftTouchActive = true;
+    } else {
+      right.targetX = tx;
+      right.targetY = ty;
+      rightTouchActive = true;
+    }
+  }
+
+  function refreshTouchActivity() {
+    leftTouchActive = false;
+    rightTouchActive = false;
+  }
+
+  document.querySelectorAll('.skinTone').forEach(btn => btn.addEventListener('click', () => selectSkinTone(btn.dataset.tone)));
+  selectSkinTone(selectedSkin);
+  updateMusicButtons();
+  updateProgress();
+
+  document.getElementById('startBtn').onclick = startGame;
+  document.getElementById('restartBtn').onclick = startGame;
+  document.getElementById('menuBtn').onclick = returnToMenu;
+  document.getElementById('resumeBtn').onclick = () => setPaused(false);
+  document.getElementById('pauseMenuBtn').onclick = returnToMenu;
+  pauseHudBtn.onclick = togglePause;
+  musicHudBtn.onclick = toggleMusic;
+  menuMusicBtn.onclick = toggleMusic;
+  pauseMusicBtn.onclick = toggleMusic;
+
+  addEventListener('resize', resize);
+  addEventListener('orientationchange', resize);
+  resize();
+
+  addEventListener('keydown', e => {
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyA','KeyS','KeyD','Escape','KeyP'].includes(e.code)) e.preventDefault();
+    if (e.code === 'Escape' || e.code === 'KeyP') {
+      if (!e.repeat) togglePause();
+      return;
+    }
+    keys.add(e.code);
+  }, {passive:false});
+  addEventListener('keyup', e => keys.delete(e.code));
+
+  addEventListener('mousemove', e => {
+    if (isMobile) return;
+    right.targetX = e.clientX;
+    right.targetY = e.clientY;
+    if (!right.initialized) {
+      right.x = e.clientX;
+      right.y = e.clientY;
+      right.prevX = right.x;
+      right.prevY = right.y;
+      right.initialized = true;
+    }
+  });
+
+  canvas.addEventListener('touchstart', e => {
+    if (!isMobile) return;
+    e.preventDefault();
+    for (const touch of e.changedTouches) {
+      const side = touch.clientX < W/2 ? 'left' : 'right';
+      touchRoles.set(touch.identifier, side);
+      handleTouchTargets(touch, side);
+    }
+  }, {passive:false});
+
+  canvas.addEventListener('touchmove', e => {
+    if (!isMobile) return;
+    e.preventDefault();
+    refreshTouchActivity();
+    for (const touch of e.touches) {
+      const side = touchRoles.get(touch.identifier);
+      if (!side) continue;
+      handleTouchTargets(touch, side);
+    }
+  }, {passive:false});
+
+  function endTouches(changedTouches) {
+    for (const touch of changedTouches) touchRoles.delete(touch.identifier);
+    leftTouchActive = false;
+    rightTouchActive = false;
+  }
+  canvas.addEventListener('touchend', e => { if (isMobile) { e.preventDefault(); endTouches(e.changedTouches); } }, {passive:false});
+  canvas.addEventListener('touchcancel', e => { if (isMobile) { e.preventDefault(); endTouches(e.changedTouches); } }, {passive:false});
+
+  function updateHands(dt) {
+    left.prevX = left.x;
+    left.prevY = left.y;
+
+    if (isMobile) {
+      const touchFollow = 1 - Math.exp(-22 * dt);
+      if (leftTouchActive) {
+        left.x += (left.targetX - left.x) * touchFollow;
+        left.y += (left.targetY - left.y) * touchFollow;
+      }
+    } else {
+      let dx = 0, dy = 0;
+      if (keys.has('KeyA') || keys.has('ArrowLeft')) dx -= 1;
+      if (keys.has('KeyD') || keys.has('ArrowRight')) dx += 1;
+      if (keys.has('KeyW') || keys.has('ArrowUp')) dy -= 1;
+      if (keys.has('KeyS') || keys.has('ArrowDown')) dy += 1;
+      if (dx && dy) { dx *= 0.7071; dy *= 0.7071; }
+      left.x += dx * LEFT_SPEED * dt;
+      left.y += dy * LEFT_VERTICAL_SPEED * dt;
+    }
+
+    left.x = clamp(left.x, playLeft + HAND_RADIUS_X, playRight - HAND_RADIUS_X);
+    left.y = clamp(left.y, handMinY(), handMaxY());
+    left.vx = (left.x - left.prevX) / Math.max(dt, 0.001);
+    left.vy = (left.y - left.prevY) / Math.max(dt, 0.001);
+
+    right.prevX = right.x;
+    right.prevY = right.y;
+    const follow = 1 - Math.exp(-(isMobile ? 22 : 68) * dt);
+    if (isMobile) {
+      if (rightTouchActive) {
+        right.x += (right.targetX - right.x) * follow;
+        right.y += (right.targetY - right.y) * follow;
+      }
+    } else {
+      const tx = clamp(right.targetX, playLeft + HAND_RADIUS_X, playRight - HAND_RADIUS_X);
+      const ty = clamp(right.targetY, handMinY(), handMaxY());
+      right.x += (tx - right.x) * follow;
+      right.y += (ty - right.y) * follow;
+    }
+
+    right.x = clamp(right.x, playLeft + HAND_RADIUS_X, playRight - HAND_RADIUS_X);
+    right.y = clamp(right.y, handMinY(), handMaxY());
+    right.vx = (right.x - right.prevX) / Math.max(dt, 0.001);
+    right.vy = (right.y - right.prevY) / Math.max(dt, 0.001);
+  }
+
+  function handCollision(ball, hand, which) {
+    const dx = ball.x - hand.x;
+    const dy = ball.y - hand.y;
+    const nxRaw = dx / (HAND_RADIUS_X + ball.r);
+    const nyRaw = dy / (HAND_RADIUS_Y + ball.r);
+    if (nxRaw*nxRaw + nyRaw*nyRaw > 1) return;
+
+    const timerKey = which === 'L' ? 'justHitL' : 'justHitR';
+    if (ball[timerKey] > 0) return;
+
+    let nx = dx / (HAND_RADIUS_X * HAND_RADIUS_X);
+    let ny = dy / (HAND_RADIUS_Y * HAND_RADIUS_Y);
+    const nl = Math.hypot(nx, ny) || 1;
+    nx /= nl; ny /= nl;
+
+    const relVy = ball.vy - hand.vy;
+    if (ny > 0.48 && relVy <= 0) return;
+
+    const angle = Math.atan2(dy / HAND_RADIUS_Y, dx / HAND_RADIUS_X);
+    ball.x = hand.x + Math.cos(angle) * (HAND_RADIUS_X + ball.r + 2);
+    ball.y = hand.y + Math.sin(angle) * (HAND_RADIUS_Y + ball.r + 2);
+
+    const upwardHandSpeed = -hand.vy;
+    let bounce = HAND_BASE_BOUNCE + upwardHandSpeed * 0.72;
+    bounce = clamp(bounce, MIN_BOUNCE, MAX_BOUNCE);
+
+    const lateral = clamp(dx / HAND_RADIUS_X, -1, 1);
+    const carriedVX = hand.vx * 0.45;
+    ball.vx = ball.vx * 0.30 + carriedVX + lateral * 340;
+    ball.vy = -bounce;
+    ball.spin += lateral * 4 + hand.vx * 0.002;
+    ball[timerKey] = 0.085;
+    bounceCount += 1;
+    if (bounceCount > highScore) {
+      highScore = bounceCount;
+      localStorage.setItem('juggleHighScore', String(highScore));
+    }
+    if (bounceCount >= nextBallAt) {
+      addBall(balls.length + 1);
+      nextBallAt += 10;
+    }
+    burst(ball.x, ball.y + 5, ball.hue, 7);
+  }
+
+  function resolveBallBall(a,b) {
+    let dx = b.x - a.x, dy = b.y - a.y;
+    let d = Math.hypot(dx,dy), min = a.r + b.r;
+    if (d === 0) { dx = 1; dy = 0; d = 1; }
+    if (d >= min) return;
+    const nx = dx / d, ny = dy / d;
+    const overlap = min - d;
+    a.x -= nx * overlap * 0.5; a.y -= ny * overlap * 0.5;
+    b.x += nx * overlap * 0.5; b.y += ny * overlap * 0.5;
+    const rvx = b.vx - a.vx, rvy = b.vy - a.vy;
+    const sep = rvx * nx + rvy * ny;
+    if (sep > 0) return;
+    const j = -(1 + RESTITUTION_BALL) * sep / 2;
+    const ix = j * nx, iy = j * ny;
+    a.vx -= ix; a.vy -= iy; b.vx += ix; b.vy += iy;
+    a.spin -= j * 0.006; b.spin += j * 0.006;
+    burst((a.x+b.x)/2, (a.y+b.y)/2, (a.hue+b.hue)/2, 3);
+  }
+
+  function updateBalls(dt) {
+    const speedMult = gameSpeedMultiplier();
+    const gravity = BASE_GRAVITY * speedMult;
+    for (let i = balls.length - 1; i >= 0; i--) {
+      const b = balls[i];
+      b.justHitL = Math.max(0, b.justHitL - dt);
+      b.justHitR = Math.max(0, b.justHitR - dt);
+      b.vy += gravity * dt;
+      b.x += b.vx * dt * speedMult;
+      b.y += b.vy * dt * speedMult;
+      b.angle += b.spin * dt * speedMult;
+
+      if (b.x - b.r < playLeft) { b.x = playLeft + b.r; b.vx = Math.abs(b.vx) * WALL_RESTITUTION; b.spin += 1.5; }
+      if (b.x + b.r > playRight) { b.x = playRight - b.r; b.vx = -Math.abs(b.vx) * WALL_RESTITUTION; b.spin -= 1.5; }
+
+      handCollision(b, left, 'L');
+      handCollision(b, right, 'R');
+
+      if (b.y - b.r > floorY) {
+        if (loseBall(i, 'The last ball hit the floor.')) return;
+        continue;
+      }
+      if (b.y < arenaTop - 220) { b.y = arenaTop - 220; b.vy = Math.abs(b.vy) * 0.4; }
+    }
+    for (let i = 0; i < balls.length; i++) {
+      for (let j = i + 1; j < balls.length; j++) resolveBallBall(balls[i], balls[j]);
+    }
+  }
+
+  function burst(x,y,hue,count) {
+    for (let i = 0; i < count; i++) particles.push({ x, y, vx: rand(-120,120), vy: rand(-140,40), life: rand(.18,.42), hue, size: rand(2,5) });
+  }
+
+  function updateParticles(dt) {
+    for (const p of particles) { p.life -= dt; p.vy += 500 * dt; p.x += p.vx * dt; p.y += p.vy * dt; }
+    particles = particles.filter(p => p.life > 0);
+  }
+
+  function update(dt) {
+    if (!running || paused || needsRotate()) { updateParticles(dt); return; }
+    elapsed += dt;
+    updateHands(dt);
+    updateBalls(dt);
+    updateParticles(dt);
+    updateProgress();
+  }
+
+  function drawBackground() {
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = '#cad8e3';
+    ctx.fillRect(0,0,W,H);
+
+    const arenaBottom = floorY + 64;
+    const arenaGrad = ctx.createLinearGradient(0, arenaTop, 0, arenaBottom);
+    arenaGrad.addColorStop(0,'#dce8f2');
+    arenaGrad.addColorStop(.76,'#edf3f7');
+    arenaGrad.addColorStop(.761,'#efe1cc');
+    arenaGrad.addColorStop(1,'#e3cba9');
+    ctx.fillStyle = arenaGrad;
+    ctx.beginPath();
+    ctx.roundRect(playLeft-10, arenaTop, arenaWidth+20, arenaBottom-arenaTop, 24);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(49,67,82,.14)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(playLeft-10, arenaTop, arenaWidth+20, arenaBottom-arenaTop, 24);
+    ctx.stroke();
+
+    const rg = ctx.createRadialGradient(W/2, floorY+10, 10, W/2, floorY+10, arenaWidth * 0.48);
+    rg.addColorStop(0,'rgba(65,53,42,.14)');
+    rg.addColorStop(1,'rgba(65,53,42,0)');
+    ctx.fillStyle = rg;
+    ctx.fillRect(playLeft-10, floorY-20, arenaWidth+20, H-floorY+20);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(playLeft-10, arenaTop, arenaWidth+20, Math.max(0, floorY-arenaTop));
+    ctx.clip();
+    ctx.strokeStyle = 'rgba(73,98,118,.08)';
+    ctx.lineWidth = 2;
+    for (let x = playLeft + 90; x < playRight; x += 120) {
+      ctx.beginPath();
+      ctx.moveTo(x, arenaTop);
+      ctx.lineTo(x, floorY);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawBall(b) {
+    ctx.save();
+    ctx.translate(b.x,b.y);
+    ctx.rotate(b.angle);
+    const g = ctx.createRadialGradient(-6,-8,2,0,0,b.r);
+    g.addColorStop(0,`hsl(${b.hue} 90% 72%)`);
+    g.addColorStop(.55,`hsl(${b.hue} 78% 57%)`);
+    g.addColorStop(1,`hsl(${b.hue} 75% 38%)`);
+    ctx.fillStyle = g;
+    ctx.strokeStyle = 'rgba(40,45,50,.35)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0,0,b.r,0,Math.PI*2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.65)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0,0,b.r*.62,-1.25,.4);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(30,30,40,.22)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-b.r*.72,0);
+    ctx.quadraticCurveTo(0,-5,b.r*.72,0);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawHand(hand,isLeft) {
+    if (!handImg.complete || !handImg.naturalWidth) return;
+    const imgW = 310;
+    const imgH = imgW * (handImg.naturalHeight / handImg.naturalWidth);
+    const palmFX = 0.50;
+    const palmFY = 0.47;
+    const rot = isLeft ? -0.055 : 0.055;
+
+    ctx.save();
+    ctx.translate(hand.x, hand.y);
+    ctx.rotate(rot);
+    if (isLeft) ctx.scale(-1, 1);
+    ctx.drawImage(handImg, -imgW*palmFX, -imgH*palmFY, imgW, imgH);
+    ctx.restore();
+  }
+
+  function drawParticles() {
+    for (const p of particles) {
+      ctx.globalAlpha = clamp(p.life / .42, 0, 1);
+      ctx.fillStyle = `hsl(${p.hue} 80% 55%)`;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawInstructionsGhost() {
+    if (!running || paused || elapsed > 7) return;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(31,45,57,.45)';
+    ctx.font = '700 14px system-ui';
+    if (isMobile) {
+      ctx.fillText('LEFT TOUCH', left.x, left.y + 60);
+      ctx.fillText('RIGHT TOUCH', right.x, right.y + 60);
+    } else {
+      ctx.fillText('A / D + W / S', left.x, left.y + 60);
+      ctx.fillText('MOUSE', right.x, right.y + 60);
+    }
+    ctx.restore();
+  }
+
+  function draw() {
+    drawBackground();
+    drawParticles();
+    for (const b of balls) drawBall(b);
+    drawHand(left, true);
+    drawHand(right, false);
+    drawInstructionsGhost();
+  }
+
+  function frame(t) {
+    const rawDt = (t - lastT) / 1000 || 0;
+    lastT = t;
+    const dt = Math.min(rawDt, 0.025);
+    update(dt);
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
