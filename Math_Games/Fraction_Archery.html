@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Fraction Archery</title>
+<style>
+  :root{
+    --bg:#f4f7fb;
+    --card:#ffffff;
+    --ink:#172033;
+    --muted:#6b7280;
+    --accent:#4169e1;
+    --accent2:#14b8a6;
+    --danger:#dc2626;
+    --good:#16803a;
+    --line:#d9e0ea;
+    --shadow:0 16px 40px rgba(28,39,68,.12);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);background:linear-gradient(180deg,#eef4ff 0%,var(--bg) 45%,#eef7f5 100%)}
+  body{min-height:100vh}
+  button,input{font:inherit}
+  button{cursor:pointer}
+  .app{width:min(1180px,96vw);margin:0 auto;padding:28px 0 40px}
+  .screen{display:none}
+  .screen.active{display:block}
+  .screen.hero.active{display:flex}
+  .panel{background:rgba(255,255,255,.96);border:1px solid rgba(255,255,255,.7);box-shadow:var(--shadow);border-radius:24px;padding:28px}
+  .hero{min-height:calc(100vh - 68px);align-items:center;justify-content:center}
+  .hero-card{width:min(720px,94vw);text-align:center}
+  h1{font-size:clamp(2.5rem,6vw,4.8rem);margin:0 0 8px;letter-spacing:-.05em}
+  .subtitle{font-size:1.15rem;color:var(--muted);margin:0 auto 28px;max-width:600px}
+  .seed-row{display:grid;grid-template-columns:1fr auto;gap:10px;max-width:520px;margin:20px auto}
+  .seed-row input{width:100%;padding:14px 16px;border:2px solid var(--line);border-radius:14px;background:#fff}
+  .btn{border:0;border-radius:14px;padding:13px 18px;font-weight:800;transition:.15s transform,.15s opacity,.15s background}
+  .btn:hover{transform:translateY(-1px)}
+  .btn:active{transform:translateY(0)}
+  .btn.primary{background:var(--accent);color:white}
+  .btn.secondary{background:#e8eefc;color:#2747a6}
+  .btn.teal{background:var(--accent2);color:#063c35}
+  .btn.ghost{background:#f2f4f8;color:#344054}
+  .btn.danger{background:#fee2e2;color:#991b1b}
+  .btn.new-game{background:#f59e0b;color:#3b2500}
+  .btn.menu-color{background:#8b5cf6;color:#ffffff}
+  .start-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .tiny{font-size:.9rem;color:var(--muted)}
+  .game-header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}
+  .brand{font-size:1.7rem;font-weight:900;letter-spacing:-.03em}
+  .seed-chip{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 10px 8px 14px}
+  .seed-chip strong{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .rules-strip{background:#fff9d8;border:1px solid #f5dc76;border-radius:16px;padding:12px 16px;margin-bottom:18px;text-align:center;font-weight:700}
+  .targets{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .target-card{background:#fff;border:2px solid #e6ebf2;border-radius:22px;padding:22px;text-align:center;box-shadow:0 8px 20px rgba(30,41,59,.06);min-width:0}
+  .target-label{font-size:.82rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:900}
+  .target-value{font-size:clamp(2.5rem,5vw,4.2rem);font-weight:950;letter-spacing:-.05em;margin:6px 0 18px}
+  .fraction{display:grid;grid-template-rows:72px 3px 72px;gap:10px;justify-content:center}
+  .frac-slot{width:96px;height:72px;border:3px dashed #bcc8dc;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:900;background:#f8faff;transition:.15s}
+  .frac-slot.active{border-color:var(--accent);background:#eef3ff;box-shadow:0 0 0 4px rgba(65,105,225,.12)}
+  .frac-slot.invalid{border-color:var(--danger);background:#fff1f2}
+  .frac-line{height:3px;background:#243047;border-radius:99px;width:108px;align-self:center}
+  .bank-wrap{margin-top:18px}
+  .bank-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+  .bank{display:grid;grid-template-columns:repeat(10,minmax(50px,1fr));gap:10px}
+  .number-tile{min-height:58px;border:0;border-radius:15px;background:#e7eefc;color:#173e96;font-size:1.25rem;font-weight:950;box-shadow:inset 0 0 0 2px #cad7f4}
+  .number-tile.used{opacity:.24;cursor:not-allowed;filter:grayscale(.4)}
+  .number-tile.selected{outline:4px solid rgba(65,105,225,.22)}
+  .game-actions{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:22px}
+  .message{min-height:24px;text-align:center;margin-top:12px;font-weight:800}
+  .message.error{color:var(--danger)}
+  .results-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .score-card,.best-card{background:white;border:1px solid var(--line);border-radius:20px;padding:22px}
+  .score-big{font-size:clamp(3rem,8vw,5.5rem);font-weight:950;letter-spacing:-.06em;color:var(--accent);margin:6px 0}
+  .result-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;padding:12px 0;border-bottom:1px solid #edf0f5;align-items:center}
+  .result-row:last-child{border-bottom:0}
+  .result-row .frac{font-weight:900}
+  .result-row .diff{font-variant-numeric:tabular-nums;color:var(--muted)}
+  .best-total{font-weight:950;font-size:1.35rem;margin-top:14px}
+  .result-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:22px}
+  .help{margin-top:14px;border-top:1px solid #edf0f5;padding-top:14px}
+  .help summary{cursor:pointer;font-weight:900}
+  .help p{color:var(--muted);line-height:1.55}
+
+  .hero{min-height:100vh;align-items:center;justify-content:center;padding:24px 0}
+  .hero.active{display:flex}
+  .menu-actions{flex-direction:column;align-items:center}
+  .menu-actions .btn{min-width:180px}
+  .always-open{margin-top:18px}
+  .help-title{font-weight:900;margin-bottom:10px}
+  .modal-backdrop{
+    position:fixed;inset:0;background:rgba(17,24,39,.42);display:none;
+    align-items:center;justify-content:center;padding:20px;z-index:1000
+  }
+  .modal-backdrop.open{display:flex}
+  .seed-modal{
+    width:min(460px,94vw);background:#fff;border-radius:22px;padding:24px;
+    box-shadow:0 24px 70px rgba(15,23,42,.28);text-align:center
+  }
+  .seed-modal h2{margin:0 0 8px;font-size:1.8rem}
+  .seed-modal p{margin:0 0 16px;color:var(--muted)}
+  .seed-modal input{width:100%;padding:14px 16px;border:2px solid var(--line);border-radius:14px;background:#fff}
+  .modal-actions{display:flex;justify-content:center;gap:10px;margin-top:16px;flex-wrap:wrap}
+
+  @media(max-width:800px){
+    .app{width:min(96vw,760px);padding:14px 0 26px}
+    .panel{padding:18px;border-radius:20px}
+    .targets{grid-template-columns:1fr}
+    .target-card{display:grid;grid-template-columns:1fr 130px;align-items:center;text-align:left;padding:16px}
+    .target-value{margin:4px 0 0;font-size:2.6rem}
+    .fraction{justify-self:center}
+    .bank{grid-template-columns:repeat(5,1fr)}
+    .results-grid{grid-template-columns:1fr}
+    .game-header{align-items:flex-start}
+  }
+  @media(max-width:480px){
+    .seed-row{grid-template-columns:1fr}
+    .target-card{grid-template-columns:1fr 115px}
+    .frac-slot{width:82px;height:62px}
+    .fraction{grid-template-rows:62px 3px 62px}
+    .frac-line{width:92px}
+    .game-header{flex-direction:column}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <section id="startScreen" class="screen active hero">
+    <div class="panel hero-card">
+      <h1>Fraction Archery</h1>
+      <p class="subtitle">Use the numbers 1–10 to build three fractions as close as possible to the decimal targets. Every number can be used only once. Lowest score wins.</p>
+      <div class="start-actions menu-actions">
+        <button class="btn primary" id="startBtn">Start Game</button>
+        <button class="btn secondary" id="enterSeedBtn">Enter Seed</button>
+      </div>
+      <div class="help always-open">
+        <div class="help-title">How to Play</div>
+        <p>Build one fraction for each target decimal. Use each number from 1 to 10 at most once across the whole round. You do not have to use all ten numbers, but all three fractions must be complete before you submit. Your score is the total error × 1000, so a lower score is better.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="gameScreen" class="screen">
+    <div class="rules-strip">Use each number 1–10 only once. Complete all three fractions. Lowest score wins.</div>
+
+    <div class="targets" id="targets"></div>
+
+    <div class="bank-wrap panel">
+      <div class="bank-title">
+        <strong>Number Bank</strong>
+        <span class="tiny">Drag a number, or select a fraction box and click a number.</span>
+      </div>
+      <div class="bank" id="numberBank"></div>
+      <div class="game-actions">
+        <button class="btn ghost" id="clearBtn">Clear Fractions</button>
+        <button class="btn primary" id="submitBtn">Submit Round</button>
+      </div>
+      <div id="message" class="message"></div>
+    </div>
+  </section>
+
+  <section id="resultsScreen" class="screen">
+<div class="results-grid">
+      <div class="score-card">
+        <div class="target-label">Your Total Score</div>
+        <div class="score-big" id="totalScore"></div>
+        <div class="tiny">Lower is better. Score = total absolute error × 1000.</div>
+        <div id="playerResults" style="margin-top:14px"></div>
+      </div>
+
+      <div class="best-card">
+        <div class="target-label">Best Possible Score</div>
+        <div class="score-big" id="bestTotal"></div>
+        <div class="tiny">Lowest possible score for this seed. Score = total absolute error × 1000.</div>
+        <div id="bestResults" style="margin-top:14px"></div>
+      </div>
+    </div>
+
+    <div class="result-actions">
+      <button class="btn teal" id="replayBtn">Replay This Seed</button>
+      <button class="btn new-game" id="newSeedBtn">Play New Seed</button>
+      <button class="btn menu-color" id="menuBtn">Main Menu</button>
+    </div>
+  </section>
+
+  <div id="seedModal" class="modal-backdrop" aria-hidden="true">
+    <div class="seed-modal" role="dialog" aria-modal="true" aria-labelledby="seedModalTitle">
+      <h2 id="seedModalTitle">Enter Seed</h2>
+      <p>Enter a seed to play the same decimal targets as someone else.</p>
+      <input id="seedInput" maxlength="40" autocomplete="off" placeholder="Enter seed">
+      <div class="modal-actions">
+        <button class="btn ghost" id="cancelSeedBtn">Cancel</button>
+        <button class="btn primary" id="startSeedBtn">Start Game</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const screens = {
+    start: $('#startScreen'),
+    game: $('#gameScreen'),
+    results: $('#resultsScreen')
+  };
+
+  let seed = '';
+  let targets = [];
+  let slots = Array(6).fill(null);
+  let activeSlot = 0;
+
+  function show(name){
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    screens[name].classList.add('active');
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  function hashSeed(str){
+    let h = 2166136261 >>> 0;
+    for(let i=0;i<str.length;i++){
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  function mulberry32(a){
+    return function(){
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+  }
+
+  function randomSeed(){
+    const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let s='';
+    if(window.crypto && crypto.getRandomValues){
+      const a=new Uint32Array(8); crypto.getRandomValues(a);
+      for(const n of a) s += chars[n % chars.length];
+    } else {
+      for(let i=0;i<8;i++) s += chars[Math.floor(Math.random()*chars.length)];
+    }
+    return s;
+  }
+
+  function generateTargets(s){
+    const rng=mulberry32(hashSeed(s));
+    const vals=[];
+    while(vals.length<3){
+      const n=10 + Math.floor(rng()*81); // 10..90 inclusive
+      if(!vals.includes(n)) vals.push(n);
+    }
+    return vals.map(n=>n/100);
+  }
+
+  function fmtTarget(v){ return v.toFixed(2); }
+  function fmtNum(v){ return Number(v.toFixed(6)).toString(); }
+  function slotLabel(i){ return i%2===0 ? 'numerator' : 'denominator'; }
+
+  function renderTargets(){
+    const wrap=$('#targets');
+    wrap.innerHTML='';
+    targets.forEach((t,idx)=>{
+      const base=idx*2;
+      const card=document.createElement('div');
+      card.className='target-card';
+      card.innerHTML=`
+        <div>
+          <div class="target-label">Target ${idx+1}</div>
+          <div class="target-value">${fmtTarget(t)}</div>
+        </div>
+        <div class="fraction">
+          <div class="frac-slot" data-slot="${base}" draggable="false" aria-label="Target ${idx+1} numerator"></div>
+          <div class="frac-line"></div>
+          <div class="frac-slot" data-slot="${base+1}" draggable="false" aria-label="Target ${idx+1} denominator"></div>
+        </div>`;
+      wrap.appendChild(card);
+    });
+
+    document.querySelectorAll('.frac-slot').forEach(el=>{
+      el.addEventListener('click',()=>setActiveSlot(+el.dataset.slot));
+      el.addEventListener('dragover',e=>{e.preventDefault(); el.classList.add('active')});
+      el.addEventListener('dragleave',()=>refreshSlots());
+      el.addEventListener('dragstart',e=>{
+        const i=+el.dataset.slot;
+        if(slots[i]==null){ e.preventDefault(); return; }
+        e.dataTransfer.setData('text/plain',String(slots[i]));
+        e.dataTransfer.setData('application/x-fraction-slot',String(i));
+      });
+      el.addEventListener('drop',e=>{
+        e.preventDefault();
+        const n=Number(e.dataTransfer.getData('text/plain'));
+        const fromRaw=e.dataTransfer.getData('application/x-fraction-slot');
+        const from=fromRaw==='' ? null : Number(fromRaw);
+        if(from!==null && from!==+el.dataset.slot) slots[from]=null;
+        placeNumber(+el.dataset.slot,n);
+      });
+    });
+    refreshSlots();
+  }
+
+  function renderBank(){
+    const bank=$('#numberBank');
+    bank.innerHTML='';
+    for(let n=1;n<=10;n++){
+      const b=document.createElement('button');
+      b.className='number-tile';
+      b.textContent=n;
+      b.draggable=true;
+      b.dataset.number=n;
+      b.addEventListener('click',()=>{
+        if(slots.includes(n)) return;
+        placeNumber(activeSlot,n);
+      });
+      b.addEventListener('dragstart',e=>{
+        if(slots.includes(n)){e.preventDefault();return}
+        e.dataTransfer.setData('text/plain',String(n));
+      });
+      bank.appendChild(b);
+    }
+    bank.addEventListener('dragover',e=>e.preventDefault());
+    bank.addEventListener('drop',e=>{
+      e.preventDefault();
+      const fromRaw=e.dataTransfer.getData('application/x-fraction-slot');
+      if(fromRaw!==''){
+        const from=Number(fromRaw);
+        slots[from]=null;
+        activeSlot=from;
+        refreshSlots();
+        refreshBank();
+      }
+    });
+    refreshBank();
+  }
+
+  function setActiveSlot(i){
+    activeSlot=i;
+    refreshSlots();
+  }
+
+  function placeNumber(slotIndex,n){
+    if(!Number.isInteger(n) || n<1 || n>10) return;
+    const existingIndex=slots.indexOf(n);
+    if(existingIndex!==-1 && existingIndex!==slotIndex) return;
+    slots[slotIndex]=n;
+    activeSlot=(slotIndex+1)%6;
+    refreshSlots();
+    refreshBank();
+    setMessage('');
+  }
+
+  function refreshSlots(){
+    document.querySelectorAll('.frac-slot').forEach(el=>{
+      const i=+el.dataset.slot;
+      el.textContent=slots[i] ?? '';
+      el.draggable=slots[i]!=null;
+      el.classList.toggle('active',i===activeSlot);
+      el.classList.remove('invalid');
+    });
+  }
+
+  function refreshBank(){
+    document.querySelectorAll('.number-tile').forEach(el=>{
+      const n=+el.dataset.number;
+      el.classList.toggle('used',slots.includes(n));
+    });
+  }
+
+  function clearFractions(){
+    slots=Array(6).fill(null);
+    activeSlot=0;
+    refreshSlots();
+    refreshBank();
+    setMessage('');
+  }
+
+  function setMessage(msg,error=false){
+    const m=$('#message');
+    m.textContent=msg;
+    m.className='message'+(error?' error':'');
+  }
+
+  function validate(){
+    let ok=true;
+    document.querySelectorAll('.frac-slot').forEach((el,i)=>{
+      const bad=slots[i]==null;
+      el.classList.toggle('invalid',bad);
+      if(bad) ok=false;
+    });
+    if(!ok){setMessage('Complete all three fractions before submitting.',true);return false}
+    const denoms=[slots[1],slots[3],slots[5]];
+    if(denoms.some(n=>n===0)){setMessage('A denominator cannot be zero.',true);return false}
+    if(new Set(slots).size!==slots.length){setMessage('Each number can only be used once.',true);return false}
+    return true;
+  }
+
+  function scoreSolution(fracs){
+    const details=fracs.map((f,i)=>{
+      const value=f[0]/f[1];
+      const diff=Math.abs(value-targets[i]);
+      return {num:f[0],den:f[1],value,diff,points:diff*1000};
+    });
+    return {details,total:details.reduce((a,d)=>a+d.points,0)};
+  }
+
+  // Exact exhaustive search over assignments of six distinct values from 1..10.
+  // 10P6 = 151,200 candidates, fast enough in-browser.
+  function bestPossible(){
+    const nums=[1,2,3,4,5,6,7,8,9,10];
+    let bestTotal=Infinity, best=null;
+    for(let a=0;a<10;a++)
+    for(let b=0;b<10;b++){ if(b===a) continue;
+      const d1=Math.abs(nums[a]/nums[b]-targets[0])*1000;
+      if(d1>=bestTotal) continue;
+      for(let c=0;c<10;c++){ if(c===a||c===b) continue;
+      for(let d=0;d<10;d++){ if(d===a||d===b||d===c) continue;
+        const d12=d1+Math.abs(nums[c]/nums[d]-targets[1])*1000;
+        if(d12>=bestTotal) continue;
+        for(let e=0;e<10;e++){ if(e===a||e===b||e===c||e===d) continue;
+        for(let f=0;f<10;f++){ if(f===a||f===b||f===c||f===d||f===e) continue;
+          const total=d12+Math.abs(nums[e]/nums[f]-targets[2])*1000;
+          if(total<bestTotal-1e-12){
+            bestTotal=total;
+            best=[[nums[a],nums[b]],[nums[c],nums[d]],[nums[e],nums[f]]];
+          }
+        }}
+      }}
+    }
+    return scoreSolution(best);
+  }
+
+  function submit(){
+    if(!validate()) return;
+    const player=scoreSolution([[slots[0],slots[1]],[slots[2],slots[3]],[slots[4],slots[5]]]);
+    const best=bestPossible();
+    $('#totalScore').textContent=player.total.toFixed(2);
+
+    $('#playerResults').innerHTML=player.details.map((d,i)=>`
+      <div class="result-row">
+        <span>Target ${i+1}: <strong>${fmtTarget(targets[i])}</strong></span>
+        <span class="frac">${d.num}/${d.den} = ${fmtNum(d.value)}</span>
+        <span class="diff">+${d.points.toFixed(2)}</span>
+      </div>`).join('');
+
+    $('#bestResults').innerHTML=best.details.map((d,i)=>`
+      <div class="result-row">
+        <span>Target ${i+1}: <strong>${fmtTarget(targets[i])}</strong></span>
+        <span class="frac">${d.num}/${d.den} = ${fmtNum(d.value)}</span>
+        <span class="diff">+${d.points.toFixed(2)}</span>
+      </div>`).join('');
+
+    $('#bestTotal').textContent=best.total.toFixed(2);
+    show('results');
+  }
+
+  function startGame(useSeed){
+    seed=(useSeed || $('#seedInput').value.trim() || randomSeed()).toUpperCase();
+    $('#seedInput').value=seed;
+    targets=generateTargets(seed);
+    slots=Array(6).fill(null);
+    activeSlot=0;
+    renderTargets();
+    renderBank();
+    setMessage('');
+    show('game');
+  }
+
+  async function copySeed(){
+    try{
+      await navigator.clipboard.writeText(seed);
+    }catch{
+      const ta=document.createElement('textarea');
+      ta.value=seed;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();
+    }
+  }
+
+  $('#startBtn').addEventListener('click',()=>startGame(randomSeed()));
+  $('#clearBtn').addEventListener('click',clearFractions);
+  $('#submitBtn').addEventListener('click',submit);
+  $('#replayBtn').addEventListener('click',()=>startGame(seed));
+  $('#newSeedBtn').addEventListener('click',()=>startGame(randomSeed()));
+  $('#menuBtn').addEventListener('click',()=>show('start'));
+
+
+  function openSeedModal(){
+    const modal=$('#seedModal');
+    $('#seedInput').value='';
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden','false');
+    setTimeout(()=>$('#seedInput').focus(),0);
+  }
+
+  function closeSeedModal(){
+    const modal=$('#seedModal');
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden','true');
+  }
+
+  $('#enterSeedBtn').addEventListener('click',openSeedModal);
+  $('#cancelSeedBtn').addEventListener('click',closeSeedModal);
+  $('#startSeedBtn').addEventListener('click',()=>{
+    const entered=$('#seedInput').value.trim();
+    if(!entered) return;
+    closeSeedModal();
+    startGame(entered);
+  });
+  $('#seedInput').addEventListener('keydown',e=>{
+    if(e.key==='Enter'){
+      const entered=$('#seedInput').value.trim();
+      if(entered){
+        closeSeedModal();
+        startGame(entered);
+      }
+    } else if(e.key==='Escape'){
+      closeSeedModal();
+    }
+  });
+  $('#seedModal').addEventListener('click',e=>{
+    if(e.target.id==='seedModal') closeSeedModal();
+  });
+
+  // Helpful keyboard entry on desktop: number keys fill the selected slot.
+  let keyboardBuffer='';
+  let keyboardTimer=null;
+
+  function commitKeyboardNumber(){
+    if(!keyboardBuffer) return;
+    const n=Number(keyboardBuffer);
+    keyboardBuffer='';
+    clearTimeout(keyboardTimer);
+    keyboardTimer=null;
+    if(Number.isInteger(n) && n>=1 && n<=10 && !slots.includes(n)){
+      placeNumber(activeSlot,n);
+    }
+  }
+
+  document.addEventListener('keydown',e=>{
+    if(!screens.game.classList.contains('active')) return;
+
+    if(e.key==='Backspace' || e.key==='Delete'){
+      e.preventDefault();
+      keyboardBuffer='';
+      clearTimeout(keyboardTimer);
+      keyboardTimer=null;
+      if(activeSlot>=0 && activeSlot<slots.length){
+        slots[activeSlot]=null;
+        refreshSlots();
+        refreshBank();
+        setMessage('');
+      }
+      return;
+    }
+
+    if(e.key==='Escape'){
+      keyboardBuffer='';
+      clearTimeout(keyboardTimer);
+      return;
+    }
+
+    if(/^[0-9]$/.test(e.key)){
+      e.preventDefault();
+
+      if(e.key==='0'){
+        if(keyboardBuffer==='1'){
+          keyboardBuffer='10';
+          commitKeyboardNumber();
+        }
+        return;
+      }
+
+      if(keyboardBuffer){
+        commitKeyboardNumber();
+      }
+
+      keyboardBuffer=e.key;
+
+      if(e.key!=='1'){
+        commitKeyboardNumber();
+      } else {
+        clearTimeout(keyboardTimer);
+        keyboardTimer=setTimeout(commitKeyboardNumber,350);
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>
