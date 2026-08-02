@@ -45,6 +45,8 @@ const state = {
   ttsDtype: null,
   ttsPreference: null,
   ttsLoading: false,
+  ttsConfigKey: null,
+  ttsProfile: null,
   ffmpeg: null,
   ffmpegReady: false,
   audioUrls: new Map(),
@@ -65,6 +67,7 @@ function startApp() {
     wireInterface();
     populateVoiceSelect(DEFAULT_VOICES);
     restoreLocalProject();
+    updateAdaptivePerformanceUi();
     hydrateMetadataInputs();
     renderAll();
     updateStorageBadge();
@@ -151,7 +154,7 @@ function wireInterface() {
   $("#helpBtn").addEventListener("click", () => $("#helpDialog").showModal());
 
   window.addEventListener("beforeunload", saveLocalProject);
-  window.addEventListener("resize", applyDeviceClass, { passive: true });
+  window.addEventListener("resize", () => { applyDeviceClass(); updateAdaptivePerformanceUi(); }, { passive: true });
 }
 
 function selectTab(name) {
@@ -436,25 +439,47 @@ async function ensureTtsWorker(options = {}) {
   if (location.protocol === "file:") {
     throw new Error("Narration generation requires this folder to be uploaded to an HTTPS website. All editing, chapter arrangement, and project controls work locally.");
   }
-  const preference = currentPerformanceMode();
-  if (state.ttsWorker && state.ttsReady && state.ttsPreference === preference) return;
-  if (!state.ttsWorker) {
-    state.ttsWorker = new Worker("tts-worker.js", { type: "module" });
-    state.ttsWorker.addEventListener("message", handleTtsMessage);
-    state.ttsWorker.addEventListener("error", (event) => {
-      state.ttsLoading = false;
-      updateEngineBadge("Engine failed", "danger", event.message || "The narration worker crashed.");
-      if (state.voiceSample) finishVoiceSampleError(new Error(event.message || "The narration worker crashed."));
-      else if (state.generation) finishGenerationWithError(new Error(event.message || "The narration worker crashed."));
-      else if (!options.quiet) toast(event.message || "The narration worker crashed.", "error");
-    });
-  }
+  const config = narrationConfig(options);
+  if (state.ttsWorker && state.ttsReady && state.ttsConfigKey === config.key) return config;
+  if (!state.ttsWorker) createTtsWorker(options);
+
   state.ttsReady = false;
   state.ttsLoading = true;
+  state.ttsConfigKey = null;
   updateEngineBadge("Loading…", "warn", "Downloading or preparing the local voice model.");
-  state.ttsWorker.postMessage({ type: "init", performance: preference });
-  await waitUntil(() => state.ttsReady && state.ttsPreference === preference, 180000, "The voice model did not finish loading.");
+  state.ttsWorker.postMessage({ type: "init", ...config });
+  await waitUntil(() => state.ttsReady && state.ttsConfigKey === config.key, 240000, "The voice model did not finish loading.");
+  return {
+    ...config,
+    performance: state.ttsDevice === "wasm" ? "wasm" : config.performance,
+    warmup: state.ttsDevice === "webgpu" && config.warmup,
+  };
 }
+
+function createTtsWorker(options = {}) {
+  state.ttsWorker = new Worker("tts-worker.js", { type: "module" });
+  state.ttsWorker.addEventListener("message", handleTtsMessage);
+  state.ttsWorker.addEventListener("error", (event) => {
+    state.ttsLoading = false;
+    updateEngineBadge("Engine failed", "danger", event.message || "The narration worker crashed.");
+    if (state.voiceSample) finishVoiceSampleError(new Error(event.message || "The narration worker crashed."));
+    else if (state.generation) finishGenerationWithError(new Error(event.message || "The narration worker crashed."));
+    else if (!options.quiet) toast(event.message || "The narration worker crashed.", "error");
+  });
+}
+
+function resetTtsWorker() {
+  try { state.ttsWorker?.terminate(); } catch {}
+  state.ttsWorker = null;
+  state.ttsReady = false;
+  state.ttsLoading = false;
+  state.ttsDevice = null;
+  state.ttsDtype = null;
+  state.ttsPreference = null;
+  state.ttsConfigKey = null;
+  state.ttsProfile = null;
+}
+
 function handleTtsMessage(event) {
   const message = event.data || {};
   if (message.type === "model-start") {
@@ -466,32 +491,42 @@ function handleTtsMessage(event) {
     const progress = normaliseModelProgress(message.item);
     updateEngineBadge("Loading…", "warn", progress.detail || progress.label);
     if (state.generation) showGenerationBox(progress.label, progress.percent, progress.detail);
+  } else if (message.type === "warmup-start") {
+    updateEngineBadge("Warming up GPU…", "warn", "Compiling the narration model for faster first-chapter generation.");
+    if (state.generation) showGenerationBox("Warming up the narration engine…", 8, "This one-time desktop warm-up reduces delay on the first section.");
   } else if (message.type === "ready") {
     state.ttsReady = true;
     state.ttsLoading = false;
     state.ttsDevice = message.device;
     state.ttsDtype = message.dtype;
     state.ttsPreference = message.preference || currentPerformanceMode();
+    state.ttsConfigKey = message.configKey || `${message.device}:${message.dtype}:${message.profile || "desktop"}`;
+    state.ttsProfile = message.profile || "desktop";
     populateVoiceSelect(message.voices);
     const accelerated = message.device === "webgpu";
-    const label = accelerated ? "WebGPU — accelerated" : "CPU/WASM — compatibility";
+    const iosSafe = String(message.profile || "").startsWith("ios");
+    const label = iosSafe ? "CPU/WASM — iOS safe" : accelerated ? "WebGPU — accelerated" : "CPU/WASM — compatibility";
     updateEngineBadge(label, accelerated ? "good" : "warn", message.fallbackReason || `${String(message.device).toUpperCase()} · ${message.dtype}`);
-    if (state.generation) showGenerationBox("Voice model ready", 8, `${String(message.device).toUpperCase()} processing`);
+    if (state.generation) showGenerationBox("Voice model ready", 9, `${String(message.device).toUpperCase()} processing · adaptive ${message.profile || "desktop"} sections`);
   } else if (message.type === "generation-progress") {
     if (state.voiceSample && message.id === state.voiceSample.requestId) {
       setVoiceSampleButtonState("Generating sample…", true);
       return;
     }
     if (!state.generation || message.id !== state.generation.requestId) return;
+    armGenerationWatchdog();
     const percent = 10 + Math.round((message.current / Math.max(1, message.total)) * 88);
-    showGenerationBox(`Narrating part ${message.current + 1} of ${message.total}`, percent, message.excerpt || "");
+    const elapsed = Math.max(0, (Date.now() - state.generation.startedAt) / 1000);
+    showGenerationBox(`Narrating part ${message.current + 1} of ${message.total}`, percent, `${message.excerpt || ""}${message.excerpt ? " · " : ""}${formatDuration(elapsed)} elapsed`);
   } else if (message.type === "complete") {
     if (state.voiceSample && message.id === state.voiceSample.requestId) {
       completeVoiceSample(message);
       return;
     }
+    clearGenerationWatchdog();
     completeGeneration(message);
   } else if (message.type === "cancelled") {
+    clearGenerationWatchdog();
     if (state.voiceSample && message.id === state.voiceSample.requestId) {
       finishVoiceSampleError(new Error("Voice sample cancelled."), true);
       return;
@@ -499,17 +534,21 @@ function handleTtsMessage(event) {
     finishGenerationWithError(new Error("Narration cancelled."), true);
   } else if (message.type === "error") {
     state.ttsLoading = false;
-    state.ttsReady = false;
     const error = new Error(message.message || "Narration failed.");
-    updateEngineBadge("Load when needed", "warn", error.message);
     if (state.voiceSample && message.id === state.voiceSample.requestId) {
       finishVoiceSampleError(error);
       return;
     }
     if (state.generation) {
+      if (isIOSLike() && message.code === "chunk-timeout" && !state.generation.safeRetry) {
+        retryGenerationInSafeMode(error.message).catch((retryError) => finishGenerationWithError(retryError));
+        return;
+      }
       finishGenerationWithError(error);
       return;
     }
+    state.ttsReady = false;
+    updateEngineBadge(isIOSLike() ? "Loads on demand — iOS" : "Load when needed", "warn", error.message);
     console.warn("Background narration preload failed", error);
   }
 }
@@ -519,11 +558,54 @@ function currentPerformanceMode() {
   return ["auto", "webgpu", "wasm"].includes(value) ? value : "auto";
 }
 
+function isIOSLike() {
+  const ua = navigator.userAgent || "";
+  const classicIOS = /iPhone|iPad|iPod/i.test(ua);
+  const iPadDesktopMode = navigator.platform === "MacIntel" && Number(navigator.maxTouchPoints || 0) > 1;
+  return classicIOS || iPadDesktopMode;
+}
+
+function narrationConfig(options = {}) {
+  const selected = currentPerformanceMode();
+  const ios = isIOSLike();
+  const profile = options.safe ? "ios-safe" : ios ? "ios" : isMobileLike() ? "mobile" : "desktop";
+  const performance = ios ? "wasm" : selected;
+  const warmup = !ios && profile === "desktop" && performance !== "wasm";
+  const key = `${performance}:${profile}:${warmup ? "warm" : "cold"}`;
+  return { performance, selectedPerformance: selected, profile, warmup, key };
+}
+
+function updateAdaptivePerformanceUi() {
+  const ios = isIOSLike();
+  const select = $("#performanceMode");
+  const note = $("#performanceNote");
+  if (select) {
+    const webgpuOption = select.querySelector('option[value="webgpu"]');
+    if (webgpuOption) webgpuOption.disabled = ios;
+    if (ios && select.value === "webgpu") {
+      select.value = "auto";
+      storageSet("article-audiobook-performance", "auto");
+    }
+  }
+  if (note) {
+    note.textContent = ios
+      ? "iPhone and iPad use an on-demand CPU/WASM safe mode with smaller narration sections to reduce stalls and memory use."
+      : "The voice model preloads and warms up in the background. Automatic uses GPU acceleration and larger sections when available.";
+  }
+  if (ios && !state.ttsReady && !state.ttsLoading) {
+    updateEngineBadge("Loads on demand — iOS", "warn", "Background model preloading is disabled on iPhone and iPad to preserve memory.");
+  }
+}
+
 function handlePerformanceModeChange() {
   const mode = currentPerformanceMode();
   storageSet("article-audiobook-performance", mode);
-  state.ttsReady = false;
-  state.ttsPreference = null;
+  resetTtsWorker();
+  updateAdaptivePerformanceUi();
+  if (isIOSLike()) {
+    updateEngineBadge("Loads on demand — iOS", "warn", "The safer CPU/WASM engine will load when narration starts.");
+    return;
+  }
   const labels = { auto: "Automatic selected", webgpu: "WebGPU requested", wasm: "CPU/WASM selected" };
   updateEngineBadge(labels[mode], "warn", "The narration engine will reload in the background.");
   scheduleTtsPreload(150);
@@ -532,6 +614,10 @@ function handlePerformanceModeChange() {
 function scheduleTtsPreload(delay = 1800) {
   if (location.protocol === "file:") {
     updateEngineBadge("HTTPS required", "warn", "Upload the files to an HTTPS static website to generate narration.");
+    return;
+  }
+  if (isIOSLike()) {
+    updateEngineBadge("Loads on demand — iOS", "warn", "Background preloading is disabled to reduce iPhone and iPad memory pressure.");
     return;
   }
   const start = () => {
@@ -563,10 +649,10 @@ async function playVoiceSample() {
   state.voiceSample = { requestId };
   setVoiceSampleButtonState("Preparing sample…", true);
   try {
-    await ensureTtsWorker();
+    const config = await ensureTtsWorker({ safe: isIOSLike() });
     const voice = $("#voiceSelect").value || chapter.voice;
     const speed = Number($("#speedInput").value || chapter.speed || 1);
-    state.ttsWorker.postMessage({ type: "generate", id: requestId, text: "This is a sample of my voice.", voice, speed, performance: currentPerformanceMode() });
+    state.ttsWorker.postMessage({ type: "generate", id: requestId, text: "This is a sample of my voice.", voice, speed, ...config });
   } catch (error) {
     if (state.voiceSample) finishVoiceSampleError(error);
   }
@@ -614,14 +700,23 @@ async function generateChapter(id, options = {}) {
   if (!options.force && chapter.renderedSignature === currentSignature && existing?.blob) return existing;
 
   const requestId = makeId();
-  state.generation = { chapterId: chapter.id, requestId, resolve: null, reject: null };
+  state.generation = {
+    chapterId: chapter.id,
+    requestId,
+    resolve: null,
+    reject: null,
+    startedAt: Date.now(),
+    safeRetry: false,
+    watchdog: null,
+  };
   const promise = new Promise((resolve, reject) => { state.generation.resolve = resolve; state.generation.reject = reject; });
   setGenerationControls(true);
-  showGenerationBox("Preparing narration engine…", 1, "The first use downloads and caches the local voice model.");
+  hideGenerationStats();
+  showGenerationBox("Preparing narration engine…", 1, isIOSLike() ? "Loading the iOS-safe engine on demand." : "The first use downloads, caches, and warms up the local voice model.");
 
   try {
-    await ensureTtsWorker();
-    state.ttsWorker.postMessage({ type: "generate", id: requestId, text: chapter.text, voice: chapter.voice, speed: chapter.speed, performance: currentPerformanceMode() });
+    const config = await ensureTtsWorker();
+    postGenerationRequest(chapter, config);
     return await promise;
   } catch (error) {
     if (state.generation) finishGenerationWithError(error);
@@ -629,8 +724,56 @@ async function generateChapter(id, options = {}) {
   }
 }
 
+function postGenerationRequest(chapter, config) {
+  if (!state.generation || !state.ttsWorker) throw new Error("The narration engine is unavailable.");
+  state.ttsWorker.postMessage({
+    type: "generate",
+    id: state.generation.requestId,
+    text: chapter.text,
+    voice: chapter.voice,
+    speed: chapter.speed,
+    ...config,
+  });
+  armGenerationWatchdog();
+}
+
+function armGenerationWatchdog() {
+  if (!state.generation) return;
+  clearGenerationWatchdog();
+  const delay = isIOSLike() ? 75000 : 210000;
+  const requestId = state.generation.requestId;
+  state.generation.watchdog = setTimeout(() => {
+    if (!state.generation || state.generation.requestId !== requestId) return;
+    if (isIOSLike() && !state.generation.safeRetry) {
+      retryGenerationInSafeMode("The first narration section stopped responding.").catch((error) => finishGenerationWithError(error));
+    } else {
+      finishGenerationWithError(new Error("Narration stopped responding. Try Compatibility mode or use shorter article sections."));
+    }
+  }, delay);
+}
+
+function clearGenerationWatchdog() {
+  if (state.generation?.watchdog) clearTimeout(state.generation.watchdog);
+  if (state.generation) state.generation.watchdog = null;
+}
+
+async function retryGenerationInSafeMode(reason = "Narration stalled.") {
+  const generation = state.generation;
+  if (!generation || generation.safeRetry) throw new Error(reason);
+  generation.safeRetry = true;
+  clearGenerationWatchdog();
+  const chapter = state.chapters.find((item) => item.id === generation.chapterId);
+  if (!chapter) throw new Error("The chapter was removed during narration.");
+  showGenerationBox("Retrying in extra-safe iOS mode…", 9, `${reason} The engine is restarting with much smaller sections.`);
+  resetTtsWorker();
+  generation.requestId = makeId();
+  const config = await ensureTtsWorker({ safe: true });
+  postGenerationRequest(chapter, config);
+}
+
 async function completeGeneration(message) {
   if (!state.generation || message.id !== state.generation.requestId) return;
+  clearGenerationWatchdog();
   const generation = state.generation;
   const chapter = state.chapters.find((item) => item.id === generation.chapterId);
   if (!chapter) return finishGenerationWithError(new Error("The chapter was removed during generation."));
@@ -639,7 +782,12 @@ async function completeGeneration(message) {
     chapter.renderedSignature = signatureString(chapter);
     await putAudio({ id: chapter.id, blob: message.blob, duration: chapter.duration, signature: chapter.renderedSignature, updatedAt: Date.now() });
     saveLocalProject();
+    const elapsed = Math.max(.1, (Date.now() - generation.startedAt) / 1000);
+    const realtime = chapter.duration / elapsed;
+    const engine = message.device === "webgpu" ? "WebGPU" : "CPU/WASM";
+    const retryText = generation.safeRetry ? " · iOS safe retry" : "";
     showGenerationBox("Narration complete", 100, `${formatDuration(chapter.duration)} generated locally.`);
+    showGenerationStats(`${formatDuration(chapter.duration)} of audio generated in ${formatDuration(elapsed)} · ${realtime.toFixed(1)}× real time · ${engine}/${message.dtype || state.ttsDtype || "adaptive"}${retryText}`);
     generation.resolve({ blob: message.blob, duration: chapter.duration });
     toast(`Generated “${chapter.title}”.`, "success");
     state.generation = null;
@@ -652,16 +800,19 @@ async function completeGeneration(message) {
 }
 
 function finishGenerationWithError(error, quiet = false) {
+  clearGenerationWatchdog();
   const generation = state.generation;
   if (generation) generation.reject(error);
   state.generation = null;
   setGenerationControls(false);
-  showGenerationBox(error.message || String(error), 0, "", true);
+  hideGenerationStats();
+  showGenerationBox(error.message || String(error), 0, isIOSLike() ? "The app stopped safely instead of remaining frozen. Try a shorter article or regenerate in sections." : "", true);
   if (!quiet) toast(error.message || String(error), "error");
 }
 
 function cancelGeneration() {
   if (!state.generation || !state.ttsWorker) return;
+  clearGenerationWatchdog();
   state.ttsWorker.postMessage({ type: "cancel" });
   $("#generationLabel").textContent = "Cancelling after the current section…";
 }
@@ -684,6 +835,20 @@ function showGenerationBox(label, percent = 0, detail = "", error = false) {
   $("#generationPercent").textContent = percent ? `${Math.round(percent)}%` : "";
   $("#generationProgress").value = Math.max(0, Math.min(100, percent));
   $("#generationDetail").textContent = detail;
+}
+
+function showGenerationStats(text) {
+  const stats = $("#generationStats");
+  if (!stats) return;
+  stats.textContent = text;
+  stats.classList.remove("hidden");
+}
+
+function hideGenerationStats() {
+  const stats = $("#generationStats");
+  if (!stats) return;
+  stats.textContent = "";
+  stats.classList.add("hidden");
 }
 
 function normaliseModelProgress(item = {}) {
@@ -750,72 +915,76 @@ async function exportM4b() {
   try {
     if ($("#generateMissingCheck").checked) {
       for (let index = 0; index < state.chapters.length; index += 1) {
-        setExportProgress(`Preparing chapter ${index + 1} of ${state.chapters.length}`, Math.round(index / state.chapters.length * 35), state.chapters[index].title);
+        setExportProgress(`Preparing chapter ${index + 1} of ${state.chapters.length}`, Math.round(index / state.chapters.length * 30), state.chapters[index].title);
         await generateChapter(state.chapters[index].id);
       }
     }
 
-    const records = [];
     for (const chapter of state.chapters) {
       const record = await getAudio(chapter.id);
       if (!record?.blob || chapter.renderedSignature !== signatureString(chapter)) throw new Error(`“${chapter.title}” has not been generated or has changed.`);
-      records.push(record);
     }
 
-    setExportProgress("Loading the audiobook encoder…", 38, "FFmpeg WebAssembly is downloaded once and cached by the browser.");
-    const ffmpeg = await ensureFfmpeg();
-    const filenames = [];
-    const cleanup = ["concat.txt", "metadata.txt", "audiobook.m4a", "audiobook.m4b", "cover-input", "cover.jpg"];
-    await safeDelete(ffmpeg, cleanup);
-    const lowMemoryExport = isMobileLike();
-    let code = 0;
+    const mobile = isMobileLike();
+    const audioBitrate = mobile ? "64k" : "96k";
+    const audioRate = mobile ? "32000" : "44100";
+    setExportProgress("Loading the audiobook encoder…", 34, "Preparing the lower-memory staged exporter.");
+    let ffmpeg = await ensureFfmpeg();
+    const encodedNames = [];
+    const stageOneCleanup = ["concat.txt", "audiobook.m4a"];
+    await safeDelete(ffmpeg, stageOneCleanup);
 
-    if (lowMemoryExport) {
-      for (let index = 0; index < records.length; index += 1) {
-        const number = String(index + 1).padStart(3, "0");
-        const wavName = `chapter-${number}.wav`;
-        const audioName = `chapter-${number}.m4a`;
-        filenames.push(audioName);
-        cleanup.push(wavName, audioName);
-        setExportProgress("Encoding chapter for mobile…", 40 + Math.round((index / records.length) * 30), `${state.chapters[index].title} · lower-memory mode`);
-        await ffmpeg.writeFile(wavName, new Uint8Array(await records[index].blob.arrayBuffer()));
-        code = await ffmpeg.exec(["-y", "-i", wavName, "-vn", "-c:a", "aac", "-b:a", "64k", "-ar", "32000", "-ac", "1", audioName]);
-        if (code !== 0) throw new Error(`“${state.chapters[index].title}” could not be encoded.`);
-        await safeDelete(ffmpeg, [wavName]);
-      }
-      const concatText = filenames.map((name) => `file '${name}'`).join("\n");
-      await ffmpeg.writeFile("concat.txt", new TextEncoder().encode(concatText));
-      setExportProgress("Joining encoded chapters…", 74, "Using the lower-memory mobile export path.");
-      code = await ffmpeg.exec(["-y", "-f", "concat", "-safe", "0", "-i", "concat.txt", "-vn", "-c:a", "copy", "audiobook.m4a"]);
-      if (code !== 0) throw new Error("The encoded chapters could not be joined.");
-    } else {
-      for (let index = 0; index < records.length; index += 1) {
-        const name = `chapter-${String(index + 1).padStart(3, "0")}.wav`;
-        filenames.push(name); cleanup.push(name);
-        setExportProgress("Loading chapter audio…", 40 + Math.round((index / records.length) * 8), state.chapters[index].title);
-        await ffmpeg.writeFile(name, new Uint8Array(await records[index].blob.arrayBuffer()));
-      }
-      const concatText = filenames.map((name) => `file '${name}'`).join("\n");
-      await ffmpeg.writeFile("concat.txt", new TextEncoder().encode(concatText));
-      setExportProgress("Joining and encoding chapters…", 52, "The individual cached chapters are reused; their text is not processed again.");
-      code = await ffmpeg.exec(["-y", "-f", "concat", "-safe", "0", "-i", "concat.txt", "-vn", "-c:a", "aac", "-b:a", "96k", "-ar", "44100", "-ac", "1", "audiobook.m4a"]);
-      if (code !== 0) throw new Error("The chapters could not be joined.");
+    // Encode and release one uncompressed chapter at a time. Keeping every WAV
+    // in FFmpeg's MEMFS can exhaust the WebAssembly heap on long desktop books.
+    for (let index = 0; index < state.chapters.length; index += 1) {
+      const chapter = state.chapters[index];
+      const record = await getAudio(chapter.id);
+      const number = String(index + 1).padStart(3, "0");
+      const wavName = `chapter-${number}.wav`;
+      const audioName = `chapter-${number}.m4a`;
+      encodedNames.push(audioName);
+      stageOneCleanup.push(wavName, audioName);
+      setExportProgress("Encoding chapter audio…", 36 + Math.round((index / state.chapters.length) * 30), `${chapter.title} · staged memory-safe mode`);
+      await ffmpeg.writeFile(wavName, new Uint8Array(await record.blob.arrayBuffer()));
+      const code = await ffmpeg.exec(["-y", "-i", wavName, "-vn", "-c:a", "aac", "-b:a", audioBitrate, "-ar", audioRate, "-ac", "1", audioName]);
+      if (code !== 0) throw new Error(`“${chapter.title}” could not be encoded.`);
+      await safeDelete(ffmpeg, [wavName]);
+      await yieldToBrowser();
     }
 
-    const metadata = buildFfmetadata(state.chapters);
-    await ffmpeg.writeFile("metadata.txt", new TextEncoder().encode(metadata));
-    const hasCover = Boolean(state.cover?.blob);
-    if (hasCover) {
-      await ffmpeg.writeFile("cover-input", new Uint8Array(await state.cover.blob.arrayBuffer()));
-      setExportProgress("Preparing cover art…", 78, "Converting the cover to an audiobook-compatible JPEG.");
-      code = await ffmpeg.exec(["-y", "-i", "cover-input", "-vf", "scale='min(1400,iw)':-2", "-frames:v", "1", "-q:v", "3", "cover.jpg"]);
-      if (code !== 0) throw new Error("The cover image could not be converted.");
+    const concatText = encodedNames.map((name) => `file '${name}'`).join("\n");
+    await ffmpeg.writeFile("concat.txt", new TextEncoder().encode(concatText));
+    setExportProgress("Joining encoded chapters…", 69, "Joining the compressed chapter files without re-encoding them.");
+    let code = await ffmpeg.exec(["-y", "-f", "concat", "-safe", "0", "-i", "concat.txt", "-vn", "-c:a", "copy", "audiobook.m4a"]);
+    if (code !== 0) throw new Error("The encoded chapters could not be joined.");
+
+    // Pull the compressed audiobook out, then destroy the first FFmpeg worker.
+    // WebAssembly memory does not reliably shrink after files are deleted, so a
+    // fresh worker gives cover/metadata muxing a clean heap.
+    setExportProgress("Resetting encoder memory…", 74, "Starting a clean final-assembly stage.");
+    const audiobookM4a = await ffmpeg.readFile("audiobook.m4a");
+    await safeDelete(ffmpeg, stageOneCleanup);
+    resetFfmpeg();
+    await yieldToBrowser();
+
+    let coverJpeg = null;
+    if (state.cover?.blob) {
+      setExportProgress("Preparing cover art…", 78, "Resizing the cover outside FFmpeg to avoid excess encoder memory use.");
+      coverJpeg = await prepareCoverJpeg(state.cover.blob, mobile ? 900 : 1200, .86);
     }
 
-    setExportProgress("Writing chapter markers and metadata…", 88, "Creating one M4B file.");
+    ffmpeg = await ensureFfmpeg();
+    const finalCleanup = ["audiobook.m4a", "metadata.txt", "cover.jpg", "audiobook.m4b"];
+    await safeDelete(ffmpeg, finalCleanup);
+    await ffmpeg.writeFile("audiobook.m4a", audiobookM4a);
+    await ffmpeg.writeFile("metadata.txt", new TextEncoder().encode(buildFfmetadata(state.chapters)));
+    if (coverJpeg) await ffmpeg.writeFile("cover.jpg", new Uint8Array(await coverJpeg.arrayBuffer()));
+
+    setExportProgress("Writing chapter markers and metadata…", 88, "Creating one M4B file in a fresh encoder session.");
+    const hasCover = Boolean(coverJpeg);
     const metadataIndex = hasCover ? "2" : "1";
     const command = hasCover
-      ? ["-y", "-i", "audiobook.m4a", "-i", "cover.jpg", "-f", "ffmetadata", "-i", "metadata.txt", "-map", "0:a", "-map", "1:v", "-map_metadata", metadataIndex, "-map_chapters", metadataIndex, "-c:a", "copy", "-c:v", "mjpeg", "-disposition:v", "attached_pic", "-metadata:s:v", "title=Cover", "-metadata:s:v", "comment=Cover (front)", "-movflags", "+faststart", "-f", "ipod", "audiobook.m4b"]
+      ? ["-y", "-i", "audiobook.m4a", "-i", "cover.jpg", "-f", "ffmetadata", "-i", "metadata.txt", "-map", "0:a", "-map", "1:v", "-map_metadata", metadataIndex, "-map_chapters", metadataIndex, "-c:a", "copy", "-c:v", "copy", "-disposition:v", "attached_pic", "-metadata:s:v", "title=Cover", "-metadata:s:v", "comment=Cover (front)", "-movflags", "+faststart", "-f", "ipod", "audiobook.m4b"]
       : ["-y", "-i", "audiobook.m4a", "-f", "ffmetadata", "-i", "metadata.txt", "-map", "0:a", "-map_metadata", metadataIndex, "-map_chapters", metadataIndex, "-c:a", "copy", "-movflags", "+faststart", "-f", "ipod", "audiobook.m4b"];
     code = await ffmpeg.exec(command);
     if (code !== 0) throw new Error("The M4B container could not be created.");
@@ -825,14 +994,64 @@ async function exportM4b() {
     downloadBlob(new Blob([output.buffer], { type: "audio/mp4" }), `${safeFilename(title)}.m4b`);
     setExportProgress("Audiobook downloaded", 100, `${state.chapters.length} chapters · ${formatDuration(state.chapters.reduce((sum, chapter) => sum + chapter.duration, 0))}`);
     toast("Your M4B audiobook is ready.", "success");
-    await safeDelete(ffmpeg, cleanup);
+    await safeDelete(ffmpeg, finalCleanup);
   } catch (error) {
-    setExportProgress("M4B export failed", 0, error.message || String(error), true);
-    toast(error.message || String(error), "error");
+    const message = /memory access out of bounds/i.test(error?.message || "")
+      ? "The browser audio encoder ran out of memory. Its memory has been reset; please try the export once more."
+      : (error.message || String(error));
+    resetFfmpeg();
+    setExportProgress("M4B export failed", 0, message, true);
+    toast(message, "error");
   } finally {
     $("#exportM4bBtn").disabled = false;
     $("#generateAllBtn").disabled = false;
   }
+}
+
+async function prepareCoverJpeg(blob, maxDimension = 1200, quality = .86) {
+  let source = null;
+  let revokeUrl = null;
+  try {
+    if ("createImageBitmap" in window) {
+      source = await createImageBitmap(blob, { imageOrientation: "from-image" });
+    } else {
+      const url = URL.createObjectURL(blob);
+      revokeUrl = url;
+      source = await new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error("The cover image could not be opened."));
+        image.src = url;
+      });
+    }
+    const sourceWidth = source.width || source.naturalWidth;
+    const sourceHeight = source.height || source.naturalHeight;
+    if (!sourceWidth || !sourceHeight) throw new Error("The cover image has invalid dimensions.");
+    const scale = Math.min(1, maxDimension / Math.max(sourceWidth, sourceHeight));
+    const width = Math.max(2, Math.round(sourceWidth * scale));
+    const height = Math.max(2, Math.round(sourceHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d", { alpha: false });
+    if (!context) throw new Error("The browser could not prepare the cover image.");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, width, height);
+    context.drawImage(source, 0, 0, width, height);
+    const jpeg = await new Promise((resolve, reject) => {
+      canvas.toBlob((result) => result ? resolve(result) : reject(new Error("The cover image could not be converted.")), "image/jpeg", quality);
+    });
+    canvas.width = 1;
+    canvas.height = 1;
+    return jpeg;
+  } finally {
+    if (source?.close) source.close();
+    if (revokeUrl) URL.revokeObjectURL(revokeUrl);
+  }
+}
+
+function yieldToBrowser() {
+  return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 class BrowserFFmpeg {
@@ -891,6 +1110,13 @@ class BrowserFFmpeg {
     });
   }
 
+  terminate() {
+    if (this.worker) this.worker.terminate();
+    this.worker = null;
+    this.loaded = false;
+    this.rejectAll(new Error("The audiobook encoder was reset."));
+  }
+
   exec(args, timeout = -1) { return this.send("EXEC", { args, timeout }); }
   writeFile(path, data) {
     const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
@@ -898,6 +1124,12 @@ class BrowserFFmpeg {
   }
   readFile(path, encoding) { return this.send("READ_FILE", { path, encoding }); }
   deleteFile(path) { return this.send("DELETE_FILE", { path }); }
+}
+
+function resetFfmpeg() {
+  try { state.ffmpeg?.terminate?.(); } catch {}
+  state.ffmpeg = null;
+  state.ffmpegReady = false;
 }
 
 async function ensureFfmpeg() {
@@ -1068,13 +1300,14 @@ async function requestNewProject() {
 
 function applyDeviceClass() {
   document.documentElement.classList.toggle("mobile-device", isMobileLike());
+  document.documentElement.classList.toggle("ios-device", isIOSLike());
 }
 
 function isMobileLike() {
   const narrow = window.matchMedia?.("(max-width: 760px)")?.matches;
   const coarse = window.matchMedia?.("(pointer: coarse)")?.matches;
   const mobileAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
-  return Boolean(narrow || coarse || mobileAgent);
+  return Boolean(narrow || coarse || mobileAgent || isIOSLike());
 }
 
 function estimatedBookSeconds() {
