@@ -1,4 +1,4 @@
-const CACHE = "article-audiobook-studio-v10";
+const CACHE = "article-audiobook-studio-v11";
 const APP_FILES = ["./", "./index.html", "./styles.css", "./app.js", "./tts-worker.js", "./ffmpeg-worker.js", "./manifest.webmanifest", "./favicon.svg"];
 self.addEventListener("install", (event) => {
   self.skipWaiting();
