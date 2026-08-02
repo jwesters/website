@@ -34,21 +34,32 @@ async function ensureModel(preference) {
     device = "wasm";
     fallbackReason = "WebGPU is unavailable, so compatibility mode is being used.";
   }
+
+  try {
+    await loadModelForDevice(device, requested, fallbackReason);
+  } catch (error) {
+    if (requested !== "auto" || device !== "webgpu") throw error;
+    tts = null;
+    configKey = "";
+    fallbackReason = `WebGPU could not start, so compatibility mode is being used. ${error?.message || ""}`.trim();
+    await loadModelForDevice("wasm", requested, fallbackReason);
+  }
+}
+
+async function loadModelForDevice(device, requested, fallbackReason) {
   const dtype = device === "webgpu" ? "fp32" : "q8";
   const key = `${device}:${dtype}`;
   if (tts && configKey === key) {
     self.postMessage({ type: "ready", device, dtype, preference: requested, fallbackReason, voices: serialiseVoices(tts.voices) });
     return;
   }
-
   self.postMessage({ type: "model-start", device, dtype, preference: requested, fallbackReason });
-  tts = await KokoroTTS.from_pretrained("onnx-community/Kokoro-82M-v1.0-ONNX", {
+  const nextTts = await KokoroTTS.from_pretrained("onnx-community/Kokoro-82M-v1.0-ONNX", {
     device,
     dtype,
-    progress_callback: (item) => {
-      self.postMessage({ type: "model-progress", item, device, dtype, preference: requested });
-    },
+    progress_callback: (item) => self.postMessage({ type: "model-progress", item, device, dtype, preference: requested }),
   });
+  tts = nextTts;
   configKey = key;
   self.postMessage({ type: "ready", device, dtype, preference: requested, fallbackReason, voices: serialiseVoices(tts.voices) });
 }

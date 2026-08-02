@@ -11,6 +11,10 @@ function storageSet(key, value) {
   fallbackStorage.set(key, text);
   try { window.localStorage.setItem(key, text); } catch {}
 }
+function storageRemove(key) {
+  fallbackStorage.delete(key);
+  try { window.localStorage.removeItem(key); } catch {}
+}
 
 function safeJsonParse(text, fallback) {
   try { return JSON.parse(text); } catch { return fallback; }
@@ -47,6 +51,8 @@ const state = {
   memoryAudio: new Map(),
   sampleAudioUrl: null,
   voiceSample: null,
+  exportLastPercent: 0,
+  exportStageBase: 0,
 };
 
 let db = null;
@@ -55,6 +61,7 @@ function startApp() {
   try {
     // Attach the interface first. Storage, model and encoder failures must never
     // leave the page with dead controls.
+    applyDeviceClass();
     wireInterface();
     populateVoiceSelect(DEFAULT_VOICES);
     restoreLocalProject();
@@ -130,19 +137,21 @@ function wireInterface() {
   $("#downloadMp3Btn").addEventListener("click", () => downloadChapterMp3(state.selectedId));
   $("#deleteChapterBtn").addEventListener("click", () => requestDeleteChapter(state.selectedId));
 
-  ["bookTitle", "bookAuthor", "bookNarrator", "bookGenre", "bookDescription"].forEach((id) => {
+  ["bookTitle", "bookAuthor", "bookGenre", "bookDescription"].forEach((id) => {
     $("#" + id).addEventListener("input", saveLocalProject);
   });
   $("#coverInput").addEventListener("change", (event) => setCover(event.target.files[0]));
   $("#generateAllBtn").addEventListener("click", generateAllChapters);
   $("#exportM4bBtn").addEventListener("click", exportM4b);
 
+  $("#newProjectBtn").addEventListener("click", requestNewProject);
   $("#saveProjectBtn").addEventListener("click", downloadProject);
   $("#loadProjectInput").addEventListener("change", (event) => loadProjectFile(event.target.files[0]));
   $("#themeBtn").addEventListener("click", toggleTheme);
   $("#helpBtn").addEventListener("click", () => $("#helpDialog").showModal());
 
   window.addEventListener("beforeunload", saveLocalProject);
+  window.addEventListener("resize", applyDeviceClass, { passive: true });
 }
 
 function selectTab(name) {
@@ -687,6 +696,7 @@ function normaliseModelProgress(item = {}) {
 
 async function generateAllChapters() {
   if (!state.chapters.length) return toast("Add at least one chapter first.", "error");
+  resetExportProgress();
   try {
     setExportProgress("Generating chapters…", 0, "");
     for (let index = 0; index < state.chapters.length; index += 1) {
@@ -724,6 +734,17 @@ async function downloadChapterMp3(id) {
 
 async function exportM4b() {
   if (!state.chapters.length) return toast("Add at least one chapter first.", "error");
+  resetExportProgress();
+  if (isMobileLike() && isLongMobileExport()) {
+    const proceed = await askForConfirmation({
+      title: "Large mobile export",
+      message: "This audiobook is fairly long for a mobile browser. The app will use its lower-memory export mode, but the browser may still reload if the device runs short of memory. Continue?",
+      confirmText: "Continue",
+      cancelText: "Cancel",
+      danger: false,
+    });
+    if (!proceed) return;
+  }
   $("#exportM4bBtn").disabled = true;
   $("#generateAllBtn").disabled = true;
   try {
@@ -746,19 +767,40 @@ async function exportM4b() {
     const filenames = [];
     const cleanup = ["concat.txt", "metadata.txt", "audiobook.m4a", "audiobook.m4b", "cover-input", "cover.jpg"];
     await safeDelete(ffmpeg, cleanup);
+    const lowMemoryExport = isMobileLike();
+    let code = 0;
 
-    for (let index = 0; index < records.length; index += 1) {
-      const name = `chapter-${String(index + 1).padStart(3, "0")}.wav`;
-      filenames.push(name); cleanup.push(name);
-      setExportProgress("Loading chapter audio…", 40 + Math.round((index / records.length) * 8), state.chapters[index].title);
-      await ffmpeg.writeFile(name, new Uint8Array(await records[index].blob.arrayBuffer()));
+    if (lowMemoryExport) {
+      for (let index = 0; index < records.length; index += 1) {
+        const number = String(index + 1).padStart(3, "0");
+        const wavName = `chapter-${number}.wav`;
+        const audioName = `chapter-${number}.m4a`;
+        filenames.push(audioName);
+        cleanup.push(wavName, audioName);
+        setExportProgress("Encoding chapter for mobile…", 40 + Math.round((index / records.length) * 30), `${state.chapters[index].title} · lower-memory mode`);
+        await ffmpeg.writeFile(wavName, new Uint8Array(await records[index].blob.arrayBuffer()));
+        code = await ffmpeg.exec(["-y", "-i", wavName, "-vn", "-c:a", "aac", "-b:a", "64k", "-ar", "32000", "-ac", "1", audioName]);
+        if (code !== 0) throw new Error(`“${state.chapters[index].title}” could not be encoded.`);
+        await safeDelete(ffmpeg, [wavName]);
+      }
+      const concatText = filenames.map((name) => `file '${name}'`).join("\n");
+      await ffmpeg.writeFile("concat.txt", new TextEncoder().encode(concatText));
+      setExportProgress("Joining encoded chapters…", 74, "Using the lower-memory mobile export path.");
+      code = await ffmpeg.exec(["-y", "-f", "concat", "-safe", "0", "-i", "concat.txt", "-vn", "-c:a", "copy", "audiobook.m4a"]);
+      if (code !== 0) throw new Error("The encoded chapters could not be joined.");
+    } else {
+      for (let index = 0; index < records.length; index += 1) {
+        const name = `chapter-${String(index + 1).padStart(3, "0")}.wav`;
+        filenames.push(name); cleanup.push(name);
+        setExportProgress("Loading chapter audio…", 40 + Math.round((index / records.length) * 8), state.chapters[index].title);
+        await ffmpeg.writeFile(name, new Uint8Array(await records[index].blob.arrayBuffer()));
+      }
+      const concatText = filenames.map((name) => `file '${name}'`).join("\n");
+      await ffmpeg.writeFile("concat.txt", new TextEncoder().encode(concatText));
+      setExportProgress("Joining and encoding chapters…", 52, "The individual cached chapters are reused; their text is not processed again.");
+      code = await ffmpeg.exec(["-y", "-f", "concat", "-safe", "0", "-i", "concat.txt", "-vn", "-c:a", "aac", "-b:a", "96k", "-ar", "44100", "-ac", "1", "audiobook.m4a"]);
+      if (code !== 0) throw new Error("The chapters could not be joined.");
     }
-    const concatText = filenames.map((name) => `file '${name}'`).join("\n");
-    await ffmpeg.writeFile("concat.txt", new TextEncoder().encode(concatText));
-
-    setExportProgress("Joining and encoding chapters…", 52, "The individual cached chapters are reused; their text is not processed again.");
-    let code = await ffmpeg.exec(["-f", "concat", "-safe", "0", "-i", "concat.txt", "-vn", "-c:a", "aac", "-b:a", "96k", "-ar", "44100", "-ac", "1", "audiobook.m4a"]);
-    if (code !== 0) throw new Error("The chapters could not be joined.");
 
     const metadata = buildFfmetadata(state.chapters);
     await ffmpeg.writeFile("metadata.txt", new TextEncoder().encode(metadata));
@@ -766,15 +808,15 @@ async function exportM4b() {
     if (hasCover) {
       await ffmpeg.writeFile("cover-input", new Uint8Array(await state.cover.blob.arrayBuffer()));
       setExportProgress("Preparing cover art…", 78, "Converting the cover to an audiobook-compatible JPEG.");
-      code = await ffmpeg.exec(["-i", "cover-input", "-vf", "scale='min(1400,iw)':-2", "-frames:v", "1", "-q:v", "3", "cover.jpg"]);
+      code = await ffmpeg.exec(["-y", "-i", "cover-input", "-vf", "scale='min(1400,iw)':-2", "-frames:v", "1", "-q:v", "3", "cover.jpg"]);
       if (code !== 0) throw new Error("The cover image could not be converted.");
     }
 
     setExportProgress("Writing chapter markers and metadata…", 88, "Creating one M4B file.");
     const metadataIndex = hasCover ? "2" : "1";
     const command = hasCover
-      ? ["-i", "audiobook.m4a", "-i", "cover.jpg", "-f", "ffmetadata", "-i", "metadata.txt", "-map", "0:a", "-map", "1:v", "-map_metadata", metadataIndex, "-map_chapters", metadataIndex, "-c:a", "copy", "-c:v", "mjpeg", "-disposition:v", "attached_pic", "-metadata:s:v", "title=Cover", "-metadata:s:v", "comment=Cover (front)", "-movflags", "+faststart", "-f", "ipod", "audiobook.m4b"]
-      : ["-i", "audiobook.m4a", "-f", "ffmetadata", "-i", "metadata.txt", "-map", "0:a", "-map_metadata", metadataIndex, "-map_chapters", metadataIndex, "-c:a", "copy", "-movflags", "+faststart", "-f", "ipod", "audiobook.m4b"];
+      ? ["-y", "-i", "audiobook.m4a", "-i", "cover.jpg", "-f", "ffmetadata", "-i", "metadata.txt", "-map", "0:a", "-map", "1:v", "-map_metadata", metadataIndex, "-map_chapters", metadataIndex, "-c:a", "copy", "-c:v", "mjpeg", "-disposition:v", "attached_pic", "-metadata:s:v", "title=Cover", "-metadata:s:v", "comment=Cover (front)", "-movflags", "+faststart", "-f", "ipod", "audiobook.m4b"]
+      : ["-y", "-i", "audiobook.m4a", "-f", "ffmetadata", "-i", "metadata.txt", "-map", "0:a", "-map_metadata", metadataIndex, "-map_chapters", metadataIndex, "-c:a", "copy", "-movflags", "+faststart", "-f", "ipod", "audiobook.m4b"];
     code = await ffmpeg.exec(command);
     if (code !== 0) throw new Error("The M4B container could not be created.");
 
@@ -866,8 +908,13 @@ async function ensureFfmpeg() {
   ffmpeg.on("log", ({ message }) => { if (/error|failed/i.test(message || "")) console.warn(message); });
   ffmpeg.on("progress", ({ progress }) => {
     if ($("#exportBox").classList.contains("hidden")) return;
-    const base = Number($("#exportProgress").value) || 0;
-    if (base >= 50 && base < 88) $("#exportPercent").textContent = `${Math.min(87, Math.round(base + Number(progress || 0) * 20))}%`;
+    const raw = Number(progress);
+    if (!Number.isFinite(raw) || raw < 0 || raw > 1) {
+      $("#exportPercent").textContent = "Encoding…";
+      return;
+    }
+    const base = Number.isFinite(state.exportStageBase) ? state.exportStageBase : state.exportLastPercent;
+    updateExportPercent(Math.min(87, base + raw * 20));
   });
   await ffmpeg.load({
     candidates: [
@@ -892,7 +939,6 @@ function buildFfmetadata(chapters) {
     artist: $("#bookAuthor").value.trim(),
     album_artist: $("#bookAuthor").value.trim(),
     album: $("#bookTitle").value.trim() || "Article Audiobook",
-    composer: $("#bookNarrator").value.trim(),
     genre: $("#bookGenre").value.trim() || "Audiobook",
     comment: $("#bookDescription").value.trim(),
     media_type: "2",
@@ -913,24 +959,66 @@ function escapeMetadata(value) {
   return String(value).replace(/\\/g, "\\\\").replace(/([=;#])/g, "\\$1").replace(/\r?\n/g, "\\n");
 }
 
+function resetExportProgress() {
+  state.exportLastPercent = 0;
+  state.exportStageBase = 0;
+  const progress = $("#exportProgress");
+  if (progress) progress.value = 0;
+  const percent = $("#exportPercent");
+  if (percent) percent.textContent = "";
+}
+
+function updateExportPercent(percent) {
+  const numeric = Number(percent);
+  if (!Number.isFinite(numeric)) return;
+  const clamped = Math.max(0, Math.min(100, numeric));
+  const monotonic = Math.max(state.exportLastPercent || 0, clamped);
+  state.exportLastPercent = monotonic;
+  $("#exportProgress").value = monotonic;
+  $("#exportPercent").textContent = `${Math.round(monotonic)}%`;
+}
+
 function setExportProgress(label, percent, detail = "", error = false) {
   $("#exportBox").classList.remove("hidden");
   $("#exportBox").classList.toggle("error", error);
   $("#exportLabel").textContent = label;
-  $("#exportPercent").textContent = percent ? `${Math.round(percent)}%` : "";
-  $("#exportProgress").value = Math.max(0, Math.min(100, percent));
+  const numeric = Number(percent);
+  if (Number.isFinite(numeric)) {
+    updateExportPercent(numeric);
+    state.exportStageBase = state.exportLastPercent;
+  } else {
+    $("#exportPercent").textContent = "Working…";
+  }
   $("#exportDetail").textContent = detail;
+}
+
+function askForConfirmation({ title, message, confirmText = "Yes", cancelText = "No", danger = true }) {
+  const dialog = $("#confirmDialog");
+  const confirmButton = $("#confirmOkBtn");
+  const cancelButton = $("#confirmCancelBtn");
+  $("#confirmTitle").textContent = title;
+  $("#confirmMessage").textContent = message;
+  confirmButton.textContent = confirmText;
+  cancelButton.textContent = cancelText;
+  confirmButton.className = `button ${danger ? "danger" : "primary"}`;
+  dialog.returnValue = "";
+  dialog.showModal();
+  return new Promise((resolve) => {
+    dialog.addEventListener("close", () => resolve(dialog.returnValue === "confirm"), { once: true });
+  });
 }
 
 async function requestDeleteChapter(id) {
   const chapter = state.chapters.find((item) => item.id === id);
   if (!chapter) return;
-  $("#confirmTitle").textContent = "Delete chapter?";
-  $("#confirmMessage").textContent = `“${chapter.title}” and its locally cached narration will be removed.`;
-  const dialog = $("#confirmDialog");
-  dialog.showModal();
-  const result = await new Promise((resolve) => dialog.addEventListener("close", () => resolve(dialog.returnValue), { once: true }));
-  if (result !== "confirm") return;
+  const confirmed = await askForConfirmation({
+    title: "Delete chapter?",
+    message: `“${chapter.title}” and its locally cached narration will be removed.`,
+    confirmText: "Delete",
+    cancelText: "Cancel",
+    danger: true,
+  });
+  if (!confirmed) return;
   state.chapters = state.chapters.filter((item) => item.id !== id);
   await deleteAudio(id);
   const oldUrl = state.audioUrls.get(id); if (oldUrl) URL.revokeObjectURL(oldUrl);
@@ -941,9 +1029,70 @@ async function requestDeleteChapter(id) {
   updateStorageBadge();
 }
 
+async function requestNewProject() {
+  if (state.generation || state.voiceSample) {
+    return toast("Finish or cancel the current narration before starting a new project.", "error");
+  }
+  const confirmed = await askForConfirmation({
+    title: "Start a new project?",
+    message: "This clears the current chapters, cover, audiobook details, and locally generated chapter audio. Download a project file first if you may need it later.",
+    confirmText: "Yes",
+    cancelText: "No",
+    danger: true,
+  });
+  if (!confirmed) return;
+
+  state.chapters = [];
+  state.selectedId = null;
+  if (state.cover?.url) URL.revokeObjectURL(state.cover.url);
+  state.cover = null;
+  state.audioUrls.forEach((url) => URL.revokeObjectURL(url));
+  state.audioUrls.clear();
+  await clearAllAudio();
+  storageRemove("article-audiobook-project");
+  storageRemove("article-audiobook-metadata");
+
+  $("#urlInput").value = "";
+  $("#pasteTitle").value = "";
+  $("#pasteText").value = "";
+  $("#articleFileInput").value = "";
+  $("#coverInput").value = "";
+  hydrateMetadataInputs({ bookTitle: "", bookAuthor: "", bookGenre: "Articles", bookDescription: "" });
+  selectTab("url");
+  saveLocalProject();
+  renderAll();
+  updateStorageBadge();
+  setAddStatus("New project ready. Add an article to begin.");
+  toast("New project created.", "success");
+}
+
+function applyDeviceClass() {
+  document.documentElement.classList.toggle("mobile-device", isMobileLike());
+}
+
+function isMobileLike() {
+  const narrow = window.matchMedia?.("(max-width: 760px)")?.matches;
+  const coarse = window.matchMedia?.("(pointer: coarse)")?.matches;
+  const mobileAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+  return Boolean(narrow || coarse || mobileAgent);
+}
+
+function estimatedBookSeconds() {
+  return state.chapters.reduce((sum, chapter) => {
+    if (Number(chapter.duration) > 0 && chapter.renderedSignature === signatureString(chapter)) return sum + Number(chapter.duration);
+    const words = wordCount(chapter.text);
+    return sum + (words / (155 * Number(chapter.speed || 1))) * 60;
+  }, 0);
+}
+
+function isLongMobileExport() {
+  const totalWords = state.chapters.reduce((sum, chapter) => sum + wordCount(chapter.text), 0);
+  return estimatedBookSeconds() >= 45 * 60 || state.chapters.length >= 12 || totalWords >= 9000;
+}
+
 function renderMetadata() {
   const project = currentMetadata();
-  ["bookTitle", "bookAuthor", "bookNarrator", "bookGenre", "bookDescription"].forEach((id) => {
+  ["bookTitle", "bookAuthor", "bookGenre", "bookDescription"].forEach((id) => {
     if (document.activeElement !== $("#" + id)) $("#" + id).value = project[id] || "";
   });
   const picker = $(".cover-picker");
@@ -969,7 +1118,7 @@ async function setCover(file) {
 
 function hydrateMetadataInputs(metadata = null) {
   const source = metadata || safeJsonParse(storageGet("article-audiobook-metadata") || "{}", {});
-  ["bookTitle", "bookAuthor", "bookNarrator", "bookGenre", "bookDescription"].forEach((id) => {
+  ["bookTitle", "bookAuthor", "bookGenre", "bookDescription"].forEach((id) => {
     const element = $("#" + id);
     if (element && Object.prototype.hasOwnProperty.call(source, id)) element.value = source[id] ?? "";
   });
@@ -984,7 +1133,6 @@ function currentMetadata() {
   return {
     bookTitle: valueOf("bookTitle"),
     bookAuthor: valueOf("bookAuthor"),
-    bookNarrator: valueOf("bookNarrator", "Kokoro local voices"),
     bookGenre: valueOf("bookGenre", "Articles"),
     bookDescription: valueOf("bookDescription"),
   };
@@ -1074,14 +1222,14 @@ function toggleTheme() {
 async function updateStorageBadge() {
   try {
     const estimate = await navigator.storage?.estimate?.();
-    if (!estimate) return $("#storageBadge").textContent = "Local browser storage";
+    if (!estimate) return $("#storageBadge").textContent = "Local site storage";
     const used = estimate.usage || 0;
     const quota = estimate.quota || 0;
-    $("#storageBadge").textContent = `${formatBytes(used)} used locally`;
-    $("#storageBadge").title = quota ? `${formatBytes(used)} of ${formatBytes(quota)} browser storage` : "Local browser storage";
+    $("#storageBadge").textContent = `${formatBytes(used)} site storage used`;
+    $("#storageBadge").title = quota ? `${formatBytes(used)} of ${formatBytes(quota)} storage used by this site, including the voice model, generated audio, encoder files, and app cache` : "Storage used by this website";
     if (navigator.storage.persist) await navigator.storage.persist();
   } catch {
-    $("#storageBadge").textContent = "Local browser storage";
+    $("#storageBadge").textContent = "Local site storage";
   }
 }
 
@@ -1165,6 +1313,10 @@ function getAudio(id) {
 function deleteAudio(id) {
   state.memoryAudio.delete(id);
   return db ? dbRequest("readwrite", (store) => store.delete(id)).catch(() => undefined) : Promise.resolve();
+}
+function clearAllAudio() {
+  state.memoryAudio.clear();
+  return db ? dbRequest("readwrite", (store) => store.clear()).catch(() => undefined) : Promise.resolve();
 }
 
 
