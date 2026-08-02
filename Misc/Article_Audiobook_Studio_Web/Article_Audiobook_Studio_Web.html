@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#28475d">
+  <meta name="description" content="Build a private chaptered audiobook from articles directly in your browser.">
+  <title>Article Audiobook Studio</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <noscript><div style="padding:16px;background:#7f1d1d;color:#fff;font:16px system-ui">JavaScript is disabled. Enable it to use Article Audiobook Studio.</div></noscript>
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">A</div>
+      <div>
+        <h1>Article Audiobook Studio</h1>
+        <p>Articles in. One chaptered audiobook out.</p>
+      </div>
+    </div>
+    <nav class="header-actions" aria-label="Project actions">
+      <button id="saveProjectBtn" class="button secondary">Save project</button>
+      <label class="button secondary file-button">Load project<input id="loadProjectInput" type="file" accept=".json,.aabproject,application/json"></label>
+      <button id="themeBtn" class="icon-button" title="Toggle light and dark mode" aria-label="Toggle light and dark mode">◐</button>
+      <button id="helpBtn" class="icon-button" title="Help" aria-label="Help">?</button>
+    </nav>
+  </header>
+
+  <main class="app-shell">
+    <section class="panel add-panel" aria-labelledby="addHeading">
+      <div class="panel-heading">
+        <div>
+          <span class="step">1</span>
+          <h2 id="addHeading">Add an article</h2>
+        </div>
+        <span id="privacyBadge" class="badge good">Local processing</span>
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="Add chapter method">
+        <button class="tab active" data-tab="url" role="tab" aria-selected="true">URL</button>
+        <button class="tab" data-tab="paste" role="tab" aria-selected="false">Paste text</button>
+        <button class="tab" data-tab="file" role="tab" aria-selected="false">HTML / text file</button>
+      </div>
+
+      <div class="tab-pane active" data-pane="url">
+        <label for="urlInput">Article URL</label>
+        <div class="input-row">
+          <input id="urlInput" type="url" placeholder="https://example.com/article" autocomplete="url">
+          <button id="fetchUrlBtn" class="button primary">Extract article</button>
+        </div>
+        <label class="check-line">
+          <input id="proxyFallback" type="checkbox" checked>
+          <span>Use an external reader proxy only when the site blocks direct access</span>
+        </label>
+        <p class="fine-print">Direct extraction stays in the browser. The optional fallback sends the URL—not your project—to a third-party reader service.</p>
+      </div>
+
+      <div class="tab-pane" data-pane="paste">
+        <label for="pasteTitle">Chapter title</label>
+        <input id="pasteTitle" type="text" placeholder="Article title">
+        <label for="pasteText">Article text</label>
+        <textarea id="pasteText" rows="8" placeholder="Paste the article text here..."></textarea>
+        <button id="addPastedBtn" class="button primary full">Add chapter</button>
+      </div>
+
+      <div class="tab-pane" data-pane="file">
+        <label class="drop-zone" id="articleDropZone">
+          <input id="articleFileInput" type="file" accept=".html,.htm,.txt,.md,text/html,text/plain,text/markdown">
+          <strong>Choose an HTML, Markdown or text file</strong>
+          <span>The text will be cleaned locally in your browser.</span>
+        </label>
+      </div>
+
+      <div id="addStatus" class="status-line" aria-live="polite"></div>
+    </section>
+
+    <section class="panel chapters-panel" aria-labelledby="chaptersHeading">
+      <div class="panel-heading">
+        <div>
+          <span class="step">2</span>
+          <h2 id="chaptersHeading">Arrange chapters</h2>
+        </div>
+        <span id="chapterCount" class="badge">0 chapters</span>
+      </div>
+
+      <div id="emptyChapters" class="empty-state">
+        <div class="empty-icon">☰</div>
+        <h3>No chapters yet</h3>
+        <p>Add a URL, paste article text, or import a saved page.</p>
+      </div>
+      <div id="chapterList" class="chapter-list" aria-live="polite"></div>
+    </section>
+
+    <section class="panel editor-panel" aria-labelledby="editorHeading">
+      <div class="panel-heading">
+        <div>
+          <span class="step">3</span>
+          <h2 id="editorHeading">Edit and narrate</h2>
+        </div>
+        <span id="renderBadge" class="badge">Select a chapter</span>
+      </div>
+
+      <div id="editorEmpty" class="empty-state compact">
+        <h3>Select a chapter</h3>
+        <p>You can clean its text, choose a voice, and generate the narration.</p>
+      </div>
+
+      <div id="editorForm" class="editor-form hidden">
+        <label for="chapterTitle">Chapter title</label>
+        <input id="chapterTitle" type="text">
+
+        <div class="voice-toolbar">
+          <div>
+            <label for="voiceSelect">Narrator voice</label>
+            <select id="voiceSelect"></select>
+          </div>
+          <div>
+            <label for="speedInput">Narration speed <span id="speedValue">1.00×</span></label>
+            <input id="speedInput" type="range" min="0.70" max="1.30" value="1" step="0.05">
+          </div>
+          <div class="voice-sample-wrap">
+            <label for="voiceSampleBtn">Voice sample</label>
+            <button id="voiceSampleBtn" class="button secondary voice-sample-btn" type="button">Voice Sample</button>
+          </div>
+        </div>
+
+        <label for="chapterText">Cleaned article text</label>
+        <textarea id="chapterText" rows="15"></textarea>
+        <div class="text-stats"><span id="wordCount">0 words</span><span id="timeEstimate">About 0 minutes</span></div>
+
+        <div class="button-grid">
+          <button id="generateBtn" class="button primary">Generate narration</button>
+          <button id="cancelGenerateBtn" class="button danger hidden">Cancel</button>
+          <button id="downloadMp3Btn" class="button secondary" disabled>Download MP3</button>
+          <button id="deleteChapterBtn" class="button ghost danger-text">Delete chapter</button>
+        </div>
+
+        <div id="generationBox" class="generation-box hidden">
+          <div class="progress-label"><span id="generationLabel">Preparing model…</span><span id="generationPercent"></span></div>
+          <progress id="generationProgress" max="100" value="0"></progress>
+          <p id="generationDetail" class="fine-print"></p>
+        </div>
+
+        <audio id="chapterAudio" controls class="audio-player hidden"></audio>
+      </div>
+    </section>
+
+    <section class="panel export-panel" aria-labelledby="exportHeading">
+      <div class="panel-heading">
+        <div>
+          <span class="step">4</span>
+          <h2 id="exportHeading">Build the audiobook</h2>
+        </div>
+        <span id="storageBadge" class="badge">Checking storage…</span>
+      </div>
+
+      <div class="metadata-grid">
+        <div>
+          <label for="bookTitle">Audiobook title</label>
+          <input id="bookTitle" type="text" placeholder="My Article Collection">
+        </div>
+        <div>
+          <label for="bookAuthor">Author / compiler</label>
+          <input id="bookAuthor" type="text" placeholder="Your name">
+        </div>
+        <div>
+          <label for="bookNarrator">Narrator</label>
+          <input id="bookNarrator" type="text" placeholder="Kokoro local voices">
+        </div>
+        <div>
+          <label for="bookGenre">Genre</label>
+          <input id="bookGenre" type="text" value="Articles">
+        </div>
+      </div>
+
+      <label for="bookDescription">Description</label>
+      <textarea id="bookDescription" rows="3" placeholder="A collection of narrated articles."></textarea>
+
+      <div class="cover-row">
+        <label class="cover-picker">
+          <input id="coverInput" type="file" accept="image/jpeg,image/png,image/webp">
+          <img id="coverPreview" alt="Audiobook cover preview">
+          <span id="coverPlaceholder">Add cover image</span>
+        </label>
+        <div class="cover-copy">
+          <h3>One M4B file</h3>
+          <p>Each article becomes a named chapter. Existing narration is reused unless its text, voice or speed changes.</p>
+          <label class="check-line"><input id="generateMissingCheck" type="checkbox" checked><span>Generate missing or changed chapters during export</span></label>
+        </div>
+      </div>
+
+      <div class="export-actions">
+        <button id="generateAllBtn" class="button secondary">Generate all chapters</button>
+        <button id="exportM4bBtn" class="button success">Create and download M4B</button>
+      </div>
+
+      <div id="exportBox" class="generation-box hidden">
+        <div class="progress-label"><span id="exportLabel">Preparing…</span><span id="exportPercent"></span></div>
+        <progress id="exportProgress" max="100" value="0"></progress>
+        <p id="exportDetail" class="fine-print"></p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Private by default: narration and audio assembly run on this device.</span>
+    <span>Best on desktop Chrome or Edge. Build 1.4.</span>
+  </footer>
+
+  <dialog id="helpDialog">
+    <form method="dialog" class="dialog-card">
+      <button class="dialog-close" aria-label="Close">×</button>
+      <h2>How this prototype works</h2>
+      <ol>
+        <li>Add articles using a URL, pasted text, or a saved webpage.</li>
+        <li>Edit and arrange the chapters.</li>
+        <li>Generate narration. The first generation downloads a local voice model.</li>
+        <li>Create one M4B with chapter markers and optional cover art.</li>
+      </ol>
+      <h3>Important limits</h3>
+      <p>Some websites block direct extraction. The optional reader proxy may help, or you can paste the text. Long books require substantial memory and browser storage. Mobile browsers may reload during heavy processing.</p>
+      <h3>Hosting</h3>
+      <p>Upload this folder to any HTTPS static host such as Netlify, Cloudflare Pages, GitHub Pages, or similar. No application server is required.</p>
+      <button class="button primary">Close</button>
+    </form>
+  </dialog>
+
+  <dialog id="confirmDialog">
+    <form method="dialog" class="dialog-card small">
+      <h2 id="confirmTitle">Confirm</h2>
+      <p id="confirmMessage"></p>
+      <div class="dialog-actions">
+        <button value="cancel" class="button secondary">Cancel</button>
+        <button value="confirm" class="button danger">Delete</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toastRegion" class="toast-region" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>

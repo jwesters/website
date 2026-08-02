@@ -1,0 +1,1076 @@
+const $ = (selector) => document.querySelector(selector);
+const $$ = (selector) => [...document.querySelectorAll(selector)];
+
+const fallbackStorage = new Map();
+function storageGet(key) {
+  try { return window.localStorage.getItem(key); }
+  catch { return fallbackStorage.has(key) ? fallbackStorage.get(key) : null; }
+}
+function storageSet(key, value) {
+  const text = String(value);
+  fallbackStorage.set(key, text);
+  try { window.localStorage.setItem(key, text); } catch {}
+}
+
+function safeJsonParse(text, fallback) {
+  try { return JSON.parse(text); } catch { return fallback; }
+}
+
+const DEFAULT_VOICES = [
+  ["af_heart", "Heart — American female"],
+  ["af_bella", "Bella — American female"],
+  ["af_nicole", "Nicole — American female"],
+  ["af_sarah", "Sarah — American female"],
+  ["af_sky", "Sky — American female"],
+  ["am_fenrir", "Fenrir — American male"],
+  ["am_michael", "Michael — American male"],
+  ["bf_emma", "Emma — British female"],
+  ["bf_isabella", "Isabella — British female"],
+  ["bm_george", "George — British male"],
+  ["bm_lewis", "Lewis — British male"],
+];
+
+const state = {
+  chapters: [],
+  selectedId: null,
+  cover: null,
+  generation: null,
+  ttsWorker: null,
+  ttsReady: false,
+  ttsDevice: null,
+  ffmpeg: null,
+  ffmpegReady: false,
+  audioUrls: new Map(),
+  memoryAudio: new Map(),
+  sampleAudioUrl: null,
+  voiceSample: null,
+};
+
+let db = null;
+
+function startApp() {
+  try {
+    // Attach the interface first. Storage, model and encoder failures must never
+    // leave the page with dead controls.
+    wireInterface();
+    populateVoiceSelect(DEFAULT_VOICES);
+    restoreLocalProject();
+    hydrateMetadataInputs();
+    renderAll();
+    updateStorageBadge();
+    registerServiceWorker();
+    setAddStatus("Ready. Add a URL, paste text, or import a file.");
+    initialisePersistentStorage();
+    window.ArticleAudiobookStudio = { state, addChapter, selectTab };
+  } catch (error) {
+    reportStartupError(error);
+  }
+}
+
+async function initialisePersistentStorage() {
+  try {
+    db = await openDatabase();
+    await reconcileAudioCache();
+    renderAll();
+    updateStorageBadge();
+  } catch (error) {
+    db = null;
+    console.warn("Persistent audio storage is unavailable; using memory for this session.", error);
+    const badge = $("#storageBadge");
+    if (badge) {
+      badge.textContent = "Session-only audio storage";
+      badge.title = "This browser blocked IndexedDB. Audio will remain available until this tab closes.";
+      badge.classList.add("warn");
+    }
+    toast("Browser storage is unavailable. The app will still work, but generated audio will last only for this session.", "error");
+  }
+}
+
+function reportStartupError(error) {
+  console.error("Article Audiobook Studio startup failed", error);
+  const message = `Startup problem: ${error?.message || String(error)}`;
+  const status = document.querySelector("#addStatus");
+  if (status) {
+    status.textContent = message;
+    status.style.color = "var(--danger)";
+  } else {
+    const box = document.createElement("div");
+    box.style.cssText = "position:fixed;inset:12px 12px auto;z-index:99999;padding:14px;border-radius:10px;background:#7f1d1d;color:white;font:16px system-ui";
+    box.textContent = message;
+    document.body.appendChild(box);
+  }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", startApp, { once: true });
+} else {
+  startApp();
+}
+
+function wireInterface() {
+  $$(".tab").forEach((button) => button.addEventListener("click", () => selectTab(button.dataset.tab)));
+  $("#fetchUrlBtn").addEventListener("click", addFromUrl);
+  $("#urlInput").addEventListener("keydown", (event) => { if (event.key === "Enter") addFromUrl(); });
+  $("#addPastedBtn").addEventListener("click", addPastedText);
+  $("#articleFileInput").addEventListener("change", (event) => importArticleFile(event.target.files[0]));
+  wireDropZone();
+
+  $("#chapterTitle").addEventListener("input", updateSelectedFromEditor);
+  $("#chapterText").addEventListener("input", updateSelectedFromEditor);
+  $("#voiceSelect").addEventListener("change", updateSelectedFromEditor);
+  $("#speedInput").addEventListener("input", updateSelectedFromEditor);
+  $("#voiceSampleBtn").addEventListener("click", () => { playVoiceSample().catch(() => {}); });
+  $("#generateBtn").addEventListener("click", () => { generateChapter(state.selectedId).catch(() => {}); });
+  $("#cancelGenerateBtn").addEventListener("click", cancelGeneration);
+  $("#downloadMp3Btn").addEventListener("click", () => downloadChapterMp3(state.selectedId));
+  $("#deleteChapterBtn").addEventListener("click", () => requestDeleteChapter(state.selectedId));
+
+  ["bookTitle", "bookAuthor", "bookNarrator", "bookGenre", "bookDescription"].forEach((id) => {
+    $("#" + id).addEventListener("input", saveLocalProject);
+  });
+  $("#coverInput").addEventListener("change", (event) => setCover(event.target.files[0]));
+  $("#generateAllBtn").addEventListener("click", generateAllChapters);
+  $("#exportM4bBtn").addEventListener("click", exportM4b);
+
+  $("#saveProjectBtn").addEventListener("click", downloadProject);
+  $("#loadProjectInput").addEventListener("change", (event) => loadProjectFile(event.target.files[0]));
+  $("#themeBtn").addEventListener("click", toggleTheme);
+  $("#helpBtn").addEventListener("click", () => $("#helpDialog").showModal());
+
+  window.addEventListener("beforeunload", saveLocalProject);
+}
+
+function selectTab(name) {
+  $$(".tab").forEach((tab) => {
+    const active = tab.dataset.tab === name;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-selected", String(active));
+  });
+  $$(".tab-pane").forEach((pane) => pane.classList.toggle("active", pane.dataset.pane === name));
+}
+
+async function addFromUrl() {
+  const input = $("#urlInput");
+  const rawUrl = input.value.trim();
+  if (!rawUrl) return setAddStatus("Enter an article URL.", true);
+  let url;
+  try { url = new URL(rawUrl); } catch { return setAddStatus("That does not look like a valid URL.", true); }
+  if (!/^https?:$/.test(url.protocol)) return setAddStatus("Only HTTP and HTTPS URLs are supported.", true);
+
+  setAddStatus("Fetching and cleaning the page…");
+  $("#fetchUrlBtn").disabled = true;
+  try {
+    let extracted;
+    try {
+      const response = await fetch(url.href, { mode: "cors", credentials: "omit" });
+      if (!response.ok) throw new Error(`Website returned ${response.status}`);
+      extracted = extractReadableText(await response.text(), url.href);
+    } catch (directError) {
+      if (!$("#proxyFallback").checked) throw new Error("This website blocked direct browser access. Paste the article text or enable the reader fallback.");
+      setAddStatus("Direct access was blocked. Trying the optional reader fallback…");
+      const proxyUrl = `https://r.jina.ai/${url.href}`;
+      const response = await fetch(proxyUrl, { credentials: "omit" });
+      if (!response.ok) throw new Error(`Reader fallback returned ${response.status}`);
+      extracted = extractReaderMarkdown(await response.text(), url.href);
+    }
+    if (!extracted.text || extracted.text.split(/\s+/).length < 20) throw new Error("I could not find enough readable article text on that page.");
+    addChapter({ title: extracted.title || titleFromUrl(url), text: extracted.text, url: url.href });
+    input.value = "";
+    setAddStatus(`Added “${extracted.title || titleFromUrl(url)}”.`);
+  } catch (error) {
+    setAddStatus(error.message || String(error), true);
+  } finally {
+    $("#fetchUrlBtn").disabled = false;
+  }
+}
+
+function extractReadableText(html, sourceUrl = "") {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  doc.querySelectorAll("script,style,noscript,svg,canvas,iframe,nav,header,footer,aside,form,button,input,select,textarea,[aria-hidden='true'],.advertisement,.ads,.social-share").forEach((node) => node.remove());
+  const title = cleanWhitespace(doc.querySelector("meta[property='og:title']")?.content || doc.querySelector("h1")?.textContent || doc.title || titleFromUrl(new URL(sourceUrl)));
+  const candidates = [doc.querySelector("article"), doc.querySelector("main"), doc.querySelector("[role='main']"), doc.body].filter(Boolean);
+  let best = candidates[0];
+  let bestScore = 0;
+  for (const candidate of candidates) {
+    const paragraphs = [...candidate.querySelectorAll("p, h2, h3, blockquote, li")]
+      .map((node) => cleanWhitespace(node.textContent))
+      .filter((text) => text.length > 25);
+    const score = paragraphs.join(" ").length;
+    if (score > bestScore) { bestScore = score; best = candidate; }
+  }
+  const blocks = [...best.querySelectorAll("h2,h3,p,blockquote,li")]
+    .map((node) => cleanWhitespace(node.textContent))
+    .filter((text) => text.length > 20)
+    .filter((text, index, array) => index === 0 || text !== array[index - 1]);
+  return { title, text: blocks.join("\n\n") };
+}
+
+function extractReaderMarkdown(markdown, sourceUrl) {
+  const lines = String(markdown || "").split(/\r?\n/);
+  let title = "";
+  const kept = [];
+  for (const rawLine of lines) {
+    let line = rawLine.trim();
+    if (!line) { if (kept.at(-1) !== "") kept.push(""); continue; }
+    if (!title && /^#\s+/.test(line)) title = line.replace(/^#\s+/, "").trim();
+    if (/^(Title|URL Source|Published Time|Markdown Content):/i.test(line)) {
+      if (/^Title:/i.test(line) && !title) title = line.replace(/^Title:\s*/i, "");
+      continue;
+    }
+    line = line
+      .replace(/^#{1,6}\s+/, "")
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+      .replace(/^[-*+]\s+/, "")
+      .replace(/^>\s?/, "")
+      .replace(/[*_`~]/g, "");
+    if (line.length > 1) kept.push(line);
+  }
+  return { title: cleanWhitespace(title) || titleFromUrl(new URL(sourceUrl)), text: kept.join("\n").replace(/\n{3,}/g, "\n\n").trim() };
+}
+
+function addPastedText() {
+  const text = $("#pasteText").value.trim();
+  if (!text) return setAddStatus("Paste some article text first.", true);
+  const title = $("#pasteTitle").value.trim() || firstSentence(text).slice(0, 90) || "Untitled article";
+  addChapter({ title, text, url: "" });
+  $("#pasteTitle").value = "";
+  $("#pasteText").value = "";
+  setAddStatus(`Added “${title}”.`);
+}
+
+async function importArticleFile(file) {
+  if (!file) return;
+  setAddStatus(`Reading ${file.name}…`);
+  try {
+    const contents = await file.text();
+    const isHtml = /html|htm/i.test(file.type) || /\.html?$/i.test(file.name);
+    const extracted = isHtml ? extractReadableText(contents) : { title: file.name.replace(/\.[^.]+$/, ""), text: cleanImportedText(contents) };
+    if (!extracted.text.trim()) throw new Error("The file did not contain readable text.");
+    addChapter({ title: extracted.title || file.name, text: extracted.text, url: "" });
+    setAddStatus(`Added “${extracted.title || file.name}”.`);
+  } catch (error) {
+    setAddStatus(error.message || String(error), true);
+  } finally {
+    $("#articleFileInput").value = "";
+  }
+}
+
+function wireDropZone() {
+  const zone = $("#articleDropZone");
+  ["dragenter", "dragover"].forEach((eventName) => zone.addEventListener(eventName, (event) => { event.preventDefault(); zone.classList.add("dragover"); }));
+  ["dragleave", "drop"].forEach((eventName) => zone.addEventListener(eventName, (event) => { event.preventDefault(); zone.classList.remove("dragover"); }));
+  zone.addEventListener("drop", (event) => importArticleFile(event.dataTransfer.files[0]));
+}
+
+function addChapter({ title, text, url }) {
+  const chapter = {
+    id: makeId(),
+    title: cleanWhitespace(title) || "Untitled article",
+    text: cleanImportedText(text),
+    url: url || "",
+    voice: "af_heart",
+    speed: 1,
+    renderedSignature: "",
+    duration: 0,
+    createdAt: Date.now(),
+  };
+  state.chapters.push(chapter);
+  state.selectedId = chapter.id;
+  saveLocalProject();
+  renderAll();
+}
+
+function renderAll() {
+  renderChapterList();
+  renderEditor();
+  renderMetadata();
+}
+
+function renderChapterList() {
+  const list = $("#chapterList");
+  list.innerHTML = "";
+  $("#emptyChapters").classList.toggle("hidden", state.chapters.length > 0);
+  $("#chapterCount").textContent = `${state.chapters.length} chapter${state.chapters.length === 1 ? "" : "s"}`;
+  state.chapters.forEach((chapter, index) => {
+    const card = document.createElement("div");
+    card.className = `chapter-card${chapter.id === state.selectedId ? " selected" : ""}`;
+    card.dataset.id = chapter.id;
+    const status = chapterStatus(chapter);
+    card.innerHTML = `
+      <div class="chapter-number">${index + 1}</div>
+      <div class="chapter-copy">
+        <strong></strong>
+        <span><i class="status-dot ${status.className}"></i>${status.label}</span>
+      </div>
+      <div class="chapter-tools">
+        <button class="mini-button move-up" title="Move up" aria-label="Move chapter up" ${index === 0 ? "disabled" : ""}>↑</button>
+        <button class="mini-button move-down" title="Move down" aria-label="Move chapter down" ${index === state.chapters.length - 1 ? "disabled" : ""}>↓</button>
+      </div>`;
+    card.querySelector("strong").textContent = chapter.title;
+    card.addEventListener("click", () => selectChapter(chapter.id));
+    card.querySelector(".move-up").addEventListener("click", (event) => { event.stopPropagation(); moveChapter(index, -1); });
+    card.querySelector(".move-down").addEventListener("click", (event) => { event.stopPropagation(); moveChapter(index, 1); });
+    list.appendChild(card);
+  });
+}
+
+function chapterStatus(chapter) {
+  if (!chapter.renderedSignature) return { className: "", label: "Not generated" };
+  const current = signatureString(chapter);
+  if (chapter.renderedSignature === current) return { className: "ready", label: formatDuration(chapter.duration) + " · Ready" };
+  return { className: "dirty", label: "Changed · regenerate" };
+}
+
+function selectChapter(id) {
+  state.selectedId = id;
+  renderChapterList();
+  renderEditor();
+}
+
+function moveChapter(index, offset) {
+  const target = index + offset;
+  if (target < 0 || target >= state.chapters.length) return;
+  [state.chapters[index], state.chapters[target]] = [state.chapters[target], state.chapters[index]];
+  saveLocalProject();
+  renderChapterList();
+}
+
+async function renderEditor() {
+  const chapter = selectedChapter();
+  const requestedId = chapter?.id || null;
+  $("#editorEmpty").classList.toggle("hidden", Boolean(chapter));
+  $("#editorForm").classList.toggle("hidden", !chapter);
+  if (!chapter) {
+    $("#renderBadge").textContent = "Select a chapter";
+    const sampleButton = $("#voiceSampleBtn");
+    if (sampleButton) sampleButton.disabled = true;
+    return;
+  }
+  $("#chapterTitle").value = chapter.title;
+  $("#chapterText").value = chapter.text;
+  $("#voiceSelect").value = chapter.voice;
+  $("#speedInput").value = chapter.speed;
+  $("#speedValue").textContent = `${Number(chapter.speed).toFixed(2)}×`;
+  updateTextStats(chapter.text, chapter.speed);
+  const status = chapterStatus(chapter);
+  $("#renderBadge").textContent = status.label;
+  $("#renderBadge").className = `badge ${status.className === "ready" ? "good" : status.className === "dirty" ? "warn" : ""}`;
+
+  const audioRecord = await getAudio(chapter.id);
+  if (state.selectedId !== requestedId) return;
+  if (audioRecord?.blob && chapter.renderedSignature === signatureString(chapter)) {
+    const url = audioUrlFor(chapter.id, audioRecord.blob);
+    $("#chapterAudio").src = url;
+    $("#chapterAudio").classList.remove("hidden");
+    $("#downloadMp3Btn").disabled = false;
+  } else {
+    $("#chapterAudio").removeAttribute("src");
+    $("#chapterAudio").classList.add("hidden");
+    $("#downloadMp3Btn").disabled = true;
+  }
+  const sampleButton = $("#voiceSampleBtn");
+  if (sampleButton) {
+    sampleButton.disabled = false;
+    sampleButton.textContent = "Voice Sample";
+    sampleButton.classList.remove("loading");
+  }
+}
+
+function updateSelectedFromEditor() {
+  const chapter = selectedChapter();
+  if (!chapter) return;
+  chapter.title = $("#chapterTitle").value.trim() || "Untitled article";
+  chapter.text = $("#chapterText").value;
+  chapter.voice = $("#voiceSelect").value;
+  chapter.speed = Number($("#speedInput").value);
+  $("#speedValue").textContent = `${chapter.speed.toFixed(2)}×`;
+  updateTextStats(chapter.text, chapter.speed);
+  saveLocalProject();
+  renderChapterList();
+  const status = chapterStatus(chapter);
+  $("#renderBadge").textContent = status.label;
+  $("#downloadMp3Btn").disabled = chapter.renderedSignature !== signatureString(chapter);
+}
+
+function updateTextStats(text, speed = 1) {
+  const words = wordCount(text);
+  const minutes = Math.max(0, Math.round(words / (155 * Number(speed || 1))));
+  $("#wordCount").textContent = `${words.toLocaleString()} words`;
+  $("#timeEstimate").textContent = `About ${minutes} minute${minutes === 1 ? "" : "s"}`;
+}
+
+function populateVoiceSelect(voiceData) {
+  const select = $("#voiceSelect");
+  const current = select.value;
+  let entries = DEFAULT_VOICES;
+  if (Array.isArray(voiceData)) {
+    if (voiceData.length && Array.isArray(voiceData[0])) entries = voiceData;
+    else if (voiceData.length && typeof voiceData[0] === "string") entries = voiceData.map((name) => [name, prettifyVoice(name)]);
+  } else if (voiceData && typeof voiceData === "object") {
+    entries = Object.keys(voiceData).map((name) => [name, `${prettifyVoice(name)}${voiceData[name]?.name ? ` — ${voiceData[name].name}` : ""}`]);
+  }
+  select.innerHTML = "";
+  entries.forEach(([value, label]) => {
+    const option = document.createElement("option");
+    option.value = value; option.textContent = label; select.appendChild(option);
+  });
+  select.value = current || selectedChapter()?.voice || "af_heart";
+}
+
+async function ensureTtsWorker() {
+  if (location.protocol === "file:") {
+    throw new Error("Narration generation requires this folder to be uploaded to an HTTPS website. All editing, chapter arrangement, and project controls work locally.");
+  }
+  if (state.ttsWorker && state.ttsReady) return;
+  if (!state.ttsWorker) {
+    state.ttsWorker = new Worker("tts-worker.js", { type: "module" });
+    state.ttsWorker.addEventListener("message", handleTtsMessage);
+    state.ttsWorker.addEventListener("error", (event) => {
+      finishGenerationWithError(new Error(event.message || "The narration worker crashed."));
+    });
+  }
+  state.ttsWorker.postMessage({ type: "init", device: "auto" });
+  await waitUntil(() => state.ttsReady, 180000, "The voice model did not finish loading.");
+}
+
+function handleTtsMessage(event) {
+  const message = event.data || {};
+  if (message.type === "model-start") {
+    showGenerationBox("Downloading local voice model…", 2, `${message.device.toUpperCase()} · ${message.dtype}`);
+  } else if (message.type === "model-progress") {
+    const progress = normaliseModelProgress(message.item);
+    showGenerationBox(progress.label, progress.percent, progress.detail);
+  } else if (message.type === "ready") {
+    state.ttsReady = true;
+    state.ttsDevice = message.device;
+    populateVoiceSelect(message.voices);
+    showGenerationBox("Voice model ready", 8, `${message.device.toUpperCase()} processing`);
+  } else if (message.type === "generation-progress") {
+    if (state.voiceSample && message.id === state.voiceSample.requestId) {
+      setVoiceSampleButtonState("Generating sample…", true);
+      return;
+    }
+    if (!state.generation || message.id !== state.generation.requestId) return;
+    const percent = 10 + Math.round((message.current / Math.max(1, message.total)) * 88);
+    showGenerationBox(`Narrating part ${message.current + 1} of ${message.total}`, percent, message.excerpt || "");
+  } else if (message.type === "complete") {
+    if (state.voiceSample && message.id === state.voiceSample.requestId) {
+      completeVoiceSample(message);
+      return;
+    }
+    completeGeneration(message);
+  } else if (message.type === "cancelled") {
+    if (state.voiceSample && message.id === state.voiceSample.requestId) {
+      finishVoiceSampleError(new Error("Voice sample cancelled."), true);
+      return;
+    }
+    finishGenerationWithError(new Error("Narration cancelled."), true);
+  } else if (message.type === "error") {
+    if (state.voiceSample && message.id === state.voiceSample.requestId) {
+      finishVoiceSampleError(new Error(message.message || "Voice sample failed."));
+      return;
+    }
+    finishGenerationWithError(new Error(message.message || "Narration failed."));
+  }
+}
+
+async function playVoiceSample() {
+  const chapter = selectedChapter();
+  if (!chapter) return toast("Select a chapter first.", "error");
+  if (state.generation) return toast("Wait for the current narration to finish before playing a voice sample.", "error");
+  if (state.voiceSample) return;
+  const requestId = makeId();
+  state.voiceSample = { requestId };
+  setVoiceSampleButtonState("Preparing sample…", true);
+  try {
+    await ensureTtsWorker();
+    const voice = $("#voiceSelect").value || chapter.voice;
+    const speed = Number($("#speedInput").value || chapter.speed || 1);
+    state.ttsWorker.postMessage({ type: "generate", id: requestId, text: "This is a sample of my voice.", voice, speed, device: "auto" });
+  } catch (error) {
+    if (state.voiceSample) finishVoiceSampleError(error);
+  }
+}
+
+async function completeVoiceSample(message) {
+  if (!state.voiceSample || message.id !== state.voiceSample.requestId) return;
+  try {
+    if (state.sampleAudioUrl) URL.revokeObjectURL(state.sampleAudioUrl);
+    const url = URL.createObjectURL(message.blob);
+    state.sampleAudioUrl = url;
+    const audio = new Audio(url);
+    audio.addEventListener("ended", () => setVoiceSampleButtonState("Voice Sample", false), { once: true });
+    audio.addEventListener("error", () => finishVoiceSampleError(new Error("The voice sample could not be played.")), { once: true });
+    setVoiceSampleButtonState("Playing sample…", true);
+    await audio.play();
+    state.voiceSample = null;
+  } catch (error) {
+    finishVoiceSampleError(error);
+  }
+}
+
+function finishVoiceSampleError(error, quiet = false) {
+  state.voiceSample = null;
+  setVoiceSampleButtonState("Voice Sample", false);
+  if (!quiet) toast(error.message || String(error), "error");
+}
+
+function setVoiceSampleButtonState(label, active) {
+  const button = $("#voiceSampleBtn");
+  if (!button) return;
+  button.textContent = label;
+  button.disabled = active;
+  button.classList.toggle("loading", active);
+}
+
+async function generateChapter(id, options = {}) {
+  const chapter = state.chapters.find((item) => item.id === id);
+  if (!chapter) throw new Error("Chapter not found.");
+  if (!chapter.text.trim()) throw new Error("This chapter has no text.");
+  if (state.generation) throw new Error("Another chapter is already being generated.");
+
+  const currentSignature = signatureString(chapter);
+  const existing = await getAudio(chapter.id);
+  if (!options.force && chapter.renderedSignature === currentSignature && existing?.blob) return existing;
+
+  const requestId = makeId();
+  state.generation = { chapterId: chapter.id, requestId, resolve: null, reject: null };
+  const promise = new Promise((resolve, reject) => { state.generation.resolve = resolve; state.generation.reject = reject; });
+  setGenerationControls(true);
+  showGenerationBox("Preparing narration engine…", 1, "The first use downloads and caches the local voice model.");
+
+  try {
+    await ensureTtsWorker();
+    state.ttsWorker.postMessage({ type: "generate", id: requestId, text: chapter.text, voice: chapter.voice, speed: chapter.speed, device: "auto" });
+    return await promise;
+  } catch (error) {
+    if (state.generation) finishGenerationWithError(error);
+    throw error;
+  }
+}
+
+async function completeGeneration(message) {
+  if (!state.generation || message.id !== state.generation.requestId) return;
+  const generation = state.generation;
+  const chapter = state.chapters.find((item) => item.id === generation.chapterId);
+  if (!chapter) return finishGenerationWithError(new Error("The chapter was removed during generation."));
+  try {
+    chapter.duration = Number(message.duration) || await durationOfBlob(message.blob);
+    chapter.renderedSignature = signatureString(chapter);
+    await putAudio({ id: chapter.id, blob: message.blob, duration: chapter.duration, signature: chapter.renderedSignature, updatedAt: Date.now() });
+    saveLocalProject();
+    showGenerationBox("Narration complete", 100, `${formatDuration(chapter.duration)} generated locally.`);
+    generation.resolve({ blob: message.blob, duration: chapter.duration });
+    toast(`Generated “${chapter.title}”.`, "success");
+    state.generation = null;
+    setGenerationControls(false);
+    renderAll();
+    updateStorageBadge();
+  } catch (error) {
+    finishGenerationWithError(error);
+  }
+}
+
+function finishGenerationWithError(error, quiet = false) {
+  const generation = state.generation;
+  if (generation) generation.reject(error);
+  state.generation = null;
+  setGenerationControls(false);
+  showGenerationBox(error.message || String(error), 0, "", true);
+  if (!quiet) toast(error.message || String(error), "error");
+}
+
+function cancelGeneration() {
+  if (!state.generation || !state.ttsWorker) return;
+  state.ttsWorker.postMessage({ type: "cancel" });
+  $("#generationLabel").textContent = "Cancelling after the current section…";
+}
+
+function setGenerationControls(active) {
+  $("#generateBtn").disabled = active;
+  $("#cancelGenerateBtn").classList.toggle("hidden", !active);
+  $("#deleteChapterBtn").disabled = active;
+  const sampleButton = $("#voiceSampleBtn");
+  if (sampleButton && !state.voiceSample) sampleButton.disabled = active || !selectedChapter();
+}
+
+function showGenerationBox(label, percent = 0, detail = "", error = false) {
+  const box = $("#generationBox");
+  box.classList.remove("hidden");
+  box.classList.toggle("error", error);
+  $("#generationLabel").textContent = label;
+  $("#generationPercent").textContent = percent ? `${Math.round(percent)}%` : "";
+  $("#generationProgress").value = Math.max(0, Math.min(100, percent));
+  $("#generationDetail").textContent = detail;
+}
+
+function normaliseModelProgress(item = {}) {
+  const percent = Number(item.progress || 0);
+  const file = item.file || item.name || "voice model";
+  if (item.status === "progress") return { label: `Downloading ${file}`, percent: Math.max(2, Math.min(8, percent / 12.5)), detail: `${Math.round(percent)}% of model file` };
+  if (item.status === "done") return { label: `Loaded ${file}`, percent: 8, detail: "Preparing the narration engine…" };
+  return { label: "Loading local voice model…", percent: 4, detail: file };
+}
+
+async function generateAllChapters() {
+  if (!state.chapters.length) return toast("Add at least one chapter first.", "error");
+  try {
+    setExportProgress("Generating chapters…", 0, "");
+    for (let index = 0; index < state.chapters.length; index += 1) {
+      const chapter = state.chapters[index];
+      setExportProgress(`Chapter ${index + 1} of ${state.chapters.length}`, (index / state.chapters.length) * 100, chapter.title);
+      await generateChapter(chapter.id);
+    }
+    setExportProgress("All chapters are ready", 100, "You can now create the M4B.");
+    toast("All chapters are generated.", "success");
+  } catch (error) {
+    setExportProgress("Generation stopped", 0, error.message || String(error), true);
+  }
+}
+
+async function downloadChapterMp3(id) {
+  const chapter = state.chapters.find((item) => item.id === id);
+  const record = chapter ? await getAudio(chapter.id) : null;
+  if (!chapter || !record?.blob || chapter.renderedSignature !== signatureString(chapter)) return toast("Generate this chapter first.", "error");
+  try {
+    showGenerationBox("Loading audio encoder…", 20, "MP3 conversion runs in this browser.");
+    const ffmpeg = await ensureFfmpeg();
+    await safeDelete(ffmpeg, ["chapter.wav", "chapter.mp3"]);
+    await ffmpeg.writeFile("chapter.wav", new Uint8Array(await record.blob.arrayBuffer()));
+    showGenerationBox("Encoding MP3…", 55, chapter.title);
+    const code = await ffmpeg.exec(["-i", "chapter.wav", "-codec:a", "libmp3lame", "-b:a", "128k", "chapter.mp3"]);
+    if (code !== 0) throw new Error("The MP3 encoder returned an error.");
+    const data = await ffmpeg.readFile("chapter.mp3");
+    downloadBlob(new Blob([data.buffer], { type: "audio/mpeg" }), `${safeFilename(chapter.title)}.mp3`);
+    showGenerationBox("MP3 downloaded", 100, chapter.title);
+  } catch (error) {
+    showGenerationBox("MP3 export failed", 0, error.message || String(error), true);
+    toast(error.message || String(error), "error");
+  }
+}
+
+async function exportM4b() {
+  if (!state.chapters.length) return toast("Add at least one chapter first.", "error");
+  $("#exportM4bBtn").disabled = true;
+  $("#generateAllBtn").disabled = true;
+  try {
+    if ($("#generateMissingCheck").checked) {
+      for (let index = 0; index < state.chapters.length; index += 1) {
+        setExportProgress(`Preparing chapter ${index + 1} of ${state.chapters.length}`, Math.round(index / state.chapters.length * 35), state.chapters[index].title);
+        await generateChapter(state.chapters[index].id);
+      }
+    }
+
+    const records = [];
+    for (const chapter of state.chapters) {
+      const record = await getAudio(chapter.id);
+      if (!record?.blob || chapter.renderedSignature !== signatureString(chapter)) throw new Error(`“${chapter.title}” has not been generated or has changed.`);
+      records.push(record);
+    }
+
+    setExportProgress("Loading the audiobook encoder…", 38, "FFmpeg WebAssembly is downloaded once and cached by the browser.");
+    const ffmpeg = await ensureFfmpeg();
+    const filenames = [];
+    const cleanup = ["concat.txt", "metadata.txt", "audiobook.m4a", "audiobook.m4b", "cover-input", "cover.jpg"];
+    await safeDelete(ffmpeg, cleanup);
+
+    for (let index = 0; index < records.length; index += 1) {
+      const name = `chapter-${String(index + 1).padStart(3, "0")}.wav`;
+      filenames.push(name); cleanup.push(name);
+      setExportProgress("Loading chapter audio…", 40 + Math.round((index / records.length) * 8), state.chapters[index].title);
+      await ffmpeg.writeFile(name, new Uint8Array(await records[index].blob.arrayBuffer()));
+    }
+    const concatText = filenames.map((name) => `file '${name}'`).join("\n");
+    await ffmpeg.writeFile("concat.txt", new TextEncoder().encode(concatText));
+
+    setExportProgress("Joining and encoding chapters…", 52, "The individual cached chapters are reused; their text is not processed again.");
+    let code = await ffmpeg.exec(["-f", "concat", "-safe", "0", "-i", "concat.txt", "-vn", "-c:a", "aac", "-b:a", "96k", "-ar", "44100", "-ac", "1", "audiobook.m4a"]);
+    if (code !== 0) throw new Error("The chapters could not be joined.");
+
+    const metadata = buildFfmetadata(state.chapters);
+    await ffmpeg.writeFile("metadata.txt", new TextEncoder().encode(metadata));
+    const hasCover = Boolean(state.cover?.blob);
+    if (hasCover) {
+      await ffmpeg.writeFile("cover-input", new Uint8Array(await state.cover.blob.arrayBuffer()));
+      setExportProgress("Preparing cover art…", 78, "Converting the cover to an audiobook-compatible JPEG.");
+      code = await ffmpeg.exec(["-i", "cover-input", "-vf", "scale='min(1400,iw)':-2", "-frames:v", "1", "-q:v", "3", "cover.jpg"]);
+      if (code !== 0) throw new Error("The cover image could not be converted.");
+    }
+
+    setExportProgress("Writing chapter markers and metadata…", 88, "Creating one M4B file.");
+    const metadataIndex = hasCover ? "2" : "1";
+    const command = hasCover
+      ? ["-i", "audiobook.m4a", "-i", "cover.jpg", "-f", "ffmetadata", "-i", "metadata.txt", "-map", "0:a", "-map", "1:v", "-map_metadata", metadataIndex, "-map_chapters", metadataIndex, "-c:a", "copy", "-c:v", "mjpeg", "-disposition:v", "attached_pic", "-metadata:s:v", "title=Cover", "-metadata:s:v", "comment=Cover (front)", "-movflags", "+faststart", "-f", "ipod", "audiobook.m4b"]
+      : ["-i", "audiobook.m4a", "-f", "ffmetadata", "-i", "metadata.txt", "-map", "0:a", "-map_metadata", metadataIndex, "-map_chapters", metadataIndex, "-c:a", "copy", "-movflags", "+faststart", "-f", "ipod", "audiobook.m4b"];
+    code = await ffmpeg.exec(command);
+    if (code !== 0) throw new Error("The M4B container could not be created.");
+
+    const output = await ffmpeg.readFile("audiobook.m4b");
+    const title = $("#bookTitle").value.trim() || "Article Audiobook";
+    downloadBlob(new Blob([output.buffer], { type: "audio/mp4" }), `${safeFilename(title)}.m4b`);
+    setExportProgress("Audiobook downloaded", 100, `${state.chapters.length} chapters · ${formatDuration(state.chapters.reduce((sum, chapter) => sum + chapter.duration, 0))}`);
+    toast("Your M4B audiobook is ready.", "success");
+    await safeDelete(ffmpeg, cleanup);
+  } catch (error) {
+    setExportProgress("M4B export failed", 0, error.message || String(error), true);
+    toast(error.message || String(error), "error");
+  } finally {
+    $("#exportM4bBtn").disabled = false;
+    $("#generateAllBtn").disabled = false;
+  }
+}
+
+async function ensureFfmpeg() {
+  if (state.ffmpegReady && state.ffmpeg) return state.ffmpeg;
+  if (!window.FFmpegWASM?.FFmpeg) {
+    await loadExternalScript("https://cdnjs.cloudflare.com/ajax/libs/ffmpeg/0.12.15/umd/ffmpeg.min.js", "ffmpeg-wasm-library");
+  }
+  if (!window.FFmpegWASM?.FFmpeg) throw new Error("The browser could not load the audiobook encoder. Check the internet connection or content-blocking extensions.");
+  const ffmpeg = state.ffmpeg || new window.FFmpegWASM.FFmpeg();
+  state.ffmpeg = ffmpeg;
+  ffmpeg.on("log", ({ message }) => { if (/error|failed/i.test(message)) console.warn(message); });
+  ffmpeg.on("progress", ({ progress }) => {
+    if ($("#exportBox").classList.contains("hidden")) return;
+    const base = Number($("#exportProgress").value) || 0;
+    if (base >= 50 && base < 88) $("#exportPercent").textContent = `${Math.min(87, Math.round(base + progress * 20))}%`;
+  });
+  const baseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+  await ffmpeg.load({
+    classWorkerURL: await toBlobUrl("https://cdnjs.cloudflare.com/ajax/libs/ffmpeg/0.12.15/umd/814.ffmpeg.js", "text/javascript"),
+    coreURL: await toBlobUrl(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+    wasmURL: await toBlobUrl(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+  });
+  state.ffmpegReady = true;
+  return ffmpeg;
+}
+
+function loadExternalScript(url, id, timeoutMs = 30000) {
+  if (id && document.getElementById(id)) {
+    return new Promise((resolve, reject) => {
+      const existing = document.getElementById(id);
+      if (existing.dataset.loaded === "true") return resolve();
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener("error", () => reject(new Error("The audiobook encoder library could not be downloaded.")), { once: true });
+    });
+  }
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    if (id) script.id = id;
+    script.src = url;
+    script.async = true;
+    const timer = setTimeout(() => { script.remove(); reject(new Error("The audiobook encoder download timed out.")); }, timeoutMs);
+    script.onload = () => { clearTimeout(timer); script.dataset.loaded = "true"; resolve(); };
+    script.onerror = () => { clearTimeout(timer); script.remove(); reject(new Error("The audiobook encoder library could not be downloaded.")); };
+    document.head.appendChild(script);
+  });
+}
+
+async function toBlobUrl(url, type) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Could not download ${url.split("/").pop()}.`);
+  return URL.createObjectURL(new Blob([await response.blob()], { type }));
+}
+
+function buildFfmetadata(chapters) {
+  const lines = [";FFMETADATA1"];
+  const values = {
+    title: $("#bookTitle").value.trim() || "Article Audiobook",
+    artist: $("#bookAuthor").value.trim(),
+    album_artist: $("#bookAuthor").value.trim(),
+    album: $("#bookTitle").value.trim() || "Article Audiobook",
+    composer: $("#bookNarrator").value.trim(),
+    genre: $("#bookGenre").value.trim() || "Audiobook",
+    comment: $("#bookDescription").value.trim(),
+    media_type: "2",
+  };
+  Object.entries(values).forEach(([key, value]) => { if (value) lines.push(`${key}=${escapeMetadata(value)}`); });
+  let start = 0;
+  chapters.forEach((chapter, index) => {
+    const end = index === chapters.length - 1
+      ? Math.round((start + chapter.duration) * 1000)
+      : Math.max(Math.round((start + chapter.duration) * 1000), Math.round(start * 1000) + 1);
+    lines.push("", "[CHAPTER]", "TIMEBASE=1/1000", `START=${Math.round(start * 1000)}`, `END=${end}`, `title=${escapeMetadata(chapter.title)}`);
+    start += chapter.duration;
+  });
+  return lines.join("\n");
+}
+
+function escapeMetadata(value) {
+  return String(value).replace(/\\/g, "\\\\").replace(/([=;#])/g, "\\$1").replace(/\r?\n/g, "\\n");
+}
+
+function setExportProgress(label, percent, detail = "", error = false) {
+  $("#exportBox").classList.remove("hidden");
+  $("#exportBox").classList.toggle("error", error);
+  $("#exportLabel").textContent = label;
+  $("#exportPercent").textContent = percent ? `${Math.round(percent)}%` : "";
+  $("#exportProgress").value = Math.max(0, Math.min(100, percent));
+  $("#exportDetail").textContent = detail;
+}
+
+async function requestDeleteChapter(id) {
+  const chapter = state.chapters.find((item) => item.id === id);
+  if (!chapter) return;
+  $("#confirmTitle").textContent = "Delete chapter?";
+  $("#confirmMessage").textContent = `“${chapter.title}” and its locally cached narration will be removed.`;
+  const dialog = $("#confirmDialog");
+  dialog.showModal();
+  const result = await new Promise((resolve) => dialog.addEventListener("close", () => resolve(dialog.returnValue), { once: true }));
+  if (result !== "confirm") return;
+  state.chapters = state.chapters.filter((item) => item.id !== id);
+  await deleteAudio(id);
+  const oldUrl = state.audioUrls.get(id); if (oldUrl) URL.revokeObjectURL(oldUrl);
+  state.audioUrls.delete(id);
+  if (state.selectedId === id) state.selectedId = state.chapters[0]?.id || null;
+  saveLocalProject();
+  renderAll();
+  updateStorageBadge();
+}
+
+function renderMetadata() {
+  const project = currentMetadata();
+  ["bookTitle", "bookAuthor", "bookNarrator", "bookGenre", "bookDescription"].forEach((id) => {
+    if (document.activeElement !== $("#" + id)) $("#" + id).value = project[id] || "";
+  });
+  const picker = $(".cover-picker");
+  if (state.cover?.url) {
+    $("#coverPreview").src = state.cover.url;
+    picker.classList.add("has-cover");
+  } else {
+    $("#coverPreview").removeAttribute("src");
+    picker.classList.remove("has-cover");
+  }
+}
+
+async function setCover(file) {
+  if (!file) return;
+  if (!file.type.startsWith("image/")) return toast("Choose a JPG, PNG or WebP image.", "error");
+  const blob = file.slice(0, file.size, file.type);
+  const dataUrl = await blobToDataUrl(blob);
+  if (state.cover?.url) URL.revokeObjectURL(state.cover.url);
+  state.cover = { blob, dataUrl, url: URL.createObjectURL(blob), type: file.type, name: file.name };
+  saveLocalProject();
+  renderMetadata();
+}
+
+function hydrateMetadataInputs(metadata = null) {
+  const source = metadata || safeJsonParse(storageGet("article-audiobook-metadata") || "{}", {});
+  ["bookTitle", "bookAuthor", "bookNarrator", "bookGenre", "bookDescription"].forEach((id) => {
+    const element = $("#" + id);
+    if (element && Object.prototype.hasOwnProperty.call(source, id)) element.value = source[id] ?? "";
+  });
+}
+
+function currentMetadata() {
+  const stored = safeJsonParse(storageGet("article-audiobook-metadata") || "{}", {});
+  const valueOf = (id, fallback = "") => {
+    const element = $("#" + id);
+    return element ? element.value : (stored[id] ?? fallback);
+  };
+  return {
+    bookTitle: valueOf("bookTitle"),
+    bookAuthor: valueOf("bookAuthor"),
+    bookNarrator: valueOf("bookNarrator", "Kokoro local voices"),
+    bookGenre: valueOf("bookGenre", "Articles"),
+    bookDescription: valueOf("bookDescription"),
+  };
+}
+
+function saveLocalProject() {
+  const metadata = currentMetadata();
+  storageSet("article-audiobook-project", JSON.stringify({ version: 1, chapters: state.chapters, selectedId: state.selectedId, metadata, coverDataUrl: state.cover?.dataUrl || null }));
+  storageSet("article-audiobook-metadata", JSON.stringify(metadata));
+}
+
+function restoreLocalProject() {
+  try {
+    const saved = safeJsonParse(storageGet("article-audiobook-project") || "null", null);
+    if (saved?.chapters) {
+      state.chapters = saved.chapters;
+      state.selectedId = saved.selectedId && state.chapters.some((chapter) => chapter.id === saved.selectedId) ? saved.selectedId : state.chapters[0]?.id || null;
+      if (saved.metadata) storageSet("article-audiobook-metadata", JSON.stringify(saved.metadata));
+      if (saved.coverDataUrl) restoreCoverFromDataUrl(saved.coverDataUrl);
+    }
+    const theme = storageGet("article-audiobook-theme");
+    if (theme) document.documentElement.dataset.theme = theme;
+  } catch (error) {
+    console.warn("Could not restore saved project", error);
+  }
+}
+
+async function restoreCoverFromDataUrl(dataUrl) {
+  try {
+    const blob = await (await fetch(dataUrl)).blob();
+    state.cover = { blob, dataUrl, url: URL.createObjectURL(blob), type: blob.type, name: "cover" };
+    renderMetadata();
+  } catch {}
+}
+
+function downloadProject() {
+  const payload = {
+    format: "Article Audiobook Studio Project",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    chapters: state.chapters,
+    metadata: currentMetadata(),
+    coverDataUrl: state.cover?.dataUrl || null,
+    note: "Narration audio remains in this browser's local cache. Changed or missing chapters can be regenerated.",
+  };
+  const title = currentMetadata().bookTitle || "article-audiobook-project";
+  downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }), `${safeFilename(title)}.aabproject.json`);
+}
+
+async function loadProjectFile(file) {
+  if (!file) return;
+  try {
+    const payload = JSON.parse(await file.text());
+    if (!Array.isArray(payload.chapters)) throw new Error("This is not a valid Article Audiobook Studio project.");
+    state.chapters = payload.chapters.map((chapter) => ({ voice: "af_heart", speed: 1, renderedSignature: "", duration: 0, ...chapter, id: chapter.id || makeId() }));
+    for (const chapter of state.chapters) {
+      const cached = await getAudio(chapter.id);
+      if (cached?.blob && cached.signature === signatureString(chapter)) {
+        chapter.renderedSignature = cached.signature;
+        chapter.duration = cached.duration || chapter.duration || 0;
+      } else {
+        chapter.renderedSignature = "";
+        chapter.duration = 0;
+      }
+    }
+    state.selectedId = state.chapters[0]?.id || null;
+    storageSet("article-audiobook-metadata", JSON.stringify(payload.metadata || {}));
+    hydrateMetadataInputs(payload.metadata || {});
+    if (payload.coverDataUrl) await restoreCoverFromDataUrl(payload.coverDataUrl); else state.cover = null;
+    saveLocalProject(); renderAll();
+    toast("Project loaded. Cached audio is reused when available.", "success");
+  } catch (error) {
+    toast(error.message || String(error), "error");
+  } finally {
+    $("#loadProjectInput").value = "";
+  }
+}
+
+function toggleTheme() {
+  const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  storageSet("article-audiobook-theme", next);
+}
+
+async function updateStorageBadge() {
+  try {
+    const estimate = await navigator.storage?.estimate?.();
+    if (!estimate) return $("#storageBadge").textContent = "Local browser storage";
+    const used = estimate.usage || 0;
+    const quota = estimate.quota || 0;
+    $("#storageBadge").textContent = `${formatBytes(used)} used locally`;
+    $("#storageBadge").title = quota ? `${formatBytes(used)} of ${formatBytes(quota)} browser storage` : "Local browser storage";
+    if (navigator.storage.persist) await navigator.storage.persist();
+  } catch {
+    $("#storageBadge").textContent = "Local browser storage";
+  }
+}
+
+function setAddStatus(message, error = false) {
+  $("#addStatus").textContent = message;
+  $("#addStatus").style.color = error ? "var(--danger)" : "var(--muted)";
+}
+
+function toast(message, type = "") {
+  const item = document.createElement("div");
+  item.className = `toast ${type}`;
+  item.textContent = message;
+  $("#toastRegion").appendChild(item);
+  setTimeout(() => item.remove(), 4500);
+}
+
+function makeId() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  if (globalThis.crypto?.getRandomValues) {
+    const values = new Uint32Array(4);
+    globalThis.crypto.getRandomValues(values);
+    return [...values].map((value) => value.toString(16).padStart(8, "0")).join("-");
+  }
+  return `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function selectedChapter() { return state.chapters.find((chapter) => chapter.id === state.selectedId) || null; }
+function signatureString(chapter) { return `${chapter.text}\u241f${chapter.voice}\u241f${Number(chapter.speed).toFixed(2)}\u241fkokoro-82m-v1`; }
+function wordCount(text) { return (String(text || "").trim().match(/[\p{L}\p{N}’'-]+/gu) || []).length; }
+function cleanWhitespace(text) { return String(text || "").replace(/\s+/g, " ").trim(); }
+function cleanImportedText(text) { return String(text || "").replace(/\r/g, "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim(); }
+function firstSentence(text) { return (String(text).match(/^.{1,120}?(?:[.!?](?:\s|$)|$)/s) || [""])[0].trim(); }
+function titleFromUrl(url) { return decodeURIComponent(url.pathname.split("/").filter(Boolean).pop() || url.hostname).replace(/[-_]+/g, " ").replace(/\.[a-z0-9]+$/i, "").replace(/\b\w/g, (letter) => letter.toUpperCase()); }
+function safeFilename(value) { return String(value || "file").replace(/[<>:"/\\|?*\x00-\x1F]/g, "").replace(/\s+/g, " ").trim().slice(0, 120) || "file"; }
+function formatDuration(seconds) { const total = Math.max(0, Math.round(Number(seconds) || 0)); const hours = Math.floor(total / 3600); const minutes = Math.floor((total % 3600) / 60); const secs = total % 60; return hours ? `${hours}h ${minutes}m` : minutes ? `${minutes}m ${secs}s` : `${secs}s`; }
+function formatBytes(bytes) { const units = ["B", "KB", "MB", "GB"]; let value = Number(bytes) || 0; let unit = 0; while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit += 1; } return `${value.toFixed(unit ? 1 : 0)} ${units[unit]}`; }
+function prettifyVoice(name) { const prefix = name.startsWith("af_") ? "American female" : name.startsWith("am_") ? "American male" : name.startsWith("bf_") ? "British female" : name.startsWith("bm_") ? "British male" : "Voice"; return `${name.split("_").slice(1).join(" ").replace(/\b\w/g, (letter) => letter.toUpperCase())} — ${prefix}`; }
+function downloadBlob(blob, filename) { const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = filename; document.body.appendChild(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000); }
+function blobToDataUrl(blob) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(reader.error); reader.readAsDataURL(blob); }); }
+function audioUrlFor(id, blob) { const old = state.audioUrls.get(id); if (old) URL.revokeObjectURL(old); const url = URL.createObjectURL(blob); state.audioUrls.set(id, url); return url; }
+async function durationOfBlob(blob) { const context = new AudioContext(); try { const buffer = await context.decodeAudioData(await blob.arrayBuffer()); return buffer.duration; } finally { await context.close(); } }
+async function waitUntil(predicate, timeout, message) { const started = Date.now(); while (!predicate()) { if (Date.now() - started > timeout) throw new Error(message); await new Promise((resolve) => setTimeout(resolve, 100)); } }
+async function safeDelete(ffmpeg, names) { for (const name of names) { try { await ffmpeg.deleteFile(name); } catch {} } }
+
+function openDatabase() {
+  return new Promise((resolve, reject) => {
+    if (!("indexedDB" in window)) return reject(new Error("IndexedDB is not supported in this browser."));
+    const request = indexedDB.open("article-audiobook-studio", 1);
+    request.onupgradeneeded = () => {
+      const database = request.result;
+      if (!database.objectStoreNames.contains("audio")) database.createObjectStore("audio", { keyPath: "id" });
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("Could not open browser audio storage."));
+    request.onblocked = () => reject(new Error("Browser audio storage is blocked by another tab."));
+  });
+}
+function dbRequest(mode, operation) {
+  if (!db) return Promise.reject(new Error("Persistent browser audio storage is not ready."));
+  return new Promise((resolve, reject) => {
+    try {
+      const transaction = db.transaction("audio", mode);
+      const store = transaction.objectStore("audio");
+      const request = operation(store);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+      transaction.onabort = () => reject(transaction.error || new Error("Browser storage transaction failed."));
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+function putAudio(record) {
+  state.memoryAudio.set(record.id, record);
+  return db ? dbRequest("readwrite", (store) => store.put(record)).catch(() => record) : Promise.resolve(record);
+}
+function getAudio(id) {
+  if (!db) return Promise.resolve(state.memoryAudio.get(id));
+  return dbRequest("readonly", (store) => store.get(id)).then((record) => record || state.memoryAudio.get(id)).catch(() => state.memoryAudio.get(id));
+}
+function deleteAudio(id) {
+  state.memoryAudio.delete(id);
+  return db ? dbRequest("readwrite", (store) => store.delete(id)).catch(() => undefined) : Promise.resolve();
+}
+
+
+async function reconcileAudioCache() {
+  for (const chapter of state.chapters) {
+    try {
+      const cached = await getAudio(chapter.id);
+      if (cached?.blob && cached.signature === signatureString(chapter)) {
+        chapter.renderedSignature = cached.signature;
+        chapter.duration = cached.duration || chapter.duration || 0;
+      } else {
+        chapter.renderedSignature = "";
+        chapter.duration = 0;
+      }
+    } catch {
+      chapter.renderedSignature = "";
+      chapter.duration = 0;
+    }
+  }
+}
+
+function registerServiceWorker() {
+  if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+}
