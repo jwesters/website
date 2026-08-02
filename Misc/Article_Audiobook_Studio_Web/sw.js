@@ -1,5 +1,5 @@
-const CACHE = "article-audiobook-studio-v4";
-const APP_FILES = ["./", "./index.html", "./styles.css", "./app.js", "./tts-worker.js", "./manifest.webmanifest", "./favicon.svg"];
+const CACHE = "article-audiobook-studio-v5";
+const APP_FILES = ["./", "./index.html", "./styles.css", "./app.js", "./tts-worker.js", "./ffmpeg-worker.js", "./manifest.webmanifest", "./favicon.svg"];
 self.addEventListener("install", (event) => {
   self.skipWaiting();
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(APP_FILES)));

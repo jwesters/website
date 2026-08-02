@@ -38,6 +38,9 @@ const state = {
   ttsWorker: null,
   ttsReady: false,
   ttsDevice: null,
+  ttsDtype: null,
+  ttsPreference: null,
+  ttsLoading: false,
   ffmpeg: null,
   ffmpegReady: false,
   audioUrls: new Map(),
@@ -61,6 +64,7 @@ function startApp() {
     registerServiceWorker();
     setAddStatus("Ready. Add a URL, paste text, or import a file.");
     initialisePersistentStorage();
+    scheduleTtsPreload();
     window.ArticleAudiobookStudio = { state, addChapter, selectTab };
   } catch (error) {
     reportStartupError(error);
@@ -120,6 +124,7 @@ function wireInterface() {
   $("#voiceSelect").addEventListener("change", updateSelectedFromEditor);
   $("#speedInput").addEventListener("input", updateSelectedFromEditor);
   $("#voiceSampleBtn").addEventListener("click", () => { playVoiceSample().catch(() => {}); });
+  $("#performanceMode").addEventListener("change", handlePerformanceModeChange);
   $("#generateBtn").addEventListener("click", () => { generateChapter(state.selectedId).catch(() => {}); });
   $("#cancelGenerateBtn").addEventListener("click", cancelGeneration);
   $("#downloadMp3Btn").addEventListener("click", () => downloadChapterMp3(state.selectedId));
@@ -418,34 +423,51 @@ function populateVoiceSelect(voiceData) {
   select.value = current || selectedChapter()?.voice || "af_heart";
 }
 
-async function ensureTtsWorker() {
+async function ensureTtsWorker(options = {}) {
   if (location.protocol === "file:") {
     throw new Error("Narration generation requires this folder to be uploaded to an HTTPS website. All editing, chapter arrangement, and project controls work locally.");
   }
-  if (state.ttsWorker && state.ttsReady) return;
+  const preference = currentPerformanceMode();
+  if (state.ttsWorker && state.ttsReady && state.ttsPreference === preference) return;
   if (!state.ttsWorker) {
     state.ttsWorker = new Worker("tts-worker.js", { type: "module" });
     state.ttsWorker.addEventListener("message", handleTtsMessage);
     state.ttsWorker.addEventListener("error", (event) => {
-      finishGenerationWithError(new Error(event.message || "The narration worker crashed."));
+      state.ttsLoading = false;
+      updateEngineBadge("Engine failed", "danger", event.message || "The narration worker crashed.");
+      if (state.voiceSample) finishVoiceSampleError(new Error(event.message || "The narration worker crashed."));
+      else if (state.generation) finishGenerationWithError(new Error(event.message || "The narration worker crashed."));
+      else if (!options.quiet) toast(event.message || "The narration worker crashed.", "error");
     });
   }
-  state.ttsWorker.postMessage({ type: "init", device: "auto" });
-  await waitUntil(() => state.ttsReady, 180000, "The voice model did not finish loading.");
+  state.ttsReady = false;
+  state.ttsLoading = true;
+  updateEngineBadge("Loading…", "warn", "Downloading or preparing the local voice model.");
+  state.ttsWorker.postMessage({ type: "init", performance: preference });
+  await waitUntil(() => state.ttsReady && state.ttsPreference === preference, 180000, "The voice model did not finish loading.");
 }
-
 function handleTtsMessage(event) {
   const message = event.data || {};
   if (message.type === "model-start") {
-    showGenerationBox("Downloading local voice model…", 2, `${message.device.toUpperCase()} · ${message.dtype}`);
+    state.ttsLoading = true;
+    updateEngineBadge("Loading…", "warn", `${String(message.device).toUpperCase()} · ${message.dtype}`);
+    if (state.generation) showGenerationBox("Downloading local voice model…", 2, `${String(message.device).toUpperCase()} · ${message.dtype}`);
+    if (state.voiceSample) setVoiceSampleButtonState("Loading voice…", true);
   } else if (message.type === "model-progress") {
     const progress = normaliseModelProgress(message.item);
-    showGenerationBox(progress.label, progress.percent, progress.detail);
+    updateEngineBadge("Loading…", "warn", progress.detail || progress.label);
+    if (state.generation) showGenerationBox(progress.label, progress.percent, progress.detail);
   } else if (message.type === "ready") {
     state.ttsReady = true;
+    state.ttsLoading = false;
     state.ttsDevice = message.device;
+    state.ttsDtype = message.dtype;
+    state.ttsPreference = message.preference || currentPerformanceMode();
     populateVoiceSelect(message.voices);
-    showGenerationBox("Voice model ready", 8, `${message.device.toUpperCase()} processing`);
+    const accelerated = message.device === "webgpu";
+    const label = accelerated ? "WebGPU — accelerated" : "CPU/WASM — compatibility";
+    updateEngineBadge(label, accelerated ? "good" : "warn", message.fallbackReason || `${String(message.device).toUpperCase()} · ${message.dtype}`);
+    if (state.generation) showGenerationBox("Voice model ready", 8, `${String(message.device).toUpperCase()} processing`);
   } else if (message.type === "generation-progress") {
     if (state.voiceSample && message.id === state.voiceSample.requestId) {
       setVoiceSampleButtonState("Generating sample…", true);
@@ -467,12 +489,60 @@ function handleTtsMessage(event) {
     }
     finishGenerationWithError(new Error("Narration cancelled."), true);
   } else if (message.type === "error") {
+    state.ttsLoading = false;
+    state.ttsReady = false;
+    const error = new Error(message.message || "Narration failed.");
+    updateEngineBadge("Load when needed", "warn", error.message);
     if (state.voiceSample && message.id === state.voiceSample.requestId) {
-      finishVoiceSampleError(new Error(message.message || "Voice sample failed."));
+      finishVoiceSampleError(error);
       return;
     }
-    finishGenerationWithError(new Error(message.message || "Narration failed."));
+    if (state.generation) {
+      finishGenerationWithError(error);
+      return;
+    }
+    console.warn("Background narration preload failed", error);
   }
+}
+
+function currentPerformanceMode() {
+  const value = $("#performanceMode")?.value || storageGet("article-audiobook-performance") || "auto";
+  return ["auto", "webgpu", "wasm"].includes(value) ? value : "auto";
+}
+
+function handlePerformanceModeChange() {
+  const mode = currentPerformanceMode();
+  storageSet("article-audiobook-performance", mode);
+  state.ttsReady = false;
+  state.ttsPreference = null;
+  const labels = { auto: "Automatic selected", webgpu: "WebGPU requested", wasm: "CPU/WASM selected" };
+  updateEngineBadge(labels[mode], "warn", "The narration engine will reload in the background.");
+  scheduleTtsPreload(150);
+}
+
+function scheduleTtsPreload(delay = 1800) {
+  if (location.protocol === "file:") {
+    updateEngineBadge("HTTPS required", "warn", "Upload the files to an HTTPS static website to generate narration.");
+    return;
+  }
+  const start = () => {
+    if (state.ttsReady || state.ttsLoading || state.generation || state.voiceSample) return;
+    ensureTtsWorker({ quiet: true }).catch((error) => {
+      state.ttsLoading = false;
+      updateEngineBadge("Load when needed", "warn", error.message || String(error));
+    });
+  };
+  if (delay <= 200) return setTimeout(start, delay);
+  if ("requestIdleCallback" in window) window.requestIdleCallback(start, { timeout: delay + 2000 });
+  else setTimeout(start, delay);
+}
+
+function updateEngineBadge(text, className = "", title = "") {
+  const badge = $("#engineBadge");
+  if (!badge) return;
+  badge.textContent = text;
+  badge.className = `badge ${className}`.trim();
+  badge.title = title;
 }
 
 async function playVoiceSample() {
@@ -487,7 +557,7 @@ async function playVoiceSample() {
     await ensureTtsWorker();
     const voice = $("#voiceSelect").value || chapter.voice;
     const speed = Number($("#speedInput").value || chapter.speed || 1);
-    state.ttsWorker.postMessage({ type: "generate", id: requestId, text: "This is a sample of my voice.", voice, speed, device: "auto" });
+    state.ttsWorker.postMessage({ type: "generate", id: requestId, text: "This is a sample of my voice.", voice, speed, performance: currentPerformanceMode() });
   } catch (error) {
     if (state.voiceSample) finishVoiceSampleError(error);
   }
@@ -542,7 +612,7 @@ async function generateChapter(id, options = {}) {
 
   try {
     await ensureTtsWorker();
-    state.ttsWorker.postMessage({ type: "generate", id: requestId, text: chapter.text, voice: chapter.voice, speed: chapter.speed, device: "auto" });
+    state.ttsWorker.postMessage({ type: "generate", id: requestId, text: chapter.text, voice: chapter.voice, speed: chapter.speed, performance: currentPerformanceMode() });
     return await promise;
   } catch (error) {
     if (state.generation) finishGenerationWithError(error);
@@ -593,6 +663,8 @@ function setGenerationControls(active) {
   $("#deleteChapterBtn").disabled = active;
   const sampleButton = $("#voiceSampleBtn");
   if (sampleButton && !state.voiceSample) sampleButton.disabled = active || !selectedChapter();
+  const performanceSelect = $("#performanceMode");
+  if (performanceSelect) performanceSelect.disabled = active || Boolean(state.voiceSample);
 }
 
 function showGenerationBox(label, percent = 0, detail = "", error = false) {
@@ -721,55 +793,96 @@ async function exportM4b() {
   }
 }
 
+class BrowserFFmpeg {
+  constructor(workerURL) {
+    this.workerURL = workerURL;
+    this.worker = null;
+    this.loaded = false;
+    this.nextId = 1;
+    this.pending = new Map();
+    this.listeners = { log: [], progress: [] };
+  }
+
+  on(type, callback) {
+    if (this.listeners[type]) this.listeners[type].push(callback);
+  }
+
+  async load(config) {
+    if (this.loaded) return true;
+    if (!this.worker) {
+      this.worker = new Worker(this.workerURL);
+      this.worker.addEventListener("message", (event) => this.handleMessage(event.data || {}));
+      this.worker.addEventListener("error", (event) => this.rejectAll(new Error(event.message || "The audiobook encoder worker crashed.")));
+    }
+    await this.send("LOAD", config);
+    this.loaded = true;
+    return true;
+  }
+
+  handleMessage(message) {
+    if (message.type === "LOG") {
+      this.listeners.log.forEach((callback) => callback(message.data || {}));
+      return;
+    }
+    if (message.type === "PROGRESS") {
+      this.listeners.progress.forEach((callback) => callback(message.data || {}));
+      return;
+    }
+    const pending = this.pending.get(message.id);
+    if (!pending) return;
+    this.pending.delete(message.id);
+    if (message.type === "ERROR") pending.reject(new Error(message.data || "The audiobook encoder failed."));
+    else pending.resolve(message.data);
+  }
+
+  rejectAll(error) {
+    this.pending.forEach(({ reject }) => reject(error));
+    this.pending.clear();
+  }
+
+  send(type, data, transfer = []) {
+    if (!this.worker) return Promise.reject(new Error("The audiobook encoder worker is unavailable."));
+    const id = this.nextId++;
+    return new Promise((resolve, reject) => {
+      this.pending.set(id, { resolve, reject });
+      this.worker.postMessage({ id, type, data }, transfer);
+    });
+  }
+
+  exec(args, timeout = -1) { return this.send("EXEC", { args, timeout }); }
+  writeFile(path, data) {
+    const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+    return this.send("WRITE_FILE", { path, data: bytes }, [bytes.buffer]);
+  }
+  readFile(path, encoding) { return this.send("READ_FILE", { path, encoding }); }
+  deleteFile(path) { return this.send("DELETE_FILE", { path }); }
+}
+
 async function ensureFfmpeg() {
   if (state.ffmpegReady && state.ffmpeg) return state.ffmpeg;
-  if (!window.FFmpegWASM?.FFmpeg) {
-    await loadExternalScript("https://cdnjs.cloudflare.com/ajax/libs/ffmpeg/0.12.15/umd/ffmpeg.min.js", "ffmpeg-wasm-library");
-  }
-  if (!window.FFmpegWASM?.FFmpeg) throw new Error("The browser could not load the audiobook encoder. Check the internet connection or content-blocking extensions.");
-  const ffmpeg = state.ffmpeg || new window.FFmpegWASM.FFmpeg();
+  const workerURL = new URL("ffmpeg-worker.js", document.baseURI).href;
+  const ffmpeg = state.ffmpeg || new BrowserFFmpeg(workerURL);
   state.ffmpeg = ffmpeg;
-  ffmpeg.on("log", ({ message }) => { if (/error|failed/i.test(message)) console.warn(message); });
+  ffmpeg.on("log", ({ message }) => { if (/error|failed/i.test(message || "")) console.warn(message); });
   ffmpeg.on("progress", ({ progress }) => {
     if ($("#exportBox").classList.contains("hidden")) return;
     const base = Number($("#exportProgress").value) || 0;
-    if (base >= 50 && base < 88) $("#exportPercent").textContent = `${Math.min(87, Math.round(base + progress * 20))}%`;
+    if (base >= 50 && base < 88) $("#exportPercent").textContent = `${Math.min(87, Math.round(base + Number(progress || 0) * 20))}%`;
   });
-  const baseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
   await ffmpeg.load({
-    classWorkerURL: await toBlobUrl("https://cdnjs.cloudflare.com/ajax/libs/ffmpeg/0.12.15/umd/814.ffmpeg.js", "text/javascript"),
-    coreURL: await toBlobUrl(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-    wasmURL: await toBlobUrl(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+    candidates: [
+      {
+        coreURL: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd/ffmpeg-core.js",
+        wasmURL: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd/ffmpeg-core.wasm",
+      },
+      {
+        coreURL: "https://unpkg.com/@ffmpeg/core@0.12.10/dist/umd/ffmpeg-core.js",
+        wasmURL: "https://unpkg.com/@ffmpeg/core@0.12.10/dist/umd/ffmpeg-core.wasm",
+      },
+    ],
   });
   state.ffmpegReady = true;
   return ffmpeg;
-}
-
-function loadExternalScript(url, id, timeoutMs = 30000) {
-  if (id && document.getElementById(id)) {
-    return new Promise((resolve, reject) => {
-      const existing = document.getElementById(id);
-      if (existing.dataset.loaded === "true") return resolve();
-      existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener("error", () => reject(new Error("The audiobook encoder library could not be downloaded.")), { once: true });
-    });
-  }
-  return new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    if (id) script.id = id;
-    script.src = url;
-    script.async = true;
-    const timer = setTimeout(() => { script.remove(); reject(new Error("The audiobook encoder download timed out.")); }, timeoutMs);
-    script.onload = () => { clearTimeout(timer); script.dataset.loaded = "true"; resolve(); };
-    script.onerror = () => { clearTimeout(timer); script.remove(); reject(new Error("The audiobook encoder library could not be downloaded.")); };
-    document.head.appendChild(script);
-  });
-}
-
-async function toBlobUrl(url, type) {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Could not download ${url.split("/").pop()}.`);
-  return URL.createObjectURL(new Blob([await response.blob()], { type }));
 }
 
 function buildFfmetadata(chapters) {
@@ -894,6 +1007,8 @@ function restoreLocalProject() {
     }
     const theme = storageGet("article-audiobook-theme");
     if (theme) document.documentElement.dataset.theme = theme;
+    const performanceMode = storageGet("article-audiobook-performance") || "auto";
+    if ($("#performanceMode")) $("#performanceMode").value = ["auto", "webgpu", "wasm"].includes(performanceMode) ? performanceMode : "auto";
   } catch (error) {
     console.warn("Could not restore saved project", error);
   }

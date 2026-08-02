@@ -8,7 +8,7 @@ self.onmessage = async (event) => {
   const message = event.data || {};
   try {
     if (message.type === "init") {
-      await ensureModel(message.device || "auto");
+      await ensureModel(message.performance || message.device || "auto");
       return;
     }
     if (message.type === "cancel") {
@@ -17,7 +17,7 @@ self.onmessage = async (event) => {
     }
     if (message.type === "generate") {
       cancelled = false;
-      await ensureModel(message.device || "auto");
+      await ensureModel(message.performance || message.device || "auto");
       await generateAudio(message);
     }
   } catch (error) {
@@ -26,25 +26,31 @@ self.onmessage = async (event) => {
 };
 
 async function ensureModel(preference) {
+  const requested = ["auto", "webgpu", "wasm"].includes(preference) ? preference : "auto";
   const webgpuAvailable = Boolean(self.navigator?.gpu);
-  const device = preference === "wasm" ? "wasm" : (webgpuAvailable ? "webgpu" : "wasm");
+  let device = requested === "wasm" ? "wasm" : "webgpu";
+  let fallbackReason = "";
+  if (device === "webgpu" && !webgpuAvailable) {
+    device = "wasm";
+    fallbackReason = "WebGPU is unavailable, so compatibility mode is being used.";
+  }
   const dtype = device === "webgpu" ? "fp32" : "q8";
   const key = `${device}:${dtype}`;
   if (tts && configKey === key) {
-    self.postMessage({ type: "ready", device, voices: serialiseVoices(tts.voices) });
+    self.postMessage({ type: "ready", device, dtype, preference: requested, fallbackReason, voices: serialiseVoices(tts.voices) });
     return;
   }
 
-  self.postMessage({ type: "model-start", device, dtype });
+  self.postMessage({ type: "model-start", device, dtype, preference: requested, fallbackReason });
   tts = await KokoroTTS.from_pretrained("onnx-community/Kokoro-82M-v1.0-ONNX", {
     device,
     dtype,
     progress_callback: (item) => {
-      self.postMessage({ type: "model-progress", item });
+      self.postMessage({ type: "model-progress", item, device, dtype, preference: requested });
     },
   });
   configKey = key;
-  self.postMessage({ type: "ready", device, voices: serialiseVoices(tts.voices) });
+  self.postMessage({ type: "ready", device, dtype, preference: requested, fallbackReason, voices: serialiseVoices(tts.voices) });
 }
 
 function serialiseVoices(voices) {
@@ -55,8 +61,8 @@ function serialiseVoices(voices) {
   }
 }
 
-async function generateAudio({ id, text, voice, speed }) {
-  const chunks = splitForNarration(text);
+async function generateAudio({ id, text, voice, speed, performance }) {
+  const chunks = splitForNarration(text, messageChunkSize(performance));
   if (!chunks.length) throw new Error("This chapter has no text to narrate.");
 
   const audioChunks = [];
@@ -98,7 +104,11 @@ async function generateAudio({ id, text, voice, speed }) {
   });
 }
 
-function splitForNarration(text) {
+function messageChunkSize(performance) {
+  return performance === "wasm" ? 650 : 900;
+}
+
+function splitForNarration(text, maxLength = 650) {
   const normalised = String(text || "")
     .replace(/\r/g, "")
     .replace(/[ \t]+/g, " ")
@@ -109,7 +119,7 @@ function splitForNarration(text) {
   const paragraphs = normalised.split(/\n\s*\n/).map((part) => part.trim()).filter(Boolean);
   const output = [];
   for (const paragraph of paragraphs) {
-    if (paragraph.length <= 650) {
+    if (paragraph.length <= maxLength) {
       output.push(paragraph);
       continue;
     }
@@ -117,7 +127,7 @@ function splitForNarration(text) {
     let current = "";
     for (const sentence of sentences) {
       const candidate = `${current} ${sentence.trim()}`.trim();
-      if (candidate.length > 650 && current) {
+      if (candidate.length > maxLength && current) {
         output.push(current);
         current = sentence.trim();
       } else {
