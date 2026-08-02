@@ -55,6 +55,9 @@ const state = {
   voiceSample: null,
   exportLastPercent: 0,
   exportStageBase: 0,
+  systemVoices: [],
+  systemUtterance: null,
+  voiceMode: "kokoro",
 };
 
 let db = null;
@@ -66,6 +69,7 @@ function startApp() {
     applyDeviceClass();
     wireInterface();
     populateVoiceSelect(DEFAULT_VOICES);
+    initialiseSystemVoiceSupport();
     restoreLocalProject();
     updateAdaptivePerformanceUi();
     hydrateMetadataInputs();
@@ -366,7 +370,12 @@ async function renderEditor() {
   }
   $("#chapterTitle").value = chapter.title;
   $("#chapterText").value = chapter.text;
-  $("#voiceSelect").value = chapter.voice;
+  if (isIOSLike()) {
+    populateSystemVoiceSelect();
+    $("#voiceSelect").value = chapter.iosPreviewVoiceURI || $("#voiceSelect").value;
+  } else {
+    $("#voiceSelect").value = chapter.voice;
+  }
   $("#speedInput").value = chapter.speed;
   $("#speedValue").textContent = `${Number(chapter.speed).toFixed(2)}×`;
   updateTextStats(chapter.text, chapter.speed);
@@ -392,6 +401,7 @@ async function renderEditor() {
     sampleButton.textContent = "Voice Sample";
     sampleButton.classList.remove("loading");
   }
+  applyPlatformCapabilities();
 }
 
 function updateSelectedFromEditor() {
@@ -399,7 +409,8 @@ function updateSelectedFromEditor() {
   if (!chapter) return;
   chapter.title = $("#chapterTitle").value.trim() || "Untitled article";
   chapter.text = $("#chapterText").value;
-  chapter.voice = $("#voiceSelect").value;
+  if (isIOSLike()) chapter.iosPreviewVoiceURI = $("#voiceSelect").value;
+  else chapter.voice = $("#voiceSelect").value;
   chapter.speed = Number($("#speedInput").value);
   $("#speedValue").textContent = `${chapter.speed.toFixed(2)}×`;
   updateTextStats(chapter.text, chapter.speed);
@@ -407,7 +418,8 @@ function updateSelectedFromEditor() {
   renderChapterList();
   const status = chapterStatus(chapter);
   $("#renderBadge").textContent = status.label;
-  $("#downloadMp3Btn").disabled = chapter.renderedSignature !== signatureString(chapter);
+  $("#downloadMp3Btn").disabled = isIOSLike() || chapter.renderedSignature !== signatureString(chapter);
+  applyPlatformCapabilities();
 }
 
 function updateTextStats(text, speed = 1) {
@@ -418,6 +430,8 @@ function updateTextStats(text, speed = 1) {
 }
 
 function populateVoiceSelect(voiceData) {
+  if (isIOSLike()) return populateSystemVoiceSelect();
+  state.voiceMode = "kokoro";
   const select = $("#voiceSelect");
   const current = select.value;
   let entries = DEFAULT_VOICES;
@@ -435,7 +449,141 @@ function populateVoiceSelect(voiceData) {
   select.value = current || selectedChapter()?.voice || "af_heart";
 }
 
+function initialiseSystemVoiceSupport() {
+  if (!isIOSLike() || !("speechSynthesis" in window)) return;
+  populateSystemVoiceSelect();
+  const refresh = () => {
+    state.systemVoices = window.speechSynthesis.getVoices() || [];
+    populateSystemVoiceSelect();
+  };
+  window.speechSynthesis.addEventListener?.("voiceschanged", refresh);
+  window.setTimeout(refresh, 250);
+  window.setTimeout(refresh, 1000);
+}
+
+function populateSystemVoiceSelect() {
+  if (!isIOSLike()) return;
+  state.voiceMode = "system";
+  const select = $("#voiceSelect");
+  if (!select) return;
+  const chapter = selectedChapter();
+  const current = chapter?.iosPreviewVoiceURI || select.value;
+  const voices = (window.speechSynthesis?.getVoices?.() || state.systemVoices || [])
+    .filter((voice) => voice && voice.name)
+    .sort((a, b) => {
+      const score = (voice) => /^en-CA/i.test(voice.lang) ? 0 : /^en-US/i.test(voice.lang) ? 1 : /^en-GB/i.test(voice.lang) ? 2 : /^en/i.test(voice.lang) ? 3 : 4;
+      return score(a) - score(b) || a.name.localeCompare(b.name);
+    });
+  state.systemVoices = voices;
+  select.innerHTML = "";
+  const defaultOption = document.createElement("option");
+  defaultOption.value = "__system_default__";
+  defaultOption.textContent = "Default iOS voice";
+  select.appendChild(defaultOption);
+  voices.forEach((voice) => {
+    const option = document.createElement("option");
+    option.value = voice.voiceURI || voice.name;
+    option.textContent = `${voice.name} — ${voice.lang || "system"}`;
+    select.appendChild(option);
+  });
+  if ([...select.options].some((option) => option.value === current)) select.value = current;
+  else select.value = "__system_default__";
+}
+
+function selectedSystemVoice() {
+  const selected = $("#voiceSelect")?.value;
+  if (!selected || selected === "__system_default__") return null;
+  return (window.speechSynthesis?.getVoices?.() || state.systemVoices || []).find((voice) => (voice.voiceURI || voice.name) === selected) || null;
+}
+
+function playSystemVoiceSample() {
+  return new Promise((resolve, reject) => {
+    if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
+      reject(new Error("Built-in speech is unavailable in this browser."));
+      return;
+    }
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance("This is a sample of my voice.");
+      const voice = selectedSystemVoice();
+      if (voice) utterance.voice = voice;
+      utterance.rate = Math.max(0.7, Math.min(1.3, Number($("#speedInput")?.value || 1)));
+      state.systemUtterance = utterance;
+      state.voiceSample = { system: true };
+      setVoiceSampleButtonState("Playing sample…", true);
+      utterance.onend = () => {
+        state.systemUtterance = null;
+        state.voiceSample = null;
+        setVoiceSampleButtonState("Voice Sample", false);
+        resolve();
+      };
+      utterance.onerror = (event) => {
+        state.systemUtterance = null;
+        state.voiceSample = null;
+        setVoiceSampleButtonState("Voice Sample", false);
+        reject(new Error(event?.error === "canceled" ? "Voice sample cancelled." : "The built-in iOS voice could not be played."));
+      };
+      window.speechSynthesis.speak(utterance);
+    } catch (error) {
+      state.systemUtterance = null;
+      state.voiceSample = null;
+      setVoiceSampleButtonState("Voice Sample", false);
+      reject(error);
+    }
+  });
+}
+
+function desktopNarrationMessage() {
+  return "Local neural narration and MP3/M4B creation require the desktop version. Save this project and open it on a computer to generate the audio.";
+}
+
+function applyPlatformCapabilities() {
+  const ios = isIOSLike();
+  const notice = $("#iosModeNotice");
+  if (notice) notice.classList.toggle("hidden", !ios);
+  const label = $("#voiceSelectLabel");
+  if (label) label.textContent = ios ? "iOS preview voice" : "Narrator voice";
+  const privacy = $("#privacyBadge");
+  if (privacy) privacy.textContent = ios ? "Local editing + preview" : "Local processing";
+  const performance = $("#performanceMode");
+  if (performance) {
+    performance.disabled = ios || Boolean(state.generation) || Boolean(state.voiceSample);
+    performance.classList.toggle("desktop-only-disabled", ios);
+  }
+  const generate = $("#generateBtn");
+  const generateAll = $("#generateAllBtn");
+  const exportButton = $("#exportM4bBtn");
+  const download = $("#downloadMp3Btn");
+  const generateMissing = $("#generateMissingCheck");
+  [generate, generateAll, exportButton, download].forEach((button) => {
+    if (!button) return;
+    if (ios) {
+      button.disabled = true;
+      button.classList.add("desktop-only-disabled");
+      button.title = desktopNarrationMessage();
+    } else {
+      button.classList.remove("desktop-only-disabled");
+      button.removeAttribute("title");
+    }
+  });
+  if (generateMissing) {
+    generateMissing.disabled = ios;
+    generateMissing.closest("label")?.classList.toggle("desktop-only-disabled", ios);
+  }
+  if (ios) {
+    updateEngineBadge("Desktop generation required", "warn", desktopNarrationMessage());
+    const note = $("#performanceNote");
+    if (note) note.textContent = "The local neural voice model is disabled on iPhone and iPad because it does not complete reliably in iOS browsers.";
+    const badge = $("#renderBadge");
+    if (badge && selectedChapter()) {
+      badge.textContent = "Desktop generation required";
+      badge.className = "badge warn";
+    }
+  }
+}
+
 async function ensureTtsWorker(options = {}) {
+  if (isIOSLike()) throw new Error(desktopNarrationMessage());
   if (location.protocol === "file:") {
     throw new Error("Narration generation requires this folder to be uploaded to an HTTPS website. All editing, chapter arrangement, and project controls work locally.");
   }
@@ -582,19 +730,18 @@ function updateAdaptivePerformanceUi() {
   if (select) {
     const webgpuOption = select.querySelector('option[value="webgpu"]');
     if (webgpuOption) webgpuOption.disabled = ios;
-    if (ios && select.value === "webgpu") {
-      select.value = "auto";
-      storageSet("article-audiobook-performance", "auto");
-    }
+    if (ios && select.value === "webgpu") select.value = "auto";
   }
-  if (note) {
-    note.textContent = ios
-      ? "iPhone and iPad use an on-demand CPU/WASM safe mode with smaller narration sections to reduce stalls and memory use."
-      : "The voice model preloads and warms up in the background. Automatic uses GPU acceleration and larger sections when available.";
+  if (note && !ios) {
+    note.textContent = "The voice model preloads and warms up in the background. Automatic uses GPU acceleration and larger sections when available.";
   }
-  if (ios && !state.ttsReady && !state.ttsLoading) {
-    updateEngineBadge("Loads on demand — iOS", "warn", "Background model preloading is disabled on iPhone and iPad to preserve memory.");
+  if (ios) {
+    resetTtsWorker();
+    populateSystemVoiceSelect();
+  } else if (state.voiceMode === "system") {
+    populateVoiceSelect(DEFAULT_VOICES);
   }
+  applyPlatformCapabilities();
 }
 
 function handlePerformanceModeChange() {
@@ -603,7 +750,7 @@ function handlePerformanceModeChange() {
   resetTtsWorker();
   updateAdaptivePerformanceUi();
   if (isIOSLike()) {
-    updateEngineBadge("Loads on demand — iOS", "warn", "The safer CPU/WASM engine will load when narration starts.");
+    applyPlatformCapabilities();
     return;
   }
   const labels = { auto: "Automatic selected", webgpu: "WebGPU requested", wasm: "CPU/WASM selected" };
@@ -617,7 +764,7 @@ function scheduleTtsPreload(delay = 1800) {
     return;
   }
   if (isIOSLike()) {
-    updateEngineBadge("Loads on demand — iOS", "warn", "Background preloading is disabled to reduce iPhone and iPad memory pressure.");
+    applyPlatformCapabilities();
     return;
   }
   const start = () => {
@@ -643,6 +790,11 @@ function updateEngineBadge(text, className = "", title = "") {
 async function playVoiceSample() {
   const chapter = selectedChapter();
   if (!chapter) return toast("Select a chapter first.", "error");
+  if (isIOSLike()) {
+    try { await playSystemVoiceSample(); }
+    catch (error) { toast(error.message || String(error), "error"); }
+    return;
+  }
   if (state.generation) return toast("Wait for the current narration to finish before playing a voice sample.", "error");
   if (state.voiceSample) return;
   const requestId = makeId();
@@ -690,6 +842,7 @@ function setVoiceSampleButtonState(label, active) {
 }
 
 async function generateChapter(id, options = {}) {
+  if (isIOSLike()) throw new Error(desktopNarrationMessage());
   const chapter = state.chapters.find((item) => item.id === id);
   if (!chapter) throw new Error("Chapter not found.");
   if (!chapter.text.trim()) throw new Error("This chapter has no text.");
@@ -818,13 +971,14 @@ function cancelGeneration() {
 }
 
 function setGenerationControls(active) {
-  $("#generateBtn").disabled = active;
+  $("#generateBtn").disabled = active || isIOSLike();
   $("#cancelGenerateBtn").classList.toggle("hidden", !active);
   $("#deleteChapterBtn").disabled = active;
   const sampleButton = $("#voiceSampleBtn");
   if (sampleButton && !state.voiceSample) sampleButton.disabled = active || !selectedChapter();
   const performanceSelect = $("#performanceMode");
-  if (performanceSelect) performanceSelect.disabled = active || Boolean(state.voiceSample);
+  if (performanceSelect) performanceSelect.disabled = active || Boolean(state.voiceSample) || isIOSLike();
+  applyPlatformCapabilities();
 }
 
 function showGenerationBox(label, percent = 0, detail = "", error = false) {
@@ -860,6 +1014,7 @@ function normaliseModelProgress(item = {}) {
 }
 
 async function generateAllChapters() {
+  if (isIOSLike()) return toast(desktopNarrationMessage(), "error");
   if (!state.chapters.length) return toast("Add at least one chapter first.", "error");
   resetExportProgress();
   try {
@@ -877,6 +1032,7 @@ async function generateAllChapters() {
 }
 
 async function downloadChapterMp3(id) {
+  if (isIOSLike()) return toast(desktopNarrationMessage(), "error");
   const chapter = state.chapters.find((item) => item.id === id);
   const record = chapter ? await getAudio(chapter.id) : null;
   if (!chapter || !record?.blob || chapter.renderedSignature !== signatureString(chapter)) return toast("Generate this chapter first.", "error");
@@ -898,6 +1054,7 @@ async function downloadChapterMp3(id) {
 }
 
 async function exportM4b() {
+  if (isIOSLike()) return toast(desktopNarrationMessage(), "error");
   if (!state.chapters.length) return toast("Add at least one chapter first.", "error");
   resetExportProgress();
   if (isMobileLike() && isLongMobileExport()) {
@@ -1274,6 +1431,9 @@ async function requestNewProject() {
   });
   if (!confirmed) return;
 
+  try { window.speechSynthesis?.cancel(); } catch {}
+  state.systemUtterance = null;
+  state.voiceSample = null;
   state.chapters = [];
   state.selectedId = null;
   if (state.cover?.url) URL.revokeObjectURL(state.cover.url);
@@ -1301,6 +1461,10 @@ async function requestNewProject() {
 function applyDeviceClass() {
   document.documentElement.classList.toggle("mobile-device", isMobileLike());
   document.documentElement.classList.toggle("ios-device", isIOSLike());
+  if (document.readyState !== "loading") {
+    if (isIOSLike()) populateSystemVoiceSelect();
+    applyPlatformCapabilities();
+  }
 }
 
 function isMobileLike() {
@@ -1422,7 +1586,7 @@ async function loadProjectFile(file) {
   try {
     const payload = JSON.parse(await file.text());
     if (!Array.isArray(payload.chapters)) throw new Error("This is not a valid Article Audiobook Studio project.");
-    state.chapters = payload.chapters.map((chapter) => ({ voice: "af_heart", speed: 1, renderedSignature: "", duration: 0, ...chapter, id: chapter.id || makeId() }));
+    state.chapters = payload.chapters.map((chapter) => ({ voice: "af_heart", iosPreviewVoiceURI: "__system_default__", speed: 1, renderedSignature: "", duration: 0, ...chapter, id: chapter.id || makeId() }));
     for (const chapter of state.chapters) {
       const cached = await getAudio(chapter.id);
       if (cached?.blob && cached.signature === signatureString(chapter)) {
