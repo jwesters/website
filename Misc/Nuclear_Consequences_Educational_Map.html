@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Nuclear Consequences: An Educational Map</title>
+<link rel="preconnect" href="https://unpkg.com">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{
+  --bg:#0b1118;--panel:#121c27;--panel2:#182534;--text:#edf4fa;--muted:#a9b9c8;
+  --accent:#71d6c4;--warning:#ffc56e;--danger:#ff7b72;--line:#2a3a49;--focus:#9ce8dc;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+body{overflow:hidden}
+button,select,input{font:inherit}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.app{height:100%;display:grid;grid-template-columns:360px 1fr}
+.sidebar{background:var(--panel);border-right:1px solid var(--line);overflow:auto;padding:20px}
+.brand{display:flex;gap:12px;align-items:center;margin-bottom:8px}
+.icon{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:#263746;font-size:22px}
+h1{font-size:1.28rem;line-height:1.2;margin:0}
+.subtitle{color:var(--muted);font-size:.91rem;line-height:1.45;margin:6px 0 18px}
+.notice{border-left:4px solid var(--accent);background:#17262c;padding:11px 12px;border-radius:8px;margin-bottom:17px;font-size:.87rem;line-height:1.45}
+.control{margin-bottom:15px}
+.control label{display:block;font-weight:700;font-size:.9rem;margin-bottom:7px}
+select,input[type=range]{width:100%}
+select{background:var(--panel2);color:var(--text);border:1px solid #3b4c5b;border-radius:9px;padding:10px}
+.range-row{display:grid;grid-template-columns:1fr 76px;gap:10px;align-items:center}
+output{background:var(--panel2);border:1px solid #3b4c5b;border-radius:9px;padding:8px;text-align:center;font-weight:800}
+.hint{font-size:.78rem;color:var(--muted);line-height:1.35;margin-top:6px}
+.primary,.secondary,.tab-btn{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:pointer}
+.primary{width:100%;background:var(--accent);color:#07130f}
+.secondary{background:#263746;color:var(--text);border:1px solid #3b4c5b}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:16px 0}
+.map-wrap{position:relative;min-width:0}
+#map{height:100%;width:100%;background:#17222e}
+.map-instruction{position:absolute;z-index:600;left:50%;top:16px;transform:translateX(-50%);background:rgba(11,17,24,.94);border:1px solid #415466;border-radius:999px;padding:9px 15px;font-size:.86rem;font-weight:750;box-shadow:0 6px 20px rgba(0,0,0,.28);pointer-events:none;text-align:center}
+.legend{position:absolute;z-index:600;right:14px;bottom:18px;background:rgba(11,17,24,.94);border:1px solid #415466;border-radius:12px;padding:11px 13px;font-size:.77rem;box-shadow:0 6px 20px rgba(0,0,0,.28)}
+.legend div{display:flex;align-items:center;gap:7px;margin:5px 0}
+.swatch{width:13px;height:13px;border-radius:50%}
+.tabs{display:flex;gap:5px;margin:16px 0 10px}
+.tab-btn{flex:1;padding:8px 5px;background:#1a2937;color:var(--muted);font-size:.78rem}
+.tab-btn.active{background:#2b4252;color:#fff}
+.tab{display:none}
+.tab.active{display:block}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:13px;margin-bottom:10px}
+.card h2,.card h3{font-size:.96rem;margin:0 0 7px}
+.card p,.card li{color:#ced9e2;font-size:.82rem;line-height:1.48}
+.card ul{padding-left:18px;margin:6px 0}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{background:#101a24;border-radius:9px;padding:10px}
+.stat strong{display:block;font-size:1.05rem;color:#fff}
+.stat span{font-size:.72rem;color:var(--muted)}
+.empty{color:var(--muted);font-size:.85rem;line-height:1.5}
+.source-links a{color:#91dfd1}
+.modal{position:fixed;z-index:2000;inset:0;background:rgba(0,0,0,.72);display:none;place-items:center;padding:18px}
+.modal.open{display:grid}
+.modal-box{max-width:720px;max-height:88vh;overflow:auto;background:var(--panel);border:1px solid #405465;border-radius:15px;padding:22px}
+.modal-box h2{margin-top:0}
+.modal-close{float:right}
+.leaflet-control-attribution{font-size:9px}
+@media(max-width:820px){
+ body{overflow:auto}
+ .app{height:auto;min-height:100%;grid-template-columns:1fr;grid-template-rows:auto 64vh}
+ .sidebar{border-right:0;border-bottom:1px solid var(--line);padding:14px}
+ .map-wrap{min-height:520px}
+ .map-instruction{top:10px;max-width:92%;border-radius:12px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+  <div class="brand"><div class="icon" aria-hidden="true">🕊️</div><div><h1>Nuclear Consequences</h1><div class="subtitle">An educational visualization of humanitarian and environmental harm</div></div></div>
+  <div class="notice"><strong>Purpose:</strong> This is not a prediction or targeting tool. It uses simplified, uncertain models to communicate scale and support nuclear-risk education.</div>
+
+  <div class="control">
+    <label for="preset">Historical/reference yield</label>
+    <select id="preset">
+      <option value="15">Hiroshima reference — about 15 kt</option>
+      <option value="21">Nagasaki reference — about 21 kt</option>
+      <option value="100">100 kt — educational reference</option>
+      <option value="300">300 kt — educational reference</option>
+      <option value="800">800 kt — educational reference</option>
+      <option value="custom">Custom educational yield</option>
+    </select>
+  </div>
+
+  <div class="control" id="customControl" hidden>
+    <label for="yield">Yield in kilotons (broad model)</label>
+    <div class="range-row"><input id="yield" type="range" min="1" max="1000" value="100"><output id="yieldOut">100 kt</output></div>
+  </div>
+
+  <div class="control">
+    <label for="density">Settlement type near the selected point</label>
+    <select id="density">
+      <option value="rural">Rural / sparsely populated</option>
+      <option value="suburban">Suburban / small town</option>
+      <option value="urban" selected>Urban</option>
+      <option value="dense">Dense urban centre</option>
+    </select>
+    <div class="hint">Used only for broad exposure and displacement ranges. The app does not retrieve local population data.</div>
+  </div>
+
+  <button class="primary" id="simulate">Select a point on the map</button>
+  <div class="actions">
+    <button class="secondary" id="clear">Clear map</button>
+    <button class="secondary" id="about">How it works</button>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab-btn active" data-tab="results">Impact</button>
+    <button class="tab-btn" data-tab="history">History</button>
+    <button class="tab-btn" data-tab="peace">Peace efforts</button>
+  </div>
+
+  <section class="tab active" id="results">
+    <div id="resultContent" class="empty">Choose a yield, select the surrounding settlement type, and click a point on the world map. The result will emphasize people, services, recovery, and uncertainty—not spectacle.</div>
+  </section>
+
+  <section class="tab" id="history">
+    <div class="card">
+      <h2>Hiroshima — August 6, 1945</h2>
+      <p>A uranium weapon with an estimated yield of roughly 15 kilotons was detonated over Hiroshima. Buildings, medical services, families, and neighbourhoods were devastated. Estimates vary, but approximately 140,000 people had died by the end of 1945. Survivors experienced burns, trauma, radiation illness, cancer risk, bereavement, displacement, and discrimination.</p>
+    </div>
+    <div class="card">
+      <h2>Nagasaki — August 9, 1945</h2>
+      <p>A plutonium weapon with an estimated yield of roughly 21 kilotons was detonated over Nagasaki. Tens of thousands died in 1945, and many others lived with lifelong physical and psychological consequences. Terrain changed the pattern of destruction, illustrating why simple circles cannot predict real events.</p>
+    </div>
+    <div class="card">
+      <h3>Remembering people, not statistics</h3>
+      <p>The people affected included children, patients, health workers, forced labourers, families, and entire communities. Numerical estimates cannot represent the individual lives, relationships, cultures, and futures lost.</p>
+    </div>
+  </section>
+
+  <section class="tab" id="peace">
+    <div class="card">
+      <h2>Non-Proliferation Treaty (NPT)</h2>
+      <p>Opened for signature in 1968 and in force since 1970, the NPT seeks to prevent the spread of nuclear weapons, support peaceful nuclear cooperation, and advance nuclear disarmament.</p>
+    </div>
+    <div class="card">
+      <h2>Treaty on the Prohibition of Nuclear Weapons (TPNW)</h2>
+      <p>Adopted in 2017 and in force since 2021, the TPNW establishes broad prohibitions on nuclear-weapon activities for participating states and recognizes assistance for victims and environmental remediation.</p>
+    </div>
+    <div class="card source-links">
+      <h3>Further learning</h3>
+      <p><a href="https://disarmament.unoda.org/en/our-work/weapons-mass-destruction/nuclear-weapons/treaty-non-proliferation-nuclear-weapons" target="_blank" rel="noopener">United Nations: NPT</a><br>
+      <a href="https://disarmament.unoda.org/en/our-work/weapons-mass-destruction/nuclear-weapons/treaty-prohibition-nuclear-weapons" target="_blank" rel="noopener">United Nations: TPNW</a><br>
+      <a href="https://www.icanw.org/hiroshima_and_nagasaki_bombings" target="_blank" rel="noopener">ICAN: Hiroshima and Nagasaki</a></p>
+    </div>
+  </section>
+</aside>
+
+<main class="map-wrap">
+  <div id="map" aria-label="Interactive world map"></div>
+  <div class="map-instruction" id="instruction">Choose settings, then click anywhere on the map</div>
+  <div class="legend" aria-label="Impact-zone legend">
+    <div><span class="swatch" style="background:#d94949"></span>Extreme destruction</div>
+    <div><span class="swatch" style="background:#f28e54"></span>Severe blast damage</div>
+    <div><span class="swatch" style="background:#f4cf62"></span>Thermal injury / fires</div>
+    <div><span class="swatch" style="background:#8ec9d6"></span>Widespread disruption</div>
+  </div>
+</main>
+</div>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+ <div class="modal-box">
+  <button class="secondary modal-close" id="modalClose">Close</button>
+  <h2 id="modalTitle">How this educational model works</h2>
+  <p>This app uses broad circular zones that scale approximately with the cube root of explosive yield. The reference distances are intentionally simplified. Actual consequences depend on burst height, terrain, weather, construction, emergency preparedness, time of day, and many other factors.</p>
+  <p><strong>It does not model fallout direction, weapon delivery, target value, optimal detonation height, or attack planning.</strong> Radiation and environmental effects are explained qualitatively because a trustworthy local estimate would require detailed atmospheric and geographic data.</p>
+  <p>Humanitarian estimates use a generic settlement-density range selected by the learner. They are not casualty predictions. The figures describe people potentially within broad disruption zones and people who might need temporary or long-term shelter.</p>
+  <p>Circle size can help learners understand scale, but it cannot express grief, disability, cultural loss, breakdown of health care, family separation, or decades of recovery.</p>
+ </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const map = L.map('map',{worldCopyJump:true,minZoom:2}).setView([24,0],2);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+ maxZoom:18, attribution:'&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+const preset=document.getElementById('preset'), slider=document.getElementById('yield'),
+ out=document.getElementById('yieldOut'), custom=document.getElementById('customControl'),
+ density=document.getElementById('density'), result=document.getElementById('resultContent'),
+ instruction=document.getElementById('instruction'), simulateBtn=document.getElementById('simulate');
+
+let choosing=false, layers=[];
+
+preset.addEventListener('change',()=>{custom.hidden=preset.value!=='custom';});
+slider.addEventListener('input',()=>out.value=slider.value+' kt');
+simulateBtn.addEventListener('click',()=>{
+ choosing=true; instruction.textContent='Click a location to explore the humanitarian consequences';
+ simulateBtn.textContent='Waiting for map selection…';
+});
+document.getElementById('clear').addEventListener('click',()=>{
+ layers.forEach(x=>map.removeLayer(x)); layers=[]; result.innerHTML='Choose a yield, select the surrounding settlement type, and click a point on the world map.';
+ instruction.textContent='Choose settings, then click anywhere on the map'; simulateBtn.textContent='Select a point on the map'; choosing=false;
+});
+map.on('click',e=>{ if(!choosing)return; choosing=false; runSimulation(e.latlng); });
+
+function currentYield(){return preset.value==='custom'?Number(slider.value):Number(preset.value)}
+function fmtKm(v){return v<1?Math.round(v*1000)+' m':v.toFixed(v<10?1:0)+' km'}
+function fmtPeople(n){
+ if(n>=1000000)return (n/1000000).toFixed(n>=10000000?0:1)+' million';
+ if(n>=1000)return Math.round(n/1000)+' thousand'; return Math.round(n).toLocaleString();
+}
+function rangeText(a,b){return fmtPeople(a)+'–'+fmtPeople(b)}
+function area(r){return Math.PI*r*r}
+
+function runSimulation(latlng){
+ layers.forEach(x=>map.removeLayer(x)); layers=[];
+ const y=currentYield(), scale=Math.cbrt(y/15);
+ // Broad educational reference distances at 15 kt, not engineering calculations.
+ const radii={
+  extreme:.22*scale,
+  severe:1.25*scale,
+  thermal:2.1*scale,
+  disruption:4.6*scale
+ };
+ const zones=[
+  {r:radii.disruption,c:'#8ec9d6',fill:.16},
+  {r:radii.thermal,c:'#f4cf62',fill:.22},
+  {r:radii.severe,c:'#f28e54',fill:.30},
+  {r:radii.extreme,c:'#d94949',fill:.48}
+ ];
+ zones.forEach(z=>layers.push(L.circle(latlng,{radius:z.r*1000,color:z.c,fillColor:z.c,fillOpacity:z.fill,weight:2}).addTo(map)));
+ layers.push(L.marker(latlng).addTo(map).bindPopup('<strong>Educational scenario point</strong><br>'+y+' kilotons<br>Not a prediction or targeting assessment.').openPopup());
+ map.fitBounds(layers[0].getBounds(),{padding:[40,40],maxZoom:11});
+
+ const densities={
+  rural:[15,60], suburban:[700,2200], urban:[2500,7000], dense:[8000,18000]
+ }[density.value];
+ const disruptedArea=area(radii.disruption), severeArea=area(radii.severe);
+ const exposedLow=disruptedArea*densities[0], exposedHigh=disruptedArea*densities[1];
+ const displacedLow=severeArea*densities[0]*.45, displacedHigh=severeArea*densities[1]*1.15;
+ const landmark = radii.disruption<2?'about the length of a major airport runway':
+   radii.disruption<7?'comparable to crossing a central city on foot':
+   radii.disruption<15?'comparable to travelling across a large metropolitan core':
+   'large enough to span multiple neighbouring communities';
+
+ result.innerHTML=`
+ <div class="card">
+  <h2>Humanitarian overview</h2>
+  <div class="stat-grid">
+   <div class="stat"><strong>${rangeText(exposedLow,exposedHigh)}</strong><span>people potentially inside the broad disruption area</span></div>
+   <div class="stat"><strong>${rangeText(displacedLow,displacedHigh)}</strong><span>illustrative short- or long-term shelter need</span></div>
+  </div>
+  <p>These are deliberately broad teaching ranges—not predicted deaths or injuries. Real population, building, terrain, weather, and response conditions are not included.</p>
+ </div>
+ <div class="card">
+  <h3>Approximate physical zones</h3>
+  <ul>
+   <li><strong>Extreme destruction:</strong> about ${fmtKm(radii.extreme)} from the selected point.</li>
+   <li><strong>Severe blast damage:</strong> about ${fmtKm(radii.severe)}.</li>
+   <li><strong>Thermal injury and fires:</strong> about ${fmtKm(radii.thermal)}.</li>
+   <li><strong>Widespread disruption:</strong> about ${fmtKm(radii.disruption)}.</li>
+  </ul>
+  <p>The outer radius is ${landmark}. Circular zones are a visual aid; actual damage would be irregular.</p>
+ </div>
+ <div class="card">
+  <h3>Health and radiation</h3>
+  <p>People could experience traumatic injuries, severe burns, eye injury, acute radiation illness near the event, and increased long-term cancer risk. Hospitals and clinics may be damaged precisely when demand becomes overwhelming. Fallout is not drawn because wind, precipitation, terrain, and detonation conditions can radically change where radioactive material travels.</p>
+ </div>
+ <div class="card">
+  <h3>Infrastructure and displacement</h3>
+  <p>Likely consequences include fires, blocked roads, power and communications failure, contaminated or interrupted water supplies, overwhelmed emergency services, family separation, inaccessible schools, loss of housing, and prolonged displacement. Damage to health systems can turn otherwise survivable injuries into deaths.</p>
+ </div>
+ <div class="card">
+  <h3>Environmental consequences</h3>
+  <p>Debris, smoke, fires, damaged sewage systems, hazardous building materials, and radioactive contamination could affect soil and water. Cleanup and exclusion zones may persist for years. A wider nuclear conflict could also produce effects far beyond any single map location, including disruption to food systems and climate.</p>
+ </div>
+ <div class="card">
+  <h3>Educational reflection</h3>
+  <p>A nuclear detonation is not a momentary circle on a map. It is a continuing humanitarian emergency affecting people, families, culture, health, education, housing, and the environment across generations. Prevention, diplomacy, risk reduction, non-proliferation, and disarmament matter because no emergency response can undo these consequences.</p>
+ </div>`;
+ instruction.textContent='Scenario displayed — review the human consequences in the side panel';
+ simulateBtn.textContent='Select another point';
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn=>btn.addEventListener('click',()=>{
+ document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
+ document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+ btn.classList.add('active'); document.getElementById(btn.dataset.tab).classList.add('active');
+}));
+const modal=document.getElementById('modal');
+document.getElementById('about').onclick=()=>modal.classList.add('open');
+document.getElementById('modalClose').onclick=()=>modal.classList.remove('open');
+modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.remove('open')});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')modal.classList.remove('open')});
+</script>
+</body>
+</html>

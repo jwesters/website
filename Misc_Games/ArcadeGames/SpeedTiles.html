@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Speed Tiles</title>
+<style>
+  :root {
+    --bg1: #223022;
+    --bg2: #101a11;
+    --panel: rgba(18, 28, 18, 0.92);
+    --panel2: rgba(30, 44, 28, 0.95);
+    --border: #94c179;
+    --text: #f5f3e8;
+    --muted: #c6d4b9;
+    --accent: #dfb860;
+    --accent2: #7ad078;
+    --danger: #c96060;
+    --shadow: rgba(0,0,0,0.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    font-family: "Trebuchet MS", Verdana, Arial, sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(circle at top, #435c3a 0%, #223022 34%, #101a11 100%);
+    overflow: hidden;
+  }
+
+  body.mobile {
+    overscroll-behavior: none;
+    touch-action: manipulation;
+  }
+
+  #app {
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: none;
+    padding: 14px;
+  }
+
+  .screen.active {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .menu-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .panel {
+    width: min(820px, 100%);
+    background: linear-gradient(180deg, rgba(28,42,28,0.98), rgba(17,25,17,0.98));
+    border: 3px solid rgba(157, 195, 136, 0.95);
+    border-radius: 18px;
+    padding: 20px;
+    box-shadow: 0 16px 40px var(--shadow);
+  }
+
+  .title {
+    margin: 0 0 8px;
+    text-align: center;
+    font-size: clamp(2rem, 3.6vw, 3.4rem);
+    letter-spacing: 1px;
+    color: #f1e7bd;
+    text-shadow: 0 2px 0 #5d4d21, 0 6px 18px rgba(0,0,0,0.35);
+  }
+
+  .subtitle {
+    margin: 0 0 18px;
+    text-align: center;
+    font-size: 1.05rem;
+    color: var(--muted);
+  }
+
+  .menu-buttons, .button-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 12px;
+  }
+
+  button {
+    appearance: none;
+    border: none;
+    border-radius: 14px;
+    padding: 12px 18px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #182015;
+    background: linear-gradient(180deg, #efd58a, #c49a3a);
+    box-shadow: 0 4px 0 #7b5a19, 0 8px 18px rgba(0,0,0,0.25);
+    cursor: pointer;
+    transition: transform 0.08s ease, filter 0.18s ease;
+  }
+
+  button:hover { filter: brightness(1.05); }
+  button:active { transform: translateY(2px); box-shadow: 0 2px 0 #7b5a19, 0 6px 12px rgba(0,0,0,0.24); }
+  button.secondary { background: linear-gradient(180deg, #afd99e, #6ca85f); box-shadow: 0 4px 0 #40643a, 0 8px 18px rgba(0,0,0,0.25); }
+  button.ghost { background: linear-gradient(180deg, #d7ddd1, #a4b19b); box-shadow: 0 4px 0 #667262, 0 8px 18px rgba(0,0,0,0.25); }
+  button.danger { background: linear-gradient(180deg, #e89f9f, #bf5a5a); box-shadow: 0 4px 0 #7e3434, 0 8px 18px rgba(0,0,0,0.25); }
+  button[disabled] {
+    cursor: not-allowed;
+    filter: grayscale(0.5) brightness(0.8);
+    opacity: 0.75;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+  }
+
+  .stat-card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    padding: 14px;
+    text-align: center;
+  }
+
+  .stat-label {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-size: 1.2rem;
+    font-weight: 800;
+  }
+
+  .help-text {
+    margin-top: 16px;
+    text-align: center;
+    color: #dce6cf;
+    line-height: 1.45;
+  }
+
+  .levels-panel {
+    width: min(950px, 100%);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .section-heading {
+    margin: 0;
+    text-align: center;
+    font-size: 1.7rem;
+    color: #f1e7bd;
+  }
+
+  .levels-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 14px;
+    overflow: auto;
+    align-content: start;
+    padding: 5px 8px 12px 5px;
+  }
+
+  .level-card {
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    text-align: center;
+    min-height: 142px;
+    overflow: hidden;
+  }
+
+  .level-card button {
+    width: 100%;
+    margin-top: auto;
+    padding: 9px 12px;
+    box-shadow: 0 3px 0 #40643a, 0 5px 10px rgba(0,0,0,0.2);
+  }
+
+  .level-page-label {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-top: -6px;
+  }
+
+  .page-buttons {
+    display: flex;
+    flex-shrink: 0;
+    gap: 8px;
+    justify-content: center;
+    overflow-x: auto;
+    padding: 4px 2px 8px;
+  }
+
+  .page-buttons button {
+    flex: 0 0 auto;
+    min-width: 76px;
+    padding: 8px 10px;
+    font-size: 0.88rem;
+    border-radius: 10px;
+    box-shadow: 0 3px 0 #667262, 0 5px 10px rgba(0,0,0,0.2);
+  }
+
+  .page-buttons button.active-page {
+    background: linear-gradient(180deg, #efd58a, #c49a3a);
+    box-shadow: 0 3px 0 #7b5a19, 0 5px 10px rgba(0,0,0,0.2);
+  }
+
+  .level-card.locked {
+    opacity: 0.58;
+  }
+
+  .level-num { font-weight: 800; font-size: 1.05rem; }
+  .level-best { color: var(--muted); font-size: 0.92rem; }
+
+  #gameScreen {
+    gap: 10px;
+  }
+
+  .hud {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0,1fr));
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .hud-card {
+    background: rgba(17,25,17,0.84);
+    border: 2px solid rgba(150, 193, 121, 0.45);
+    border-radius: 14px;
+    padding: 10px 12px;
+    text-align: center;
+    min-height: 62px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .hud-label { color: var(--muted); font-size: 0.84rem; }
+  .hud-value { font-size: 1.15rem; font-weight: 800; }
+
+  .game-area {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .canvas-wrap {
+    flex: 1;
+    min-height: 220px;
+    background: rgba(8, 12, 8, 0.3);
+    border: 3px solid rgba(150, 193, 121, 0.36);
+    border-radius: 18px;
+    padding: 8px;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+    position: relative;
+  }
+
+  canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #5b4a31, #433824);
+  }
+
+  .progress-bar {
+    height: 14px;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.35);
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #72c76b, #e6cc75);
+    transition: width 0.1s linear;
+  }
+
+  #mobileControls {
+    display: none;
+    align-self: center;
+    margin-top: 4px;
+  }
+
+  body.mobile #mobileControls {
+    display: grid;
+    grid-template-columns: repeat(3, 74px);
+    grid-template-rows: repeat(3, 68px);
+    gap: 8px;
+  }
+
+  .dpad-btn {
+    font-size: 1.45rem;
+    padding: 0;
+    min-width: 0;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+  }
+
+  .dpad-spacer { visibility: hidden; }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.62);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 50;
+  }
+
+  .overlay.show { display: flex; }
+
+  .overlay-card {
+    width: min(520px, 100%);
+    background: linear-gradient(180deg, rgba(33,46,31,0.98), rgba(16,22,16,0.98));
+    border: 3px solid rgba(157, 195, 136, 0.95);
+    border-radius: 18px;
+    padding: 22px;
+    text-align: center;
+    box-shadow: 0 18px 50px rgba(0,0,0,0.42);
+  }
+
+  .overlay-title {
+    margin: 0 0 10px;
+    font-size: 1.9rem;
+    color: #f1e7bd;
+  }
+
+  .overlay-text {
+    color: #e2ebd8;
+    line-height: 1.5;
+    margin-bottom: 14px;
+  }
+
+  .tiny-note {
+    color: #bdccb2;
+    font-size: 0.9rem;
+    margin-top: 8px;
+  }
+
+  .footer-controls {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .portrait-note {
+    display: none;
+    text-align: center;
+    font-size: 0.92rem;
+    color: #dce6cf;
+    margin-top: 6px;
+  }
+
+  body.mobile .portrait-note {
+    display: block;
+  }
+
+  @media (max-width: 900px) {
+    .hud {
+      grid-template-columns: repeat(3, minmax(0,1fr));
+    }
+  }
+
+  @media (max-width: 640px) {
+    .screen { padding: 10px; }
+    .panel { padding: 16px; }
+    .hud {
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 8px;
+    }
+    .canvas-wrap { padding: 6px; }
+    .levels-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .level-card { min-height: 136px; padding: 10px; }
+    .page-buttons { justify-content: flex-start; }
+    body.mobile .screen { padding-bottom: env(safe-area-inset-bottom, 10px); }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <section id="menuScreen" class="screen active">
+    <div class="menu-wrap">
+      <div class="panel">
+        <h1 class="title">Speed Tiles</h1>
+        <p class="subtitle">Cover every walkable tile as fast as you can.</p>
+        <div class="menu-buttons">
+          <button id="startBtn">Start Game</button>
+          <button id="levelSelectBtn" class="secondary">Level Select</button>
+          <button id="resetSaveBtn" class="ghost">Reset Save Data</button>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-label">Available Levels</div><div id="unlockedInfo" class="stat-value">300 / 300</div></div>
+          <div class="stat-card"><div class="stat-label">Overall Best</div><div id="overallBest" class="stat-value">--</div></div>
+          <div class="stat-card"><div class="stat-label">Controls</div><div id="controlInfo" class="stat-value">WASD / Arrows</div></div>
+        </div>
+        <div class="help-text">
+          Desktop: use <strong>WASD</strong> or the <strong>arrow keys</strong>.<br />
+          Mobile: use the on-screen touch pad in portrait mode.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="levelSelectScreen" class="screen">
+    <div class="levels-panel panel">
+      <h2 class="section-heading">Choose a Level</h2>
+      <div id="levelPageLabel" class="level-page-label">Levels 1–30 of 300</div>
+      <div id="levelsGrid" class="levels-grid"></div>
+      <div id="pageButtons" class="page-buttons" aria-label="Level pages"></div>
+      <div class="button-row">
+        <button id="backToMenuBtn" class="ghost">Back to Menu</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="gameScreen" class="screen">
+    <div class="hud">
+      <div class="hud-card"><div class="hud-label">Level</div><div class="hud-value" id="levelValue">1 / 300</div></div>
+      <div class="hud-card"><div class="hud-label">Time</div><div class="hud-value" id="timeValue">0.00s</div></div>
+      <div class="hud-card"><div class="hud-label">Best</div><div class="hud-value" id="bestValue">--</div></div>
+      <div class="hud-card"><div class="hud-label">Visited</div><div class="hud-value" id="visitedValue">0 / 0</div></div>
+      <div class="hud-card"><div class="hud-label">Remaining</div><div class="hud-value" id="remainingValue">0</div></div>
+    </div>
+
+    <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+
+    <div class="game-area">
+      <div class="canvas-wrap">
+        <canvas id="gameCanvas" aria-label="Speed Tiles maze"></canvas>
+      </div>
+      <div id="mobileControls" aria-label="Touch controls">
+        <div class="dpad-spacer"></div>
+        <button class="dpad-btn secondary" data-dir="up">▲</button>
+        <div class="dpad-spacer"></div>
+        <button class="dpad-btn secondary" data-dir="left">◀</button>
+        <div class="dpad-spacer"></div>
+        <button class="dpad-btn secondary" data-dir="right">▶</button>
+        <div class="dpad-spacer"></div>
+        <button class="dpad-btn secondary" data-dir="down">▼</button>
+        <div class="dpad-spacer"></div>
+      </div>
+      <div class="portrait-note">Portrait mode is fully supported on mobile.</div>
+      <div class="footer-controls">
+        <button id="pauseBtn" class="ghost">Pause</button>
+        <button id="restartBtn" class="secondary">Restart Level</button>
+        <button id="menuBtn" class="ghost">Main Menu</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="overlay" class="overlay" aria-live="polite">
+    <div class="overlay-card">
+      <h2 id="overlayTitle" class="overlay-title">Paused</h2>
+      <div id="overlayText" class="overlay-text"></div>
+      <div id="overlayButtons" class="button-row"></div>
+      <div id="overlayNote" class="tiny-note"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const TOTAL_LEVELS = 300;
+  const LEVELS_PER_PAGE = 30;
+  const PAGE_COUNT = Math.ceil(TOTAL_LEVELS / LEVELS_PER_PAGE);
+  const STORAGE_KEY = "speed_tiles_save_v2";
+  const DESKTOP_PADDING = 16;
+  const MOBILE_QUERY = window.matchMedia("(pointer: coarse)");
+
+  // One-tile taps stay controllable, while a held direction rapidly accelerates.
+  const BASE_TILE_DURATION = 105;
+  const MIN_TILE_DURATION = 18;
+  const ACCELERATION_DELAY = 70;
+  const ACCELERATION_TIME = 720;
+  const BLOCKED_RETRY_DELAY = 32;
+
+  const DIRECTIONS = {
+    up: { dx: 0, dy: -1 },
+    down: { dx: 0, dy: 1 },
+    left: { dx: -1, dy: 0 },
+    right: { dx: 1, dy: 0 }
+  };
+
+  const el = {
+    menuScreen: document.getElementById("menuScreen"),
+    levelSelectScreen: document.getElementById("levelSelectScreen"),
+    gameScreen: document.getElementById("gameScreen"),
+    startBtn: document.getElementById("startBtn"),
+    levelSelectBtn: document.getElementById("levelSelectBtn"),
+    resetSaveBtn: document.getElementById("resetSaveBtn"),
+    backToMenuBtn: document.getElementById("backToMenuBtn"),
+    levelsGrid: document.getElementById("levelsGrid"),
+    pageButtons: document.getElementById("pageButtons"),
+    levelPageLabel: document.getElementById("levelPageLabel"),
+    unlockedInfo: document.getElementById("unlockedInfo"),
+    overallBest: document.getElementById("overallBest"),
+    controlInfo: document.getElementById("controlInfo"),
+    levelValue: document.getElementById("levelValue"),
+    timeValue: document.getElementById("timeValue"),
+    bestValue: document.getElementById("bestValue"),
+    visitedValue: document.getElementById("visitedValue"),
+    remainingValue: document.getElementById("remainingValue"),
+    progressFill: document.getElementById("progressFill"),
+    pauseBtn: document.getElementById("pauseBtn"),
+    restartBtn: document.getElementById("restartBtn"),
+    menuBtn: document.getElementById("menuBtn"),
+    overlay: document.getElementById("overlay"),
+    overlayTitle: document.getElementById("overlayTitle"),
+    overlayText: document.getElementById("overlayText"),
+    overlayButtons: document.getElementById("overlayButtons"),
+    overlayNote: document.getElementById("overlayNote"),
+    mobileControls: document.getElementById("mobileControls"),
+    canvas: document.getElementById("gameCanvas")
+  };
+
+  const ctx = el.canvas.getContext("2d");
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+
+  let isMobile = detectMobile();
+  let levelPage = 0;
+  document.body.classList.toggle("mobile", isMobile);
+
+  let saveData = loadSave();
+  const levels = buildAllLevels();
+
+  const state = {
+    screen: "menu",
+    levelIndex: 0,
+    currentLevel: null,
+    player: { x: 0, y: 0 },
+    visualPlayer: { x: 0, y: 0 },
+    moveAnim: {
+      active: false,
+      fromX: 0,
+      fromY: 0,
+      toX: 0,
+      toY: 0,
+      start: 0,
+      duration: BASE_TILE_DURATION,
+      progress: 1
+    },
+    visited: [],
+    visitedCount: 0,
+    totalWalkable: 0,
+    timerStarted: false,
+    startTimestamp: 0,
+    elapsedMs: 0,
+    paused: false,
+    complete: false,
+    heldOrder: [],
+    held: new Set(),
+    heldSince: {},
+    nextMoveAt: 0,
+    tileSize: 24,
+    boardOffsetX: 0,
+    boardOffsetY: 0
+  };
+
+  function detectMobile() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || MOBILE_QUERY.matches;
+  }
+
+  function showScreen(name) {
+    state.screen = name;
+    for (const section of [el.menuScreen, el.levelSelectScreen, el.gameScreen]) {
+      section.classList.remove("active");
+    }
+    if (name === "menu") el.menuScreen.classList.add("active");
+    if (name === "levels") el.levelSelectScreen.classList.add("active");
+    if (name === "game") el.gameScreen.classList.add("active");
+    resizeCanvas();
+  }
+
+  function normalizeSaveData(parsed) {
+    return {
+      unlockedLevel: TOTAL_LEVELS,
+      bestTimes: parsed && typeof parsed.bestTimes === "object" && parsed.bestTimes ? parsed.bestTimes : {}
+    };
+  }
+
+  function loadSave() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? normalizeSaveData(JSON.parse(raw)) : normalizeSaveData({});
+    } catch {
+      return normalizeSaveData({});
+    }
+  }
+
+  function saveGameData() {
+    saveData.unlockedLevel = TOTAL_LEVELS;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+  }
+
+  function resetSaveData() {
+    if (!confirm("Reset all saved best times?")) return;
+    saveData = { unlockedLevel: TOTAL_LEVELS, bestTimes: {} };
+    saveGameData();
+    refreshMenuStats();
+    populateLevelSelect(levelPage);
+  }
+
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function() {
+      a += 0x6D2B79F5;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function shuffle(array, rng) {
+    for (let i = array.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(rng() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+
+  function sizeForLevel(index) {
+    if (index <= 8) return 5;
+    if (index <= 15) return 6;
+    if (index <= 22) return 7;
+    if (index <= 30) return 8;
+    // Levels 31–300 use each square size from 9×9 to 23×23 for 18 levels.
+    return Math.min(23, 9 + Math.floor((index - 31) / 18));
+  }
+
+  function buildAllLevels() {
+    const results = [];
+    const seen = new Set();
+
+    for (let index = 1; index <= TOTAL_LEVELS; index += 1) {
+      let salt = 0;
+      let level;
+      let signature;
+      do {
+        level = generateLevel(index, salt);
+        signature = level.grid.map((row) => row.join("")).join("|") + `@${level.start.x},${level.start.y}`;
+        salt += 1;
+      } while (seen.has(signature) && salt < 250);
+      seen.add(signature);
+      results.push(level);
+    }
+
+    return results;
+  }
+
+  function generateLevel(index, salt) {
+    const size = sizeForLevel(index);
+    const width = size;
+    const height = size;
+    const rng = mulberry32((0xC0FFEE + index * 2654435761 + salt * 1597334677) >>> 0);
+    let grid;
+
+    if (size <= 8) {
+      grid = generateCompactGrid(size, rng);
+    } else {
+      grid = Array.from({ length: height }, () => Array(width).fill(1));
+
+      // Carve a connected maze through odd-numbered cells.
+      const stack = [[1, 1]];
+      grid[1][1] = 0;
+      while (stack.length) {
+        const [x, y] = stack[stack.length - 1];
+        const dirs = shuffle([[0, -2], [2, 0], [0, 2], [-2, 0]], rng);
+        let carved = false;
+
+        for (const [dx, dy] of dirs) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx > 0 && nx < width - 1 && ny > 0 && ny < height - 1 && grid[ny][nx] === 1) {
+            grid[y + dy / 2][x + dx / 2] = 0;
+            grid[ny][nx] = 0;
+            stack.push([nx, ny]);
+            carved = true;
+            break;
+          }
+        }
+
+        if (!carved) stack.pop();
+      }
+
+      // Even-sized boards gain usable space along their final interior row/column.
+      if (size % 2 === 0) {
+        const edge = size - 2;
+        for (let n = 1; n <= size - 3; n += 2) {
+          if (rng() < 0.72) grid[n][edge] = 0;
+          if (rng() < 0.72) grid[edge][n] = 0;
+        }
+        if (rng() < 0.55) grid[edge][edge] = 0;
+      }
+
+      // Open selected divider walls to create loops and different routing choices.
+      const loopCandidates = [];
+      for (let y = 1; y < height - 1; y += 1) {
+        for (let x = 1; x < width - 1; x += 1) {
+          if (grid[y][x] !== 1) continue;
+          const horizontalBridge = grid[y][x - 1] === 0 && grid[y][x + 1] === 0;
+          const verticalBridge = grid[y - 1][x] === 0 && grid[y + 1][x] === 0;
+          if (horizontalBridge || verticalBridge) loopCandidates.push([x, y]);
+        }
+      }
+      shuffle(loopCandidates, rng);
+      const groupPosition = ((index - 31) % 18) / 17;
+      const loopRatio = 0.04 + groupPosition * 0.13;
+      const loopsToOpen = Math.floor(loopCandidates.length * loopRatio);
+      for (let i = 0; i < loopsToOpen; i += 1) {
+        const [x, y] = loopCandidates[i];
+        grid[y][x] = 0;
+      }
+
+      // Safely add a few small open areas on larger boards. Every room starts on an
+      // existing path, so it remains connected to the playable region.
+      const roomAttempts = size >= 11 ? Math.min(4, Math.floor((size - 8) / 4)) : 0;
+      for (let room = 0; room < roomAttempts; room += 1) {
+        const floorCellsNow = collectFloorCells(grid);
+        const anchor = floorCellsNow[Math.floor(rng() * floorCellsNow.length)];
+        if (!anchor) break;
+        const roomW = rng() < 0.5 ? 2 : 3;
+        const roomH = rng() < 0.5 ? 2 : 3;
+        const startX = Math.max(1, Math.min(width - roomW - 1, anchor.x - Math.floor(rng() * roomW)));
+        const startY = Math.max(1, Math.min(height - roomH - 1, anchor.y - Math.floor(rng() * roomH)));
+        for (let y = startY; y < startY + roomH; y += 1) {
+          for (let x = startX; x < startX + roomW; x += 1) {
+            grid[y][x] = 0;
+          }
+        }
+      }
+    }
+
+    // Close any accidental disconnected pockets so every required tile is reachable.
+    const firstFloor = findFirstFloor(grid) || { x: 1, y: 1 };
+    const reachable = floodFill(grid, firstFloor.x, firstFloor.y);
+    for (let y = 1; y < height - 1; y += 1) {
+      for (let x = 1; x < width - 1; x += 1) {
+        if (grid[y][x] === 0 && !reachable.has(`${x},${y}`)) grid[y][x] = 1;
+      }
+    }
+
+    const floorCells = collectFloorCells(grid);
+    const deadEnds = floorCells.filter(({ x, y }) => floorDegree(grid, x, y) <= 1);
+    const startPool = deadEnds.length ? deadEnds : floorCells;
+    const start = startPool[Math.floor(rng() * startPool.length)] || { x: 1, y: 1 };
+
+    return { index, width, height, grid, start, totalWalkable: floorCells.length };
+  }
+
+  function generateCompactGrid(size, rng) {
+    const grid = Array.from({ length: size }, (_, y) =>
+      Array.from({ length: size }, (_, x) => (x === 0 || y === 0 || x === size - 1 || y === size - 1 ? 1 : 0))
+    );
+    const candidates = [];
+    for (let y = 1; y < size - 1; y += 1) {
+      for (let x = 1; x < size - 1; x += 1) candidates.push([x, y]);
+    }
+    shuffle(candidates, rng);
+
+    const interiorCount = (size - 2) * (size - 2);
+    const minimumWalls = Math.max(1, Math.floor(interiorCount * 0.14));
+    const maximumWalls = Math.max(minimumWalls, Math.floor(interiorCount * 0.34));
+    const targetWalls = minimumWalls + Math.floor(rng() * (maximumWalls - minimumWalls + 1));
+    let placed = 0;
+
+    for (const [x, y] of candidates) {
+      if (placed >= targetWalls) break;
+      grid[y][x] = 1;
+      const firstFloor = findFirstFloor(grid);
+      const reachable = firstFloor ? floodFill(grid, firstFloor.x, firstFloor.y) : new Set();
+      const floorCount = collectFloorCells(grid).length;
+      if (floorCount < Math.max(4, Math.floor(interiorCount * 0.55)) || reachable.size !== floorCount) {
+        grid[y][x] = 0;
+      } else {
+        placed += 1;
+      }
+    }
+
+    return grid;
+  }
+
+  function collectFloorCells(grid) {
+    const cells = [];
+    for (let y = 0; y < grid.length; y += 1) {
+      for (let x = 0; x < grid[y].length; x += 1) {
+        if (grid[y][x] === 0) cells.push({ x, y });
+      }
+    }
+    return cells;
+  }
+
+  function findFirstFloor(grid) {
+    for (let y = 0; y < grid.length; y += 1) {
+      for (let x = 0; x < grid[y].length; x += 1) {
+        if (grid[y][x] === 0) return { x, y };
+      }
+    }
+    return null;
+  }
+
+  function floodFill(grid, startX, startY) {
+    const found = new Set([`${startX},${startY}`]);
+    const queue = [[startX, startY]];
+    for (let i = 0; i < queue.length; i += 1) {
+      const [x, y] = queue[i];
+      for (const { dx, dy } of Object.values(DIRECTIONS)) {
+        const nx = x + dx;
+        const ny = y + dy;
+        const key = `${nx},${ny}`;
+        if (ny < 0 || ny >= grid.length || nx < 0 || nx >= grid[0].length) continue;
+        if (grid[ny][nx] !== 0 || found.has(key)) continue;
+        found.add(key);
+        queue.push([nx, ny]);
+      }
+    }
+    return found;
+  }
+
+  function floorDegree(grid, x, y) {
+    let degree = 0;
+    for (const { dx, dy } of Object.values(DIRECTIONS)) {
+      if (grid[y + dy] && grid[y + dy][x + dx] === 0) degree += 1;
+    }
+    return degree;
+  }
+
+  function openLevelSelect(levelNumber) {
+    const safeLevel = Math.max(1, Math.min(TOTAL_LEVELS, levelNumber || 1));
+    levelPage = Math.floor((safeLevel - 1) / LEVELS_PER_PAGE);
+    populateLevelSelect(levelPage);
+    showScreen("levels");
+  }
+
+  function populateLevelSelect(page = levelPage) {
+    levelPage = Math.max(0, Math.min(PAGE_COUNT - 1, page));
+    const firstLevel = levelPage * LEVELS_PER_PAGE + 1;
+    const lastLevel = Math.min(TOTAL_LEVELS, firstLevel + LEVELS_PER_PAGE - 1);
+
+    el.levelPageLabel.textContent = `Levels ${firstLevel}–${lastLevel} of ${TOTAL_LEVELS}`;
+    el.levelsGrid.innerHTML = "";
+
+    for (let i = firstLevel; i <= lastLevel; i += 1) {
+      const level = levels[i - 1];
+      const card = document.createElement("div");
+      card.className = "level-card";
+
+      const num = document.createElement("div");
+      num.className = "level-num";
+      num.textContent = `Level ${i}`;
+
+      const size = document.createElement("div");
+      size.className = "level-best";
+      size.textContent = `${level.width}×${level.height}`;
+
+      const best = document.createElement("div");
+      best.className = "level-best";
+      best.textContent = `Best: ${saveData.bestTimes[i] ? formatTime(saveData.bestTimes[i]) : "--"}`;
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = "Play";
+      btn.className = "secondary";
+      btn.addEventListener("click", () => startLevel(i));
+
+      card.appendChild(num);
+      card.appendChild(size);
+      card.appendChild(best);
+      card.appendChild(btn);
+      el.levelsGrid.appendChild(card);
+    }
+
+    el.pageButtons.innerHTML = "";
+    for (let pageIndex = 0; pageIndex < PAGE_COUNT; pageIndex += 1) {
+      const start = pageIndex * LEVELS_PER_PAGE + 1;
+      const end = Math.min(TOTAL_LEVELS, start + LEVELS_PER_PAGE - 1);
+      const pageButton = document.createElement("button");
+      pageButton.type = "button";
+      pageButton.className = `ghost${pageIndex === levelPage ? " active-page" : ""}`;
+      pageButton.textContent = `${start}–${end}`;
+      pageButton.setAttribute("aria-current", pageIndex === levelPage ? "page" : "false");
+      pageButton.addEventListener("click", () => {
+        populateLevelSelect(pageIndex);
+        el.levelsGrid.scrollTop = 0;
+      });
+      el.pageButtons.appendChild(pageButton);
+    }
+  }
+
+  function refreshMenuStats() {
+    el.unlockedInfo.textContent = `${TOTAL_LEVELS} / ${TOTAL_LEVELS}`;
+    const times = Object.values(saveData.bestTimes).map(Number).filter(Number.isFinite);
+    const best = times.length ? Math.min(...times) : null;
+    el.overallBest.textContent = best !== null ? formatTime(best) : "--";
+    el.controlInfo.textContent = isMobile ? "Touch Pad" : "WASD / Arrows";
+  }
+
+  function createVisitedGrid(level) {
+    return Array.from({ length: level.height }, () => Array(level.width).fill(false));
+  }
+
+  function startLevel(levelNumber) {
+    const safeLevel = Math.max(1, Math.min(TOTAL_LEVELS, levelNumber));
+    const level = levels[safeLevel - 1];
+    state.levelIndex = safeLevel - 1;
+    state.currentLevel = level;
+    state.player = { x: level.start.x, y: level.start.y };
+    state.visualPlayer = { x: level.start.x, y: level.start.y };
+    state.moveAnim = {
+      active: false,
+      fromX: level.start.x,
+      fromY: level.start.y,
+      toX: level.start.x,
+      toY: level.start.y,
+      start: 0,
+      duration: BASE_TILE_DURATION,
+      progress: 1
+    };
+    state.visited = createVisitedGrid(level);
+    state.visited[level.start.y][level.start.x] = true;
+    state.visitedCount = 1;
+    state.totalWalkable = level.totalWalkable;
+    state.timerStarted = false;
+    state.startTimestamp = 0;
+    state.elapsedMs = 0;
+    state.paused = false;
+    state.complete = false;
+    state.held.clear();
+    state.heldOrder = [];
+    state.heldSince = {};
+    state.nextMoveAt = 0;
+    hideOverlay();
+    showScreen("game");
+    updateHUD();
+    resizeCanvas();
+  }
+
+  function updateHUD() {
+    const levelNum = state.levelIndex + 1;
+    el.levelValue.textContent = `${levelNum} / ${TOTAL_LEVELS}`;
+    el.timeValue.textContent = formatTime(state.elapsedMs);
+    el.bestValue.textContent = saveData.bestTimes[levelNum] ? formatTime(saveData.bestTimes[levelNum]) : "--";
+    el.visitedValue.textContent = `${state.visitedCount} / ${state.totalWalkable}`;
+    const remaining = Math.max(0, state.totalWalkable - state.visitedCount);
+    el.remainingValue.textContent = String(remaining);
+    const pct = state.totalWalkable ? (state.visitedCount / state.totalWalkable) * 100 : 0;
+    el.progressFill.style.width = `${pct}%`;
+  }
+
+  function formatTime(ms) {
+    return `${(ms / 1000).toFixed(2)}s`;
+  }
+
+  function setHeldDirection(dir, isDown, now = performance.now()) {
+    if (!(dir in DIRECTIONS)) return;
+    if (isDown) {
+      if (!state.held.has(dir)) {
+        state.heldOrder.push(dir);
+        state.heldSince[dir] = now;
+      }
+      state.held.add(dir);
+    } else {
+      state.held.delete(dir);
+      delete state.heldSince[dir];
+      state.heldOrder = state.heldOrder.filter((item) => item !== dir);
+    }
+  }
+
+  function getCurrentHeldDirection() {
+    for (let i = state.heldOrder.length - 1; i >= 0; i -= 1) {
+      const dir = state.heldOrder[i];
+      if (state.held.has(dir)) return dir;
+    }
+    return null;
+  }
+
+  function getTileDuration(dir, now) {
+    const heldFor = Math.max(0, now - (state.heldSince[dir] || now));
+    if (heldFor <= ACCELERATION_DELAY) return BASE_TILE_DURATION;
+    const progress = Math.min(1, (heldFor - ACCELERATION_DELAY) / ACCELERATION_TIME);
+    const accelerated = progress * progress * (3 - 2 * progress);
+    return BASE_TILE_DURATION - (BASE_TILE_DURATION - MIN_TILE_DURATION) * accelerated;
+  }
+
+  function tryImmediateMove(dir, now = performance.now()) {
+    if (state.screen !== "game" || !state.currentLevel || state.paused || state.complete || state.moveAnim.active) return;
+    const moved = attemptMove(dir, now);
+    if (!moved) state.nextMoveAt = now + BLOCKED_RETRY_DELAY;
+  }
+
+  function attemptMove(dirName, now = performance.now()) {
+    if (!state.currentLevel || state.paused || state.complete || state.moveAnim.active) return false;
+    const dir = DIRECTIONS[dirName];
+    if (!dir) return false;
+
+    const nx = state.player.x + dir.dx;
+    const ny = state.player.y + dir.dy;
+    if (ny < 0 || ny >= state.currentLevel.height || nx < 0 || nx >= state.currentLevel.width) return false;
+    if (state.currentLevel.grid[ny][nx] === 1) return false;
+
+    if (!state.timerStarted) {
+      state.timerStarted = true;
+      state.startTimestamp = now - state.elapsedMs;
+    }
+
+    const fromX = state.player.x;
+    const fromY = state.player.y;
+    state.player.x = nx;
+    state.player.y = ny;
+    state.moveAnim = {
+      active: true,
+      fromX,
+      fromY,
+      toX: nx,
+      toY: ny,
+      start: now,
+      duration: getTileDuration(dirName, now),
+      progress: 0
+    };
+
+    if (!state.visited[ny][nx]) {
+      state.visited[ny][nx] = true;
+      state.visitedCount += 1;
+      if (state.visitedCount >= state.totalWalkable) finishLevel();
+    }
+
+    updateHUD();
+    return true;
+  }
+
+  function finishLevel() {
+    state.complete = true;
+    state.timerStarted = false;
+    const levelNum = state.levelIndex + 1;
+    const previousBest = Number(saveData.bestTimes[levelNum]) || null;
+
+    if (previousBest === null || state.elapsedMs < previousBest) {
+      saveData.bestTimes[levelNum] = state.elapsedMs;
+    }
+    saveGameData();
+    refreshMenuStats();
+
+    const isLast = levelNum === TOTAL_LEVELS;
+    showOverlay(
+      isLast ? "All Levels Complete!" : "Level Complete!",
+      `${isLast ? "Amazing work!" : `You cleared Level ${levelNum}.`}<br />Time: <strong>${formatTime(state.elapsedMs)}</strong><br />Best: <strong>${formatTime(saveData.bestTimes[levelNum])}</strong>`,
+      isLast
+        ? [
+            { label: "Play Level 1", className: "secondary", onClick: () => startLevel(1) },
+            { label: "Level Select", className: "ghost", onClick: () => openLevelSelect(levelNum) },
+            { label: "Main Menu", className: "ghost", onClick: () => showScreen("menu") }
+          ]
+        : [
+            { label: "Next Level", className: "secondary", onClick: () => startLevel(levelNum + 1) },
+            { label: "Replay", className: "ghost", onClick: () => startLevel(levelNum) },
+            { label: "Level Select", className: "ghost", onClick: () => openLevelSelect(levelNum) },
+            { label: "Main Menu", className: "ghost", onClick: () => showScreen("menu") }
+          ],
+      previousBest !== null && state.elapsedMs >= previousBest ? `Best time remains ${formatTime(previousBest)}.` : "New best time saved."
+    );
+  }
+
+  function pauseGame() {
+    if (state.complete || !state.currentLevel) return;
+    state.paused = true;
+    state.timerStarted = false;
+    showOverlay(
+      "Paused",
+      `Take a break. Current time: <strong>${formatTime(state.elapsedMs)}</strong>`,
+      [
+        { label: "Resume", className: "secondary", onClick: resumeGame },
+        { label: "Restart Level", className: "ghost", onClick: () => startLevel(state.levelIndex + 1) },
+        { label: "Main Menu", className: "ghost", onClick: () => showScreen("menu") }
+      ],
+      isMobile ? "Touch controls return when you resume." : "Press P or Escape to pause or resume."
+    );
+  }
+
+  function resumeGame() {
+    if (!state.currentLevel) return;
+    hideOverlay();
+    state.paused = false;
+    if (!state.complete && state.elapsedMs > 0) {
+      state.timerStarted = true;
+      state.startTimestamp = performance.now() - state.elapsedMs;
+    }
+  }
+
+  function showOverlay(title, htmlText, buttons, note = "") {
+    el.overlayTitle.textContent = title;
+    el.overlayText.innerHTML = htmlText;
+    el.overlayButtons.innerHTML = "";
+    for (const cfg of buttons) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = cfg.label;
+      btn.className = cfg.className || "ghost";
+      btn.addEventListener("click", () => {
+        hideOverlay();
+        cfg.onClick();
+      });
+      el.overlayButtons.appendChild(btn);
+    }
+    el.overlayNote.textContent = note;
+    el.overlay.classList.add("show");
+  }
+
+  function hideOverlay() {
+    el.overlay.classList.remove("show");
+    el.overlayNote.textContent = "";
+  }
+
+  function resizeCanvas() {
+    if (state.screen !== "game") return;
+    const rect = el.canvas.parentElement.getBoundingClientRect();
+    const cssW = Math.max(240, Math.floor(rect.width - DESKTOP_PADDING));
+    const cssH = Math.max(240, Math.floor(rect.height - DESKTOP_PADDING));
+    el.canvas.width = Math.floor(cssW * dpr);
+    el.canvas.height = Math.floor(cssH * dpr);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+
+    if (state.currentLevel) {
+      const fittedTile = Math.floor(Math.min(cssW / state.currentLevel.width, cssH / state.currentLevel.height));
+      const maximumTile = isMobile ? 64 : 92;
+      state.tileSize = Math.max(isMobile ? 12 : 14, Math.min(maximumTile, fittedTile));
+      state.boardOffsetX = Math.floor((cssW - state.tileSize * state.currentLevel.width) / 2);
+      state.boardOffsetY = Math.floor((cssH - state.tileSize * state.currentLevel.height) / 2);
+    }
+  }
+
+  function hashNoise(a, b, c = 0) {
+    const value = Math.sin(a * 127.1 + b * 311.7 + c * 74.7) * 43758.5453123;
+    return value - Math.floor(value);
+  }
+
+  function drawFloorTile(x, y, size, visited) {
+    const px = state.boardOffsetX + x * size;
+    const py = state.boardOffsetY + y * size;
+    ctx.fillStyle = visited ? "#cdb777" : "#bea77a";
+    ctx.fillRect(px, py, size, size);
+
+    for (let i = 0; i < 3; i += 1) {
+      const noise = hashNoise(x * 5 + i, y * 7 + i, state.levelIndex + 1);
+      ctx.fillStyle = noise > 0.65 ? "rgba(122, 100, 66, 0.22)" : "rgba(240, 225, 190, 0.10)";
+      const rw = size * (0.22 + hashNoise(x + i, y + i, 3) * 0.18);
+      const rh = size * (0.14 + hashNoise(x + i, y + i, 4) * 0.22);
+      const rx = px + hashNoise(x + i, y, 5) * (size - rw);
+      const ry = py + hashNoise(x, y + i, 6) * (size - rh);
+      ctx.fillRect(rx, ry, rw, rh);
+    }
+
+    ctx.strokeStyle = "rgba(74, 56, 34, 0.35)";
+    ctx.lineWidth = Math.max(1, size * 0.04);
+    ctx.strokeRect(px, py, size, size);
+
+    if (hashNoise(x, y, 8) > 0.55) {
+      ctx.strokeStyle = "rgba(96, 71, 42, 0.4)";
+      ctx.lineWidth = Math.max(1, size * 0.03);
+      ctx.beginPath();
+      const cx = px + size * (0.15 + hashNoise(x, y, 9) * 0.7);
+      const cy = py + size * (0.15 + hashNoise(x, y, 10) * 0.7);
+      ctx.moveTo(cx - size * 0.12, cy - size * 0.08);
+      ctx.lineTo(cx, cy);
+      ctx.lineTo(cx + size * 0.16, cy - size * 0.12);
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + size * 0.05, cy + size * 0.18);
+      ctx.stroke();
+    }
+
+    if (visited) {
+      ctx.fillStyle = "rgba(248, 227, 135, 0.22)";
+      ctx.fillRect(px, py, size, size);
+    }
+  }
+
+  function drawWallTile(x, y, size) {
+    const px = state.boardOffsetX + x * size;
+    const py = state.boardOffsetY + y * size;
+    ctx.fillStyle = "#6b5940";
+    ctx.fillRect(px, py, size, size);
+
+    const margin = size * 0.06;
+    const hedgeX = px + margin;
+    const hedgeY = py + margin;
+    const hedgeSize = size - margin * 2;
+    ctx.fillStyle = "#2c5d24";
+    roundRect(ctx, hedgeX, hedgeY, hedgeSize, hedgeSize, size * 0.18, true, false);
+
+    for (let i = 0; i < 9; i += 1) {
+      const leafX = hedgeX + hashNoise(x + i, y, 11) * hedgeSize;
+      const leafY = hedgeY + hashNoise(x, y + i, 12) * hedgeSize;
+      const radius = size * (0.08 + hashNoise(x + i, y + i, 13) * 0.11);
+      ctx.fillStyle = i % 2 === 0 ? "rgba(97, 179, 74, 0.8)" : "rgba(53, 121, 43, 0.85)";
+      ctx.beginPath();
+      ctx.arc(leafX, leafY, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.strokeStyle = "rgba(16, 53, 13, 0.45)";
+    ctx.lineWidth = Math.max(1, size * 0.04);
+    roundRect(ctx, hedgeX, hedgeY, hedgeSize, hedgeSize, size * 0.18, false, true);
+  }
+
+  function roundRect(context, x, y, width, height, radius, fill, stroke) {
+    const r = Math.min(radius, width / 2, height / 2);
+    context.beginPath();
+    context.moveTo(x + r, y);
+    context.arcTo(x + width, y, x + width, y + height, r);
+    context.arcTo(x + width, y + height, x, y + height, r);
+    context.arcTo(x, y + height, x, y, r);
+    context.arcTo(x, y, x + width, y, r);
+    context.closePath();
+    if (fill) context.fill();
+    if (stroke) context.stroke();
+  }
+
+  function updateVisualPlayer(now) {
+    if (!state.moveAnim.active) {
+      state.visualPlayer.x = state.player.x;
+      state.visualPlayer.y = state.player.y;
+      state.moveAnim.progress = 1;
+      return;
+    }
+
+    const progress = Math.min(1, (now - state.moveAnim.start) / state.moveAnim.duration);
+    state.moveAnim.progress = progress;
+    // Linear interpolation makes consecutive tile movements look like one glide,
+    // rather than slowing down and speeding up at every tile boundary.
+    state.visualPlayer.x = state.moveAnim.fromX + (state.moveAnim.toX - state.moveAnim.fromX) * progress;
+    state.visualPlayer.y = state.moveAnim.fromY + (state.moveAnim.toY - state.moveAnim.fromY) * progress;
+
+    if (progress >= 1) {
+      state.moveAnim.active = false;
+      state.visualPlayer.x = state.moveAnim.toX;
+      state.visualPlayer.y = state.moveAnim.toY;
+      state.moveAnim.progress = 1;
+    }
+  }
+
+  function drawPlayer() {
+    const size = state.tileSize;
+    const px = state.boardOffsetX + state.visualPlayer.x * size;
+    const py = state.boardOffsetY + state.visualPlayer.y * size;
+    const cx = px + size / 2;
+    const cy = py + size / 2;
+
+    if (state.moveAnim.active) {
+      const dx = state.moveAnim.toX - state.moveAnim.fromX;
+      const dy = state.moveAnim.toY - state.moveAnim.fromY;
+      const trailLength = size * 0.38;
+      const gradient = ctx.createLinearGradient(cx, cy, cx - dx * trailLength, cy - dy * trailLength);
+      gradient.addColorStop(0, "rgba(151, 210, 255, 0.35)");
+      gradient.addColorStop(1, "rgba(151, 210, 255, 0)");
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = size * 0.28;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx - dx * trailLength, cy - dy * trailLength);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = "rgba(0,0,0,0.18)";
+    ctx.beginPath();
+    ctx.ellipse(cx, py + size * 0.82, size * 0.25, size * 0.14, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = state.moveAnim.active ? "rgba(160, 211, 255, 0.27)" : "rgba(160, 211, 255, 0.20)";
+    ctx.beginPath();
+    ctx.arc(cx, cy, size * 0.38, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#3b7bd1";
+    ctx.beginPath();
+    ctx.arc(cx, cy, size * 0.29, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#e8f2ff";
+    ctx.lineWidth = Math.max(1, size * 0.05);
+    ctx.stroke();
+
+    ctx.fillStyle = "#e8f2ff";
+    ctx.beginPath();
+    ctx.arc(cx, cy, size * 0.12, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawBoard() {
+    if (!state.currentLevel) return;
+    const level = state.currentLevel;
+    const cssW = el.canvas.width / dpr;
+    const cssH = el.canvas.height / dpr;
+    ctx.clearRect(0, 0, cssW, cssH);
+    ctx.fillStyle = "#4f422f";
+    ctx.fillRect(0, 0, cssW, cssH);
+
+    for (let y = 0; y < level.height; y += 1) {
+      for (let x = 0; x < level.width; x += 1) {
+        if (level.grid[y][x] === 1) drawWallTile(x, y, state.tileSize);
+        else drawFloorTile(x, y, state.tileSize, state.visited[y][x]);
+      }
+    }
+
+    drawStartMarker(level.start.x, level.start.y, state.tileSize);
+    drawPlayer();
+  }
+
+  function drawStartMarker(x, y, size) {
+    const px = state.boardOffsetX + x * size;
+    const py = state.boardOffsetY + y * size;
+    ctx.strokeStyle = "rgba(55, 112, 200, 0.35)";
+    ctx.lineWidth = Math.max(1, size * 0.07);
+    ctx.strokeRect(px + size * 0.15, py + size * 0.15, size * 0.7, size * 0.7);
+  }
+
+  function updateFrame(now) {
+    if (state.screen === "game" && state.currentLevel) {
+      if (state.timerStarted && !state.paused && !state.complete) {
+        state.elapsedMs = now - state.startTimestamp;
+      }
+
+      updateVisualPlayer(now);
+      const heldDir = getCurrentHeldDirection();
+      if (!state.paused && !state.complete && heldDir && !state.moveAnim.active && now >= state.nextMoveAt) {
+        const moved = attemptMove(heldDir, now);
+        state.nextMoveAt = moved ? now : now + BLOCKED_RETRY_DELAY;
+      }
+
+      updateHUD();
+      drawBoard();
+    }
+    requestAnimationFrame(updateFrame);
+  }
+
+  function handleKeyChange(event, isDown) {
+    const key = event.key.toLowerCase();
+    let dir = null;
+    if (key === "w" || key === "arrowup") dir = "up";
+    if (key === "s" || key === "arrowdown") dir = "down";
+    if (key === "a" || key === "arrowleft") dir = "left";
+    if (key === "d" || key === "arrowright") dir = "right";
+
+    if (dir) {
+      event.preventDefault();
+      const now = performance.now();
+      const wasHeld = state.held.has(dir);
+      setHeldDirection(dir, isDown, now);
+      if (isDown && !wasHeld) tryImmediateMove(dir, now);
+      return;
+    }
+
+    if (isDown && (key === "p" || key === "escape")) {
+      event.preventDefault();
+      if (state.screen === "game") {
+        if (state.paused) resumeGame();
+        else if (!state.complete) pauseGame();
+      }
+    }
+  }
+
+  function bindTouchControls() {
+    const buttons = el.mobileControls.querySelectorAll("[data-dir]");
+    for (const btn of buttons) {
+      const dir = btn.getAttribute("data-dir");
+      const press = (event) => {
+        event.preventDefault();
+        const now = performance.now();
+        const wasHeld = state.held.has(dir);
+        setHeldDirection(dir, true, now);
+        if (!wasHeld) tryImmediateMove(dir, now);
+      };
+      const release = (event) => {
+        event.preventDefault();
+        setHeldDirection(dir, false, performance.now());
+      };
+      btn.addEventListener("pointerdown", press);
+      btn.addEventListener("pointerup", release);
+      btn.addEventListener("pointercancel", release);
+      btn.addEventListener("pointerleave", release);
+    }
+  }
+
+  function maybeHandleResize() {
+    const mobileNow = detectMobile();
+    if (mobileNow !== isMobile) {
+      isMobile = mobileNow;
+      document.body.classList.toggle("mobile", isMobile);
+      refreshMenuStats();
+    }
+    resizeCanvas();
+  }
+
+  el.startBtn.addEventListener("click", () => startLevel(1));
+  el.levelSelectBtn.addEventListener("click", () => openLevelSelect(state.currentLevel ? state.levelIndex + 1 : 1));
+  el.resetSaveBtn.addEventListener("click", resetSaveData);
+  el.backToMenuBtn.addEventListener("click", () => showScreen("menu"));
+  el.pauseBtn.addEventListener("click", () => {
+    if (state.paused) resumeGame();
+    else pauseGame();
+  });
+  el.restartBtn.addEventListener("click", () => {
+    if (state.currentLevel) startLevel(state.levelIndex + 1);
+  });
+  el.menuBtn.addEventListener("click", () => {
+    if (confirm("Return to the main menu?")) {
+      hideOverlay();
+      state.paused = false;
+      state.timerStarted = false;
+      showScreen("menu");
+    }
+  });
+
+  window.addEventListener("keydown", (event) => handleKeyChange(event, true), { passive: false });
+  window.addEventListener("keyup", (event) => handleKeyChange(event, false), { passive: false });
+  window.addEventListener("resize", maybeHandleResize);
+  window.addEventListener("orientationchange", () => setTimeout(maybeHandleResize, 80));
+
+  bindTouchControls();
+  populateLevelSelect(0);
+  refreshMenuStats();
+  showScreen("menu");
+  requestAnimationFrame(updateFrame);
+})();
+</script>
+</body>
+</html>
