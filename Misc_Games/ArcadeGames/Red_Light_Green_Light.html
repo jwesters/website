@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Red Light / Green Light</title>
+<style>
+:root{
+  --text:#f5f7f3;
+  --muted:#c6d0c9;
+  --green:#79ee96;
+  --red:#ff8088;
+}
+*{box-sizing:border-box}
+html,body{
+  margin:0;width:100%;height:100%;overflow:hidden;
+  background:#0b120f;color:var(--text);
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  touch-action:none;
+}
+button{font:inherit}
+#app{
+  position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 15%,rgba(77,130,91,.28),transparent 46%),#0b120f;
+}
+#shell{
+  position:relative;
+  width:min(100vw,1360px);height:min(100vh,820px);
+  aspect-ratio:16/9;overflow:hidden;background:#87aa62;
+  box-shadow:0 18px 70px rgba(0,0,0,.5);
+}
+canvas{display:block;width:100%;height:100%}
+#hud{
+  position:absolute;inset:10px 10px auto 10px;
+  display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:start;
+  pointer-events:none;
+}
+.hudBox{
+  background:rgba(8,15,11,.82);
+  border:1px solid rgba(255,255,255,.11);
+  border-radius:13px;padding:8px 11px;
+  box-shadow:0 5px 18px rgba(0,0,0,.22);
+  backdrop-filter:blur(7px);
+}
+#leftStats{justify-self:start}
+#rightStats{justify-self:end;text-align:right}
+.small{font-size:11px;color:var(--muted);letter-spacing:.03em}
+.big{font-size:17px;line-height:1.05;font-weight:900}
+#lightPanel{min-width:260px;text-align:center;padding:8px 16px}
+#lightLabel{font-size:22px;font-weight:950;letter-spacing:.065em;line-height:1}
+#lightLabel.green{color:var(--green)}
+#lightLabel.red{color:var(--red)}
+#countdown{font-size:11px;margin-top:4px;color:#e7ede9}
+#phaseBar{height:5px;border-radius:8px;overflow:hidden;background:rgba(255,255,255,.12);margin-top:6px}
+#phaseFill{height:100%;width:100%;background:white;opacity:.8}
+#helpBtn{
+  position:absolute;right:13px;bottom:13px;z-index:4;
+  width:42px;height:42px;border:1px solid rgba(255,255,255,.13);
+  border-radius:50%;padding:0;background:rgba(8,15,11,.82);
+  color:white;font-weight:900;cursor:pointer;
+}
+.overlay{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  padding:18px;background:rgba(4,9,7,.73);backdrop-filter:blur(6px);z-index:8;
+}
+.hidden{display:none!important}
+.card{
+  width:min(570px,94%);max-height:94%;overflow:auto;text-align:center;
+  background:linear-gradient(180deg,rgba(24,37,30,.98),rgba(12,20,16,.98));
+  border:1px solid rgba(255,255,255,.13);border-radius:22px;padding:25px;
+  box-shadow:0 20px 60px rgba(0,0,0,.42);
+}
+h1{margin:0 0 9px;font-size:clamp(29px,5vw,52px);line-height:.93}
+.subtitle{margin:0 auto 18px;color:var(--muted);line-height:1.45;max-width:470px}
+.buttonRow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+button.action{
+  border:0;border-radius:13px;padding:11px 18px;color:white;
+  font-weight:850;cursor:pointer;background:#355744;box-shadow:0 5px 15px rgba(0,0,0,.2);
+}
+button.action:hover{filter:brightness(1.08)}
+button.primary{background:#3ba85d}
+.helpGrid{
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:left;margin:15px 0 19px;
+}
+.helpItem{background:rgba(255,255,255,.06);border-radius:13px;padding:11px;line-height:1.35}
+.helpItem b{display:block;margin-bottom:3px}
+#roundCard .advance{
+  margin:14px auto 0;width:min(360px,100%);
+  border-radius:12px;background:rgba(255,255,255,.07);padding:10px 12px;
+  font-weight:800;
+}
+#mobileControls{position:absolute;inset:auto 0 0 0;pointer-events:none;display:none;z-index:5}
+#joystickBase{
+  position:absolute;left:20px;bottom:20px;width:122px;height:122px;
+  border-radius:50%;border:2px solid rgba(255,255,255,.28);
+  background:rgba(8,12,10,.38);pointer-events:auto;
+}
+#joystickKnob{
+  position:absolute;left:34px;top:34px;width:50px;height:50px;border-radius:50%;
+  background:rgba(255,255,255,.72);box-shadow:0 4px 14px rgba(0,0,0,.25)
+}
+#mobileHint{
+  position:absolute;left:154px;bottom:37px;padding:6px 9px;border-radius:9px;
+  background:rgba(0,0,0,.25);font-size:11px;color:rgba(255,255,255,.76)
+}
+@media (pointer:coarse),(max-width:900px){
+  #shell{width:100vw;height:100vh;aspect-ratio:auto}
+  #mobileControls{display:block}
+  #finishStatus{bottom:8px;font-size:12px;padding:6px 10px}
+  #hud{inset:6px 6px auto 6px;gap:5px}
+  .hudBox{padding:5px 7px;border-radius:9px}
+  .small{font-size:9px}.big{font-size:13px}
+  #lightPanel{min-width:168px;padding:5px 8px}
+  #lightLabel{font-size:16px}#countdown{font-size:9px}
+  .helpGrid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div id="app">
+<div id="shell">
+  <canvas id="game" width="1280" height="720"></canvas>
+
+  <div id="hud">
+    <div class="hudBox" id="leftStats">
+      <div class="small">LEVEL <span id="levelNum">1</span> · CONTESTANTS</div>
+      <div class="big"><span id="contestants">50</span></div>
+    </div>
+
+    <div class="hudBox" id="lightPanel">
+      <div id="lightLabel" class="green">GREEN LIGHT</div>
+      <div id="countdown">Red light in 4.5s</div>
+      <div id="phaseBar"><div id="phaseFill"></div></div>
+    </div>
+
+    <div class="hudBox" id="rightStats">
+      <div class="small">ROUND TIME</div>
+      <div class="big" id="matchTime">1:00</div>
+    </div>
+  </div>
+
+  <button id="helpBtn" aria-label="Help">?</button>
+
+  <div id="finishStatus" class="hidden" style="
+    position:absolute;left:50%;bottom:14px;transform:translateX(-50%);
+    z-index:5;pointer-events:none;text-align:center;
+    background:rgba(8,15,11,.88);border:1px solid rgba(255,255,255,.14);
+    border-radius:14px;padding:9px 15px;box-shadow:0 5px 18px rgba(0,0,0,.25);
+    font-weight:900;letter-spacing:.02em">
+    <div id="finishPlace" style="font-size:17px">FINISHED</div>
+    <div style="font-size:10px;color:#c6d0c9;margin-top:2px">WATCHING AT 1.5× SPEED</div>
+  </div>
+
+
+  <div id="mobileControls">
+    <div id="joystickBase"><div id="joystickKnob"></div></div>
+    <div id="mobileHint">Drag to move</div>
+  </div>
+
+  <div id="menu" class="overlay">
+    <div class="card">
+      <h1>RED LIGHT<br>GREEN LIGHT</h1>
+      <p class="subtitle">
+        Race through a crowd of 50. During red light the robot visibly sweeps the field:
+        move while it is looking elsewhere, hide behind cover, and survive each one-minute level.
+      </p>
+      <div style="margin:0 auto 16px;max-width:380px">
+        <div class="small" style="margin-bottom:7px">DIFFICULTY</div>
+        <div class="buttonRow" style="gap:8px">
+          <button class="action primary" id="easyBtn">Easy</button>
+          <button class="action" id="hardBtn">Hard</button>
+        </div>
+        <div id="modeDesc" style="font-size:12px;color:#c6d0c9;margin-top:8px;line-height:1.35">
+          Easy: standard CPU aggression and one scanning beam.
+        </div>
+      </div>
+      <div class="buttonRow">
+        <button class="action primary" id="startBtn">Start Game</button>
+        <button class="action" id="menuHelpBtn">How to Play</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="gameOver" class="overlay hidden">
+    <div class="card">
+      <h1>ELIMINATED</h1>
+      <p class="subtitle" id="elimText">The robot caught you moving.</p>
+      <div class="buttonRow">
+        <button class="action primary" id="retryBtn">Retry</button>
+        <button class="action" id="gameOverMenuBtn">Main Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="winScreen" class="overlay hidden">
+    <div class="card">
+      <h1>YOU WIN!</h1>
+      <p class="subtitle" id="winText">You are the final surviving player.</p>
+      <div class="buttonRow">
+        <button class="action primary" id="againBtn">Play Again</button>
+        <button class="action" id="winMenuBtn">Main Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="roundScreen" class="overlay hidden">
+    <div class="card" id="roundCard">
+      <h1 id="roundTitle" style="font-size:38px">LEVEL COMPLETE</h1>
+      <p class="subtitle" id="roundText">Players advance.</p>
+      <div class="advance" id="roundAdvance">Next level ready.</div>
+      <div class="buttonRow" style="margin-top:14px">
+        <button class="action primary" id="nextLevelBtn">Okay</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="help" class="overlay hidden">
+    <div class="card">
+      <h1 style="font-size:34px">HOW TO PLAY</h1>
+      <div class="helpGrid">
+        <div class="helpItem"><b>Move</b>WASD or arrow keys. On mobile, drag the joystick.</div>
+        <div class="helpItem"><b>Bump Players</b>Running into another player moves them. They can bump you too.</div>
+        <div class="helpItem"><b>Green Light</b>Run for the finish. The countdown warns you when red is coming.</div>
+        <div class="helpItem"><b>Red Light</b>The visible scan shows where the robot is looking. You may still move while the scan is elsewhere.</div>
+        <div class="helpItem"><b>Cover</b>Rocks, trees, barriers, and other players can block the robot's actual line of sight.</div>
+        <div class="helpItem"><b>Levels</b>You have 1 minute. Once only the final elimination group is left behind, they are eliminated immediately. Survivors advance to a reshuffled, harder course.</div>
+        <div class="helpItem"><b>Finish Early</b>Your finishing place is shown when you cross. While you wait for the others, the rest of the round runs at 1.5× speed.</div>
+        <div class="helpItem"><b>Between Levels</b>The next level waits for you. Press Okay when you are ready to continue.</div>
+        <div class="helpItem"><b>Difficulty</b>Easy uses the current rules. Hard makes CPU players more aggressive and activates two scanning beams during red light.</div>
+      </div>
+      <button class="action primary" id="closeHelpBtn">Got It</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W=1280,H=720;
+const START_Y=658, FINISH_Y=105;
+const ROBOT={x:W/2,y:42,r:25};
+
+const $=id=>document.getElementById(id);
+const els={
+  menu:$('menu'),gameOver:$('gameOver'),winScreen:$('winScreen'),
+  roundScreen:$('roundScreen'),help:$('help'),
+  levelNum:$('levelNum'),contestants:$('contestants'),matchTime:$('matchTime'),
+  lightLabel:$('lightLabel'),countdown:$('countdown'),phaseFill:$('phaseFill'),
+  elimText:$('elimText'),winText:$('winText'),
+  roundTitle:$('roundTitle'),roundText:$('roundText'),roundAdvance:$('roundAdvance'),
+  finishStatus:$('finishStatus'),finishPlace:$('finishPlace'),
+  easyBtn:$('easyBtn'),hardBtn:$('hardBtn'),modeDesc:$('modeDesc'),
+  joystickBase:$('joystickBase'),joystickKnob:$('joystickKnob')
+};
+
+const rand=(a,b)=>a+Math.random()*(b-a);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const angleDelta=(a,b)=>Math.atan2(Math.sin(a-b),Math.cos(a-b));
+
+let gameState='menu';
+let gameMode='easy';
+let lastTime=performance.now();
+let elapsed=0;
+let level=1;
+let rosterSize=50;
+let matchTime=60;
+let roundDuration=60;
+let light='green';
+let phaseTime=4.8,phaseDuration=4.8;
+let robotAngle=Math.PI/2;
+let robotAngle2=Math.PI/2;
+let robotScanDir=1;
+let robotScanDir2=-1;
+let robotScanSpeed=.58;
+let robotScanFov=.66;
+let player=null,npcs=[],obstacles=[],lasers=[],particles=[];
+let screenShake=0;
+let finishOrder=0;
+let keys=new Set();
+let mobileVector={x:0,y:0},joystickPointer=null;
+
+let audioCtx=null;
+let lastBumpSound=0;
+
+function ensureAudio(){
+  if(!audioCtx){
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(AC)audioCtx=new AC();
+  }
+  if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
+}
+
+function tone(freq,duration=.12,type='sine',volume=.055,slideTo=null,delay=0){
+  if(!audioCtx)return;
+  const now=audioCtx.currentTime+delay;
+  const osc=audioCtx.createOscillator();
+  const gain=audioCtx.createGain();
+  osc.type=type;
+  osc.frequency.setValueAtTime(freq,now);
+  if(slideTo!==null)osc.frequency.exponentialRampToValueAtTime(Math.max(20,slideTo),now+duration);
+  gain.gain.setValueAtTime(.0001,now);
+  gain.gain.exponentialRampToValueAtTime(volume,now+.012);
+  gain.gain.exponentialRampToValueAtTime(.0001,now+duration);
+  osc.connect(gain);gain.connect(audioCtx.destination);
+  osc.start(now);osc.stop(now+duration+.02);
+}
+
+function noiseBurst(duration=.08,volume=.035,delay=0){
+  if(!audioCtx)return;
+  const rate=audioCtx.sampleRate;
+  const buffer=audioCtx.createBuffer(1,Math.max(1,Math.floor(rate*duration)),rate);
+  const data=buffer.getChannelData(0);
+  for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*(1-i/data.length);
+  const src=audioCtx.createBufferSource();
+  const gain=audioCtx.createGain();
+  src.buffer=buffer;
+  const now=audioCtx.currentTime+delay;
+  gain.gain.setValueAtTime(volume,now);
+  gain.gain.exponentialRampToValueAtTime(.0001,now+duration);
+  src.connect(gain);gain.connect(audioCtx.destination);
+  src.start(now);
+}
+
+function playSfx(name){
+  if(!audioCtx)return;
+  switch(name){
+    case 'green':
+      tone(520,.09,'sine',.045,680,0);
+      tone(760,.10,'sine',.04,900,.085);
+      break;
+    case 'red':
+      tone(260,.13,'square',.035,180,0);
+      tone(210,.16,'square',.03,145,.11);
+      break;
+    case 'laser':
+      tone(1150,.11,'sawtooth',.038,120,.0);
+      noiseBurst(.055,.018,.02);
+      break;
+    case 'finish':
+      tone(620,.08,'sine',.04,760,0);
+      tone(820,.10,'sine',.045,990,.08);
+      break;
+    case 'round':
+      tone(430,.10,'triangle',.035,520,0);
+      tone(620,.11,'triangle',.04,760,.1);
+      tone(820,.14,'triangle',.045,1040,.2);
+      break;
+    case 'win':
+      tone(520,.11,'triangle',.04,650,0);
+      tone(660,.11,'triangle',.04,830,.11);
+      tone(880,.18,'triangle',.05,1100,.22);
+      break;
+    case 'bump':{
+      const now=performance.now();
+      if(now-lastBumpSound<150)return;
+      lastBumpSound=now;
+      noiseBurst(.045,.02,0);
+      tone(110,.055,'sine',.022,75,0);
+      break;
+    }
+  }
+}
+
+
+function difficulty(){
+  return {
+    roundTime:60,
+    greenMin:Math.max(2.35,4.15-(level-1)*.16),
+    greenMax:Math.max(3.45,5.9-(level-1)*.18),
+    redMin:Math.min(4.5,2.8+(level-1)*.08),
+    redMax:Math.min(5.5,4.1+(level-1)*.09),
+    // Round 1 keeps the original scan. Every later round is faster and wider.
+    scanSpeed:Math.min(1.55,.58+(level-1)*.12),
+    scanFov:Math.min(1.38,.66+(level-1)*.13),
+    coverRemove:Math.min(4,Math.floor((level-1)/2))
+  };
+}
+
+function cpuHarassSettings(){
+  if(gameMode==='hard'){
+    return {
+      aggressionThreshold:.56,
+      closeDistance:235,
+      randomHarassChance:.20,
+      shoulderChance:.76,
+      shoulderCooldownMin:.34,
+      shoulderCooldownMax:.62
+    };
+  }
+  return {
+    aggressionThreshold:.82,
+    closeDistance:175,
+    randomHarassChance:.06,
+    shoulderChance:.45,
+    shoulderCooldownMin:.70,
+    shoulderCooldownMax:1.15
+  };
+}
+
+
+function makeCharacter(x,y,isPlayer=false){
+  return {
+    x,y,r:isPlayer?10:9,vx:0,vy:0,
+    moving:false,alive:true,finished:false,isPlayer,
+    color:isPlayer?'#fff06e':`hsl(${Math.floor(rand(0,360))} 58% 63%)`,
+    speed:isPlayer?150:rand(84,118),
+    decision:rand(.2,.8),target:null,panic:rand(0,1),
+    aggression:isPlayer?0:Math.random(),shoulderCooldown:rand(0,.6),
+    id:Math.random().toString(36).slice(2)
+  };
+}
+
+function obstacleBounds(o,pad=0){
+  if(o.type==='barrier'){
+    return {x:o.x-pad,y:o.y-pad,w:o.w+pad*2,h:o.h+pad*2};
+  }
+  const rr=o.r+pad;
+  return {x:o.x-rr,y:o.y-rr,w:rr*2,h:rr*2};
+}
+
+function obstacleOverlaps(a,b,gap=14){
+  const A=obstacleBounds(a,gap);
+  const B=obstacleBounds(b,gap);
+  return !(A.x+A.w<B.x || B.x+B.w<A.x || A.y+A.h<B.y || B.y+B.h<A.y);
+}
+
+function makeObstacles(){
+  const templates=[
+    {type:'tree',x:135,y:170,r:35},
+    {type:'tree',x:1080,y:215,r:38},
+    {type:'tree',x:930,y:470,r:36},
+    {type:'tree',x:275,y:420,r:34},
+    {type:'rock',x:455,y:220,r:30},
+    {type:'rock',x:785,y:165,r:28},
+    {type:'rock',x:620,y:450,r:34},
+    {type:'rock',x:1110,y:515,r:31},
+    {type:'barrier',x:355,y:330,w:150,h:28},
+    {type:'barrier',x:770,y:330,w:155,h:28},
+    {type:'barrier',x:95,y:535,w:145,h:28},
+    {type:'barrier',x:935,y:575,w:165,h:28}
+  ];
+
+  const remove=difficulty().coverRemove;
+  for(let i=0;i<remove;i++){
+    if(templates.length>7)templates.splice(Math.floor(rand(0,templates.length)),1);
+  }
+
+  const placed=[];
+  for(const base of templates){
+    let accepted=null;
+
+    // Try several randomized positions until scenery has a clean visible gap.
+    for(let attempt=0;attempt<80;attempt++){
+      const o={...base};
+      if(o.type==='barrier'){
+        o.x=clamp(base.x+rand(-95,95),45,W-o.w-45);
+        o.y=clamp(base.y+rand(-58,58),150,585);
+      }else{
+        o.x=clamp(base.x+rand(-100,100),55,W-55);
+        o.y=clamp(base.y+rand(-62,62),145,585);
+      }
+
+      // Keep obstacles away from the finish strip and starting crowd.
+      const clearFinish = (o.type==='barrier' ? o.y : o.y-o.r) > 132;
+      const clearStart = (o.type==='barrier' ? o.y+o.h : o.y+o.r) < START_Y-30;
+      const spaced = placed.every(p=>!obstacleOverlaps(o,p,16));
+
+      if(clearFinish && clearStart && spaced){
+        accepted=o;
+        break;
+      }
+    }
+
+    // Fallback to the original template only if it still fits cleanly.
+    if(!accepted){
+      const fallback={...base};
+      if(placed.every(p=>!obstacleOverlaps(fallback,p,12)))accepted=fallback;
+    }
+
+    if(accepted)placed.push(accepted);
+  }
+
+  obstacles=placed;
+}
+
+function spawnRoster(count){
+  player=makeCharacter(W/2,START_Y,true);
+  npcs=[];
+  const npcCount=Math.max(0,count-1);
+  const cols=Math.min(12,Math.max(5,Math.ceil(Math.sqrt(Math.max(1,npcCount))*1.6)));
+  for(let i=0;i<npcCount;i++){
+    const row=Math.floor(i/cols),col=i%cols;
+    const spacingX=Math.min(92,(W-170)/(Math.max(1,cols-1)));
+    const x=85+col*spacingX+rand(-15,15);
+    const y=START_Y-18-row*20+rand(-6,6);
+    npcs.push(makeCharacter(clamp(x,35,W-35),y,false));
+  }
+}
+
+function prepareLevel(count){
+  rosterSize=count;
+  const d=difficulty();
+  roundDuration=d.roundTime;
+  matchTime=roundDuration;
+  robotScanSpeed=d.scanSpeed;
+  robotScanFov=d.scanFov;
+  light='green';
+  phaseDuration=rand(d.greenMin,d.greenMax);
+  phaseTime=phaseDuration;
+  robotAngle=Math.PI/2;
+  robotAngle2=Math.PI/2;
+  robotScanDir=Math.random()<.5?-1:1;
+  robotScanDir2=-robotScanDir;
+  lasers=[];particles=[];screenShake=0;elapsed=0;finishOrder=0;
+  els.finishStatus.classList.add('hidden');
+  makeObstacles();
+  spawnRoster(count);
+  updateHud();
+}
+
+function newTournament(){
+  ensureAudio();
+  level=1;
+  prepareLevel(50);
+  playSfx('green');
+  gameState='playing';
+  els.menu.classList.add('hidden');
+  els.gameOver.classList.add('hidden');
+  els.winScreen.classList.add('hidden');
+  els.roundScreen.classList.add('hidden');
+  els.finishStatus.classList.add('hidden');
+  els.help.classList.add('hidden');
+}
+
+function backToMenu(){
+  gameState='menu';
+  els.menu.classList.remove('hidden');
+  els.gameOver.classList.add('hidden');
+  els.winScreen.classList.add('hidden');
+  els.roundScreen.classList.add('hidden');
+  els.finishStatus.classList.add('hidden');
+  els.help.classList.add('hidden');
+}
+
+function activeContestants(){
+  let n=(player&&player.alive&&!player.finished)?1:0;
+  n+=npcs.filter(p=>p.alive&&!p.finished).length;
+  return n;
+}
+function survivors(){
+  const arr=[];
+  if(player&&player.alive&&player.finished)arr.push(player);
+  for(const n of npcs)if(n.alive&&n.finished)arr.push(n);
+  return arr;
+}
+
+function updateHud(){
+  els.levelNum.textContent=level;
+  // During a level, show everyone still alive whether on field or already finished.
+  const alive=(player&&player.alive?1:0)+npcs.filter(n=>n.alive).length;
+  els.contestants.textContent=alive;
+  const sec=Math.max(0,Math.ceil(matchTime));
+  els.matchTime.textContent=`${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')}`;
+  els.lightLabel.textContent=light==='green'?'GREEN LIGHT':'RED LIGHT';
+  els.lightLabel.className=light;
+  els.countdown.textContent=light==='green'
+    ?`Red light in ${Math.max(0,phaseTime).toFixed(1)}s`
+    :`Scan active · ${Math.max(0,phaseTime).toFixed(1)}s`;
+  els.phaseFill.style.width=`${clamp(phaseTime/phaseDuration,0,1)*100}%`;
+}
+
+function circleRectHit(cx,cy,cr,r){
+  const nx=clamp(cx,r.x,r.x+r.w),ny=clamp(cy,r.y,r.y+r.h);
+  const dx=cx-nx,dy=cy-ny;
+  return dx*dx+dy*dy<cr*cr;
+}
+
+function collideWorld(ch,dx,dy){
+  let nx=clamp(ch.x+dx,18,W-18);
+  let ny=clamp(ch.y+dy,FINISH_Y+4,H-16);
+  for(const o of obstacles){
+    if(o.type==='tree'||o.type==='rock'){
+      const ddx=nx-o.x,ddy=ny-o.y,min=ch.r+o.r,d=Math.hypot(ddx,ddy);
+      if(d<min&&d>0){
+        nx=o.x+ddx/d*min;
+        ny=o.y+ddy/d*min;
+      }
+    }else if(circleRectHit(nx,ny,ch.r,o)){
+      const left=Math.abs(nx-o.x),right=Math.abs(nx-(o.x+o.w));
+      const top=Math.abs(ny-o.y),bottom=Math.abs(ny-(o.y+o.h));
+      const m=Math.min(left,right,top,bottom);
+      if(m===left)nx=o.x-ch.r;
+      else if(m===right)nx=o.x+o.w+ch.r;
+      else if(m===top)ny=o.y-ch.r;
+      else ny=o.y+o.h+ch.r;
+    }
+  }
+  return {x:nx,y:ny};
+}
+
+function pushCharacter(ch,dx,dy){
+  if(!ch.alive||ch.finished)return;
+  const p=collideWorld(ch,dx,dy);
+  ch.x=p.x;ch.y=p.y;
+}
+
+function resolvePlayerCollisions(dt){
+  const collisionPairs=[];
+  const all=[player,...npcs].filter(Boolean).filter(p=>p.alive&&!p.finished);
+  for(let i=0;i<all.length;i++){
+    for(let j=i+1;j<all.length;j++){
+      const a=all[i],b=all[j];
+      let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);
+      const min=a.r+b.r;
+      if(d===0){dx=.1;dy=0;d=.1}
+      if(d<min){
+        const nx=dx/d,ny=dy/d;
+        const overlap=min-d;
+
+        // Normal contact: both people yield and physically move.
+        pushCharacter(a,-nx*overlap*.52,-ny*overlap*.52);
+        pushCharacter(b, nx*overlap*.52, ny*overlap*.52);
+
+        // Momentum transfer makes running into someone visibly bump them.
+        const av=Math.hypot(a.vx,a.vy),bv=Math.hypot(b.vx,b.vy);
+        if(av>35 && av>bv+10){
+          const shove=Math.min(5.5,(av-bv)*dt*.75+1.1);
+          pushCharacter(b,nx*shove,ny*shove);
+          pushCharacter(a,-nx*shove*.16,-ny*shove*.16);
+          if(a.isPlayer||b.isPlayer)playSfx('bump');
+        }else if(bv>35 && bv>av+10){
+          const shove=Math.min(5.5,(bv-av)*dt*.75+1.1);
+          pushCharacter(a,-nx*shove,-ny*shove);
+          pushCharacter(b,nx*shove*.16,ny*shove*.16);
+          if(a.isPlayer||b.isPlayer)playSfx('bump');
+        }
+
+        collisionPairs.push([a,b]);
+      }
+    }
+  }
+  return collisionPairs;
+}
+
+function segmentIntersectsRect(a,b,r){
+  const dx=b.x-a.x,dy=b.y-a.y;
+  let t0=0,t1=1;
+
+  const checks=[
+    [-dx,a.x-r.x],
+    [ dx,r.x+r.w-a.x],
+    [-dy,a.y-r.y],
+    [ dy,r.y+r.h-a.y]
+  ];
+
+  for(const [p,q] of checks){
+    if(Math.abs(p)<1e-9){
+      if(q<0)return false;
+      continue;
+    }
+    const t=q/p;
+    if(p<0){
+      if(t>t1)return false;
+      if(t>t0)t0=t;
+    }else{
+      if(t<t0)return false;
+      if(t<t1)t1=t;
+    }
+  }
+  return true;
+}
+
+function segmentBlockedByObstacle(a,b,o){
+  if(o.type==='tree'||o.type==='rock'){
+    const dx=b.x-a.x,dy=b.y-a.y,len2=dx*dx+dy*dy;
+    if(!len2)return false;
+    const t=clamp(((o.x-a.x)*dx+(o.y-a.y)*dy)/len2,0,1);
+    const px=a.x+t*dx,py=a.y+t*dy;
+
+    // Slightly larger than the collision radius so something that visually
+    // looks like cover also reliably behaves like cover.
+    const rr=o.r+(o.type==='tree'?12:8);
+    return (px-o.x)**2+(py-o.y)**2<=rr*rr;
+  }
+
+  // Barriers get a small visual padding and an exact segment/rectangle test.
+  return segmentIntersectsRect(a,b,{
+    x:o.x-5,y:o.y-5,w:o.w+10,h:o.h+10
+  });
+}
+
+function segmentBlockedByPlayer(a,b,target){
+  const blockers=[player,...npcs].filter(p=>p&&p!==target&&p.alive&&!p.finished);
+  const dx=b.x-a.x,dy=b.y-a.y,len2=dx*dx+dy*dy;
+  if(!len2)return false;
+  for(const p of blockers){
+    const t=clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/len2,0,1);
+    if(t<=.03||t>=.97)continue;
+    const px=a.x+t*dx,py=a.y+t*dy,rr=p.r+2;
+    if((px-p.x)**2+(py-p.y)**2<rr*rr)return true;
+  }
+  return false;
+}
+
+function angleInsideScan(ang,scanAngle){
+  // Tiny inward margin keeps detection aligned with what the player sees
+  // at the soft edge of the visible red cone.
+  const detectionFov=Math.max(.05,robotScanFov-.035);
+  return Math.abs(angleDelta(ang,scanAngle))<=detectionFov/2;
+}
+
+function pointInsideActiveScan(x,y){
+  if(light!=='red')return false;
+  const ang=Math.atan2(y-ROBOT.y,x-ROBOT.x);
+  if(angleInsideScan(ang,robotAngle))return true;
+  if(gameMode==='hard'&&angleInsideScan(ang,robotAngle2))return true;
+  return false;
+}
+
+function clearSceneryLineTo(x,y){
+  const a={x:ROBOT.x,y:ROBOT.y+8},b={x,y};
+  if(Math.hypot(b.x-a.x,b.y-a.y)>790)return false;
+  for(const o of obstacles){
+    if(segmentBlockedByObstacle(a,b,o))return false;
+  }
+  return true;
+}
+
+function withinScanCone(target){
+  return pointInsideActiveScan(target.x,target.y);
+}
+
+function robotCanSee(target){
+  if(light!=='red'||!target.alive||target.finished)return false;
+  if(!pointInsideActiveScan(target.x,target.y))return false;
+  if(!clearSceneryLineTo(target.x,target.y))return false;
+
+  const a={x:ROBOT.x,y:ROBOT.y+8},b={x:target.x,y:target.y};
+  if(segmentBlockedByPlayer(a,b,target))return false;
+  return true;
+}
+
+function collisionPointIsExposed(a,b){
+  // Check the physical contact itself. Players may shield one another normally,
+  // but a bump only takes both out if their shared contact point is actually
+  // inside an active scan and unobstructed by scenery.
+  const x=(a.x+b.x)/2;
+  const y=(a.y+b.y)/2;
+  return pointInsideActiveScan(x,y)&&clearSceneryLineTo(x,y);
+}
+
+function eliminateScanCollisionPairs(pairs){
+  if(light!=='red'||!pairs||!pairs.length)return false;
+
+  for(const [a,b] of pairs){
+    if(!a.alive||!b.alive||a.finished||b.finished)continue;
+    if(!collisionPointIsExposed(a,b))continue;
+
+    const playerInPair=a.isPlayer||b.isPlayer;
+    eliminate(a, a.isPlayer ? 'You collided with another player inside the active scan.' : undefined, true);
+    eliminate(b, b.isPlayer ? 'You collided with another player inside the active scan.' : undefined, true);
+    if(playerInPair)return true;
+  }
+  return false;
+}
+
+function eliminate(ch,reason='The robot caught you moving.',useLaser=true){
+  if(!ch.alive||ch.finished)return;
+  ch.alive=false;ch.vx=ch.vy=0;
+
+  if(useLaser){
+    playSfx('laser');
+    // Keep the flash brief so the visible scan cannot sweep far away while
+    // the old laser is still on screen.
+    lasers.push({x1:ROBOT.x,y1:ROBOT.y+6,x2:ch.x,y2:ch.y,life:.13,max:.13});
+  }else{
+    // Round-cutoff/time eliminations are not line-of-sight kills.
+    noiseBurst(.065,.014,0);
+  }
+
+  for(let i=0;i<15;i++)particles.push({
+    x:ch.x,y:ch.y,vx:rand(-100,100),vy:rand(-100,100),
+    life:rand(.3,.7),size:rand(2,5),color:ch.color
+  });
+
+  if(ch.isPlayer){
+    screenShake=5;
+    els.elimText.textContent=reason;
+    gameState='eliminated';
+    els.gameOver.classList.remove('hidden');
+  }
+}
+
+function ordinal(n){
+  const mod100=n%100;
+  if(mod100>=11&&mod100<=13)return `${n}th`;
+  switch(n%10){
+    case 1:return `${n}st`;
+    case 2:return `${n}nd`;
+    case 3:return `${n}rd`;
+    default:return `${n}th`;
+  }
+}
+
+function finish(ch){
+  if(!ch.alive||ch.finished)return;
+  ch.finished=true;ch.vx=ch.vy=0;
+  finishOrder++;
+  ch.finishPlace=finishOrder;
+  if(ch.isPlayer){
+    playSfx('finish');
+    els.finishPlace.textContent=`FINISHED ${ordinal(ch.finishPlace).toUpperCase()} PLACE`;
+    els.finishStatus.classList.remove('hidden');
+  }
+}
+
+function chooseCoverTarget(n){
+  const opts=obstacles.map(o=>{
+    const ox=o.type==='barrier'?o.x+o.w/2:o.x;
+    const oy=o.type==='barrier'?o.y+o.h/2:o.y;
+    const vx=ox-ROBOT.x,vy=oy-ROBOT.y,d=Math.hypot(vx,vy)||1;
+    return {x:clamp(ox+vx/d*49,25,W-25),y:clamp(oy+vy/d*49,FINISH_Y+20,START_Y-15)};
+  }).filter(t=>t.y<n.y+85);
+  if(!opts.length)return null;
+  opts.sort((a,b)=>Math.abs(a.y-n.y)-Math.abs(b.y-n.y)+rand(-60,60));
+  return opts[Math.floor(rand(0,Math.min(4,opts.length)))];
+}
+
+function chooseNpcTarget(n){
+  const nearRed=light==='green'&&phaseTime<1.8;
+
+  // Aggressive NPCs sometimes deliberately intercept the player.
+  const hs=cpuHarassSettings();
+  const canHarass=player&&player.alive&&!player.finished&&n.aggression>hs.aggressionThreshold;
+  const closeToPlayer=canHarass&&distance(n,player)<hs.closeDistance;
+  if(canHarass && (closeToPlayer||Math.random()<hs.randomHarassChance) && !nearRed){
+    const px=player.x+rand(-12,12);
+    const py=player.y+rand(-8,18); // approach from below/side and shoulder forward
+    n.target={x:px,y:py,kind:'harass'};
+    return;
+  }
+
+  if(nearRed||Math.random()<.24){
+    const c=chooseCoverTarget(n);
+    if(c){c.kind='cover';n.target=c;return}
+  }
+
+  n.target={
+    x:clamp(n.x+rand(-120,120),30,W-30),
+    y:FINISH_Y-rand(0,12),kind:'finish'
+  };
+}
+
+function safeToMoveDuringRed(n){
+  // NPCs understand the visible sweep imperfectly.
+  if(!withinScanCone(n))return true;
+  if(!robotCanSee(n))return true;
+  return false;
+}
+
+function updateNpc(n,dt){
+  if(!n.alive||n.finished)return;
+  n.decision-=dt;
+  n.shoulderCooldown-=dt;
+
+  let dx=0,dy=0,speedScale=1;
+
+  if(light==='green'){
+    if(!n.target||n.decision<=0||distance(n,n.target)<18){
+      chooseNpcTarget(n);
+      n.decision=rand(.35,1.1);
+    }
+    dx=n.target.x-n.x;dy=n.target.y-n.y;
+    const d=Math.hypot(dx,dy)||1;dx/=d;dy/=d;
+
+    if(n.target.kind==='harass'){
+      speedScale=1.08;
+      // Slight lateral offset makes shoulder checks rather than perfect following.
+      dx+=Math.sin(elapsed*4+n.x*.03)*.18;
+    }
+  }else{
+    // During red, smart NPCs can sneak while the scanner faces elsewhere.
+    const safe=safeToMoveDuringRed(n);
+    if(safe){
+      if(!n.target||n.decision<=0||distance(n,n.target)<18){
+        chooseNpcTarget(n);
+        n.decision=rand(.25,.8);
+      }
+      dx=n.target.x-n.x;dy=n.target.y-n.y;
+      const d=Math.hypot(dx,dy)||1;dx/=d;dy/=d;
+      speedScale=.54+(.25*n.aggression);
+    }else{
+      // A few make mistakes under pressure.
+      if(n.decision<=0){
+        n.decision=rand(.25,.75);
+        if(Math.random()<.025+n.panic*.035){
+          dx=rand(-1,1);dy=rand(-.4,.8);
+          const d=Math.hypot(dx,dy)||1;dx/=d;dy/=d;
+          speedScale=.2;
+        }
+      }
+    }
+  }
+
+  n.vx=dx*n.speed*speedScale;
+  n.vy=dy*n.speed*speedScale;
+  n.moving=Math.hypot(n.vx,n.vy)>5;
+
+  const ox=n.x,oy=n.y;
+  if(n.moving){
+    const p=collideWorld(n,n.vx*dt,n.vy*dt);
+    n.x=p.x;n.y=p.y;
+  }
+
+  // Deliberate shoulder bump against the user if close.
+  {
+    const hs=cpuHarassSettings();
+    if(player&&player.alive&&!player.finished&&n.aggression>hs.aggressionThreshold&&n.target&&n.target.kind==='harass'&&n.shoulderCooldown<=0){
+      const d=distance(n,player);
+      if(d<n.r+player.r+7 && Math.random()<hs.shoulderChance){
+        const sx=(player.x-n.x)/(d||1),sy=(player.y-n.y)/(d||1);
+        const shove=(gameMode==='hard'?4.2:3.0)+(gameMode==='hard'?4.0:3.2)*n.aggression;
+        pushCharacter(player,sx*shove,sy*shove);
+        pushCharacter(n,-sx*shove*.35,-sy*shove*.35);
+        playSfx('bump');
+        n.shoulderCooldown=rand(hs.shoulderCooldownMin,hs.shoulderCooldownMax);
+      }
+    }
+  }
+
+  const moved=Math.hypot(n.x-ox,n.y-oy);
+  if(n.y<=FINISH_Y+10){finish(n);return}
+
+  if(light==='red'&&moved>.13&&robotCanSee(n)){
+    // Detection is fast but not literally single-frame, giving tiny tolerance.
+    if(Math.random()<dt*11)eliminate(n,undefined,true);
+  }
+}
+
+function inputVector(){
+  let x=0,y=0;
+  if(keys.has('ArrowLeft')||keys.has('a')||keys.has('A'))x--;
+  if(keys.has('ArrowRight')||keys.has('d')||keys.has('D'))x++;
+  if(keys.has('ArrowUp')||keys.has('w')||keys.has('W'))y--;
+  if(keys.has('ArrowDown')||keys.has('s')||keys.has('S'))y++;
+  x+=mobileVector.x;y+=mobileVector.y;
+  const d=Math.hypot(x,y);
+  if(d>1){x/=d;y/=d}
+  return{x,y};
+}
+
+function updatePlayer(dt){
+  if(!player||!player.alive||player.finished)return;
+  const v=inputVector(),mag=Math.hypot(v.x,v.y);
+  player.vx=v.x*150;player.vy=v.y*150;
+  player.moving=mag>.055;
+
+  const ox=player.x,oy=player.y;
+  if(player.moving){
+    const p=collideWorld(player,player.vx*dt,player.vy*dt);
+    player.x=p.x;player.y=p.y;
+  }
+
+  const moved=Math.hypot(player.x-ox,player.y-oy);
+  if(player.y<=FINISH_Y+10){finish(player);return}
+
+  if(light==='red'&&moved>.15&&mag>.09&&robotCanSee(player)){
+    eliminate(player,'The scan caught you moving in the robot’s line of sight.',true);
+  }
+}
+
+function switchLight(){
+  const d=difficulty();
+  if(light==='green'){
+    light='red';
+    phaseDuration=rand(d.redMin,d.redMax);
+    phaseTime=phaseDuration;
+    robotScanDir=Math.random()<.5?-1:1;
+    robotScanDir2=-robotScanDir;
+    if(gameMode==='hard'){
+      robotAngle=.58;
+      robotAngle2=2.56;
+    }
+    playSfx('red');
+  }else{
+    light='green';
+    phaseDuration=rand(d.greenMin,d.greenMax);
+    phaseTime=phaseDuration;
+    playSfx('green');
+  }
+}
+
+function eliminationGroupSize(){
+  // With 6+ contestants, the final five left behind are cut.
+  // With smaller rosters, leave at least one possible winner.
+  return Math.min(5,Math.max(1,rosterSize-1));
+}
+
+function endRound(reason='time'){
+  if(gameState!=='playing')return;
+
+  const cutoff=eliminationGroupSize();
+  const leftBehind=[player,...npcs].filter(p=>p&&p.alive&&!p.finished);
+
+  // The remaining players on the field are eliminated, either because they
+  // are the final five (or smaller late-game cutoff) or because time expired.
+  if(player.alive&&!player.finished){
+    const msg=reason==='cutoff'
+      ?`You were among the final ${leftBehind.length} player${leftBehind.length===1?'':'s'} left behind.`
+      :'Time ran out before you reached the finish line.';
+    eliminate(player,msg,false);
+    return;
+  }
+
+  for(const n of npcs){
+    if(n.alive&&!n.finished){
+      // Each eliminated NPC still gets the cartoon laser effect.
+      eliminate(n,undefined,false);
+    }
+  }
+
+  const s=survivors();
+  if(!player.alive||!player.finished)return;
+
+  if(s.length===1){
+    gameState='won';
+    playSfx('win');
+    els.winText.textContent=`You are the final survivor after ${level} level${level===1?'':'s'}.`;
+    els.winScreen.classList.remove('hidden');
+    return;
+  }
+
+  gameState='round';
+  playSfx('round');
+  els.roundTitle.textContent=`LEVEL ${level} COMPLETE`;
+  const cutText=reason==='cutoff'
+    ?`The final ${leftBehind.length} player${leftBehind.length===1?'':'s'} left behind were eliminated.`
+    :'Time expired for everyone still on the field.';
+  els.roundText.textContent=`${cutText} ${s.length} player${s.length===1?'':'s'} advance.`;
+  els.roundAdvance.textContent=`Level ${level+1} will start with ${s.length} contestants.`;
+  els.roundScreen.classList.remove('hidden');
+}
+
+function startNextLevel(){
+  const count=survivors().length;
+  if(count<=1){
+    gameState='won';
+    els.winScreen.classList.remove('hidden');
+    return;
+  }
+  level++;
+  prepareLevel(count);
+  els.roundScreen.classList.add('hidden');
+  els.finishStatus.classList.add('hidden');
+  gameState='playing';
+  playSfx('green');
+}
+
+function updateEffects(dt){
+  for(const l of lasers)l.life-=dt;
+  lasers=lasers.filter(l=>l.life>0);
+  for(const p of particles){
+    p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;
+    p.vx*=Math.pow(.2,dt);p.vy*=Math.pow(.2,dt);
+  }
+  particles=particles.filter(p=>p.life>0);
+  screenShake=Math.max(0,screenShake-dt*18);
+}
+
+function update(dt){
+  if(gameState!=='playing'){
+    updateEffects(dt);
+    return;
+  }
+
+  // Once the human has finished, accelerate the remaining round to 1.5x.
+  // This speeds NPC movement, the scanner, light phases, effects, and the clock.
+  const simDt=(player&&player.alive&&player.finished)?dt*1.5:dt;
+  updateEffects(simDt);
+
+  elapsed+=simDt;
+  matchTime-=simDt;
+  phaseTime-=simDt;
+  if(phaseTime<=0)switchLight();
+
+  if(light==='red'){
+    const min=.48,max=2.66;
+    robotAngle+=robotScanDir*robotScanSpeed*simDt;
+    if(robotAngle<min){robotAngle=min;robotScanDir=1}
+    if(robotAngle>max){robotAngle=max;robotScanDir=-1}
+
+    if(gameMode==='hard'){
+      robotAngle2+=robotScanDir2*robotScanSpeed*simDt;
+      if(robotAngle2<min){robotAngle2=min;robotScanDir2=1}
+      if(robotAngle2>max){robotAngle2=max;robotScanDir2=-1}
+    }
+  }else{
+    robotAngle=lerp(robotAngle,Math.PI/2,1-Math.pow(.008,simDt));
+    robotAngle2=lerp(robotAngle2,Math.PI/2,1-Math.pow(.008,simDt));
+  }
+
+  updatePlayer(simDt);
+  if(gameState!=='playing'){updateHud();return}
+
+  for(const n of npcs)updateNpc(n,simDt);
+  const collisionPairs=resolvePlayerCollisions(simDt);
+
+  // Physical contact in the active scan counts as movement for both contestants.
+  // This also prevents one player from "shielding" the other during the bump itself.
+  if(eliminateScanCollisionPairs(collisionPairs)){
+    updateHud();
+    return;
+  }
+
+  // Normal movement detection after collision resolution.
+  if(light==='red'){
+    if(player.alive&&!player.finished&&player.moving&&robotCanSee(player)){
+      eliminate(player,'The scan caught you moving in the robot’s line of sight.',true);
+      updateHud();return;
+    }
+    for(const n of npcs){
+      if(n.alive&&!n.finished&&n.moving&&robotCanSee(n)&&Math.random()<simDt*8)eliminate(n,undefined,true);
+    }
+  }
+
+  // As soon as only the final elimination group remains behind the line,
+  // eliminate them immediately even if there is still time on the clock.
+  const unresolved=(player.alive&&!player.finished?1:0)+npcs.filter(n=>n.alive&&!n.finished).length;
+  const finishedCount=survivors().length;
+  const cutoff=eliminationGroupSize();
+
+  if(unresolved>0 && finishedCount>0 && unresolved<=cutoff){
+    endRound('cutoff');
+  }else if(matchTime<=0){
+    matchTime=0;
+    endRound('time');
+  }else if(unresolved===0){
+    endRound('all');
+  }
+
+  updateHud();
+}
+
+function drawField(){
+  ctx.fillStyle='#8caf68';ctx.fillRect(0,0,W,H);
+  for(let i=0;i<12;i++){
+    ctx.fillStyle=i%2?'rgba(255,255,255,.022)':'rgba(34,71,38,.035)';
+    ctx.fillRect(0,80+i*55,W,55);
+  }
+
+  ctx.fillStyle='#6b6a56';ctx.fillRect(0,75,18,H-75);ctx.fillRect(W-18,75,18,H-75);
+  ctx.strokeStyle='rgba(255,255,255,.18)';ctx.setLineDash([9,7]);
+  ctx.beginPath();ctx.moveTo(18,80);ctx.lineTo(18,H);ctx.moveTo(W-18,80);ctx.lineTo(W-18,H);ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle='rgba(255,255,255,.82)';ctx.fillRect(28,START_Y+20,W-56,4);
+  ctx.fillStyle='rgba(255,255,255,.72)';ctx.font='700 12px system-ui';ctx.textAlign='center';
+  ctx.fillText('START',W/2,START_Y+40);
+
+  ctx.fillStyle='#d4c45d';ctx.fillRect(18,80,W-36,34);
+  ctx.fillStyle='#29291f';
+  ctx.font='950 18px system-ui';
+  ctx.textAlign='center';
+  for(let x=105;x<=W-70;x+=214)ctx.fillText('FINISH',x,101);
+
+  for(let x=24;x<W-24;x+=32){
+    ctx.fillStyle=(Math.floor(x/32)%2)?'#222':'#f4f0d9';ctx.fillRect(x,104,16,10);
+    ctx.fillStyle=(Math.floor(x/32)%2)?'#f4f0d9':'#222';ctx.fillRect(x+16,104,16,10);
+  }
+}
+
+function drawOneScan(scanAngle,alphaScale=1){
+  const length=820;
+  const a1=scanAngle-robotScanFov/2,a2=scanAngle+robotScanFov/2;
+
+  const grad=ctx.createRadialGradient(ROBOT.x,ROBOT.y,20,ROBOT.x,ROBOT.y,length);
+  grad.addColorStop(0,`rgba(255,72,82,${.22*alphaScale})`);
+  grad.addColorStop(.45,`rgba(255,72,82,${.12*alphaScale})`);
+  grad.addColorStop(1,`rgba(255,72,82,${.02*alphaScale})`);
+  ctx.fillStyle=grad;
+  ctx.beginPath();ctx.moveTo(ROBOT.x,ROBOT.y);
+  ctx.arc(ROBOT.x,ROBOT.y,length,a1,a2);
+  ctx.closePath();ctx.fill();
+
+  ctx.strokeStyle=`rgba(255,105,110,${.28*alphaScale})`;
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(ROBOT.x,ROBOT.y);
+  ctx.lineTo(ROBOT.x+Math.cos(a1)*length,ROBOT.y+Math.sin(a1)*length);
+  ctx.moveTo(ROBOT.x,ROBOT.y);
+  ctx.lineTo(ROBOT.x+Math.cos(a2)*length,ROBOT.y+Math.sin(a2)*length);
+  ctx.stroke();
+}
+
+function drawScan(){
+  if(light!=='red')return;
+  drawOneScan(robotAngle,1);
+  if(gameMode==='hard')drawOneScan(robotAngle2,.88);
+}
+
+function drawObstacle(o){
+  if(o.type==='tree'){
+    ctx.fillStyle='rgba(0,0,0,.18)';ctx.beginPath();
+    ctx.ellipse(o.x+7,o.y+10,o.r*.85,o.r*.45,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#704d30';ctx.fillRect(o.x-7,o.y-2,14,o.r+15);
+    ctx.fillStyle='#356f3c';
+    for(let i=0;i<5;i++){
+      const a=i*Math.PI*2/5;
+      ctx.beginPath();ctx.arc(o.x+Math.cos(a)*16,o.y+Math.sin(a)*13,o.r*.62,0,Math.PI*2);ctx.fill();
+    }
+    ctx.fillStyle='#4d8a4b';ctx.beginPath();ctx.arc(o.x,o.y-7,o.r*.68,0,Math.PI*2);ctx.fill();
+  }else if(o.type==='rock'){
+    ctx.fillStyle='rgba(0,0,0,.18)';ctx.beginPath();
+    ctx.ellipse(o.x+4,o.y+8,o.r*.95,o.r*.48,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#666d68';ctx.beginPath();
+    ctx.moveTo(o.x-o.r*.85,o.y+o.r*.25);ctx.lineTo(o.x-o.r*.55,o.y-o.r*.55);
+    ctx.lineTo(o.x+o.r*.18,o.y-o.r*.8);ctx.lineTo(o.x+o.r*.84,o.y-o.r*.2);
+    ctx.lineTo(o.x+o.r*.65,o.y+o.r*.55);ctx.lineTo(o.x-o.r*.28,o.y+o.r*.75);
+    ctx.closePath();ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.1)';ctx.beginPath();
+    ctx.arc(o.x-o.r*.2,o.y-o.r*.28,o.r*.24,0,Math.PI*2);ctx.fill();
+  }else{
+    ctx.fillStyle='rgba(0,0,0,.16)';ctx.fillRect(o.x+5,o.y+7,o.w,o.h);
+    ctx.fillStyle='#8a6b3c';ctx.fillRect(o.x,o.y,o.w,o.h);
+    ctx.fillStyle='#b08b50';ctx.fillRect(o.x+4,o.y+4,o.w-8,5);
+    for(let x=o.x+16;x<o.x+o.w;x+=32){
+      ctx.fillStyle='rgba(0,0,0,.18)';ctx.fillRect(x,o.y,4,o.h);
+    }
+  }
+}
+
+function drawRobot(){
+  ctx.fillStyle='#6f6b62';ctx.beginPath();ctx.ellipse(ROBOT.x,ROBOT.y+30,58,18,0,0,Math.PI*2);ctx.fill();
+  ctx.save();ctx.translate(ROBOT.x,ROBOT.y);
+  ctx.fillStyle='#e5b9a7';ctx.beginPath();ctx.arc(0,0,24,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#3d2f2b';ctx.beginPath();ctx.arc(0,-5,25,Math.PI,0);ctx.fill();
+  ctx.fillStyle='#7a4c48';ctx.fillRect(-20,22,40,36);
+  ctx.fillStyle='#f0d3a6';ctx.fillRect(-13,58,10,28);ctx.fillRect(3,58,10,28);
+
+  ctx.rotate(robotAngle-Math.PI/2);
+  ctx.fillStyle='#222';ctx.beginPath();ctx.arc(-7,-2,3.1,0,Math.PI*2);ctx.arc(7,-2,3.1,0,Math.PI*2);ctx.fill();
+  if(light==='red'){
+    ctx.fillStyle='#ff3b49';ctx.beginPath();ctx.arc(-7,-2,1.8,0,Math.PI*2);ctx.arc(7,-2,1.8,0,Math.PI*2);ctx.fill();
+    if(gameMode==='hard'){
+      ctx.strokeStyle='rgba(255,70,80,.8)';ctx.lineWidth=1.4;
+      ctx.beginPath();ctx.arc(0,-2,13,0,Math.PI*2);ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+function drawCharacter(ch){
+  if(!ch.alive)return;
+  const y=ch.finished?91:ch.y;
+  ctx.fillStyle='rgba(0,0,0,.18)';ctx.beginPath();ctx.ellipse(ch.x+2,y+4,ch.r*.9,ch.r*.55,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=ch.color;ctx.beginPath();ctx.arc(ch.x,y,ch.r,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle=ch.isPlayer?'#252111':'rgba(30,30,30,.42)';
+  ctx.lineWidth=ch.isPlayer?3:1.3;ctx.stroke();
+  ctx.fillStyle=ch.isPlayer?'#2d332c':'rgba(255,255,255,.7)';
+  ctx.beginPath();ctx.arc(ch.x,y-ch.r*.25,2.1,0,Math.PI*2);ctx.fill();
+  if(ch.isPlayer){
+    ctx.fillStyle='rgba(0,0,0,.78)';ctx.font='900 10px system-ui';ctx.textAlign='center';
+    ctx.fillText('YOU',ch.x,y+23);
+  }
+}
+
+function drawEffects(){
+  ctx.lineCap='round';
+  for(const l of lasers){
+    const a=l.life/l.max;
+    ctx.strokeStyle=`rgba(255,45,65,${.18+.82*a})`;ctx.lineWidth=7*a+1;
+    ctx.beginPath();ctx.moveTo(l.x1,l.y1);ctx.lineTo(l.x2,l.y2);ctx.stroke();
+    ctx.strokeStyle=`rgba(255,235,235,${.65*a})`;ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(l.x1,l.y1);ctx.lineTo(l.x2,l.y2);ctx.stroke();
+  }
+  for(const p of particles){
+    ctx.globalAlpha=clamp(p.life/.5,0,1);ctx.fillStyle=p.color;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();
+  }
+  ctx.globalAlpha=1;
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.save();
+  if(screenShake>0)ctx.translate(rand(-screenShake,screenShake),rand(-screenShake,screenShake));
+  drawField();
+  drawScan();
+  for(const o of obstacles)drawObstacle(o);
+  for(const n of npcs)drawCharacter(n);
+  if(player)drawCharacter(player);
+  drawRobot();
+  drawEffects();
+  ctx.restore();
+}
+
+function frame(t){
+  let dt=(t-lastTime)/1000;lastTime=t;
+  dt=Math.min(dt,.033);
+  update(dt);draw();
+  requestAnimationFrame(frame);
+}
+
+window.addEventListener('keydown',e=>{
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();
+  keys.add(e.key);
+});
+window.addEventListener('keyup',e=>keys.delete(e.key));
+window.addEventListener('blur',()=>keys.clear());
+
+function updateJoy(e){
+  const r=els.joystickBase.getBoundingClientRect();
+  const cx=r.left+r.width/2,cy=r.top+r.height/2;
+  let dx=e.clientX-cx,dy=e.clientY-cy;
+  const max=r.width*.34,d=Math.hypot(dx,dy)||1;
+  if(d>max){dx=dx/d*max;dy=dy/d*max}
+  els.joystickKnob.style.transform=`translate(${dx}px,${dy}px)`;
+  mobileVector.x=dx/max;mobileVector.y=dy/max;
+}
+els.joystickBase.addEventListener('pointerdown',e=>{
+  joystickPointer=e.pointerId;
+  els.joystickBase.setPointerCapture(e.pointerId);
+  updateJoy(e);
+});
+els.joystickBase.addEventListener('pointermove',e=>{
+  if(e.pointerId===joystickPointer)updateJoy(e);
+});
+function releaseJoy(e){
+  if(joystickPointer!==null&&(!e||e.pointerId===joystickPointer)){
+    joystickPointer=null;mobileVector={x:0,y:0};
+    els.joystickKnob.style.transform='translate(0px,0px)';
+  }
+}
+els.joystickBase.addEventListener('pointerup',releaseJoy);
+els.joystickBase.addEventListener('pointercancel',releaseJoy);
+
+
+function setGameMode(mode){
+  gameMode=mode==='hard'?'hard':'easy';
+
+  if(gameMode==='easy'){
+    els.easyBtn.classList.add('primary');
+    els.hardBtn.classList.remove('primary');
+    els.modeDesc.textContent='Easy: standard CPU aggression and one scanning beam.';
+  }else{
+    els.hardBtn.classList.add('primary');
+    els.easyBtn.classList.remove('primary');
+    els.modeDesc.textContent='Hard: CPU players target you more often and two scanning beams sweep the field.';
+  }
+}
+
+$('easyBtn').onclick=()=>setGameMode('easy');
+$('hardBtn').onclick=()=>setGameMode('hard');
+$('startBtn').onclick=newTournament;
+$('retryBtn').onclick=newTournament;
+$('againBtn').onclick=newTournament;
+$('gameOverMenuBtn').onclick=backToMenu;
+$('winMenuBtn').onclick=backToMenu;
+$('nextLevelBtn').onclick=startNextLevel;
+$('helpBtn').onclick=()=>els.help.classList.remove('hidden');
+$('menuHelpBtn').onclick=()=>els.help.classList.remove('hidden');
+$('closeHelpBtn').onclick=()=>els.help.classList.add('hidden');
+
+setGameMode('easy');
+prepareLevel(50);
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
