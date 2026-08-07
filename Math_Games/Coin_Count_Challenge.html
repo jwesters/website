@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Coin Count Challenge</title>
+<style>
+  :root{
+    --bg:#07111f;
+    --panel:#0d1b2d;
+    --panel2:#11233a;
+    --line:#203852;
+    --text:#f4f7fb;
+    --muted:#9fb1c5;
+    --accent:#52c9a5;
+    --accent2:#76a8ff;
+    --good:#65d58a;
+    --bad:#ff7f87;
+    --warn:#ffd166;
+    --shadow:0 18px 50px rgba(0,0,0,.28);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:
+    radial-gradient(circle at 20% 0%, rgba(82,201,165,.11), transparent 32%),
+    radial-gradient(circle at 90% 15%, rgba(118,168,255,.11), transparent 26%),
+    var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  body{min-height:100vh}
+  button,input{font:inherit}
+  button{cursor:pointer}
+  .app{width:min(1120px,calc(100% - 28px));margin:0 auto;min-height:100vh;padding:24px 0 34px;display:flex;flex-direction:column}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}
+  .brand{display:flex;align-items:center;gap:11px;font-weight:850;letter-spacing:.2px}
+  .brand-mark{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(145deg,#ffd36a,#e8a62a);color:#312100;box-shadow:inset 0 0 0 3px rgba(255,255,255,.22),0 6px 18px rgba(0,0,0,.24);font-weight:900}
+  .top-actions{display:flex;gap:9px;align-items:center}
+  .ghost,.secondary,.primary,.dangerless{border:1px solid var(--line);border-radius:12px;padding:10px 14px;background:#0b1828;color:var(--text);font-weight:750}
+  .ghost:hover,.secondary:hover{background:#13243a;border-color:#31516f}
+  .primary{border:0;background:linear-gradient(135deg,var(--accent),#39a883);color:#05231b;padding:12px 18px;box-shadow:0 10px 25px rgba(82,201,165,.18)}
+  .primary:hover{filter:brightness(1.05)}
+  .primary:disabled{opacity:.46;cursor:not-allowed;filter:none}
+  .secondary{background:#102036}
+  .screen{display:none;flex:1}
+  .screen.active{display:block}
+  .hero{text-align:center;padding:34px 10px 18px}
+  .eyebrow{display:inline-flex;align-items:center;gap:7px;background:rgba(82,201,165,.09);border:1px solid rgba(82,201,165,.24);color:#8de3c9;padding:7px 11px;border-radius:999px;font-size:.84rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+  h1{font-size:clamp(2.4rem,7vw,5.5rem);line-height:.95;margin:18px 0 14px;letter-spacing:-.055em}
+  .hero p{max-width:690px;margin:0 auto;color:var(--muted);font-size:1.06rem;line-height:1.65}
+  .setup{max-width:930px;margin:26px auto 0}
+  .section-label{font-size:.85rem;color:#c4d2df;text-transform:uppercase;letter-spacing:.08em;font-weight:850;margin:0 0 10px}
+  .difficulty-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}
+  .difficulty{position:relative;text-align:left;padding:19px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(180deg,#102139,#0c192a);color:var(--text);min-height:145px;transition:.18s transform,.18s border-color,.18s background}
+  .difficulty:hover{transform:translateY(-2px);border-color:#3c5e7e}
+  .difficulty.selected{border-color:var(--accent);background:linear-gradient(180deg,rgba(82,201,165,.13),#0c192a);box-shadow:0 0 0 1px rgba(82,201,165,.18) inset}
+  .difficulty .name{font-size:1.18rem;font-weight:900;margin-bottom:5px}
+  .difficulty .coins{color:var(--accent);font-weight:850;font-size:.9rem}
+  .difficulty .desc{color:var(--muted);font-size:.91rem;line-height:1.45;margin-top:10px}
+  .checkmark{position:absolute;right:14px;top:14px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:#06231b;font-size:.78rem;font-weight:950;opacity:0;transform:scale(.8)}
+  .difficulty.selected .checkmark{opacity:1;transform:scale(1)}
+  .count-row{display:flex;gap:9px;flex-wrap:wrap}
+  .count-btn{min-width:76px;border:1px solid var(--line);background:#0c192a;color:var(--text);padding:11px 16px;border-radius:12px;font-weight:850}
+  .count-btn.selected{background:rgba(118,168,255,.14);border-color:var(--accent2);color:#dce9ff}
+  .start-row{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:26px}
+  .start-row .primary{min-width:190px;font-size:1.02rem}
+  .info-strip{display:flex;justify-content:center;gap:22px;flex-wrap:wrap;margin-top:24px;color:var(--muted);font-size:.9rem}
+  .info-strip span{display:flex;align-items:center;gap:7px}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+
+  /* Game */
+  .game-shell{max-width:900px;margin:0 auto}
+  .game-header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;margin-bottom:17px}
+  .game-header .center{text-align:center}.game-header>.ghost{justify-self:start}
+  .progress-label{font-weight:850}
+  .score{text-align:right;color:var(--muted);font-weight:750}
+  .score b{color:var(--text)}
+  .progress-track{height:7px;background:#12233a;border-radius:999px;overflow:hidden;margin-bottom:18px;border:1px solid #1a314c}
+  .progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s ease}
+  .question-card{background:linear-gradient(180deg,rgba(17,35,58,.96),rgba(11,25,42,.96));border:1px solid var(--line);border-radius:24px;padding:clamp(20px,4vw,34px);box-shadow:var(--shadow)}
+  .difficulty-pill{display:inline-flex;padding:6px 9px;border:1px solid #294560;border-radius:999px;color:#c7d7e6;font-weight:850;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em}
+  .question-text{font-size:clamp(1.35rem,3.7vw,2.15rem);line-height:1.35;font-weight:780;letter-spacing:-.02em;margin:14px 0 8px}
+  .question-sub{color:var(--muted);line-height:1.55}
+  .clues{display:grid;gap:8px;margin:17px 0 0}
+  .clue{border:1px solid rgba(255,209,102,.25);background:rgba(255,209,102,.07);padding:11px 13px;border-radius:12px;color:#ffe3a3;line-height:1.45}
+  .clue strong{color:#ffd166}
+  .answer-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:24px 0}
+  .answer-item{display:flex;align-items:center;gap:12px;border:1px solid var(--line);background:#0b1828;padding:12px;border-radius:15px}
+  .coin-icon{width:48px;height:48px;flex:0 0 48px;border-radius:50%;display:grid;place-items:center;color:#2b240d;font-weight:950;font-size:.78rem;border:3px solid rgba(255,255,255,.25);box-shadow:inset 0 0 0 2px rgba(0,0,0,.08)}
+  .coin-penny{background:linear-gradient(145deg,#e79f71,#a85735)}
+  .coin-nickel{background:linear-gradient(145deg,#e0e7ef,#929eaa)}
+  .coin-dime{background:linear-gradient(145deg,#edf2f6,#aeb7c0)}
+  .coin-quarter{background:linear-gradient(145deg,#f2f5f8,#9ca8b2)}
+  .coin-loonie{background:linear-gradient(145deg,#f7d56f,#b8891b)}
+  .coin-toonie{background:radial-gradient(circle,#f2d36c 0 48%,#c9d1d9 49% 100%)}
+  .answer-label{flex:1;min-width:0}
+  .answer-label .coin-name{font-weight:850}
+  .answer-label .coin-value{font-size:.8rem;color:var(--muted);margin-top:2px}
+  .coin-input{width:80px;min-width:70px;padding:10px 8px;border-radius:10px;border:1px solid #29425d;background:#07131f;color:var(--text);font-weight:900;font-size:1.05rem;text-align:center;outline:none}
+  .coin-input:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(118,168,255,.12)}
+  .coin-input:disabled{opacity:.75}
+  .game-actions{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+  .feedback{display:none;margin-top:18px;border-radius:16px;padding:15px 16px;line-height:1.5}
+  .feedback.show{display:block}
+  .feedback.correct{background:rgba(101,213,138,.09);border:1px solid rgba(101,213,138,.28)}
+  .feedback.wrong{background:rgba(255,127,135,.08);border:1px solid rgba(255,127,135,.26)}
+  .feedback-title{font-weight:900;font-size:1.03rem;margin-bottom:5px}
+  .correct .feedback-title{color:#9be8b3}
+  .wrong .feedback-title{color:#ffadb2}
+  .solution-chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+  .solution-chip{background:#081421;border:1px solid #28415c;padding:7px 10px;border-radius:999px;font-weight:800;font-size:.86rem}
+
+  /* Finish */
+  .finish-card{max-width:650px;margin:60px auto 0;text-align:center;background:linear-gradient(180deg,#102139,#0b1828);border:1px solid var(--line);border-radius:25px;padding:38px 26px;box-shadow:var(--shadow)}
+  .finish-icon{font-size:3.5rem}
+  .finish-card h2{font-size:2.15rem;margin:9px 0 6px}
+  .big-score{font-size:4.5rem;font-weight:950;letter-spacing:-.06em;margin:18px 0 4px}
+  .finish-card p{color:var(--muted);margin:0 0 24px}
+
+  /* Modal */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(2,8,15,.78);display:none;align-items:center;justify-content:center;padding:18px;z-index:50;backdrop-filter:blur(7px)}
+  .modal-backdrop.open{display:flex}
+  .modal{width:min(780px,100%);max-height:min(760px,92vh);overflow:auto;background:#0c1a2b;border:1px solid #29415a;border-radius:22px;box-shadow:0 24px 80px rgba(0,0,0,.45)}
+  .modal-head{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;gap:12px;align-items:center;padding:17px 19px;background:rgba(12,26,43,.96);border-bottom:1px solid var(--line);backdrop-filter:blur(8px)}
+  .modal-head h2{font-size:1.25rem;margin:0}
+  .close{border:1px solid var(--line);background:#102139;color:var(--text);width:36px;height:36px;border-radius:10px;font-weight:900}
+  .modal-body{padding:20px}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:17px}
+  .tab{border:1px solid var(--line);background:#091522;color:var(--muted);padding:8px 12px;border-radius:999px;font-weight:850}
+  .tab.active{background:rgba(82,201,165,.12);border-color:var(--accent);color:#b7f2df}
+  .lesson{display:none}
+  .lesson.active{display:block}
+  .lesson h3{margin:18px 0 8px;font-size:1.02rem}
+  .lesson p,.lesson li{color:#bdcad8;line-height:1.62}
+  .example-box{border:1px solid #29445f;background:#091522;border-radius:14px;padding:14px;margin:12px 0}
+  .equation{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#06101a;border:1px solid #20364e;padding:10px 12px;border-radius:10px;margin:7px 0;color:#d8e8f7;overflow-x:auto}
+  .hint-card{border-left:3px solid var(--accent2);background:rgba(118,168,255,.07);padding:12px 14px;border-radius:0 12px 12px 0;margin:10px 0}
+  .tutor-controls{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}
+  .hidden{display:none!important}
+
+  @media(max-width:720px){
+    .app{width:min(100% - 18px,1120px);padding-top:12px}
+    .topbar{margin-bottom:8px}
+    .brand span:last-child{display:none}
+    .difficulty-grid{grid-template-columns:1fr}
+    .difficulty{min-height:auto}
+    .hero{padding-top:18px}
+    .answer-grid{grid-template-columns:1fr}
+    .game-header{grid-template-columns:auto 1fr auto}
+    .game-header .center{font-size:.9rem}
+    .score{font-size:.86rem}
+    .question-card{border-radius:19px}
+  }
+  @media(max-height:520px) and (orientation:landscape){
+    .app{padding-top:8px}
+    .topbar{margin-bottom:7px}
+    .hero{padding:6px 8px}
+    h1{font-size:2.5rem;margin:8px 0}
+    .hero p{font-size:.9rem}
+    .setup{margin-top:10px}
+    .difficulty-grid{grid-template-columns:repeat(3,1fr)}
+    .difficulty{min-height:105px;padding:12px}
+    .difficulty .desc{font-size:.78rem;margin-top:5px}
+    .start-row{margin-top:12px}
+    .info-strip{display:none}
+    .question-card{padding:16px}
+    .question-text{font-size:1.25rem;margin:8px 0 4px}
+    .answer-grid{grid-template-columns:repeat(2,1fr);margin:12px 0;gap:8px}
+    .answer-item{padding:7px}
+    .coin-icon{width:38px;height:38px;flex-basis:38px}
+    .feedback{margin-top:8px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand"><div class="brand-mark">¢</div><span>Coin Count Challenge</span></div>
+    <div class="top-actions">
+      <button class="ghost" id="howBtn">How to Play</button>
+      <button class="ghost" id="globalTutorBtn">Tutor</button>
+    </div>
+  </div>
+
+  <main>
+    <section id="menuScreen" class="screen active">
+      <div class="hero">
+        <div class="eyebrow">Canadian Coin Math</div>
+        <h1>Coin Count<br>Challenge</h1>
+        <p>Use the number of coins, their total value, and any clues to work out exactly how many of each coin you have.</p>
+      </div>
+
+      <div class="setup">
+        <p class="section-label">Choose difficulty</p>
+        <div class="difficulty-grid">
+          <button class="difficulty selected" data-level="easy">
+            <span class="checkmark">✓</span>
+            <div class="name">Easy</div>
+            <div class="coins">2 coin types</div>
+            <div class="desc">A straightforward two-variable coin puzzle.</div>
+          </button>
+          <button class="difficulty" data-level="hard">
+            <span class="checkmark">✓</span>
+            <div class="name">Hard</div>
+            <div class="coins">3 coin types</div>
+            <div class="desc">Three coin types plus a clue to narrow the possibilities.</div>
+          </button>
+          <button class="difficulty" data-level="extreme">
+            <span class="checkmark">✓</span>
+            <div class="name">Extreme</div>
+            <div class="coins">4 coin types</div>
+            <div class="desc">Four coin types with enough clues to guarantee one solution.</div>
+          </button>
+        </div>
+
+        <div style="margin-top:22px">
+          <p class="section-label">Number of questions</p>
+          <div class="count-row">
+            <button class="count-btn" data-count="1">1</button>
+            <button class="count-btn selected" data-count="5">5</button>
+            <button class="count-btn" data-count="10">10</button>
+          </div>
+        </div>
+
+        <div class="start-row">
+          <button class="primary" id="startBtn">Start Game</button>
+        </div>
+        <div class="info-strip">
+          <span><i class="dot"></i> One unique answer</span>
+          <span><i class="dot"></i> Immediate feedback</span>
+          <span><i class="dot"></i> Tutor available anytime</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="gameScreen" class="screen">
+      <div class="game-shell">
+        <div class="game-header">
+          <button class="ghost" id="homeBtn">← Menu</button>
+          <div class="center progress-label" id="progressLabel">Question 1 of 5</div>
+          <div class="score">Correct: <b id="scoreLabel">0</b></div>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+        <div class="question-card">
+          <span class="difficulty-pill" id="difficultyPill">Easy · 2 coin types</span>
+          <div class="question-text" id="questionText"></div>
+          <div class="question-sub">Enter the number of each coin.</div>
+          <div class="clues" id="cluesBox"></div>
+          <div class="answer-grid" id="answerGrid"></div>
+
+          <div class="game-actions">
+            <button class="secondary" id="questionTutorBtn">Tutor</button>
+            <div style="display:flex;gap:9px">
+              <button class="primary" id="checkBtn">Check Answer</button>
+              <button class="primary hidden" id="nextBtn">Next Question →</button>
+            </div>
+          </div>
+
+          <div id="feedback" class="feedback">
+            <div class="feedback-title" id="feedbackTitle"></div>
+            <div id="feedbackText"></div>
+            <div class="solution-chips" id="solutionChips"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="finishScreen" class="screen">
+      <div class="finish-card">
+        <div class="finish-icon">🪙</div>
+        <h2>Game Complete</h2>
+        <div class="big-score" id="finalScore">0 / 5</div>
+        <p id="finishMessage">Nice work!</p>
+        <div class="start-row">
+          <button class="primary" id="playAgainBtn">Play Again</button>
+          <button class="secondary" id="finishMenuBtn">Main Menu</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- How to Play -->
+<div class="modal-backdrop" id="howModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="howTitle">
+    <div class="modal-head">
+      <h2 id="howTitle">How to Play</h2>
+      <button class="close" data-close="howModal">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="example-box">
+        <strong>Example</strong>
+        <p>You have 20 coins made up of nickels and dimes. Their total value is $1.40. How many of each coin do you have?</p>
+      </div>
+      <p>Use the <strong>total number of coins</strong> and the <strong>total value</strong> to figure out how many of each coin there are.</p>
+      <ul>
+        <li><strong>Easy:</strong> 2 different coin types.</li>
+        <li><strong>Hard:</strong> 3 coin types and an extra clue.</li>
+        <li><strong>Extreme:</strong> 4 coin types and enough clues to make the answer unique.</li>
+      </ul>
+      <p>Type a whole number for every coin and press <strong>Check Answer</strong>. You will see the correct answer immediately. The Tutor is available during every question.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Tutor -->
+<div class="modal-backdrop" id="tutorModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tutorTitle">
+    <div class="modal-head">
+      <h2 id="tutorTitle">Coin Puzzle Tutor</h2>
+      <button class="close" data-close="tutorModal">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="menuTutor">
+        <div class="tabs">
+          <button class="tab active" data-tab="easyLesson">Easy</button>
+          <button class="tab" data-tab="hardLesson">Hard</button>
+          <button class="tab" data-tab="extremeLesson">Extreme</button>
+        </div>
+
+        <div class="lesson active" id="easyLesson">
+          <h3>Example: 20 nickels and dimes worth $1.40</h3>
+          <div class="example-box">There are 20 coins total. They are nickels (5¢) and dimes (10¢). Together they are worth 140¢.</div>
+          <h3>Practical method</h3>
+          <ol>
+            <li>Start with all 20 coins as nickels: 20 × 5¢ = 100¢.</li>
+            <li>You need 40¢ more.</li>
+            <li>Changing one nickel into one dime adds 5¢.</li>
+            <li>40 ÷ 5 = 8, so change 8 nickels into dimes.</li>
+            <li>That gives <strong>12 nickels and 8 dimes</strong>.</li>
+          </ol>
+          <h3>Algebra method</h3>
+          <div class="equation">n + d = 20</div>
+          <div class="equation">5n + 10d = 140</div>
+          <p>From the first equation, <strong>n = 20 − d</strong>. Substitute that into the value equation and solve for <strong>d</strong>.</p>
+          <div class="equation">5(20 − d) + 10d = 140<br>100 + 5d = 140<br>d = 8, so n = 12</div>
+        </div>
+
+        <div class="lesson" id="hardLesson">
+          <h3>Example: 18 nickels, dimes and quarters worth $2.25</h3>
+          <div class="example-box">Clue: The number of <strong>dimes is 1 greater than the number of nickels</strong>.</div>
+          <h3>Practical method</h3>
+          <ol>
+            <li>Use the clue first. Try pairs where dimes are exactly one more than nickels.</li>
+            <li>For each pair, the remaining coins must be quarters so the total count stays 18.</li>
+            <li>Check the value. The combination that reaches exactly 225¢ is the answer.</li>
+            <li>The solution is <strong>6 nickels, 7 dimes and 5 quarters</strong>.</li>
+          </ol>
+          <h3>Algebra method</h3>
+          <div class="equation">n + d + q = 18</div>
+          <div class="equation">5n + 10d + 25q = 225</div>
+          <div class="equation">d = n + 1</div>
+          <p>Use the clue to replace <strong>d</strong> with <strong>n + 1</strong>. Then use the coin-count equation to write <strong>q</strong> in terms of <strong>n</strong>. Substitute into the value equation and solve.</p>
+        </div>
+
+        <div class="lesson" id="extremeLesson">
+          <h3>Example: 14 pennies, nickels, dimes and quarters worth $1.05</h3>
+          <div class="example-box">Clues: The number of <strong>pennies is 1 greater than the number of nickels</strong>, and the number of <strong>nickels is 2 greater than the number of quarters</strong>.</div>
+          <h3>Practical method</h3>
+          <ol>
+            <li>Build combinations that obey both clues before checking money.</li>
+            <li>Every time you choose a quarter count, the nickel count is fixed by the second clue.</li>
+            <li>That fixes the penny count using the first clue.</li>
+            <li>The dime count is whatever is needed to reach 14 coins.</li>
+            <li>Check the total value. The solution is <strong>5 pennies, 4 nickels, 3 dimes and 2 quarters</strong>.</li>
+          </ol>
+          <h3>Algebra method</h3>
+          <div class="equation">p + n + d + q = 14</div>
+          <div class="equation">p + 5n + 10d + 25q = 105</div>
+          <div class="equation">p = n + 1</div>
+          <div class="equation">n = q + 2</div>
+          <p>Use the clue equations to replace variables until the count and value equations contain only one unknown. Solve it, then work backward.</p>
+        </div>
+      </div>
+
+      <div id="questionTutor" class="hidden">
+        <div class="difficulty-pill" id="tutorDifficulty"></div>
+        <h3 style="font-size:1.35rem;margin-bottom:7px">Work through this question</h3>
+        <p style="color:var(--muted);margin-top:0">Reveal one hint at a time. The full answer stays hidden until you ask for it.</p>
+        <div id="hintContainer"></div>
+        <div class="tutor-controls">
+          <button class="secondary" id="nextHintBtn">Show Next Hint</button>
+          <button class="secondary" id="fullSolutionBtn">Show Full Solution</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const COINS = [
+    {id:"penny", singular:"penny", plural:"pennies", cents:1, short:"1¢"},
+    {id:"nickel", singular:"nickel", plural:"nickels", cents:5, short:"5¢"},
+    {id:"dime", singular:"dime", plural:"dimes", cents:10, short:"10¢"},
+    {id:"quarter", singular:"quarter", plural:"quarters", cents:25, short:"25¢"},
+    {id:"loonie", singular:"loonie", plural:"loonies", cents:100, short:"$1"},
+    {id:"toonie", singular:"toonie", plural:"toonies", cents:200, short:"$2"}
+  ];
+
+  let selectedLevel = "easy";
+  let selectedCount = 5;
+  let game = null;
+  let currentQuestion = null;
+  let answered = false;
+  let hintIndex = 0;
+
+  const $ = id => document.getElementById(id);
+  const screens = ["menuScreen","gameScreen","finishScreen"];
+
+  function showScreen(id){
+    screens.forEach(s => $(s).classList.toggle("active", s === id));
+    window.scrollTo({top:0, behavior:"smooth"});
+  }
+
+  function money(cents){
+    return "$" + (cents / 100).toFixed(2);
+  }
+
+  function sample(arr, n){
+    const copy = [...arr];
+    for(let i=copy.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [copy[i],copy[j]]=[copy[j],copy[i]];
+    }
+    return copy.slice(0,n).sort((a,b)=>a.cents-b.cents);
+  }
+
+  function joinCoinNames(coins){
+    const names = coins.map(c=>c.plural);
+    if(names.length===2) return names[0] + " and " + names[1];
+    return names.slice(0,-1).join(", ") + ", and " + names[names.length-1];
+  }
+
+  function enumerateSolutions(coins, totalCount, totalValue){
+    const out=[];
+    const k=coins.length;
+    const counts=new Array(k).fill(0);
+
+    function rec(i, remainingCount, remainingValue){
+      if(i===k-1){
+        const cnt=remainingCount;
+        if(cnt>=1 && cnt*coins[i].cents===remainingValue){
+          counts[i]=cnt;
+          out.push([...counts]);
+        }
+        return;
+      }
+      const minRest=k-i-1;
+      for(let cnt=1;cnt<=remainingCount-minRest;cnt++){
+        const value=cnt*coins[i].cents;
+        if(value>remainingValue) break;
+        counts[i]=cnt;
+        rec(i+1, remainingCount-cnt, remainingValue-value);
+      }
+    }
+    rec(0,totalCount,totalValue);
+    return out;
+  }
+
+  function sameCounts(a,b){
+    return a.length===b.length && a.every((v,i)=>v===b[i]);
+  }
+
+  function relationClues(coins,target){
+    const clues=[];
+    for(let i=0;i<coins.length;i++){
+      for(let j=i+1;j<coins.length;j++){
+        const d=target[i]-target[j];
+        let text;
+        if(d===0){
+          text=`There are the same number of ${coins[i].plural} and ${coins[j].plural}.`;
+        }else if(d>0){
+          text=`The number of ${coins[i].plural} is ${d} greater than the number of ${coins[j].plural}.`;
+        }else{
+          const n=-d;
+          text=`The number of ${coins[j].plural} is ${n} greater than the number of ${coins[i].plural}.`;
+        }
+        clues.push({
+          text,
+          equation: `${symbolFor(coins[i])} = ${symbolFor(coins[j])}${d===0?"":(d>0?" + "+d:" − "+(-d))}`,
+          test:s=>s[i]-s[j]===d
+        });
+
+        const a=target[i], b=target[j];
+        if(a===2*b){
+          clues.push({
+            text:`There are twice as many ${coins[i].plural} as ${coins[j].plural}.`,
+            equation:`${symbolFor(coins[i])} = 2${symbolFor(coins[j])}`,
+            test:s=>s[i]===2*s[j]
+          });
+        }
+        if(b===2*a){
+          clues.push({
+            text:`There are twice as many ${coins[j].plural} as ${coins[i].plural}.`,
+            equation:`${symbolFor(coins[j])} = 2${symbolFor(coins[i])}`,
+            test:s=>s[j]===2*s[i]
+          });
+        }
+      }
+    }
+    return clues;
+  }
+
+  function symbolFor(coin){
+    const map={penny:"p",nickel:"n",dime:"d",quarter:"q",loonie:"l",toonie:"t"};
+    return map[coin.id];
+  }
+
+  function chooseClues(coins,target,solutions,needed){
+    if(solutions.length===1) return [];
+    const candidates=relationClues(coins,target);
+
+    for(const c of candidates){
+      if(solutions.filter(c.test).length===1) return [c];
+    }
+
+    if(needed>=2){
+      for(let i=0;i<candidates.length;i++){
+        for(let j=i+1;j<candidates.length;j++){
+          const remain=solutions.filter(s=>candidates[i].test(s)&&candidates[j].test(s));
+          if(remain.length===1) return [candidates[i],candidates[j]];
+        }
+      }
+    }
+
+    // Fallback: exact-count clues, used only if relational clues cannot isolate the answer.
+    for(let i=0;i<coins.length;i++){
+      const c={
+        text:`There are exactly ${target[i]} ${target[i]===1?coins[i].singular:coins[i].plural}.`,
+        equation:`${symbolFor(coins[i])} = ${target[i]}`,
+        test:s=>s[i]===target[i]
+      };
+      if(solutions.filter(c.test).length===1) return [c];
+      candidates.push(c);
+    }
+
+    if(needed>=2){
+      for(let i=0;i<candidates.length;i++){
+        for(let j=i+1;j<candidates.length;j++){
+          const remain=solutions.filter(s=>candidates[i].test(s)&&candidates[j].test(s));
+          if(remain.length===1) return [candidates[i],candidates[j]];
+        }
+      }
+    }
+    return [];
+  }
+
+  function generateQuestion(level){
+    const k={easy:2,hard:3,extreme:4}[level];
+    const maxEach={easy:15,hard:10,extreme:8}[level];
+
+    for(let attempt=0;attempt<500;attempt++){
+      const coins=sample(COINS,k);
+      const target=coins.map(()=>1+Math.floor(Math.random()*maxEach));
+      const totalCount=target.reduce((a,b)=>a+b,0);
+      if(totalCount<8 || totalCount>34) continue;
+
+      const totalValue=target.reduce((sum,cnt,i)=>sum+cnt*coins[i].cents,0);
+      const solutions=enumerateSolutions(coins,totalCount,totalValue);
+      if(!solutions.some(s=>sameCounts(s,target))) continue;
+
+      if(level==="easy" && solutions.length!==1) continue;
+
+      const clues=level==="easy" ? [] : chooseClues(coins,target,solutions,level==="extreme"?2:1);
+      const filtered=solutions.filter(s=>clues.every(c=>c.test(s)));
+
+      // Hard should normally need one clue; Extreme may need one or two.
+      if(level!=="easy" && (clues.length===0 || filtered.length!==1)) continue;
+
+      return {level,coins,target,totalCount,totalValue,solutions,clues};
+    }
+
+    // Extremely unlikely safety fallback.
+    if(level==="easy"){
+      return {
+        level,
+        coins:[COINS[1],COINS[2]],
+        target:[12,8],
+        totalCount:20,totalValue:140,
+        solutions:[[12,8]],clues:[]
+      };
+    }
+    if(level==="hard"){
+      const coins=[COINS[1],COINS[2],COINS[3]];
+      const target=[6,7,5];
+      return {
+        level,coins,target,totalCount:18,totalValue:225,
+        solutions:enumerateSolutions(coins,18,225),
+        clues:[{
+          text:"The number of dimes is 1 greater than the number of nickels.",
+          equation:"d = n + 1",
+          test:s=>s[1]===s[0]+1
+        }]
+      };
+    }
+    const coins=[COINS[0],COINS[1],COINS[2],COINS[3]];
+    const target=[5,4,3,2];
+    return {
+      level,coins,target,totalCount:14,totalValue:105,
+      solutions:enumerateSolutions(coins,14,105),
+      clues:[
+        {text:"The number of pennies is 1 greater than the number of nickels.",equation:"p = n + 1",test:s=>s[0]===s[1]+1},
+        {text:"The number of nickels is 2 greater than the number of quarters.",equation:"n = q + 2",test:s=>s[1]===s[3]+2}
+      ]
+    };
+  }
+
+  function renderQuestion(){
+    answered=false;
+    hintIndex=0;
+    currentQuestion=generateQuestion(game.level);
+
+    const q=currentQuestion;
+    $("progressLabel").textContent=`Question ${game.index+1} of ${game.total}`;
+    $("scoreLabel").textContent=game.correct;
+    $("progressFill").style.width=`${((game.index)/game.total)*100}%`;
+    const levelName=q.level[0].toUpperCase()+q.level.slice(1);
+    $("difficultyPill").textContent=`${levelName} · ${q.coins.length} coin types`;
+    $("questionText").textContent=`You have ${q.totalCount} coins made up of ${joinCoinNames(q.coins)}. Their total value is ${money(q.totalValue)}. How many of each coin do you have?`;
+
+    $("cluesBox").innerHTML=q.clues.map((c,i)=>`<div class="clue"><strong>${q.clues.length>1?`Clue ${i+1}`:"Clue"}:</strong> ${c.text}</div>`).join("");
+
+    $("answerGrid").innerHTML=q.coins.map((coin,i)=>`
+      <label class="answer-item">
+        <span class="coin-icon coin-${coin.id}">${coin.short}</span>
+        <span class="answer-label">
+          <div class="coin-name">${coin.plural[0].toUpperCase()+coin.plural.slice(1)}</div>
+          <div class="coin-value">${coin.cents}¢ each</div>
+        </span>
+        <input class="coin-input" data-index="${i}" type="number" min="0" step="1" inputmode="numeric" aria-label="Number of ${coin.plural}">
+      </label>`).join("");
+
+    $("feedback").className="feedback";
+    $("feedbackTitle").textContent="";
+    $("feedbackText").textContent="";
+    $("solutionChips").innerHTML="";
+    $("checkBtn").classList.remove("hidden");
+    $("nextBtn").classList.add("hidden");
+    $("nextBtn").textContent=game.index===game.total-1?"See Results →":"Next Question →";
+
+    setTimeout(()=>document.querySelector(".coin-input")?.focus(),80);
+  }
+
+  function checkAnswer(){
+    if(answered) return;
+    const inputs=[...document.querySelectorAll(".coin-input")];
+    const values=inputs.map(inp=>{
+      const v=Number(inp.value);
+      return Number.isInteger(v)&&v>=0?v:null;
+    });
+
+    if(values.some(v=>v===null)){
+      $("feedback").className="feedback show wrong";
+      $("feedbackTitle").textContent="Fill in every box";
+      $("feedbackText").textContent="Enter a whole number for each coin before checking.";
+      $("solutionChips").innerHTML="";
+      return;
+    }
+
+    answered=true;
+    const correct=sameCounts(values,currentQuestion.target);
+    if(correct) game.correct++;
+    inputs.forEach(i=>i.disabled=true);
+
+    $("scoreLabel").textContent=game.correct;
+    $("feedback").className=`feedback show ${correct?"correct":"wrong"}`;
+    $("feedbackTitle").textContent=correct?"Correct!":"Not quite.";
+    $("feedbackText").textContent=correct
+      ?"You found the unique combination."
+      :"Here is the correct combination:";
+    $("solutionChips").innerHTML=currentQuestion.coins.map((coin,i)=>
+      `<span class="solution-chip">${currentQuestion.target[i]} ${currentQuestion.target[i]===1?coin.singular:coin.plural}</span>`
+    ).join("");
+
+    $("checkBtn").classList.add("hidden");
+    $("nextBtn").classList.remove("hidden");
+    $("progressFill").style.width=`${((game.index+1)/game.total)*100}%`;
+  }
+
+  function nextQuestion(){
+    if(!answered) return;
+    game.index++;
+    if(game.index>=game.total){
+      finishGame();
+    }else{
+      renderQuestion();
+    }
+  }
+
+  function finishGame(){
+    $("finalScore").textContent=`${game.correct} / ${game.total}`;
+    const ratio=game.correct/game.total;
+    $("finishMessage").textContent=
+      ratio===1 ? "Perfect score!" :
+      ratio>=.8 ? "Excellent work!" :
+      ratio>=.6 ? "Nice work!" :
+      "Good practice — try another round or use the Tutor for a walkthrough.";
+    showScreen("finishScreen");
+  }
+
+  function startGame(){
+    game={level:selectedLevel,total:selectedCount,index:0,correct:0};
+    showScreen("gameScreen");
+    renderQuestion();
+  }
+
+  function openModal(id){
+    $(id).classList.add("open");
+  }
+  function closeModal(id){
+    $(id).classList.remove("open");
+  }
+
+  function openGlobalTutor(){
+    $("menuTutor").classList.remove("hidden");
+    $("questionTutor").classList.add("hidden");
+    openModal("tutorModal");
+  }
+
+  function generateHints(q){
+    const names=joinCoinNames(q.coins);
+    const countEq=q.coins.map(c=>symbolFor(c)).join(" + ")+" = "+q.totalCount;
+    const valueEq=q.coins.map(c=>`${c.cents===1?"":c.cents}${symbolFor(c)}`).join(" + ")+" = "+q.totalValue;
+    const clueEq=q.clues.map(c=>c.equation).join(" and ");
+    const low=q.coins[0], high=q.coins[q.coins.length-1];
+
+    const practical = q.level==="easy"
+      ? `Practical method: imagine all ${q.totalCount} coins are ${low.plural}. That gives ${money(q.totalCount*low.cents)}. Replacing one ${low.singular} with one ${high.singular} changes the value by ${high.cents-low.cents}¢. Use the difference from ${money(q.totalValue)} to work out how many replacements are needed.`
+      : `Practical method: use ${q.clues.length===1?"the clue":"both clues"} first. Only test combinations that obey ${q.clues.length===1?"it":"them"}. For each possible combination, keep the coin count at ${q.totalCount}, then check whether the value is exactly ${money(q.totalValue)}.`;
+
+    const equations = [`Coin-count equation: ${countEq}`,`Value equation in cents: ${valueEq}`];
+    if(clueEq) equations.push(`Clue equation${q.clues.length>1?"s":""}: ${clueEq}`);
+
+    return [
+      `<strong>Step 1 — Organize the facts.</strong><br>There are ${q.totalCount} coins total and they are worth ${q.totalValue}¢. The coin types are ${names}.`,
+      `<strong>Step 2 — Try a practical approach.</strong><br>${practical}`,
+      `<strong>Step 3 — Set up algebra.</strong><br>${equations.map(e=>`<div class="equation">${e}</div>`).join("")}${q.level==="easy"?"Use the count equation to write one variable in terms of the other, then substitute.":"Use the clue equation(s) to reduce the number of variables, then substitute into the count and value equations."}`
+    ];
+  }
+
+  function openQuestionTutor(){
+    if(!currentQuestion) return openGlobalTutor();
+    $("menuTutor").classList.add("hidden");
+    $("questionTutor").classList.remove("hidden");
+    $("tutorDifficulty").textContent=`${currentQuestion.level[0].toUpperCase()+currentQuestion.level.slice(1)} · ${currentQuestion.coins.length} coin types`;
+    $("hintContainer").innerHTML="";
+    $("nextHintBtn").disabled=false;
+    $("fullSolutionBtn").disabled=false;
+    hintIndex=0;
+    openModal("tutorModal");
+  }
+
+  function showNextHint(){
+    const hints=generateHints(currentQuestion);
+    if(hintIndex>=hints.length){
+      $("nextHintBtn").disabled=true;
+      return;
+    }
+    const div=document.createElement("div");
+    div.className="hint-card";
+    div.innerHTML=hints[hintIndex++];
+    $("hintContainer").appendChild(div);
+    if(hintIndex>=hints.length) $("nextHintBtn").disabled=true;
+  }
+
+  function showFullSolution(){
+    const q=currentQuestion;
+    const countCheck=q.target.reduce((a,b)=>a+b,0);
+    const valueCheck=q.target.reduce((sum,cnt,i)=>sum+cnt*q.coins[i].cents,0);
+    const answer=q.coins.map((c,i)=>`${q.target[i]} ${q.target[i]===1?c.singular:c.plural}`).join(", ");
+    const div=document.createElement("div");
+    div.className="hint-card";
+    div.style.borderLeftColor="var(--warn)";
+    div.innerHTML=`
+      <strong>Full solution</strong><br>
+      ${answer}.<br><br>
+      <strong>Check the count:</strong> ${q.target.join(" + ")} = ${countCheck}.<br>
+      <strong>Check the value:</strong> ${q.target.map((n,i)=>`${n}×${q.coins[i].cents}¢`).join(" + ")} = ${valueCheck}¢ = ${money(valueCheck)}.
+      ${q.clues.length?`<br><strong>Check the clue${q.clues.length>1?"s":""}:</strong> ${q.clues.map(c=>c.text).join(" ")}`:""}
+    `;
+    $("hintContainer").appendChild(div);
+    $("fullSolutionBtn").disabled=true;
+  }
+
+  // Setup buttons
+  document.querySelectorAll(".difficulty").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      selectedLevel=btn.dataset.level;
+      document.querySelectorAll(".difficulty").forEach(b=>b.classList.toggle("selected",b===btn));
+    });
+  });
+
+  document.querySelectorAll(".count-btn").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      selectedCount=Number(btn.dataset.count);
+      document.querySelectorAll(".count-btn").forEach(b=>b.classList.toggle("selected",b===btn));
+    });
+  });
+
+  $("startBtn").addEventListener("click",startGame);
+  $("homeBtn").addEventListener("click",()=>showScreen("menuScreen"));
+  $("playAgainBtn").addEventListener("click",startGame);
+  $("finishMenuBtn").addEventListener("click",()=>showScreen("menuScreen"));
+  $("checkBtn").addEventListener("click",checkAnswer);
+  $("nextBtn").addEventListener("click",nextQuestion);
+  $("howBtn").addEventListener("click",()=>openModal("howModal"));
+  $("globalTutorBtn").addEventListener("click",openGlobalTutor);
+  $("questionTutorBtn").addEventListener("click",openQuestionTutor);
+  $("nextHintBtn").addEventListener("click",showNextHint);
+  $("fullSolutionBtn").addEventListener("click",showFullSolution);
+
+  document.querySelectorAll("[data-close]").forEach(btn=>btn.addEventListener("click",()=>closeModal(btn.dataset.close)));
+  document.querySelectorAll(".modal-backdrop").forEach(bg=>bg.addEventListener("click",e=>{if(e.target===bg) closeModal(bg.id)}));
+
+  document.querySelectorAll(".tab").forEach(tab=>tab.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t===tab));
+    document.querySelectorAll(".lesson").forEach(l=>l.classList.toggle("active",l.id===tab.dataset.tab));
+  }));
+
+  document.addEventListener("keydown",e=>{
+    if(e.key==="Escape"){
+      document.querySelectorAll(".modal-backdrop.open").forEach(m=>closeModal(m.id));
+      return;
+    }
+    if(e.key==="Enter" && $("gameScreen").classList.contains("active") && !document.querySelector(".modal-backdrop.open")){
+      if(answered) nextQuestion(); else checkAnswer();
+    }
+  });
+
+})();
+</script>
+</body>
+</html>

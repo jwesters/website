@@ -1,0 +1,1647 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Cliff Dive — Pixel Prototype</title>
+<style>
+  :root {
+    --ui-bg: rgba(9, 21, 28, 0.9);
+    --ui-border: rgba(154, 195, 211, 0.24);
+    --ui-text: #d9eef4;
+    --ui-muted: #9bb8c3;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: #07141c;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: var(--ui-text);
+    overscroll-behavior: none;
+  }
+  body { touch-action: none; }
+  #shell {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: #07141c;
+  }
+  canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    background: #0b2a3b;
+    cursor: crosshair;
+  }
+  canvas.dragging { cursor: grabbing; }
+  .bar {
+    position: absolute;
+    left: max(10px, env(safe-area-inset-left));
+    right: max(10px, env(safe-area-inset-right));
+    top: max(10px, env(safe-area-inset-top));
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: none;
+    z-index: 4;
+  }
+  .group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    pointer-events: auto;
+  }
+  button, .pill {
+    border: 1px solid var(--ui-border);
+    background: var(--ui-bg);
+    color: var(--ui-text);
+    border-radius: 999px;
+    min-height: 34px;
+    padding: 7px 12px;
+    font: inherit;
+    font-size: 12px;
+    line-height: 1;
+    box-shadow: 0 4px 14px rgba(0,0,0,.18);
+    backdrop-filter: blur(4px);
+  }
+  button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  button:hover { background: rgba(17, 39, 50, 0.97); }
+  button:active { transform: translateY(1px); }
+  button:focus-visible { outline: 2px solid #a6dce9; outline-offset: 2px; }
+  .genderToggle {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px;
+    border: 1px solid rgba(168, 222, 235, 0.52);
+    border-radius: 999px;
+    background: rgba(6, 27, 37, 0.96);
+    box-shadow: 0 0 0 1px rgba(96, 177, 204, 0.10), 0 5px 18px rgba(0,0,0,.24);
+  }
+  .genderToggle button {
+    min-height: 30px;
+    padding: 6px 11px;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+    color: #8fb5c2;
+  }
+  .genderToggle button.active {
+    background: #d9eef4;
+    color: #092333;
+    font-weight: 800;
+    box-shadow: 0 2px 8px rgba(0,0,0,.22);
+  }
+  .bottom {
+    position: absolute;
+    right: max(10px, env(safe-area-inset-right));
+    bottom: max(10px, env(safe-area-inset-bottom));
+    display: flex;
+    gap: 7px;
+    align-items: center;
+    pointer-events: none;
+    z-index: 4;
+  }
+  .pill {
+    min-height: 29px;
+    padding: 6px 10px;
+    color: var(--ui-muted);
+  }
+  .pill strong { color: var(--ui-text); font-weight: 700; }
+  #hint {
+    position: absolute;
+    left: 50%;
+    bottom: max(14px, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    max-width: min(560px, calc(100% - 250px));
+    padding: 8px 13px;
+    border: 1px solid var(--ui-border);
+    border-radius: 999px;
+    background: var(--ui-bg);
+    color: var(--ui-text);
+    text-align: center;
+    font-size: 12px;
+    z-index: 4;
+    pointer-events: none;
+    transition: opacity .18s ease;
+  }
+  #hint.hidden { opacity: 0; }
+  #touchControls {
+    display: none;
+    position: absolute;
+    left: max(10px, env(safe-area-inset-left));
+    right: max(10px, env(safe-area-inset-right));
+    bottom: max(10px, env(safe-area-inset-bottom));
+    justify-content: space-between;
+    align-items: flex-end;
+    pointer-events: none;
+    z-index: 5;
+  }
+  #touchControls.active { display: flex; }
+  .touchCluster {
+    display: flex;
+    gap: 7px;
+    align-items: flex-end;
+    pointer-events: none;
+  }
+  .touchActionButton {
+    width: clamp(64px, 13vw, 92px);
+    min-height: clamp(44px, 9vw, 60px);
+    pointer-events: auto;
+    border-radius: 16px;
+    padding: 7px 8px;
+    font-size: 12px;
+    font-weight: 800;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .touchActionButton.active { background: rgba(40, 91, 111, .98); }
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(3, 12, 17, 0.58);
+    z-index: 8;
+  }
+  .overlay.hidden { display: none; }
+  .panel {
+    width: min(430px, 100%);
+    max-height: calc(100vh - 30px);
+    overflow: auto;
+    padding: 24px;
+    border: 1px solid var(--ui-border);
+    border-radius: 20px;
+    background: rgba(8, 24, 32, 0.96);
+    box-shadow: 0 18px 50px rgba(0,0,0,.35);
+    text-align: center;
+  }
+  .panel h2 { margin: 0 0 8px; font-size: 24px; }
+  .panel p { margin: 0 0 18px; color: var(--ui-muted); line-height: 1.45; }
+  .panel button { width: 100%; min-height: 44px; font-size: 14px; }
+
+  .scoreTotal {
+    margin: 6px 0 12px;
+    color: #f2fbff;
+    font-size: clamp(36px, 8vw, 50px);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.04em;
+  }
+  .scoreTotal small {
+    display: block;
+    margin-top: 5px;
+    color: var(--ui-muted);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+  .scoreGrid {
+    display: grid;
+    gap: 7px;
+    margin: 16px 0 18px;
+    text-align: left;
+  }
+  .scoreRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 11px;
+    border: 1px solid rgba(154, 195, 211, 0.14);
+    border-radius: 11px;
+    background: rgba(18, 43, 54, 0.68);
+  }
+  .scoreRow span:first-child { color: var(--ui-muted); }
+  .scoreRow strong { color: var(--ui-text); white-space: nowrap; }
+
+  .helpList {
+    display: grid;
+    gap: 8px;
+    margin: 16px 0 20px;
+    text-align: left;
+  }
+  .helpItem {
+    padding: 10px 12px;
+    border: 1px solid rgba(154, 195, 211, 0.14);
+    border-radius: 11px;
+    background: rgba(18, 43, 54, 0.68);
+    color: var(--ui-muted);
+    line-height: 1.42;
+  }
+  .helpItem strong {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--ui-text);
+  }
+
+  #rotateWarning {
+    display: none;
+    position: absolute;
+    inset: 0;
+    place-items: center;
+    background: #07141c;
+    z-index: 20;
+    text-align: center;
+    padding: 30px;
+  }
+  #rotateWarning .phone {
+    width: 46px;
+    height: 76px;
+    border: 3px solid #c9e7ef;
+    border-radius: 8px;
+    margin: 0 auto 16px;
+    animation: rotate 1.6s ease-in-out infinite;
+  }
+  @keyframes rotate {
+    0%, 30% { transform: rotate(0); }
+    70%, 100% { transform: rotate(90deg); }
+  }
+  @media (pointer: coarse) {
+    #hint { display: none; }
+    .bottom { bottom: auto; top: max(52px, calc(env(safe-area-inset-top) + 42px)); }
+    canvas { cursor: default; touch-action: none; }
+  }
+  @media (pointer: coarse) and (orientation: landscape) {
+    .bar {
+      left: max(6px, env(safe-area-inset-left));
+      right: max(6px, env(safe-area-inset-right));
+      top: max(6px, env(safe-area-inset-top));
+    }
+    .group { gap: 5px; }
+    button, .pill { min-height: 30px; padding: 6px 9px; font-size: 10px; }
+    .genderToggle { padding: 2px; }
+    .genderToggle button { min-height: 27px; padding: 5px 8px; font-size: 10px; }
+    .touchActionButton { font-size: 11px; }
+    .overlay { padding: 8px max(8px, env(safe-area-inset-left)); }
+    .panel { max-height: calc(100dvh - 16px); padding: 14px; border-radius: 16px; }
+    .panel h2 { font-size: 20px; }
+    .panel p { margin-bottom: 10px; font-size: 11px; }
+    .helpList { grid-template-columns: 1fr 1fr; gap: 6px; margin: 10px 0 12px; }
+    .helpItem { padding: 7px 8px; font-size: 10px; line-height: 1.3; }
+    .scoreGrid { gap: 5px; margin: 10px 0 12px; }
+    .scoreRow { padding: 6px 8px; font-size: 10px; }
+    .panel button { min-height: 36px; font-size: 11px; }
+  }
+  @media (orientation: portrait) and (pointer: coarse) {
+    #rotateWarning { display: grid; }
+  }
+  @media (max-height: 520px) {
+    button, .pill { min-height: 30px; padding: 6px 10px; font-size: 11px; }
+    #hint { font-size: 11px; padding: 7px 11px; }
+    .panel { padding: 18px; }
+  }
+</style>
+</head>
+<body>
+<main id="shell" aria-label="Pixel-style cliff diving prototype">
+  <canvas id="game" width="240" height="135" aria-label="Cliff diving game with moving pixel water and rocks"></canvas>
+
+  <div class="bar" aria-label="Game controls">
+    <div class="group">
+      <div class="genderToggle" role="group" aria-label="Choose diver">
+        <button id="maleBtn" class="active" type="button" aria-pressed="true">Male</button>
+        <button id="femaleBtn" type="button" aria-pressed="false">Female</button>
+      </div>
+      <button id="resetBtn" type="button">Reset Dive</button>
+    </div>
+    <div class="group">
+      <span class="pill">Best <strong id="bestScore">0</strong></span>
+      <button id="helpBtn" type="button">Help</button>
+    </div>
+  </div>
+
+  <div id="touchControls" aria-label="Touch dive controls">
+    <div class="touchCluster">
+      <button id="twistLeft" class="touchActionButton" type="button">↶ Flip</button>
+      <button id="twistRight" class="touchActionButton" type="button">Flip ↷</button>
+    </div>
+    <div class="touchCluster">
+      <button id="spinBack" class="touchActionButton" type="button">↶ Spin</button>
+      <button id="spinForward" class="touchActionButton" type="button">Spin ↷</button>
+    </div>
+  </div>
+
+
+  <section id="resultOverlay" class="overlay hidden" aria-live="assertive">
+    <div class="panel">
+      <h2 id="resultTitle">Clean Dive!</h2>
+      <div id="totalScore" class="scoreTotal">0<small>total points</small></div>
+      <p id="resultDetail">Headfirst into clear water.</p>
+      <div class="scoreGrid" aria-label="Score breakdown">
+        <div class="scoreRow"><span>Distance</span><strong id="distanceScore">0 pts</strong></div>
+        <div class="scoreRow"><span>Air time</span><strong id="airtimeScore">0 pts</strong></div>
+        <div class="scoreRow"><span>Entry straightness</span><strong id="straightScore">0 pts</strong></div>
+        <div class="scoreRow"><span>Flip bonus</span><strong id="flipScore">0 pts</strong></div>
+        <div class="scoreRow"><span>Spin bonus</span><strong id="spinScore">0 pts</strong></div>
+        <div class="scoreRow"><span>Star bonus</span><strong id="starScore">0 pts</strong></div>
+      </div>
+      <button id="retryBtn" type="button">Try Again — New Rocks</button>
+    </div>
+  </section>
+
+  <section id="helpOverlay" class="overlay hidden" aria-label="How to play">
+    <div class="panel">
+      <h2>How to Play</h2>
+      <p>Time the moving water, avoid the rocks, and make the cleanest entry you can.</p>
+      <div class="helpList">
+        <div class="helpItem"><strong>Launch</strong>Grab the diver, drag toward the water, and release. A longer drag gives more power.</div>
+        <div class="helpItem"><strong>Flip</strong>A / Left = backflip. D / Right = front flip. More than half a flip earns bonus points; backflips are worth more.</div>
+        <div class="helpItem"><strong>Spin</strong>Use W/S. Spinning earns bonus points, but makes the flip harder to control.</div>
+        <div class="helpItem"><strong>Water entry</strong>A clean headfirst entry earns full points. A clean feet-first entry counts for half points. Use the Male/Female button to swap diver style instantly.</div>
+        <div class="helpItem"><strong>Stars</strong>Three floating stars give 100 / 300 / 600 total. A rare shooting star gives 300 points.</div>
+        <div class="helpItem"><strong>Score</strong>Points come from distance, airtime, entry straightness, flips, spins, and stars. Each retry creates a new fair rock layout.</div>
+      </div>
+      <button id="closeHelpBtn" type="button">Close</button>
+    </div>
+  </section>
+
+  <div id="rotateWarning">
+    <div>
+      <div class="phone" aria-hidden="true"></div>
+      <strong>Rotate your device</strong>
+      <div style="margin-top:6px;color:#9bb8c3">This game is designed for landscape.</div>
+    </div>
+  </div>
+</main>
+
+<script>
+(() => {
+  'use strict';
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d', { alpha: false });
+  ctx.imageSmoothingEnabled = false;
+
+  const W = canvas.width;
+  const H = canvas.height;
+  const resetBtn = document.getElementById('resetBtn');
+  const retryBtn = document.getElementById('retryBtn');
+  const maleBtn = document.getElementById('maleBtn');
+  const femaleBtn = document.getElementById('femaleBtn');
+  const helpBtn = document.getElementById('helpBtn');
+  const closeHelpBtn = document.getElementById('closeHelpBtn');
+  const helpOverlay = document.getElementById('helpOverlay');
+  const bestScoreLabel = document.getElementById('bestScore');
+  const totalScoreLabel = document.getElementById('totalScore');
+  const distanceScoreLabel = document.getElementById('distanceScore');
+  const airtimeScoreLabel = document.getElementById('airtimeScore');
+  const straightScoreLabel = document.getElementById('straightScore');
+  const flipScoreLabel = document.getElementById('flipScore');
+  const spinScoreLabel = document.getElementById('spinScore');
+  const starScoreLabel = document.getElementById('starScore');
+  const resultOverlay = document.getElementById('resultOverlay');
+  const resultTitle = document.getElementById('resultTitle');
+  const resultDetail = document.getElementById('resultDetail');
+  const touchControls = document.getElementById('touchControls');
+  const twistLeft = document.getElementById('twistLeft');
+  const twistRight = document.getElementById('twistRight');
+  const spinBack = document.getElementById('spinBack');
+  const spinForward = document.getElementById('spinForward');
+
+  const TOUCH_DEVICE = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+  const CLIFF_DROP = 8;
+  const START = { x: 36, y: 36 };
+  const GRAVITY = 46;
+  const MAX_DRAG = 58;
+  const MAX_DISTANCE_POINTS = 400;
+  const MAX_AIRTIME_POINTS = 250;
+  const MAX_STRAIGHT_POINTS = 350;
+  const MAX_FLIP_POINTS = 500;
+  const MAX_SPIN_POINTS = 500;
+  const AIRTIME_SCORE_CAP = 2.6;
+
+  let paused = false;
+  let helpOpen = false;
+  let time = 0;
+  let last = performance.now();
+  let fpsSmoothing = 60;
+  let waterCells = 0;
+  let mode = 'ready';
+  let resultDelay = 0;
+  let pendingResult = null;
+  let rotateLeftHeld = false;
+  let rotateRightHeld = false;
+  let spinForwardHeld = false;
+  let spinBackwardHeld = false;
+  let pointerId = null;
+  let twistDrag = false;
+  let twistLastX = 0;
+  let safeGap = { start: 105, end: 160 };
+  let bestScore = loadBestScore();
+  let playerGender = 'male';
+
+  const aim = { active: false, x: START.x, y: START.y };
+  const splash = [];
+
+  const waterPalette = ['#137fc1', '#1686c8', '#1b8dce', '#2095d5', '#269bd9'];
+  const rockPalette = ['#3f444a', '#484e55', '#525860', '#5c626a'];
+  const sandPalette = ['#c89f43', '#d4ad51', '#dfba60', '#e6c36b'];
+
+  const bubbles = Array.from({ length: 38 }, (_, i) => ({
+    x: 52 + ((i * 37) % 184),
+    y: 74 + ((i * 19) % 49),
+    speed: 2.6 + (i % 5) * 0.55,
+    size: i % 7 === 0 ? 2 : 1,
+    offset: i * 0.73
+  }));
+
+  let rocks = [];
+  let stars = [];
+  let shootingStar = null;
+  let shootingStarSpawnAt = Infinity;
+  let shootingStarSpawnedThisDive = false;
+
+  const cliffPoints = [
+    [0, 44], [38, 44], [46, 51], [43, 65], [48, 76], [44, 89], [49, 101],
+    [43, 112], [46, 122], [37, 128], [0, 133]
+  ];
+
+  function createPlayer() {
+    return {
+      x: START.x,
+      y: START.y,
+      vx: 0,
+      vy: 0,
+      rotation: 0,
+      angularVelocity: 0,
+      spinAngle: 0,
+      spinVelocity: 0,
+      airborneTime: 0,
+      accumulatedRotation: 0,
+      accumulatedSpin: 0,
+      frontRotation: 0,
+      backRotation: 0,
+      spinInputTime: 0,
+      hitShootingStar: false,
+
+      maxSpinRate: 0,
+      visible: true,
+      trail: []
+    };
+  }
+
+  let player = createPlayer();
+
+  function hash(x, y, seed = 0) {
+    let n = (x * 374761393 + y * 668265263 + seed * 1442695041) | 0;
+    n = (n ^ (n >>> 13)) * 1274126177;
+    return ((n ^ (n >>> 16)) >>> 0) / 4294967295;
+  }
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+
+  function setPlayerGender(gender) {
+    playerGender = gender === 'female' ? 'female' : 'male';
+    const maleActive = playerGender === 'male';
+    maleBtn.classList.toggle('active', maleActive);
+    femaleBtn.classList.toggle('active', !maleActive);
+    maleBtn.setAttribute('aria-pressed', String(maleActive));
+    femaleBtn.setAttribute('aria-pressed', String(!maleActive));
+  }
+
+  function loadBestScore() {
+    try {
+      const stored = Number(localStorage.getItem('cliffDiveBestScore'));
+      return Number.isFinite(stored) && stored > 0 ? Math.round(stored) : 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  function saveBestScore(value) {
+    try { localStorage.setItem('cliffDiveBestScore', String(value)); } catch (_) {}
+  }
+
+  function randomBetween(min, max) {
+    return min + Math.random() * (max - min);
+  }
+
+  function generateRocks() {
+    const gapWidth = Math.round(randomBetween(54, 68));
+    const gapCenter = Math.round(randomBetween(114, 170));
+    safeGap = {
+      start: clamp(Math.round(gapCenter - gapWidth / 2), 74, 186),
+      end: clamp(Math.round(gapCenter + gapWidth / 2), 124, 224)
+    };
+
+    const leftZone = { min: 57, max: safeGap.start - 7 };
+    const rightZone = { min: safeGap.end + 7, max: 231 };
+    const leftCount = Math.random() < 0.5 ? 1 : 2;
+    const rightCount = 3 - leftCount;
+    const generated = [];
+
+    const addZoneRocks = (zone, count) => {
+      if (count <= 0) return;
+      const zoneWidth = zone.max - zone.min;
+      if (zoneWidth < 14) return;
+      const slotWidth = zoneWidth / count;
+      for (let i = 0; i < count; i += 1) {
+        const slotCenter = zone.min + slotWidth * (i + 0.5);
+        const width = Math.round(randomBetween(11, Math.min(24, Math.max(13, slotWidth - 6))));
+        const x = Math.round(clamp(slotCenter + randomBetween(-slotWidth * 0.14, slotWidth * 0.14), zone.min + width / 2, zone.max - width / 2));
+        generated.push({ x, base: 126, width, height: 44, lowered: false });
+      }
+    };
+
+    addZoneRocks(leftZone, leftCount);
+    addZoneRocks(rightZone, rightCount);
+
+    const zones = [leftZone, rightZone].sort((a, b) => (b.max - b.min) - (a.max - a.min));
+    while (generated.length < 3) {
+      const zone = zones[generated.length % zones.length];
+      const width = 12;
+      const x = Math.round(clamp((zone.min + zone.max) / 2 + generated.length * 10, zone.min + width / 2, zone.max - width / 2));
+      generated.push({ x, base: 126, width, height: 44, lowered: false });
+    }
+
+    // Two more visible rocks, one noticeably lower / more submerged.
+    const lowerIndex = Math.floor(Math.random() * 3);
+    generated.forEach((rock, index) => {
+      if (index === lowerIndex) {
+        rock.height = Math.round(randomBetween(36, 40));
+        rock.lowered = true;
+      } else {
+        rock.height = Math.round(randomBetween(64, 66));
+        rock.lowered = false;
+      }
+    });
+
+    rocks = generated.slice(0, 3).sort((a, b) => a.x - b.x);
+  }
+
+
+  function generateStars() {
+    const generated = [];
+    while (generated.length < 3) {
+      const candidate = {
+        x: Math.round(randomBetween(72, 206)),
+        y: Math.round(randomBetween(18, 50)),
+        phase: Math.random() * Math.PI * 2,
+        collected: false
+      };
+      if (generated.some((star) => Math.hypot(star.x - candidate.x, star.y - candidate.y) < 26)) continue;
+      generated.push(candidate);
+    }
+    stars = generated.sort((a, b) => a.x - b.x);
+  }
+
+  function starBonusForCount(count) {
+    if (count >= 3) return 600;
+    if (count === 2) return 300;
+    if (count === 1) return 100;
+    return 0;
+  }
+
+
+  function emptyScore() {
+    return {
+      distancePoints: 0,
+      airtimePoints: 0,
+      straightPoints: 0,
+      flipPoints: 0,
+      spinPoints: 0,
+      starPoints: 0,
+      total: 0,
+      distanceCells: 0,
+      airtime: 0,
+      straightPercent: 0,
+      flipTurns: 0,
+      frontTurns: 0,
+      backTurns: 0,
+      spinTurns: 0,
+      spinTime: 0,
+      starCount: 0,
+      shootingStarPoints: 0,
+      shootingStarHit: false,
+      entryType: 'crash',
+      entryMultiplier: 0,
+      newBest: false
+    };
+  }
+
+  function calculateScore(entryX, alignment, entryDirectionY, entryType = 'headfirst') {
+    const distanceCells = Math.max(0, entryX - START.x);
+    const distanceFactor = clamp(distanceCells / 184, 0, 1);
+    const airtimeFactor = clamp(player.airborneTime / AIRTIME_SCORE_CAP, 0, 1);
+    const verticalFactor = clamp((entryDirectionY - 0.52) / 0.48, 0, 1);
+    const alignmentFactor = clamp((alignment - 0.72) / 0.28, 0, 1);
+    const straightFactor = clamp(verticalFactor * 0.75 + alignmentFactor * 0.25, 0, 1);
+
+    const frontTurns = player.frontRotation / (Math.PI * 2);
+    const backTurns = player.backRotation / (Math.PI * 2);
+    const flipTurns = frontTurns + backTurns;
+    const weightedFlipTurns = frontTurns + backTurns * 1.45;
+    const flipFactor = weightedFlipTurns <= 0.5 ? 0 : clamp((weightedFlipTurns - 0.5) / 1.75, 0, 1);
+    const spinTurns = player.accumulatedSpin / (Math.PI * 2);
+    const spinTurnsFactor = clamp(spinTurns / 2.0, 0, 1);
+    const spinControlFactor = clamp(player.spinInputTime / 1.2, 0, 1);
+    const spinFactor = clamp(spinTurnsFactor * 0.8 + spinControlFactor * 0.2, 0, 1);
+    const starCount = stars.filter((star) => star.collected).length;
+    const shootingStarPoints = player.hitShootingStar ? 300 : 0;
+    const multiplier = entryType === 'feetfirst' ? 0.5 : 1;
+
+    const score = {
+      distancePoints: Math.round(distanceFactor * MAX_DISTANCE_POINTS * multiplier),
+      airtimePoints: Math.round(airtimeFactor * MAX_AIRTIME_POINTS * multiplier),
+      straightPoints: Math.round(straightFactor * MAX_STRAIGHT_POINTS * multiplier),
+      flipPoints: Math.round(flipFactor * MAX_FLIP_POINTS * multiplier),
+      spinPoints: Math.round(spinFactor * MAX_SPIN_POINTS * multiplier),
+      starPoints: Math.round(starBonusForCount(starCount) * multiplier),
+      shootingStarPoints,
+      distanceCells: Math.round(distanceCells),
+      airtime: player.airborneTime,
+      straightPercent: Math.round(straightFactor * 100),
+      flipTurns,
+      frontTurns,
+      backTurns,
+      spinTurns,
+      spinTime: player.spinInputTime,
+      starCount,
+      shootingStarHit: !!player.hitShootingStar,
+      entryType,
+      entryMultiplier: multiplier,
+      newBest: false
+    };
+    score.total = score.distancePoints + score.airtimePoints + score.straightPoints + score.flipPoints + score.spinPoints + score.starPoints + score.shootingStarPoints;
+    return score;
+  }
+
+  function surfaceY(x, t) {
+    const rawCenter = 232 - ((t * 28) % 300);
+    const wrappedDx = ((((x - rawCenter) + 150) % 300) + 300) % 300 - 150;
+    const swell = -21 * Math.exp(-(wrappedDx * wrappedDx) / (2 * 44 * 44));
+    const longWave = Math.sin(x * 0.04 + t * 1.55) * 3.4;
+    const chop = Math.sin(x * 0.16 + t * 2.3) * 1.6;
+    return Math.round(91 + swell + longWave + chop);
+  }
+
+  function canvasPoint(event) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (event.clientX - rect.left) * W / rect.width,
+      y: (event.clientY - rect.top) * H / rect.height
+    };
+  }
+
+  function bodyPoints() {
+    const dx = Math.sin(player.rotation);
+    const dy = -Math.cos(player.rotation);
+    return {
+      head: { x: player.x + dx * 10, y: player.y + dy * 10 },
+      chest: { x: player.x, y: player.y },
+      feet: { x: player.x - dx * 9, y: player.y - dy * 9 }
+    };
+  }
+
+  function cliffEdgeAt(y) {
+    let edge = 0;
+    for (let i = 1; i < cliffPoints.length; i += 1) {
+      const a = cliffPoints[i - 1];
+      const b = cliffPoints[i];
+      if ((y >= a[1] && y <= b[1]) || (y >= b[1] && y <= a[1])) {
+        const ratio = (y - a[1]) / ((b[1] - a[1]) || 1);
+        edge = Math.max(edge, a[0] + (b[0] - a[0]) * ratio);
+      }
+    }
+    return edge;
+  }
+
+  function pointInCliff(point) {
+    return point.y >= 44 && point.y <= 133 && point.x <= cliffEdgeAt(point.y);
+  }
+
+  function pointInRock(point, rock) {
+    const top = rock.base - rock.height;
+    if (point.y < top || point.y > rock.base) return false;
+    const progress = (rock.base - point.y) / rock.height;
+    const rowHalf = Math.max(1, (rock.width / 2) * (1 - progress * 0.9));
+    return Math.abs(point.x - rock.x) <= rowHalf + 1;
+  }
+
+  function rockIsHazardous(rock) {
+    const rockTop = rock.base - rock.height;
+    const coverage = rockTop - surfaceY(rock.x, time);
+    return coverage < 8;
+  }
+
+  function resetDive(resetWave = false) {
+    if (resetWave) time = 0;
+    generateRocks();
+    generateStars();
+    shootingStar = null;
+    shootingStarSpawnedThisDive = false;
+    shootingStarSpawnAt = Math.random() < 0.38 ? randomBetween(0.45, 1.05) : Infinity;
+    player = createPlayer();
+    mode = 'ready';
+    pendingResult = null;
+    resultDelay = 0;
+    aim.active = false;
+    rotateLeftHeld = false;
+    rotateRightHeld = false;
+    spinForwardHeld = false;
+    spinBackwardHeld = false;
+    twistDrag = false;
+    pointerId = null;
+    splash.length = 0;
+    resultOverlay.classList.add('hidden');
+    helpOverlay.classList.add('hidden');
+    helpOpen = false;
+    touchControls.classList.remove('active');
+    twistLeft.classList.remove('active');
+    twistRight.classList.remove('active');
+    canvas.classList.remove('dragging');
+  }
+
+  function launch(dx, dy) {
+    const length = Math.hypot(dx, dy);
+    if (length < 7) {
+      return;
+    }
+    const power = clamp(length / MAX_DRAG, 0.18, 1);
+    const speed = 25 + power * 50;
+    player.vx = dx / length * speed;
+    player.vy = dy / length * speed;
+    if (player.vy < 0) {
+      player.vy = -Math.sqrt(player.vy * player.vy + 2 * GRAVITY * CLIFF_DROP);
+    }
+    player.angularVelocity = 0;
+    player.airborneTime = 0;
+    mode = 'airborne';
+    if (TOUCH_DEVICE) touchControls.classList.add('active');
+    playWhoosh(power);
+  }
+
+  function setTwist(direction, active) {
+    if (direction === 'left') {
+      rotateLeftHeld = active;
+      twistLeft.classList.toggle('active', active);
+    } else {
+      rotateRightHeld = active;
+      twistRight.classList.toggle('active', active);
+    }
+  }
+
+  function createSplash(x, y, count, success) {
+    for (let i = 0; i < count; i += 1) {
+      const angle = Math.PI + Math.random() * Math.PI;
+      const speed = (success ? 12 : 7) + Math.random() * (success ? 25 : 15);
+      splash.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed + player.vx * 0.08,
+        vy: Math.sin(angle) * speed - 4,
+        life: 0.45 + Math.random() * 0.55,
+        size: Math.random() > 0.72 ? 2 : 1,
+        success
+      });
+    }
+  }
+
+  function finishAttempt(success, detail, x, y, score = null) {
+    if (mode !== 'airborne') return;
+    const finalScore = success && score ? score : emptyScore();
+
+    if (success && finalScore.total > bestScore) {
+      bestScore = finalScore.total;
+      finalScore.newBest = true;
+      saveBestScore(bestScore);
+      bestScoreLabel.textContent = String(bestScore);
+    }
+
+    mode = 'resultPending';
+    pendingResult = { success, detail, score: finalScore };
+    resultDelay = success ? 0.55 : 0.42;
+    touchControls.classList.remove('active');
+    setTwist('left', false);
+    setTwist('right', false);
+    spinForwardHeld = false;
+    spinBackwardHeld = false;
+    createSplash(x, y, success ? 28 : 14, success);
+    player.vx = 0;
+    player.vy = 0;
+    player.angularVelocity = 0;
+    player.visible = !success;
+    if (success) playSplash();
+    else playImpact();
+  }
+
+  function showResult() {
+    if (!pendingResult) return;
+    mode = 'result';
+    const score = pendingResult.score || emptyScore();
+    resultTitle.textContent = pendingResult.success
+      ? (score.newBest
+        ? 'New Best Dive!'
+        : score.entryType === 'feetfirst' ? 'Feet-First Landing!' : 'Clean Dive!')
+      : 'Try That Again';
+    const maximum = score.entryType === 'feetfirst' ? 1600 : 2900;
+    const entryNote = score.entryType === 'feetfirst' ? ' · half-score entry' : '';
+    totalScoreLabel.innerHTML = `${score.total}<small>total points · max ${maximum}${entryNote}</small>`;
+    resultDetail.textContent = pendingResult.detail;
+    distanceScoreLabel.textContent = `${score.distancePoints} pts · ${score.distanceCells} cells`;
+    airtimeScoreLabel.textContent = `${score.airtimePoints} pts · ${score.airtime.toFixed(2)} s`;
+    straightScoreLabel.textContent = `${score.straightPoints} pts · ${score.straightPercent}%`;
+    flipScoreLabel.textContent = `${score.flipPoints} pts · ${score.flipTurns.toFixed(2)} flips (${score.backTurns.toFixed(2)} back)`;
+    spinScoreLabel.textContent = `${score.spinPoints} pts · ${score.spinTurns.toFixed(2)} spins`;
+    starScoreLabel.textContent = `${score.starPoints + score.shootingStarPoints} pts · ${score.starCount}/3 stars${score.shootingStarHit ? ' + shooting star' : ''}`;
+    resultOverlay.classList.remove('hidden');
+    pendingResult = null;
+  }
+
+
+  function pointToSegmentDistance(px, py, ax, ay, bx, by) {
+    const abx = bx - ax;
+    const aby = by - ay;
+    const lengthSquared = abx * abx + aby * aby;
+    if (lengthSquared <= 0.00001) return Math.hypot(px - ax, py - ay);
+    const t = clamp(((px - ax) * abx + (py - ay) * aby) / lengthSquared, 0, 1);
+    const closestX = ax + abx * t;
+    const closestY = ay + aby * t;
+    return Math.hypot(px - closestX, py - closestY);
+  }
+
+  function spawnShootingStar() {
+    shootingStar = {
+      x: randomBetween(186, 230),
+      y: randomBetween(10, 30),
+      vx: randomBetween(-52, -42),
+      vy: randomBetween(10, 15),
+      life: randomBetween(1.8, 2.5),
+      phase: Math.random() * Math.PI * 2,
+      active: true
+    };
+  }
+
+  function updateShootingStar(previousX, previousY, dt) {
+    if (
+      mode === 'airborne' &&
+      !shootingStarSpawnedThisDive &&
+      player.airborneTime >= shootingStarSpawnAt
+    ) {
+      spawnShootingStar();
+      shootingStarSpawnedThisDive = true;
+    }
+    if (!shootingStar || !shootingStar.active) return;
+
+    shootingStar.life -= dt;
+    shootingStar.x += shootingStar.vx * dt;
+    shootingStar.y += shootingStar.vy * dt;
+
+    if (mode === 'airborne' && !player.hitShootingStar) {
+      const crossedStar = pointToSegmentDistance(
+        shootingStar.x,
+        shootingStar.y,
+        previousX,
+        previousY,
+        player.x,
+        player.y
+      ) <= 9.5;
+      if (crossedStar) {
+        player.hitShootingStar = true;
+        shootingStar.active = false;
+        playSpecialStar();
+        return;
+      }
+    }
+
+    if (shootingStar.life <= 0 || shootingStar.x < -14 || shootingStar.y > 62) {
+      shootingStar = null;
+    }
+  }
+
+  function updateStars(previousX, previousY) {
+    if (mode !== 'airborne') return;
+    for (const star of stars) {
+      if (star.collected) continue;
+      const starY = star.y + Math.sin(time * 1.8 + star.phase) * 2.4;
+      const starX = star.x + Math.cos(time * 1.1 + star.phase) * 1.2;
+      const crossedStar = pointToSegmentDistance(
+        starX,
+        starY,
+        previousX,
+        previousY,
+        player.x,
+        player.y
+      ) <= 8.5;
+      if (crossedStar) {
+        star.collected = true;
+        playStar();
+      }
+    }
+  }
+
+  function checkCollisions() {
+    const points = bodyPoints();
+    const samples = [points.head, points.chest, points.feet];
+
+    if (player.airborneTime > 0.18 && samples.some(pointInCliff)) {
+      finishAttempt(false, 'The diver clipped the cliff. Fling farther away from the rock face.', player.x, player.y);
+      return true;
+    }
+
+    for (const rock of rocks) {
+      if (!rockIsHazardous(rock)) continue;
+      if (samples.some((point) => pointInRock(point, rock))) {
+        finishAttempt(false, 'The diver hit an exposed rock. Wait for a deeper wave or aim for a clearer gap.', player.x, player.y);
+        return true;
+      }
+    }
+
+    const headDepth = points.head.y - surfaceY(points.head.x, time);
+    const chestDepth = points.chest.y - surfaceY(points.chest.x, time);
+    const feetDepth = points.feet.y - surfaceY(points.feet.x, time);
+    if (Math.max(headDepth, chestDepth, feetDepth) >= 0) {
+      const speed = Math.hypot(player.vx, player.vy);
+      const velocityX = player.vx / Math.max(1, speed);
+      const velocityY = player.vy / Math.max(1, speed);
+      const headX = Math.sin(player.rotation);
+      const headY = -Math.cos(player.rotation);
+      const feetX = -headX;
+      const feetY = -headY;
+      const headAlignment = headX * velocityX + headY * velocityY;
+      const feetAlignment = feetX * velocityX + feetY * velocityY;
+      const headFirst = headDepth >= chestDepth + 0.7 && headDepth >= feetDepth + 1.5;
+      const feetFirst = feetDepth >= chestDepth + 0.7 && feetDepth >= headDepth + 1.5;
+      const descending = velocityY > 0.35;
+      const cleanHeadfirst = headFirst && headAlignment > 0.76 && descending && speed > 18;
+      const cleanFeetFirst = feetFirst && feetAlignment > 0.76 && descending && speed > 18;
+
+      if (cleanHeadfirst) {
+        const waterX = clamp(points.head.x, 0, W - 1);
+        const waterY = surfaceY(waterX, time);
+        const score = calculateScore(waterX, headAlignment, headY, 'headfirst');
+        const spinEntry = Math.abs(player.spinVelocity) > 1.1 || spinForwardHeld || spinBackwardHeld;
+        finishAttempt(
+          true,
+          spinEntry
+            ? 'A clean headfirst entry — the diver was still spinning and it still counted.'
+            : 'A smooth headfirst entry through the open water.',
+          waterX,
+          waterY,
+          score
+        );
+      } else if (cleanFeetFirst) {
+        const waterX = clamp(points.feet.x, 0, W - 1);
+        const waterY = surfaceY(waterX, time);
+        const score = calculateScore(waterX, feetAlignment, feetY, 'feetfirst');
+        finishAttempt(
+          true,
+          'A clean feet-first landing. It counts, with every score category worth half points.',
+          waterX,
+          waterY,
+          score
+        );
+      } else if (!descending) {
+        finishAttempt(false, 'The entry was too flat. Aim the fling farther downward.', player.x, surfaceY(player.x, time));
+      } else if (headFirst) {
+        finishAttempt(false, 'The head reached the water first, but the flip angle was still too crooked.', player.x, surfaceY(player.x, time));
+      } else if (feetFirst) {
+        finishAttempt(false, 'The feet reached the water first, but the body was not straight enough for a safe landing.', player.x, surfaceY(player.x, time));
+      } else {
+        finishAttempt(false, 'The diver hit the water sideways. Straighten for a headfirst or feet-first entry.', player.x, surfaceY(player.x, time));
+      }
+      return true;
+    }
+
+    if (player.y > H + 12 || player.x > W + 15 || player.x < -15 || player.y < -30) {
+      finishAttempt(false, 'The diver missed the water. Adjust the fling direction and power.', clamp(player.x, 0, W), clamp(player.y, 0, H));
+      return true;
+    }
+
+    if (player.y >= 126) {
+      finishAttempt(false, 'The diver reached the sea floor instead of entering safely.', player.x, 126);
+      return true;
+    }
+
+    return false;
+  }
+
+  function update(dt) {
+    if (paused || helpOpen) return;
+    time += dt;
+
+    const starPrevX = player.x;
+    const starPrevY = player.y;
+
+    if (mode === 'airborne') {
+      player.airborneTime += dt;
+      const spinning = spinForwardHeld || spinBackwardHeld;
+
+      // A/D and the arrow keys control only the forward/backward flip.
+      const flipControl = spinning ? 4.1 : 6.2;
+      if (rotateLeftHeld) player.angularVelocity -= flipControl * dt;
+      if (rotateRightHeld) player.angularVelocity += flipControl * dt;
+
+      // W/S control only the separate body spin axis.
+      if (spinForwardHeld) {
+        player.spinVelocity += 12.5 * dt;
+        player.spinInputTime += dt;
+      }
+      if (spinBackwardHeld) {
+        player.spinVelocity -= 12.5 * dt;
+        player.spinInputTime += dt;
+      }
+
+      // Spinning makes flip corrections slightly less precise, but does not create a flip by itself.
+      if (spinning && (rotateLeftHeld || rotateRightHeld)) {
+        player.angularVelocity += Math.sin((time + player.airborneTime) * 24.0) * 0.08;
+      }
+
+      player.angularVelocity = clamp(player.angularVelocity, -5.8, 5.8);
+      player.spinVelocity = clamp(player.spinVelocity, -9.2, 9.2);
+      player.maxSpinRate = Math.max(player.maxSpinRate, Math.abs(player.spinVelocity));
+
+      player.angularVelocity *= Math.pow(0.994, dt * 60);
+      player.spinVelocity *= Math.pow(spinning ? 0.997 : 0.986, dt * 60);
+
+      const deltaRotation = player.angularVelocity * dt;
+      const deltaSpin = player.spinVelocity * dt;
+      player.rotation += deltaRotation;
+      player.spinAngle += deltaSpin;
+      player.accumulatedRotation += Math.abs(deltaRotation);
+      if (deltaRotation >= 0) player.frontRotation += deltaRotation;
+      else player.backRotation += Math.abs(deltaRotation);
+      player.accumulatedSpin += Math.abs(deltaSpin);
+
+      const previousX = player.x;
+      const previousY = player.y;
+      player.vy += GRAVITY * dt;
+      player.x += player.vx * dt;
+      player.y += player.vy * dt;
+      player.trail.push({ x: player.x, y: player.y, life: 0.42 });
+      if (player.trail.length > 18) player.trail.shift();
+      updateStars(previousX, previousY);
+      updateShootingStar(previousX, previousY, dt);
+      checkCollisions();
+    }
+
+    if (mode !== 'airborne') {
+      updateShootingStar(starPrevX, starPrevY, dt);
+    }
+
+    if (mode === 'resultPending') {
+      resultDelay -= dt;
+      if (resultDelay <= 0) showResult();
+    }
+
+    for (const particle of splash) {
+      particle.vy += 34 * dt;
+      particle.x += particle.vx * dt;
+      particle.y += particle.vy * dt;
+      particle.life -= dt;
+    }
+    for (let i = splash.length - 1; i >= 0; i -= 1) {
+      if (splash[i].life <= 0) splash.splice(i, 1);
+    }
+
+    for (const point of player.trail) point.life -= dt;
+    player.trail = player.trail.filter((point) => point.life > 0);
+  }
+
+  function drawBackground() {
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#143f55');
+    grad.addColorStop(0.52, '#0e3144');
+    grad.addColorStop(1, '#092333');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.fillStyle = 'rgba(143, 199, 218, 0.10)';
+    for (let i = -2; i < 12; i += 1) {
+      const x = i * 31 + 6;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x + 8, 0);
+      ctx.lineTo(x + 26, 80);
+      ctx.lineTo(x + 16, 80);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  function drawCliff() {
+    ctx.fillStyle = '#5a524a';
+    ctx.beginPath();
+    cliffPoints.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+    ctx.closePath();
+    ctx.fill();
+
+    for (let y = 44; y < 126; y += 3) {
+      for (let x = 0; x < 46; x += 3) {
+        if (x <= cliffEdgeAt(y) && hash(x, y, 8) > 0.76) {
+          ctx.fillStyle = hash(x, y, 12) > 0.5 ? '#6d6257' : '#4a4743';
+          ctx.fillRect(x, y, 2, 2);
+        }
+      }
+    }
+
+    ctx.fillStyle = '#739a4c';
+    ctx.fillRect(0, 41, 39, 4);
+    ctx.fillStyle = '#4e7d3d';
+    for (let x = 1; x < 39; x += 3) {
+      const h = 2 + ((x * 5) % 4);
+      ctx.fillRect(x, 41 - h, 1, h + 1);
+      if (x % 2) ctx.fillRect(x + 1, 40 - Math.floor(h / 2), 1, 2);
+    }
+  }
+
+
+  function drawShootingStar() {
+    if (!shootingStar || !shootingStar.active) return;
+    const x = Math.round(shootingStar.x);
+    const y = Math.round(shootingStar.y);
+    ctx.fillStyle = 'rgba(255, 247, 184, 0.55)';
+    for (let i = 1; i <= 6; i += 1) {
+      ctx.fillRect(x + i * 2, y - i, 2, 1);
+    }
+    ctx.fillStyle = '#ffd86f';
+    ctx.fillRect(x, y - 2, 1, 5);
+    ctx.fillRect(x - 2, y, 5, 1);
+    ctx.fillStyle = '#fff6b8';
+    ctx.fillRect(x - 1, y - 1, 3, 3);
+    ctx.fillStyle = '#fffdf0';
+    ctx.fillRect(x, y, 1, 1);
+  }
+
+  function drawStars() {
+    for (const star of stars) {
+      if (star.collected) continue;
+      const x = Math.round(star.x + Math.cos(time * 1.1 + star.phase) * 1.2);
+      const y = Math.round(star.y + Math.sin(time * 1.8 + star.phase) * 2.4);
+      ctx.fillStyle = '#ffd76a';
+      ctx.fillRect(x, y - 2, 1, 5);
+      ctx.fillRect(x - 2, y, 5, 1);
+      ctx.fillStyle = '#fff3b2';
+      ctx.fillRect(x - 1, y - 1, 3, 3);
+      ctx.fillStyle = '#fffbe2';
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+
+  function drawSand() {
+    ctx.fillStyle = '#d7ae51';
+    ctx.fillRect(0, 126, W, 9);
+    for (let y = 126; y < H; y += 2) {
+      for (let x = 0; x < W; x += 2) {
+        const n = hash(x, y, 21);
+        if (n > 0.36) {
+          const shade = sandPalette[Math.min(sandPalette.length - 1, Math.floor(n * sandPalette.length))];
+          ctx.fillStyle = shade;
+          ctx.fillRect(x, y, 2, 1);
+        }
+      }
+    }
+    ctx.fillStyle = '#e5bf62';
+    for (let x = 0; x < W; x += 9) {
+      const y = 125 + ((x * 7) % 3);
+      ctx.fillRect(x, y, 5, 2);
+    }
+  }
+
+  function drawRockPile(rock, index) {
+    const { x, base, width, height } = rock;
+    const half = width / 2;
+    for (let yy = base - height; yy <= base; yy += 1) {
+      const progress = (base - yy) / height;
+      const rowHalf = Math.max(1, half * (1 - progress * 0.9));
+      for (let xx = Math.floor(x - rowHalf); xx <= Math.ceil(x + rowHalf); xx += 1) {
+        const n = hash(xx, yy, 40 + index);
+        const shadeIndex = Math.min(rockPalette.length - 1, Math.floor(n * rockPalette.length));
+        ctx.fillStyle = rockPalette[shadeIndex];
+        ctx.fillRect(xx, yy, 1, 1);
+      }
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    const shineW = Math.max(2, Math.floor(width * 0.25));
+    ctx.fillRect(Math.floor(x - width * 0.17), base - height + 3, shineW, 2);
+  }
+
+
+  function drawDiverSprite(x, y, rotation, spinAngle) {
+    ctx.save();
+    ctx.translate(Math.round(x), Math.round(y));
+    ctx.rotate(rotation);
+
+    const facingAmount = Math.cos(spinAngle);
+    const facingFront = facingAmount >= 0;
+    const sideAmount = Math.abs(Math.sin(spinAngle));
+    const bodyW = Math.max(3, Math.round(7 - sideAmount * 4));
+    const bodyX = -Math.floor(bodyW / 2);
+    const armOffset = Math.max(3, Math.round(6 - sideAmount * 3));
+    const skin = '#ddb38b';
+    const skinShade = '#c99570';
+    const isFemale = playerGender === 'female';
+    const outfitMain = isFemale ? '#a23b7a' : '#315a78';
+    const outfitShade = isFemale ? '#7e2a5d' : '#244257';
+    const hair = isFemale ? '#e7cf63' : '#223643';
+    const hairShade = isFemale ? '#c7ae44' : '#223643';
+
+    // Bare legs and feet.
+    ctx.fillStyle = skinShade;
+    ctx.fillRect(-2, 3, 2, 6);
+    ctx.fillRect(1, 3, 2, 6);
+    ctx.fillStyle = skin;
+    ctx.fillRect(-2, 3, 1, 6);
+    ctx.fillRect(1, 3, 1, 6);
+    ctx.fillRect(-3, 9, 3, 1);
+    ctx.fillRect(1, 9, 3, 1);
+
+    // Torso.
+    ctx.fillStyle = skinShade;
+    ctx.fillRect(bodyX, -5, bodyW, 8);
+    ctx.fillStyle = skin;
+    if (bodyW > 2) ctx.fillRect(bodyX + 1, -5, bodyW - 1, 7);
+
+    // Outfit.
+    if (isFemale) {
+      // Bikini top
+      ctx.fillStyle = outfitShade;
+      ctx.fillRect(bodyX + 1, -4, Math.max(2, bodyW - 2), 2);
+      ctx.fillStyle = outfitMain;
+      ctx.fillRect(bodyX + 1, -4, Math.max(2, bodyW - 3), 1);
+      // Bikini bottom
+      ctx.fillStyle = outfitShade;
+      ctx.fillRect(bodyX, 1, bodyW, 4);
+      ctx.fillStyle = outfitMain;
+      if (bodyW > 2) ctx.fillRect(bodyX + 1, 1, bodyW - 1, 3);
+    } else {
+      // Speedo
+      ctx.fillStyle = outfitShade;
+      ctx.fillRect(bodyX, 1, bodyW, 4);
+      ctx.fillStyle = outfitMain;
+      if (bodyW > 2) ctx.fillRect(bodyX + 1, 1, bodyW - 1, 3);
+    }
+
+    // Bare arms.
+    ctx.fillStyle = skinShade;
+    ctx.fillRect(-armOffset, -3, 2, 6);
+    ctx.fillRect(armOffset - 2, -3, 2, 6);
+    ctx.fillStyle = skin;
+    ctx.fillRect(-armOffset, -3, 1, 5);
+    ctx.fillRect(armOffset - 1, -3, 1, 5);
+
+    // Head and hair.
+    ctx.fillStyle = skinShade;
+    ctx.fillRect(-2, -11, 5, 5);
+    ctx.fillStyle = skin;
+    ctx.fillRect(-1, -11, 4, 4);
+    ctx.fillStyle = hairShade;
+    ctx.fillRect(-3, -13, 7, 3);
+    if (isFemale) {
+      // longer blond hair in back
+      ctx.fillRect(-3, -10, 2, 4);
+      ctx.fillRect(2, -10, 2, 4);
+      if (!facingFront) ctx.fillRect(-2, -9, 6, 3);
+    } else {
+      ctx.fillRect(-2, -10, 5, 1);
+    }
+    ctx.fillStyle = hair;
+    ctx.fillRect(-2, -13, 5, 2);
+    if (isFemale) {
+      ctx.fillRect(-2, -10, 1, 3);
+      ctx.fillRect(2, -10, 1, 3);
+    }
+
+    // Face only when facing the viewer.
+    if (facingFront && Math.abs(facingAmount) > 0.35) {
+      ctx.fillStyle = '#1f2a31';
+      ctx.fillRect(-1, -9, 1, 1);
+      ctx.fillRect(1, -9, 1, 1);
+      ctx.fillStyle = '#8b5b44';
+      ctx.fillRect(0, -7, 1, 1);
+    }
+
+    ctx.restore();
+  }
+
+  function drawDiver() {
+    if (!player.visible) return;
+    for (const point of player.trail) {
+      const alpha = clamp(point.life / 0.42, 0, 1) * 0.22;
+      ctx.fillStyle = `rgba(208,238,246,${alpha})`;
+      ctx.fillRect(Math.round(point.x), Math.round(point.y), 1, 1);
+    }
+    drawDiverSprite(player.x, player.y, player.rotation, player.spinAngle);
+  }
+
+  function drawAimGuide() {
+    if (!aim.active) return;
+    const dx = aim.x - START.x;
+    const dy = aim.y - START.y;
+    const length = Math.hypot(dx, dy);
+    if (length < 1) return;
+
+    ctx.strokeStyle = 'rgba(230,248,253,0.8)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 2]);
+    ctx.beginPath();
+    ctx.moveTo(START.x, START.y);
+    ctx.lineTo(aim.x, aim.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const power = clamp(length / MAX_DRAG, 0.18, 1);
+    const speed = 25 + power * 50;
+    const vx = dx / length * speed;
+    const vy = dy / length * speed;
+    ctx.fillStyle = 'rgba(228,247,252,0.62)';
+    for (let t = 0.12; t < 1.55; t += 0.12) {
+      const px = START.x + vx * t;
+      const py = START.y + vy * t + 0.5 * GRAVITY * t * t;
+      if (px < 0 || px >= W || py >= H) break;
+      ctx.fillRect(Math.round(px), Math.round(py), 1, 1);
+      if (py >= surfaceY(px, time)) break;
+    }
+  }
+
+  function drawWater(t) {
+    waterCells = 0;
+    for (let x = 0; x < W; x += 1) {
+      const sy = surfaceY(x, t);
+      for (let y = sy; y < 126; y += 1) {
+        const depth = (y - sy) / Math.max(1, 126 - sy);
+        const band = Math.floor(y / 2);
+        const n = hash(x, band, Math.floor(t * 4));
+        const index = Math.min(waterPalette.length - 1, Math.max(0, Math.floor(depth * 2.2 + n * 2.2)));
+        ctx.fillStyle = waterPalette[index];
+        ctx.fillRect(x, y, 1, 1);
+        waterCells += 1;
+      }
+    }
+    ctx.fillStyle = '#4bb1e3';
+    for (let x = 0; x < W; x += 1) {
+      const sy = surfaceY(x, t);
+      if (hash(x, sy, 76) > 0.52) ctx.fillRect(x, sy, 1, 1);
+    }
+    ctx.fillStyle = '#7ccbed';
+    for (let x = 0; x < W; x += 3) {
+      const sy = surfaceY(x, t);
+      if (hash(x, sy, 91) > 0.62) ctx.fillRect(x, sy - 1, 2, 1);
+    }
+  }
+
+  function drawBubbles(t) {
+    ctx.fillStyle = 'rgba(177, 223, 239, 0.4)';
+    for (const bubble of bubbles) {
+      const sy = surfaceY(bubble.x, t);
+      const travel = ((t * bubble.speed + bubble.offset) % 47);
+      const y = bubble.y - travel;
+      if (y > sy + 4 && y < 124) ctx.fillRect(Math.round(bubble.x), Math.round(y), bubble.size, bubble.size);
+    }
+  }
+
+  function drawFoam(t) {
+    ctx.fillStyle = 'rgba(218, 245, 252, 0.68)';
+    for (let x = 0; x < W; x += 2) {
+      const sy = surfaceY(x, t);
+      if (hash(x, sy, Math.floor(t * 3) + 110) > 0.72) ctx.fillRect(x, sy - 1, 2, 1);
+    }
+
+    const shoreX = 44;
+    const sy = surfaceY(shoreX, t);
+    const phase = Math.floor(t * 10);
+    const crashStrength = Math.max(0, 96 - sy);
+    ctx.fillStyle = '#e8f8fd';
+    for (let x = 36; x <= 56; x += 2) {
+      if (hash(x, phase, 150) > 0.28) ctx.fillRect(x, sy - 1, 2, 1);
+      if (hash(x, phase, 151) > 0.5) ctx.fillRect(x, sy - 2, 1, 1);
+    }
+    for (let i = 0; i < 28; i += 1) {
+      const px = 39 + Math.floor(hash(i, phase, 160) * 10);
+      const py = sy - 1 - Math.floor(hash(i, phase, 161) * (8 + crashStrength * 0.8));
+      const size = hash(i, phase, 162) > 0.65 ? 2 : 1;
+      ctx.fillRect(px, py, size, 1);
+    }
+    ctx.fillStyle = 'rgba(226, 247, 252, 0.8)';
+    for (let i = 0; i < 9; i += 1) {
+      const px = 46 + Math.floor(hash(i, phase, 170) * 10);
+      const py = sy - 2 - Math.floor(hash(i, phase, 171) * 5);
+      if (hash(i, phase, 172) > 0.35) ctx.fillRect(px, py, 1, 1);
+    }
+  }
+
+  function drawSplash() {
+    for (const particle of splash) {
+      const alpha = clamp(particle.life / 0.8, 0, 1);
+      ctx.fillStyle = particle.success ? `rgba(231,251,255,${alpha})` : `rgba(187,225,234,${alpha})`;
+      ctx.fillRect(Math.round(particle.x), Math.round(particle.y), particle.size, particle.size);
+    }
+  }
+
+  function render() {
+    drawBackground();
+    drawStars();
+    drawShootingStar();
+    drawCliff();
+    rocks.forEach(drawRockPile);
+    drawSand();
+    drawWater(time);
+    drawBubbles(time);
+    drawFoam(time);
+    drawSplash();
+    drawAimGuide();
+    drawDiver();
+  }
+
+  function ensureAudio() {
+    if (ensureAudio.context) return ensureAudio.context;
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+    ensureAudio.context = new AudioContextClass();
+    return ensureAudio.context;
+  }
+
+  function playTone(startFrequency, endFrequency, duration, volume) {
+    const audio = ensureAudio();
+    if (!audio) return;
+    if (audio.state === 'suspended') audio.resume().catch(() => {});
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+    const now = audio.currentTime;
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(startFrequency, now);
+    oscillator.frequency.exponentialRampToValueAtTime(Math.max(20, endFrequency), now + duration);
+    gain.gain.setValueAtTime(volume, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    oscillator.connect(gain).connect(audio.destination);
+    oscillator.start(now);
+    oscillator.stop(now + duration);
+  }
+
+  function playWhoosh(power) { playTone(260 + power * 180, 80, 0.28, 0.08); }
+  function playSplash() { playTone(180, 45, 0.45, 0.13); }
+  function playImpact() { playTone(105, 30, 0.25, 0.16); }
+  function playStar() { playTone(520, 880, 0.12, 0.07); }
+  function playSpecialStar() { playTone(620, 1180, 0.16, 0.08); }
+
+  function pointerDown(event) {
+    if (paused || mode === 'result' || mode === 'resultPending') return;
+    ensureAudio();
+    const point = canvasPoint(event);
+    pointerId = event.pointerId;
+    canvas.setPointerCapture?.(event.pointerId);
+
+    if (mode === 'ready') {
+      if (Math.hypot(point.x - player.x, point.y - player.y) <= 15) {
+        aim.active = true;
+        aim.x = point.x;
+        aim.y = point.y;
+        mode = 'aiming';
+        canvas.classList.add('dragging');
+      }
+    } else if (mode === 'airborne') {
+      twistDrag = true;
+      twistLastX = point.x;
+      canvas.classList.add('dragging');
+    }
+  }
+
+  function pointerMove(event) {
+    if (event.pointerId !== pointerId) return;
+    const point = canvasPoint(event);
+    if (mode === 'aiming' && aim.active) {
+      const dx = point.x - START.x;
+      const dy = point.y - START.y;
+      const length = Math.hypot(dx, dy);
+      const scale = length > MAX_DRAG ? MAX_DRAG / length : 1;
+      aim.x = START.x + dx * scale;
+      aim.y = START.y + dy * scale;
+    } else if (mode === 'airborne' && twistDrag) {
+      const delta = point.x - twistLastX;
+      player.angularVelocity = clamp(player.angularVelocity + delta * 0.17, -5.4, 5.4);
+      twistLastX = point.x;
+    }
+  }
+
+  function pointerUp(event) {
+    if (event.pointerId !== pointerId) return;
+    if (mode === 'aiming' && aim.active) {
+      const dx = aim.x - START.x;
+      const dy = aim.y - START.y;
+      aim.active = false;
+      launch(dx, dy);
+      if (mode !== 'airborne') {
+        mode = 'ready';
+      }
+    }
+    twistDrag = false;
+    pointerId = null;
+    canvas.classList.remove('dragging');
+    try { canvas.releasePointerCapture?.(event.pointerId); } catch (_) {}
+  }
+
+  function keyDown(event) {
+    if (helpOpen) {
+      if (event.key === 'Escape') {
+        helpOpen = false;
+        helpOverlay.classList.add('hidden');
+      }
+      return;
+    }
+    if (['ArrowLeft', 'ArrowRight', ' ', 'ArrowUp', 'ArrowDown'].includes(event.key)) event.preventDefault();
+    const key = event.key.toLowerCase();
+    if (event.key === 'ArrowLeft' || key === 'a') setTwist('left', true);
+    if (event.key === 'ArrowRight' || key === 'd') setTwist('right', true);
+    if (key === 'w') spinForwardHeld = true;
+    if (key === 's') spinBackwardHeld = true;
+    if (key === 'r') resetDive(false);
+  }
+
+  function keyUp(event) {
+    const key = event.key.toLowerCase();
+    if (event.key === 'ArrowLeft' || key === 'a') setTwist('left', false);
+    if (event.key === 'ArrowRight' || key === 'd') setTwist('right', false);
+    if (key === 'w') spinForwardHeld = false;
+    if (key === 's') spinBackwardHeld = false;
+  }
+
+
+  function bindHoldButton(button, direction) {
+    const start = (event) => {
+      event.preventDefault();
+      ensureAudio();
+      setTwist(direction, true);
+      button.setPointerCapture?.(event.pointerId);
+    };
+    const stop = (event) => {
+      event.preventDefault();
+      setTwist(direction, false);
+      try { button.releasePointerCapture?.(event.pointerId); } catch (_) {}
+    };
+    button.addEventListener('pointerdown', start);
+    button.addEventListener('pointerup', stop);
+    button.addEventListener('pointercancel', stop);
+  }
+
+  function bindSpinButton(button, direction) {
+    const start = (event) => {
+      event.preventDefault();
+      ensureAudio();
+      if (direction === 'forward') spinForwardHeld = true;
+      else spinBackwardHeld = true;
+      button.classList.add('active');
+      button.setPointerCapture?.(event.pointerId);
+    };
+    const stop = (event) => {
+      event.preventDefault();
+      if (direction === 'forward') spinForwardHeld = false;
+      else spinBackwardHeld = false;
+      button.classList.remove('active');
+      try { button.releasePointerCapture?.(event.pointerId); } catch (_) {}
+    };
+    button.addEventListener('pointerdown', start);
+    button.addEventListener('pointerup', stop);
+    button.addEventListener('pointercancel', stop);
+    button.addEventListener('pointerleave', (event) => {
+      if (event.buttons === 0) stop(event);
+    });
+  }
+
+  function frame(now) {
+    const dt = Math.min(0.05, Math.max(0.001, (now - last) / 1000));
+    last = now;
+    update(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+
+  resetBtn.addEventListener('click', () => resetDive(false));
+  retryBtn.addEventListener('click', () => resetDive(false));
+  maleBtn.addEventListener('click', () => setPlayerGender('male'));
+  femaleBtn.addEventListener('click', () => setPlayerGender('female'));
+  helpBtn.addEventListener('click', () => {
+    helpOpen = true;
+    helpOverlay.classList.remove('hidden');
+  });
+  closeHelpBtn.addEventListener('click', () => {
+    helpOpen = false;
+    helpOverlay.classList.add('hidden');
+  });
+  canvas.addEventListener('pointerdown', pointerDown);
+  canvas.addEventListener('pointermove', pointerMove);
+  canvas.addEventListener('pointerup', pointerUp);
+  canvas.addEventListener('pointercancel', pointerUp);
+  window.addEventListener('keydown', keyDown, { passive: false });
+  window.addEventListener('keyup', keyUp);
+  bindHoldButton(twistLeft, 'left');
+  bindHoldButton(twistRight, 'right');
+  bindSpinButton(spinBack, 'back');
+  bindSpinButton(spinForward, 'forward');
+
+  bestScoreLabel.textContent = String(bestScore);
+  setPlayerGender('male');
+  resetDive(true);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
