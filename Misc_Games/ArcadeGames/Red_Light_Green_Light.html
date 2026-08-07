@@ -104,7 +104,14 @@ button.primary{background:#3ba85d}
   background:rgba(0,0,0,.25);font-size:11px;color:rgba(255,255,255,.76)
 }
 @media (pointer:coarse),(max-width:900px){
-  #shell{width:100vw;height:100vh;aspect-ratio:auto}
+  /* Keep the game at its native 16:9 shape on phones/tablets.
+     Extra-wide or taller landscape screens get harmless letterboxing instead
+     of stretching the playfield. */
+  #shell{
+    width:min(100vw,177.7778vh);
+    height:min(100vh,56.25vw);
+    aspect-ratio:16/9;
+  }
   #mobileControls{display:block}
   #finishStatus{bottom:8px;font-size:12px;padding:6px 10px}
   #hud{inset:6px 6px auto 6px;gap:5px}
@@ -114,12 +121,58 @@ button.primary{background:#3ba85d}
   #lightLabel{font-size:16px}#countdown{font-size:9px}
   .helpGrid{grid-template-columns:1fr}
 }
+
+#portraitBlock{
+  position:fixed;
+  inset:0;
+  z-index:999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  background:#0b120f;
+}
+#portraitBlock.hidden{display:none!important}
+.rotateCard{
+  width:min(360px,90vw);
+  text-align:center;
+  border-radius:22px;
+  padding:28px 22px;
+  background:linear-gradient(180deg,rgba(24,37,30,.99),rgba(12,20,16,.99));
+  border:1px solid rgba(255,255,255,.13);
+  box-shadow:0 20px 60px rgba(0,0,0,.42);
+}
+.rotateIcon{
+  font-size:58px;
+  line-height:1;
+  margin-bottom:10px;
+}
+.rotateTitle{
+  font-size:25px;
+  font-weight:950;
+  letter-spacing:.04em;
+}
+.rotateText{
+  margin-top:8px;
+  color:#c6d0c9;
+  font-size:14px;
+  line-height:1.4;
+}
+
 </style>
 </head>
 <body>
 <div id="app">
 <div id="shell">
   <canvas id="game" width="1280" height="720"></canvas>
+
+  <div id="portraitBlock" class="hidden" aria-live="polite">
+    <div class="rotateCard">
+      <div class="rotateIcon">↻</div>
+      <div class="rotateTitle">LANDSCAPE ONLY</div>
+      <div class="rotateText">Rotate your device sideways to play.</div>
+    </div>
+  </div>
 
   <div id="hud">
     <div class="hudBox" id="leftStats">
@@ -254,6 +307,7 @@ const els={
   roundTitle:$('roundTitle'),roundText:$('roundText'),roundAdvance:$('roundAdvance'),
   finishStatus:$('finishStatus'),finishPlace:$('finishPlace'),
   easyBtn:$('easyBtn'),hardBtn:$('hardBtn'),modeDesc:$('modeDesc'),
+  portraitBlock:$('portraitBlock'),
   joystickBase:$('joystickBase'),joystickKnob:$('joystickKnob')
 };
 
@@ -265,6 +319,7 @@ const angleDelta=(a,b)=>Math.atan2(Math.sin(a-b),Math.cos(a-b));
 
 let gameState='menu';
 let gameMode='easy';
+let orientationBlocked=false;
 let lastTime=performance.now();
 let elapsed=0;
 let level=1;
@@ -367,6 +422,32 @@ function playSfx(name){
   }
 }
 
+
+
+function isTouchMobileDevice(){
+  return (navigator.maxTouchPoints||0)>0 ||
+         window.matchMedia('(pointer:coarse)').matches ||
+         window.matchMedia('(hover:none)').matches;
+}
+
+function updateOrientationLock(){
+  const portrait=window.innerHeight>window.innerWidth;
+  orientationBlocked=isTouchMobileDevice()&&portrait;
+
+  if(orientationBlocked){
+    els.portraitBlock.classList.remove('hidden');
+    keys.clear();
+    mobileVector={x:0,y:0};
+    if(els.joystickKnob)els.joystickKnob.style.transform='translate(0px,0px)';
+  }else{
+    els.portraitBlock.classList.add('hidden');
+  }
+}
+
+window.addEventListener('resize',updateOrientationLock);
+window.addEventListener('orientationchange',()=>{
+  setTimeout(updateOrientationLock,80);
+});
 
 function difficulty(){
   return {
@@ -1074,6 +1155,12 @@ function updateEffects(dt){
 }
 
 function update(dt){
+  // On mobile portrait, freeze the entire simulation until the device
+  // returns to landscape so the timer, scanner, and NPCs cannot advance unseen.
+  if(orientationBlocked){
+    return;
+  }
+
   if(gameState!=='playing'){
     updateEffects(dt);
     return;
@@ -1369,6 +1456,7 @@ $('closeHelpBtn').onclick=()=>els.help.classList.add('hidden');
 
 setGameMode('easy');
 prepareLevel(50);
+updateOrientationLock();
 requestAnimationFrame(frame);
 })();
 </script>
