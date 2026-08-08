@@ -1,0 +1,828 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f3eee2" />
+  <title>Link Card</title>
+  <style>
+    :root{
+      --ink:#25303a;
+      --muted:#6f756f;
+      --paper:#fffdf5;
+      --paper-edge:#d8cfbc;
+      --desk:#eee8dc;
+      --accent:#315c72;
+      --accent-dark:#244858;
+      --accent-soft:#e4eef2;
+      --rule:#c9dbe2;
+      --margin:#dda8a3;
+      --danger:#9b4d46;
+      --shadow:0 18px 50px rgba(53,44,29,.15),0 3px 10px rgba(53,44,29,.08);
+    }
+    *{box-sizing:border-box}
+    html,body{min-height:100%}
+    body{
+      margin:0;
+      color:var(--ink);
+      background:
+        radial-gradient(circle at 10% 10%,rgba(255,255,255,.72),transparent 33%),
+        linear-gradient(135deg,#f4f0e8,#e8e0d2);
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+    button,input{font:inherit}
+    button,a{touch-action:manipulation}
+    button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid rgba(49,92,114,.24);outline-offset:2px}
+    .shell{width:min(1120px,calc(100% - 32px));margin:0 auto;padding:38px 0 54px}
+    .brand{display:flex;align-items:center;gap:11px;margin-bottom:24px;color:#4e504b;font-weight:800;letter-spacing:-.02em}
+    .brand-mark{width:35px;height:27px;border:1px solid #c8bfac;border-radius:4px;background:repeating-linear-gradient(to bottom,#fffdf5 0 7px,#dbe8ec 7px 8px);box-shadow:0 3px 7px rgba(0,0,0,.08);transform:rotate(-2deg)}
+    .hero{display:grid;grid-template-columns:.78fr 1.22fr;gap:36px;align-items:start}
+    .intro{padding:32px 10px 12px 2px}
+        h1{font-size:clamp(2.25rem,4.5vw,4.25rem);line-height:1;letter-spacing:-.05em;margin:0 0 16px;max-width:640px}
+    .intro p{font-size:1.08rem;line-height:1.65;color:#62665f;max-width:580px;margin:0}
+        .panel{background:rgba(255,255,255,.74);border:1px solid rgba(148,132,103,.2);border-radius:18px;padding:26px;box-shadow:0 12px 34px rgba(69,58,39,.08)}
+    .panel h2{font-size:1.1rem;margin:0 0 16px;letter-spacing:-.02em}
+    label{display:block;font-weight:760;font-size:.85rem;margin-bottom:7px}
+    .field{margin-bottom:17px}
+    input[type="text"],input[type="url"]{width:100%;border:1px solid #cbc4b7;background:#fffefa;border-radius:11px;padding:12px 13px;color:var(--ink);box-shadow:inset 0 1px 1px rgba(0,0,0,.025);transition:.15s border-color,.15s box-shadow}
+    input:focus{border-color:#6c8b9a;box-shadow:0 0 0 3px rgba(49,92,114,.09)}
+    .url-input.invalid{border-color:#b45b52;box-shadow:0 0 0 3px rgba(155,77,70,.09)}
+    .field-error{min-height:18px;margin:5px 2px 0;color:var(--danger);font-size:.75rem;line-height:1.35}
+    .link-entry{border-top:1px solid rgba(129,117,95,.16);padding-top:16px;margin-top:16px}
+    .link-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+    .link-head strong{font-size:.88rem}
+    .remove{appearance:none;border:0;background:transparent;color:var(--danger);font-size:.8rem;font-weight:750;cursor:pointer;padding:6px 3px}
+    .two-col{display:grid;grid-template-columns:1fr 1.2fr;gap:12px}
+    .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+    .btn{appearance:none;border:0;border-radius:11px;padding:11px 14px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;transition:transform .12s ease,background .12s ease,box-shadow .12s ease}
+    .btn:active{transform:translateY(1px)}
+    .btn-primary{background:var(--accent);color:#fff;box-shadow:0 7px 16px rgba(49,92,114,.2)}
+    .btn-primary:hover{background:var(--accent-dark)}
+    .btn-secondary{background:#fffdf8;color:#48535a;border:1px solid #d3ccbf}
+    .btn-secondary:hover{background:#fff}
+    .btn-ghost{background:transparent;color:var(--accent);padding-left:3px;padding-right:3px}
+    .btn[disabled]{opacity:.45;cursor:not-allowed;box-shadow:none}
+    .status{min-height:21px;margin-top:13px;font-size:.82rem;color:#6a6e68;line-height:1.45}
+    .status.error{color:#9a463e}
+    .result{display:none;margin-top:20px;border-top:1px solid rgba(129,117,95,.16);padding-top:18px}
+    .result.show{display:block}
+    .result-row{display:flex;gap:8px;min-width:0}
+    .result-row input{flex:1;min-width:0;font-size:.84rem;color:#5f655f}
+    .stats{font-size:.77rem;color:#737870;margin:8px 1px 0}
+    .share-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+    .share-actions .btn{padding:10px 8px;font-size:.82rem}
+
+    #viewer{display:none;min-height:100vh;align-items:center;justify-content:center;padding:28px 16px 34px}
+    #viewer.show{display:flex}
+    .viewer-wrap{width:min(690px,100%)}
+    .card{
+      position:relative;
+      overflow:hidden;
+      background:
+        linear-gradient(to right,transparent 0 54px,var(--margin) 54px 56px,transparent 56px),
+        repeating-linear-gradient(to bottom,var(--paper) 0 39px,var(--rule) 39px 40px);
+      border:1px solid var(--paper-edge);
+      border-radius:9px;
+      padding:39px 36px 35px 76px;
+      box-shadow:var(--shadow);
+      transform:rotate(-.2deg);
+    }
+    .card::before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,rgba(255,255,255,.42),transparent 26%,transparent 75%,rgba(181,165,132,.04));mix-blend-mode:multiply}
+    .card-title{position:relative;font-family:Georgia,"Times New Roman",serif;font-size:clamp(1.8rem,5vw,2.7rem);line-height:1.12;margin:0 0 24px;letter-spacing:-.025em;color:#303334;overflow-wrap:anywhere}
+    .links{position:relative;display:grid;gap:12px}
+    .link-line{display:grid;grid-template-columns:minmax(0,1fr) 42px;gap:8px;align-items:stretch}
+    .main-link{display:flex;align-items:center;min-height:51px;padding:10px 14px;border-radius:8px;background:rgba(255,255,255,.84);border:1px solid rgba(92,108,112,.15);color:#254f64;text-decoration:none;font-weight:820;box-shadow:0 2px 5px rgba(48,56,53,.055);overflow-wrap:anywhere}
+    .main-link:hover{background:#fff;box-shadow:0 4px 10px rgba(48,56,53,.09)}
+    .new-tab{display:flex;align-items:center;justify-content:center;border-radius:8px;background:rgba(255,255,255,.72);border:1px solid rgba(92,108,112,.15);color:#53666f;text-decoration:none}
+    .new-tab:hover{background:#fff;color:#244f63}
+    .new-tab svg{width:18px;height:18px}
+    .card-note{position:relative;margin:20px 1px 0;font-size:.76rem;color:#757870}
+    .create-own{text-align:center;margin-top:22px}
+    .create-own a{display:inline-flex;align-items:center;gap:7px;color:#5b625f;text-decoration:none;font-size:.88rem;font-weight:800;padding:9px 12px;border-radius:999px;background:rgba(255,255,255,.55);border:1px solid rgba(127,112,87,.18)}
+    .create-own a:hover{background:rgba(255,255,255,.82)}
+    .viewer-error{text-align:center;background:#fff;padding:26px;border-radius:16px;box-shadow:var(--shadow)}
+
+    .modal-backdrop{position:fixed;inset:0;background:rgba(31,31,28,.46);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
+    .modal-backdrop.show{display:flex}
+    .modal{width:min(430px,100%);background:#fffdf7;border-radius:18px;padding:20px;box-shadow:0 25px 75px rgba(0,0,0,.22);text-align:center}
+    .modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;text-align:left}
+    .modal h3{margin:0;font-size:1.05rem}
+    .icon-btn{appearance:none;border:0;background:#eeeae1;width:34px;height:34px;border-radius:50%;font-size:1.15rem;cursor:pointer;color:#555b58}
+    #qrBox{display:grid;place-items:center;min-height:245px;padding:10px;background:#fff;border-radius:12px;border:1px solid #ece7dc}
+    #qrBox img,#qrBox canvas{max-width:100%;height:auto!important}
+    .modal-copy{font-size:.8rem;color:#73776f;line-height:1.45;margin:12px 4px 0}
+    .toast{position:fixed;left:50%;bottom:20px;transform:translate(-50%,20px);background:#26383f;color:#fff;padding:10px 14px;border-radius:999px;font-size:.83rem;font-weight:800;opacity:0;pointer-events:none;transition:.2s;z-index:30;box-shadow:0 8px 22px rgba(0,0,0,.2)}
+    .toast.show{opacity:1;transform:translate(-50%,0)}
+    .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+
+    @media (max-width:760px){
+      body{background:#eee8dc}
+      .shell{width:100%;padding:16px 14px 30px}
+      .brand{margin:0 0 14px 2px}
+      .hero{display:block}
+      .intro{padding:6px 2px 18px}
+      h1{font-size:clamp(2rem,10vw,3rem);line-height:1.02;margin-bottom:12px}
+      .intro p{font-size:.98rem;line-height:1.5}
+      .panel{width:100%;padding:18px;border-radius:15px}
+      .panel h2{font-size:1.08rem}
+      .two-col{grid-template-columns:1fr;gap:13px}
+      input[type="text"],input[type="url"]{min-height:48px;font-size:16px}
+      .actions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px}
+      .actions .btn,.result-row .btn,.share-actions .btn{min-height:46px}
+      .result-row{display:grid;grid-template-columns:minmax(0,1fr) auto}
+      .share-actions{grid-template-columns:1fr}
+      #viewer{padding:14px 10px 24px;align-items:flex-start}
+      .viewer-wrap{margin-top:8px}
+      .card{transform:none;padding:28px 15px 26px 44px;background:linear-gradient(to right,transparent 0 28px,var(--margin) 28px 30px,transparent 30px),repeating-linear-gradient(to bottom,var(--paper) 0 39px,var(--rule) 39px 40px)}
+      .card-title{font-size:clamp(1.55rem,8vw,2.2rem);margin-bottom:18px}
+      .link-line{grid-template-columns:minmax(0,1fr) 48px;gap:7px}
+      .main-link,.new-tab{min-height:52px}
+      .main-link{padding:10px 11px}
+      .create-own a{min-height:44px}
+      .modal-backdrop{padding:12px}
+      .modal{padding:16px;border-radius:15px}
+    }
+    @media (max-width:390px){
+      .shell{padding-left:9px;padding-right:9px}
+      .panel{padding:14px}
+      .actions{grid-template-columns:1fr}
+      .actions .btn{width:100%}
+      .result-row{grid-template-columns:1fr}
+      .result-row .btn{width:100%}
+      .card{padding-left:41px;padding-right:11px}
+      .card-note{font-size:.72rem}
+    }
+    @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+  <main id="builder" class="shell">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"></span><span>Link Card</span></div>
+    <div class="hero">
+      <section class="intro" aria-labelledby="mainTitle">
+        <h1 id="mainTitle">Share up to five links with one URL.</h1>
+        <p>Everything is stored in the link—no account or server needed.</p>
+      </section>
+
+      <section class="panel" aria-label="Link card builder">
+        <h2>Build your card</h2>
+        <div class="field">
+          <label for="cardTitle">Card title <span style="font-weight:500;color:#777">(optional)</span></label>
+          <input id="cardTitle" type="text" maxlength="120" placeholder="Optional title for links" autocomplete="off" />
+        </div>
+
+        <div id="linkEntries"></div>
+
+        <button id="addLink" class="btn btn-ghost" type="button">＋ Add another link</button>
+
+        <div class="actions">
+          <button id="generate" class="btn btn-primary" type="button">Generate sharing URL</button>
+          <button id="clearForm" class="btn btn-secondary" type="button">Clear</button>
+        </div>
+        <div id="status" class="status" role="status" aria-live="polite"></div>
+
+        <div id="result" class="result">
+          <label for="shareUrl">Your sharing URL</label>
+          <div class="result-row">
+            <input id="shareUrl" type="text" readonly />
+            <button id="copyLink" class="btn btn-secondary" type="button">Copy</button>
+          </div>
+          <div id="stats" class="stats"></div>
+          <div class="share-actions">
+            <button id="shareNative" class="btn btn-primary" type="button">Share</button>
+            <button id="showQr" class="btn btn-secondary" type="button">QR code</button>
+            <button id="preview" class="btn btn-secondary" type="button">Preview card</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <main id="viewer" aria-live="polite"></main>
+
+  <div id="qrModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="qrTitle">QR code</h3>
+        <button id="closeQr" class="icon-btn" type="button" aria-label="Close QR code">×</button>
+      </div>
+      <div id="qrBox"></div>
+      <p class="modal-copy">Scanning this code opens the same multi-link card URL.</p>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+  (() => {
+    'use strict';
+
+    const MAX_LINKS = 5;
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    const builder = document.getElementById('builder');
+    const viewer = document.getElementById('viewer');
+    const entriesEl = document.getElementById('linkEntries');
+    const addBtn = document.getElementById('addLink');
+    const generateBtn = document.getElementById('generate');
+    const clearBtn = document.getElementById('clearForm');
+    const statusEl = document.getElementById('status');
+    const resultEl = document.getElementById('result');
+    const shareUrlEl = document.getElementById('shareUrl');
+    const statsEl = document.getElementById('stats');
+    const copyBtn = document.getElementById('copyLink');
+    const shareBtn = document.getElementById('shareNative');
+    const qrBtn = document.getElementById('showQr');
+    const previewBtn = document.getElementById('preview');
+    const modal = document.getElementById('qrModal');
+    const closeQr = document.getElementById('closeQr');
+    const qrBox = document.getElementById('qrBox');
+    const toast = document.getElementById('toast');
+    let activeCount = 0;
+    let currentShareUrl = '';
+    let toastTimer = null;
+
+    function escapeHtml(text) {
+      return String(text).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+    }
+
+    function createEntry(index) {
+      const wrap = document.createElement('div');
+      wrap.className = 'link-entry';
+      wrap.dataset.index = String(index);
+      wrap.innerHTML = `
+        <div class="link-head">
+          <strong>Link ${index}</strong>
+          ${index > 1 ? '<button class="remove" type="button">Remove</button>' : ''}
+        </div>
+        <div class="two-col">
+          <div>
+            <label for="label-${index}">Link label</label>
+            <input id="label-${index}" class="label-input" type="text" maxlength="80" placeholder="e.g. Assignment PDF" autocomplete="off" />
+          </div>
+          <div>
+            <label for="url-${index}">URL</label>
+            <input id="url-${index}" class="url-input" type="text" maxlength="2000" placeholder="https://example.com" inputmode="url" autocomplete="url" aria-describedby="url-error-${index}" />
+            <div id="url-error-${index}" class="field-error" aria-live="polite"></div>
+          </div>
+        </div>`;
+      const remove = wrap.querySelector('.remove');
+      if (remove) remove.addEventListener('click', () => {
+        wrap.remove();
+        renumberEntries();
+        updateAddButton();
+      });
+      const urlInput = wrap.querySelector('.url-input');
+      urlInput.addEventListener('input', () => clearUrlError(urlInput));
+      urlInput.addEventListener('blur', () => {
+        const raw = urlInput.value.trim();
+        if (!raw) { clearUrlError(urlInput); return; }
+        const normalized = normalizeUrl(raw);
+        if (normalized) {
+          urlInput.value = normalized;
+          clearUrlError(urlInput);
+        } else {
+          setUrlError(urlInput, 'Enter a valid web address, such as example.com.');
+        }
+      });
+      entriesEl.appendChild(wrap);
+      activeCount = entriesEl.children.length;
+      updateAddButton();
+    }
+
+    function renumberEntries() {
+      [...entriesEl.children].forEach((entry, i) => {
+        const n = i + 1;
+        entry.dataset.index = String(n);
+        entry.querySelector('.link-head strong').textContent = `Link ${n}`;
+        const label = entry.querySelector('.label-input');
+        const url = entry.querySelector('.url-input');
+        const labelTag = entry.querySelector(`label[for^="label-"]`);
+        const urlTag = entry.querySelector(`label[for^="url-"]`);
+        const urlError = entry.querySelector('.field-error');
+        label.id = `label-${n}`;
+        url.id = `url-${n}`;
+        urlError.id = `url-error-${n}`;
+        url.setAttribute('aria-describedby', urlError.id);
+        labelTag.setAttribute('for', label.id);
+        urlTag.setAttribute('for', url.id);
+        const head = entry.querySelector('.link-head');
+        let remove = entry.querySelector('.remove');
+        if (n === 1 && remove) remove.remove();
+        if (n > 1 && !remove) {
+          remove = document.createElement('button');
+          remove.className = 'remove';
+          remove.type = 'button';
+          remove.textContent = 'Remove';
+          remove.addEventListener('click', () => {
+            entry.remove();
+            renumberEntries();
+            updateAddButton();
+          });
+          head.appendChild(remove);
+        }
+      });
+      activeCount = entriesEl.children.length;
+    }
+
+    function updateAddButton() {
+      activeCount = entriesEl.children.length;
+      addBtn.disabled = activeCount >= MAX_LINKS;
+      addBtn.textContent = activeCount >= MAX_LINKS ? 'Maximum of 5 links' : '＋ Add another link';
+    }
+
+    function isValidHostname(hostname) {
+      let host = hostname.toLowerCase();
+      if (host.endsWith('.')) host = host.slice(0, -1);
+      if (!host || host.length > 253) return false;
+      if (host === 'localhost') return true;
+
+      // IPv6 hosts are returned with square brackets by URL.hostname.
+      if (/^\[[0-9a-f:.]+\]$/i.test(host)) return true;
+
+      // IPv4: require four numeric octets in the 0–255 range.
+      if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(host)) {
+        return host.split('.').every(part => Number(part) >= 0 && Number(part) <= 255);
+      }
+
+      // Public domain names need at least one dot and well-formed labels.
+      const labels = host.split('.');
+      if (labels.length < 2) return false;
+      if (!labels.every(part => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(part))) return false;
+      const tld = labels[labels.length - 1];
+      return /^(?:[a-z]{2,63}|xn--[a-z0-9-]{2,59})$/i.test(tld);
+    }
+
+    function normalizeUrl(value) {
+      let raw = String(value || '').trim();
+      if (!raw || /[\r\n\t]/.test(raw)) return null;
+
+      // If no scheme is supplied, assume HTTPS.
+      if (!/^[a-zA-Z][a-zA-Z\d+.-]*:\/\//.test(raw)) raw = 'https://' + raw;
+
+      try {
+        const url = new URL(raw);
+        if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+        if (url.username || url.password) return null;
+        if (!isValidHostname(url.hostname)) return null;
+        return url.href;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function setUrlError(input, message) {
+      input.classList.add('invalid');
+      input.setAttribute('aria-invalid', 'true');
+      const error = input.parentElement.querySelector('.field-error');
+      if (error) error.textContent = message;
+    }
+
+    function clearUrlError(input) {
+      input.classList.remove('invalid');
+      input.removeAttribute('aria-invalid');
+      const error = input.parentElement.querySelector('.field-error');
+      if (error) error.textContent = '';
+    }
+
+    function collectData() {
+      const title = document.getElementById('cardTitle').value.trim();
+      const links = [];
+      let firstInvalid = null;
+
+      for (const entry of entriesEl.children) {
+        const labelInput = entry.querySelector('.label-input');
+        const urlInput = entry.querySelector('.url-input');
+        const label = labelInput.value.trim();
+        const rawUrl = urlInput.value.trim();
+        clearUrlError(urlInput);
+
+        if (!label && !rawUrl) continue;
+        if (!label) {
+          labelInput.focus();
+          throw new Error('Add a label for each link you use.');
+        }
+        if (!rawUrl) {
+          setUrlError(urlInput, 'Enter a web address for this link.');
+          firstInvalid = firstInvalid || urlInput;
+          continue;
+        }
+
+        const url = normalizeUrl(rawUrl);
+        if (!url) {
+          setUrlError(urlInput, 'Enter a valid web address, such as example.com.');
+          firstInvalid = firstInvalid || urlInput;
+          continue;
+        }
+
+        urlInput.value = url;
+        links.push([label, url]);
+      }
+
+      if (firstInvalid) {
+        firstInvalid.focus();
+        throw new Error('Fix the highlighted URL before generating your card.');
+      }
+      if (!links.length) throw new Error('Add at least one link.');
+      return { t:title, l:links };
+    }
+
+    function bytesToBase64Url(bytes) {
+      let binary = '';
+      const CHUNK = 0x8000;
+      for (let i = 0; i < bytes.length; i += CHUNK) {
+        binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + CHUNK, bytes.length)));
+      }
+      return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    }
+
+    function base64UrlToBytes(text) {
+      let b64 = text.replace(/-/g,'+').replace(/_/g,'/');
+      while (b64.length % 4) b64 += '=';
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+      return bytes;
+    }
+
+    class ByteWriter {
+      constructor() { this.parts = []; this.length = 0; }
+      byte(value) { this.parts.push(Uint8Array.of(value & 255)); this.length += 1; }
+      varint(value) {
+        value = Number(value);
+        do {
+          let b = value & 127;
+          value = Math.floor(value / 128);
+          if (value) b |= 128;
+          this.byte(b);
+        } while (value);
+      }
+      bytes(bytes) { this.parts.push(bytes); this.length += bytes.length; }
+      string(value) {
+        const bytes = encoder.encode(value);
+        this.varint(bytes.length);
+        this.bytes(bytes);
+      }
+      finish() {
+        const out = new Uint8Array(this.length);
+        let offset = 0;
+        for (const part of this.parts) { out.set(part, offset); offset += part.length; }
+        return out;
+      }
+    }
+
+    class ByteReader {
+      constructor(bytes) { this.bytes = bytes; this.pos = 0; }
+      byte() {
+        if (this.pos >= this.bytes.length) throw new Error('Invalid compact card');
+        return this.bytes[this.pos++];
+      }
+      varint() {
+        let value = 0, shift = 0;
+        for (let i = 0; i < 5; i++) {
+          const b = this.byte();
+          value += (b & 127) * (2 ** shift);
+          if (!(b & 128)) return value;
+          shift += 7;
+        }
+        throw new Error('Invalid compact card');
+      }
+      string(maxBytes=8192) {
+        const len = this.varint();
+        if (len > maxBytes || this.pos + len > this.bytes.length) throw new Error('Invalid compact card');
+        const value = decoder.decode(this.bytes.subarray(this.pos, this.pos + len));
+        this.pos += len;
+        return value;
+      }
+      done() { return this.pos === this.bytes.length; }
+    }
+
+    function encodeCompactBinary(data) {
+      const w = new ByteWriter();
+      // Header: low 3 bits = link count (1–5), bit 3 = title present.
+      w.byte((data.l.length & 7) | (data.t ? 8 : 0));
+      if (data.t) w.string(data.t);
+
+      const origins = [];
+      for (const [label, rawUrl] of data.l) {
+        const url = new URL(normalizeUrl(rawUrl));
+        w.string(label);
+
+        const isHttp = url.protocol === 'http:';
+        const hasWww = url.hostname.toLowerCase().startsWith('www.');
+        const hostname = hasWww ? url.hostname.slice(4) : url.hostname;
+        const hostCore = hostname + (url.port ? ':' + url.port : '');
+        const originKey = (isHttp ? 'http://' : 'https://') + url.host;
+        const existing = origins.indexOf(originKey);
+        const originRef = existing >= 0 ? existing + 1 : 0;
+
+        // bits 0=http, 1=www, bits 2–4=previous-origin reference (1–5)
+        w.byte((isHttp ? 1 : 0) | (hasWww ? 2 : 0) | ((originRef & 7) << 2));
+        if (!originRef) {
+          w.string(hostCore);
+          origins.push(originKey);
+        }
+
+        let remainder = url.pathname + url.search + url.hash;
+        // URL() normalizes a bare host to '/'. Root links do not need to store it.
+        if (remainder === '/') remainder = '';
+        w.string(remainder);
+      }
+      return w.finish();
+    }
+
+    function decodeCompactBinary(bytes) {
+      if (!bytes.length || bytes.length > 65536) throw new Error('Invalid compact card');
+      const r = new ByteReader(bytes);
+      const header = r.byte();
+      const count = header & 7;
+      const hasTitle = !!(header & 8);
+      if (count < 1 || count > MAX_LINKS || (header & 240)) throw new Error('Invalid compact card');
+
+      const title = hasTitle ? r.string(2048) : '';
+      const links = [];
+      const origins = [];
+      for (let i = 0; i < count; i++) {
+        const label = r.string(2048);
+        const flags = r.byte();
+        if (flags & 224) throw new Error('Invalid compact card');
+        const isHttp = !!(flags & 1);
+        const hasWww = !!(flags & 2);
+        const originRef = (flags >> 2) & 7;
+        let origin;
+        if (originRef) {
+          if (originRef > origins.length) throw new Error('Invalid compact card');
+          origin = origins[originRef - 1];
+        } else {
+          const hostCore = r.string(4096);
+          const scheme = isHttp ? 'http://' : 'https://';
+          origin = scheme + (hasWww ? 'www.' : '') + hostCore;
+          origins.push(origin);
+        }
+        const remainder = r.string(16384);
+        links.push([label, origin + (remainder || '/')]);
+      }
+      if (!r.done()) throw new Error('Invalid compact card');
+      return { t:title, l:links };
+    }
+
+    async function compressBytes(bytes, format) {
+      const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream(format));
+      return new Uint8Array(await new Response(stream).arrayBuffer());
+    }
+
+    async function decompressBytes(bytes, format) {
+      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream(format));
+      return new Uint8Array(await new Response(stream).arrayBuffer());
+    }
+
+    async function encodePayload(data) {
+      const compact = encodeCompactBinary(data);
+      const choices = [
+        { payload:'c' + bytesToBase64Url(compact), method:'compact binary' }
+      ];
+
+      // Deflate has a smaller wrapper than gzip and usually wins on longer cards.
+      if ('CompressionStream' in window) {
+        try {
+          const deflated = await compressBytes(compact, 'deflate');
+          choices.push({ payload:'d' + bytesToBase64Url(deflated), method:'compact binary + deflate' });
+        } catch (_) {}
+      }
+
+      choices.sort((a,b) => a.payload.length - b.payload.length);
+      const best = choices[0];
+      return {
+        payload: best.payload,
+        method: best.method,
+        rawBytes: encoder.encode(JSON.stringify(data)).length,
+        compactBytes: compact.length,
+        payloadChars: best.payload.length
+      };
+    }
+
+    async function decodePayload(payload) {
+      if (!payload || payload.length < 2) throw new Error('Invalid card data');
+
+      // New compact formats. No separator is used so the payload is one character shorter.
+      const compactMode = payload[0];
+      if (compactMode === 'c' || compactMode === 'd') {
+        let bytes = base64UrlToBytes(payload.slice(1));
+        if (compactMode === 'd') {
+          if (!('DecompressionStream' in window)) throw new Error('This browser cannot decompress this card URL.');
+          bytes = await decompressBytes(bytes, 'deflate');
+        }
+        const data = decodeCompactBinary(bytes);
+        validateSharedData(data);
+        return data;
+      }
+
+      // Backward compatibility with Link Card URLs generated by earlier versions.
+      if (payload.length < 3 || payload[1] !== '.') throw new Error('Invalid card data');
+      const mode = payload.slice(0,1);
+      let bytes = base64UrlToBytes(payload.slice(2));
+      if (mode === 'g') {
+        if (!('DecompressionStream' in window)) throw new Error('This browser cannot decompress this card URL.');
+        bytes = await decompressBytes(bytes, 'gzip');
+      } else if (mode !== 'r') {
+        throw new Error('Unknown card format');
+      }
+      const data = JSON.parse(decoder.decode(bytes));
+      validateSharedData(data);
+      return data;
+    }
+
+    function validateSharedData(data) {
+      if (!data || typeof data.t !== 'string' || !Array.isArray(data.l)) throw new Error('Invalid card');
+      if (data.t.length > 120 || data.l.length < 1 || data.l.length > MAX_LINKS) throw new Error('Invalid card');
+      for (const pair of data.l) {
+        if (!Array.isArray(pair) || pair.length !== 2 || typeof pair[0] !== 'string' || typeof pair[1] !== 'string') throw new Error('Invalid link');
+        if (!pair[0].trim() || pair[0].length > 80 || !normalizeUrl(pair[1])) throw new Error('Invalid link');
+      }
+    }
+
+    function getBaseUrl() {
+      return location.href.split('#')[0];
+    }
+
+    function renderCard(data, previewMode=false) {
+      document.title = data.t ? data.t + ' · Link Card' : 'Shared Links · Link Card';
+      builder.style.display = 'none';
+      viewer.classList.add('show');
+      const base = getBaseUrl();
+      const linkHtml = data.l.map(([label,url]) => {
+        const safeUrl = escapeHtml(normalizeUrl(url));
+        const safeLabel = escapeHtml(label);
+        return `<div class="link-line">
+          <a class="main-link" href="${safeUrl}">${safeLabel}</a>
+          <a class="new-tab" href="${safeUrl}" target="_blank" rel="noopener noreferrer" aria-label="Open ${safeLabel} in a new tab" title="Open in a new tab">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </a>
+        </div>`;
+      }).join('');
+      const titleHtml = data.t ? `<h1 class="card-title">${escapeHtml(data.t)}</h1>` : '';
+      viewer.innerHTML = `<div class="viewer-wrap">
+        <section class="card" aria-label="Shared links">
+          ${titleHtml}
+          <div class="links">${linkHtml}</div>
+          <div class="card-note">Tap a link to open it here, or use the ↗ icon to open it in a new tab.</div>
+        </section>
+        <div class="create-own"><a href="${escapeHtml(base)}">＋ Create your own Link Card</a></div>
+        ${previewMode ? '<div class="create-own"><button id="backToBuilder" class="btn btn-secondary" type="button">Back to builder</button></div>' : ''}
+      </div>`;
+      if (previewMode) {
+        document.getElementById('backToBuilder').addEventListener('click', () => {
+          viewer.classList.remove('show');
+          viewer.innerHTML = '';
+          builder.style.display = '';
+          document.title = 'Link Card';
+          history.replaceState(null,'',getBaseUrl());
+        });
+      }
+    }
+
+    function renderBrokenCard() {
+      builder.style.display = 'none';
+      viewer.classList.add('show');
+      viewer.innerHTML = `<div class="viewer-wrap"><div class="viewer-error"><h2>This Link Card could not be opened.</h2><p>The URL may be incomplete or damaged.</p><a class="btn btn-primary" href="${escapeHtml(getBaseUrl())}">Create a new card</a></div></div>`;
+    }
+
+    function setStatus(message, isError=false) {
+      statusEl.textContent = message;
+      statusEl.classList.toggle('error', isError);
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
+    }
+
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (_) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+      }
+    }
+
+    async function generateUrl() {
+      try {
+        setStatus('Creating link…');
+        resultEl.classList.remove('show');
+        const data = collectData();
+        const encoded = await encodePayload(data);
+        currentShareUrl = getBaseUrl() + '#s=' + encoded.payload;
+        shareUrlEl.value = currentShareUrl;
+        resultEl.classList.add('show');
+        const hosted = /^https?:$/.test(location.protocol);
+        const approxOriginal = encoded.rawBytes;
+        const payloadOnly = encoded.payloadChars;
+        statsEl.textContent = `${encoded.method} · ${approxOriginal} bytes of normal card data → ${encoded.compactBytes} compact bytes → ${payloadOnly} URL characters.`;
+        setStatus(hosted ? 'Ready to copy or share.' : 'For other people to open this link, put this HTML file on your website first.');
+      } catch (err) {
+        setStatus(err.message || 'Could not generate the link.', true);
+      }
+    }
+
+    function clearForm() {
+      document.getElementById('cardTitle').value = '';
+      entriesEl.innerHTML = '';
+      createEntry(1);
+      resultEl.classList.remove('show');
+      currentShareUrl = '';
+      setStatus('');
+      document.getElementById('cardTitle').focus();
+    }
+
+    function openQr() {
+      if (!currentShareUrl) return;
+      qrBox.innerHTML = '';
+      modal.classList.add('show');
+      closeQr.focus();
+      if (typeof QRCode !== 'function') {
+        qrBox.innerHTML = '<p style="color:#7b5b50;line-height:1.5">The QR code library could not load. Check your internet connection, then reopen this page.</p>';
+        return;
+      }
+      try {
+        new QRCode(qrBox, {
+          text: currentShareUrl,
+          width: 230,
+          height: 230,
+          colorDark: '#223038',
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.L
+        });
+      } catch (_) {
+        qrBox.innerHTML = '<p style="color:#7b5b50;line-height:1.5">This sharing URL is too long to fit reliably in a QR code. The Copy and Share buttons will still work.</p>';
+      }
+    }
+
+    function closeQrModal() {
+      modal.classList.remove('show');
+      qrBtn.focus();
+    }
+
+    addBtn.addEventListener('click', () => {
+      if (entriesEl.children.length < MAX_LINKS) {
+        createEntry(entriesEl.children.length + 1);
+        entriesEl.lastElementChild.querySelector('.label-input').focus();
+      }
+    });
+    generateBtn.addEventListener('click', generateUrl);
+    clearBtn.addEventListener('click', clearForm);
+    copyBtn.addEventListener('click', async () => {
+      if (!currentShareUrl) return;
+      await copyText(currentShareUrl);
+      showToast('Sharing URL copied');
+    });
+    shareBtn.addEventListener('click', async () => {
+      if (!currentShareUrl) return;
+      const title = document.getElementById('cardTitle').value.trim() || 'Link Card';
+      if (navigator.share) {
+        try { await navigator.share({title, text:title, url:currentShareUrl}); }
+        catch (err) { if (err && err.name !== 'AbortError') { await copyText(currentShareUrl); showToast('Sharing URL copied'); } }
+      } else {
+        await copyText(currentShareUrl);
+        showToast('Sharing URL copied');
+      }
+    });
+    qrBtn.addEventListener('click', openQr);
+    previewBtn.addEventListener('click', () => {
+      try {
+        const data = collectData();
+        renderCard(data, true);
+      } catch (err) { setStatus(err.message || 'Could not preview the card.', true); }
+    });
+    closeQr.addEventListener('click', closeQrModal);
+    modal.addEventListener('click', e => { if (e.target === modal) closeQrModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.classList.contains('show')) closeQrModal(); });
+
+    async function start() {
+      const match = location.hash.match(/^#s=(.+)$/);
+      if (match) {
+        try {
+          const data = await decodePayload(match[1]);
+          renderCard(data, false);
+        } catch (_) {
+          renderBrokenCard();
+        }
+      } else {
+        createEntry(1);
+      }
+    }
+
+    start();
+  })();
+  </script>
+</body>
+</html>
