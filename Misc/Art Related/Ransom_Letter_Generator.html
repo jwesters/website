@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ransom Letter Generator</title>
+  <style>
+    :root {
+      --bg: #f2f0ec;
+      --panel: rgba(255,255,255,0.92);
+      --panel-2: rgba(255,255,255,0.78);
+      --text: #1f1d1a;
+      --muted: #676159;
+      --accent: #4d3b2f;
+      --accent-2: #7a5e47;
+      --border: rgba(60, 46, 34, 0.16);
+      --shadow: 0 10px 28px rgba(43, 34, 24, 0.12);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,0.65), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(255,255,255,0.4), transparent 30%),
+        linear-gradient(180deg, #ede8df 0%, #e8e1d6 100%);
+    }
+
+    .app {
+      width: min(1300px, calc(100vw - 24px));
+      margin: 12px auto;
+      display: grid;
+      grid-template-columns: minmax(320px, 430px) minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(7px);
+    }
+
+    .controls {
+      padding: 18px;
+      position: sticky;
+      top: 12px;
+    }
+
+    .title {
+      margin: 0 0 6px;
+      font-size: clamp(1.5rem, 1.2rem + 1vw, 2.1rem);
+      line-height: 1.1;
+      letter-spacing: 0.01em;
+    }
+
+    .subtitle {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 0.96rem;
+      line-height: 1.45;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+    }
+
+    .help-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .mini {
+      color: var(--muted);
+      font-weight: 500;
+      font-size: 0.82rem;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 220px;
+      resize: vertical;
+      padding: 14px 15px;
+      border-radius: 14px;
+      border: 1px solid rgba(60, 46, 34, 0.18);
+      background: rgba(255,255,255,0.9);
+      color: var(--text);
+      font: 600 1rem/1.45 system-ui, sans-serif;
+      outline: none;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+    }
+
+    textarea:focus {
+      border-color: rgba(85, 61, 41, 0.45);
+      box-shadow: 0 0 0 4px rgba(120, 90, 58, 0.12);
+    }
+
+    .button-row, .download-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .download-row {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin-top: 10px;
+    }
+
+    button, select, input[type="range"] {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 11px 14px;
+      background: var(--accent);
+      color: white;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      transition: transform 0.12s ease, filter 0.12s ease, opacity 0.12s ease;
+      box-shadow: 0 7px 18px rgba(77, 59, 47, 0.22);
+    }
+
+    button:hover:not(:disabled) { filter: brightness(1.05); }
+    button:active:not(:disabled) { transform: translateY(1px) scale(0.995); }
+    button.secondary {
+      background: #82725f;
+    }
+    button.ghost {
+      background: #b39c81;
+    }
+    button.download {
+      background: #5f4637;
+      padding-top: 12px;
+      padding-bottom: 12px;
+    }
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    details {
+      margin-top: 14px;
+      border: 1px solid rgba(60, 46, 34, 0.14);
+      border-radius: 14px;
+      overflow: hidden;
+      background: var(--panel-2);
+    }
+
+    summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 14px 16px;
+      font-weight: 800;
+      user-select: none;
+      position: relative;
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary::after {
+      content: '+';
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      translate: 0 -50%;
+      font-size: 1.2rem;
+    }
+    details[open] summary::after { content: '–'; }
+
+    .options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px 14px;
+      padding: 4px 16px 16px;
+    }
+
+    .field {
+      min-width: 0;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    select {
+      width: 100%;
+      border: 1px solid rgba(60, 46, 34, 0.18);
+      background: white;
+      padding: 10px 11px;
+      border-radius: 12px;
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .range-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .badge {
+      min-width: 52px;
+      text-align: center;
+      font-weight: 800;
+      font-size: 0.88rem;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(77,59,47,0.1);
+      color: var(--accent);
+    }
+
+    .preview-panel {
+      padding: 14px;
+      min-height: calc(100vh - 24px);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 4px 4px 0;
+    }
+
+    .preview-title {
+      font-size: 1rem;
+      font-weight: 800;
+      margin: 0;
+    }
+
+    .status {
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 600;
+    }
+
+    .canvas-wrap {
+      flex: 1;
+      min-height: 420px;
+      overflow: auto;
+      border-radius: 16px;
+      border: 1px solid rgba(60, 46, 34, 0.12);
+      background:
+        linear-gradient(45deg, rgba(152,152,152,0.10) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(152,152,152,0.10) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(152,152,152,0.10) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(152,152,152,0.10) 75%),
+        #f6f6f6;
+      background-size: 24px 24px;
+      background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+      display: grid;
+      place-items: start center;
+      padding: 22px;
+    }
+
+    canvas {
+      max-width: 100%;
+      height: auto;
+      box-shadow: 0 16px 34px rgba(31, 22, 13, 0.18);
+      border-radius: 6px;
+      display: block;
+    }
+
+    .tip {
+      border-radius: 14px;
+      background: rgba(77,59,47,0.08);
+      color: #57473b;
+      padding: 12px 14px;
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    .custom-bg-controls[hidden] {
+      display: none;
+    }
+
+    .custom-bg-controls {
+      padding: 12px;
+      border: 1px solid rgba(60, 46, 34, 0.12);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.55);
+    }
+
+    .rgb-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .rgb-row {
+      display: grid;
+      grid-template-columns: 26px minmax(0, 1fr) 58px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .rgb-label {
+      font-weight: 800;
+      color: var(--accent);
+      text-align: center;
+    }
+
+    .bg-swatch-row {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .bg-swatch {
+      width: 52px;
+      height: 30px;
+      border-radius: 10px;
+      border: 2px solid rgba(60, 46, 34, 0.18);
+      background: #ffffff;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+    }
+
+    .hex-badge {
+      min-width: 92px;
+    }
+
+    .footer-note {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.4;
+    }
+
+    body.mobile-mode .app {
+      grid-template-columns: 1fr;
+      width: min(100vw - 10px, 100%);
+      margin: 6px auto;
+      gap: 8px;
+    }
+
+    body.mobile-mode .controls {
+      position: static;
+      padding: 12px;
+    }
+
+    body.mobile-mode .preview-panel {
+      min-height: auto;
+      padding: 12px;
+    }
+
+    body.mobile-mode .options,
+    body.mobile-mode .button-row,
+    body.mobile-mode .download-row {
+      grid-template-columns: 1fr;
+    }
+
+    body.mobile-mode .canvas-wrap {
+      padding: 12px;
+      min-height: 300px;
+    }
+
+    body.mobile-mode textarea {
+      min-height: 170px;
+    }
+
+    body.mobile-mode .title {
+      font-size: 1.5rem;
+    }
+
+    body.mobile-mode .subtitle,
+    body.mobile-mode .tip,
+    body.mobile-mode .footer-note,
+    body.mobile-mode .status,
+    body.mobile-mode label,
+    body.mobile-mode button,
+    body.mobile-mode select,
+    body.mobile-mode textarea {
+      font-size: 0.98rem;
+    }
+
+    body.mobile-mode .tip {
+      padding: 10px 12px;
+    }
+
+    @media (max-width: 980px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+      .controls {
+        position: static;
+      }
+      .preview-panel {
+        min-height: auto;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .app {
+        width: min(100vw - 12px, 100%);
+        margin: 6px auto;
+        gap: 8px;
+      }
+      .controls, .preview-panel {
+        padding: 12px;
+      }
+      .options {
+        grid-template-columns: 1fr;
+      }
+      .button-row {
+        grid-template-columns: 1fr;
+      }
+      .download-row {
+        grid-template-columns: 1fr;
+      }
+      .canvas-wrap {
+        padding: 12px;
+        min-height: 360px;
+      }
+      .title {
+        font-size: 1.55rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="panel controls">
+      <h1 class="title">Ransom Letter Generator</h1>
+      <p class="subtitle">
+        Type a phrase or longer message and turn it into a cut-and-paste ransom-letter style image.
+        Each letter is generated separately with randomized fonts, colors, paper scraps, rotation, and layout.
+      </p>
+
+      <div class="help-row">
+        <label for="textInput" style="margin:0;">Your text</label>
+        <span class="mini">Line breaks are preserved</span>
+      </div>
+      <textarea id="textInput" spellcheck="false" placeholder="Type something here...">WE HAVE YOUR NEWSPAPER
+SEND MONEY OR WE'LL CUT OUT MORE LETTERS</textarea>
+
+      <div class="button-row">
+        <button id="generateBtn">Generate</button>
+        <button id="regenerateBtn" class="secondary">Regenerate</button>
+      </div>
+
+      <details>
+        <summary>Options</summary>
+        <div class="options">
+          <div class="field">
+            <label for="backgroundSelect">Background</label>
+            <select id="backgroundSelect">
+              <option value="white">White Paper</option>
+              <option value="transparent">Transparent</option>
+              <option value="custom">Custom Colour</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="alignmentSelect">Alignment</label>
+            <select id="alignmentSelect">
+              <option value="left">Left Align</option>
+              <option value="center">Center</option>
+            </select>
+          </div>
+
+          <div id="customBgControls" class="field full custom-bg-controls" hidden>
+            <label style="margin-bottom:10px;">Custom Background Colour</label>
+            <div class="rgb-grid">
+              <div class="rgb-row">
+                <span class="rgb-label">R</span>
+                <input id="bgRedRange" type="range" min="0" max="255" value="240" />
+                <span id="bgRedValue" class="badge">240</span>
+              </div>
+              <div class="rgb-row">
+                <span class="rgb-label">G</span>
+                <input id="bgGreenRange" type="range" min="0" max="255" value="240" />
+                <span id="bgGreenValue" class="badge">240</span>
+              </div>
+              <div class="rgb-row">
+                <span class="rgb-label">B</span>
+                <input id="bgBlueRange" type="range" min="0" max="255" value="240" />
+                <span id="bgBlueValue" class="badge">240</span>
+              </div>
+            </div>
+            <div class="bg-swatch-row">
+              <div id="bgSwatch" class="bg-swatch" aria-hidden="true"></div>
+              <span id="bgHexValue" class="badge hex-badge">#F0F0F0</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="colorModeSelect">Colour Amount</label>
+            <select id="colorModeSelect">
+              <option value="mixed">Mixed</option>
+              <option value="colorful">Colourful</option>
+              <option value="mostlybw">Mostly B&amp;W</option>
+              <option value="bw">Black &amp; White</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="messinessRange">Messiness</label>
+            <div class="range-row">
+              <input id="messinessRange" type="range" min="1" max="100" value="65" />
+              <span id="messinessValue" class="badge">65%</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="maxWidthSelect">Wrapping</label>
+            <select id="maxWidthSelect">
+              <option value="tight">Tight</option>
+              <option value="medium" selected>Medium</option>
+              <option value="wide">Wide</option>
+            </select>
+          </div>
+
+          <div class="field full">
+            <label for="scaleRange">Letter Size</label>
+            <div class="range-row">
+              <input id="scaleRange" type="range" min="70" max="150" value="100" />
+              <span id="scaleValue" class="badge">100%</span>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <div class="download-row">
+        <button id="pngBtn" class="download">Download PNG</button>
+        <button id="jpgBtn" class="download">Download JPEG</button>
+        <button id="gifBtn" class="download">Download GIF</button>
+      </div>
+
+      <div class="footer-note">
+        PNG preserves transparency. JPEG always uses a solid paper background. GIF is exported as a static image.
+      </div>
+    </section>
+
+    <section class="panel preview-panel">
+      <div class="preview-header">
+        <h2 class="preview-title">Preview</h2>
+        <div id="status" class="status">Ready</div>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="previewCanvas" width="900" height="600"></canvas>
+      </div>
+      <div class="tip">
+        Tip: use <strong>Regenerate</strong> to keep the same text but create a fresh ransom-note arrangement with different letter styles, rotations, and paper scraps.
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (() => {
+      const textInput = document.getElementById('textInput');
+      const generateBtn = document.getElementById('generateBtn');
+      const regenerateBtn = document.getElementById('regenerateBtn');
+      const pngBtn = document.getElementById('pngBtn');
+      const jpgBtn = document.getElementById('jpgBtn');
+      const gifBtn = document.getElementById('gifBtn');
+      const previewCanvas = document.getElementById('previewCanvas');
+      const statusEl = document.getElementById('status');
+      const backgroundSelect = document.getElementById('backgroundSelect');
+      const alignmentSelect = document.getElementById('alignmentSelect');
+      const customBgControls = document.getElementById('customBgControls');
+      const bgRedRange = document.getElementById('bgRedRange');
+      const bgGreenRange = document.getElementById('bgGreenRange');
+      const bgBlueRange = document.getElementById('bgBlueRange');
+      const bgRedValue = document.getElementById('bgRedValue');
+      const bgGreenValue = document.getElementById('bgGreenValue');
+      const bgBlueValue = document.getElementById('bgBlueValue');
+      const bgSwatch = document.getElementById('bgSwatch');
+      const bgHexValue = document.getElementById('bgHexValue');
+      const colorModeSelect = document.getElementById('colorModeSelect');
+      const messinessRange = document.getElementById('messinessRange');
+      const messinessValue = document.getElementById('messinessValue');
+      const maxWidthSelect = document.getElementById('maxWidthSelect');
+      const scaleRange = document.getElementById('scaleRange');
+      const scaleValue = document.getElementById('scaleValue');
+
+      const previewCtx = previewCanvas.getContext('2d');
+      const measureCanvas = document.createElement('canvas');
+      const measureCtx = measureCanvas.getContext('2d');
+
+      const FONT_FAMILIES = [
+        'Impact', 'Arial Black', 'Verdana', 'Tahoma', 'Trebuchet MS', 'Georgia',
+        'Times New Roman', 'Garamond', 'Palatino Linotype', 'Book Antiqua',
+        'Courier New', 'Lucida Console', 'Lucida Sans Unicode', 'Gill Sans',
+        'Segoe UI', 'Cambria', 'Constantia', 'Franklin Gothic Medium', 'Helvetica',
+        'Arial', 'monospace', 'serif', 'sans-serif', 'cursive'
+      ];
+
+      const PAPER_COLORS = [
+        '#fffaf2', '#fcf6ea', '#f7efe0', '#efe7d8', '#f2ead6', '#e7ddd0', '#fdfdfd',
+        '#f4f0eb', '#efe9e3', '#ece2cf', '#d9e2f2', '#f8d8de', '#f6e2b5', '#cbe4d6',
+        '#d8d3f5', '#a9c0ee', '#efaa8d', '#fae48e', '#ffc5da', '#c4f0e3', '#b6d2a8',
+        '#e4caa5', '#c8d6f5', '#f7b96b', '#ef6c57', '#44588f', '#2c2c2c', '#000000',
+        '#d83f31', '#ffce45', '#f25d8e', '#6a88c5', '#72c6d8', '#7f9a64', '#744c8c'
+      ];
+
+      const TEXT_COLORS = [
+        '#000000', '#111111', '#1f1f1f', '#222222', '#ffffff', '#fafafa', '#f6f2ec',
+        '#173c78', '#3247b8', '#1a7772', '#237a43', '#a72323', '#dd4411', '#ea7b16',
+        '#f3c316', '#cc1b5a', '#7d1f8d', '#494949', '#212121', '#ece2d5'
+      ];
+
+      let currentSeed = Date.now() >>> 0;
+      let currentLayout = null;
+
+      function mulberry32(a) {
+        return function() {
+          let t = a += 0x6D2B79F5;
+          t = Math.imul(t ^ t >>> 15, t | 1);
+          t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+          return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        };
+      }
+
+      function randInt(rand, min, max) {
+        return Math.floor(rand() * (max - min + 1)) + min;
+      }
+
+      function pick(rand, list) {
+        return list[Math.floor(rand() * list.length)];
+      }
+
+      function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+      }
+
+      function chance(rand, probability) {
+        return rand() < probability;
+      }
+
+      function toHexChannel(value) {
+        return Number(value).toString(16).padStart(2, '0').toUpperCase();
+      }
+
+      function getCustomBackgroundHex() {
+        return `#${toHexChannel(bgRedRange.value)}${toHexChannel(bgGreenRange.value)}${toHexChannel(bgBlueRange.value)}`;
+      }
+
+      function getOptions() {
+        return {
+          background: backgroundSelect.value,
+          backgroundColor: {
+            r: Number(bgRedRange.value),
+            g: Number(bgGreenRange.value),
+            b: Number(bgBlueRange.value),
+            hex: getCustomBackgroundHex()
+          },
+          alignment: alignmentSelect.value,
+          colorMode: colorModeSelect.value,
+          messiness: Number(messinessRange.value),
+          widthMode: maxWidthSelect.value,
+          scale: Number(scaleRange.value) / 100
+        };
+      }
+
+      function updateBackgroundUI() {
+        const showCustom = backgroundSelect.value === 'custom';
+        customBgControls.hidden = !showCustom;
+        const hex = getCustomBackgroundHex();
+        bgRedValue.textContent = String(bgRedRange.value);
+        bgGreenValue.textContent = String(bgGreenRange.value);
+        bgBlueValue.textContent = String(bgBlueRange.value);
+        bgHexValue.textContent = hex;
+        bgSwatch.style.background = hex;
+      }
+
+      function updateBadges() {
+        messinessValue.textContent = `${messinessRange.value}%`;
+        scaleValue.textContent = `${scaleRange.value}%`;
+        updateBackgroundUI();
+      }
+
+      function isLikelyMobile() {
+        const ua = navigator.userAgent || '';
+        const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+        const narrow = window.innerWidth <= 820;
+        return /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (coarse && narrow);
+      }
+
+      function applyMobileMode() {
+        document.body.classList.toggle('mobile-mode', isLikelyMobile());
+      }
+
+      function getBaseMaxWidth(options, textLength) {
+        const deviceCap = Math.max(520, Math.min(1180, Math.floor(window.innerWidth * 0.85)));
+        let base = 900;
+        if (options.widthMode === 'tight') base = 660;
+        if (options.widthMode === 'wide') base = 1120;
+
+        if (textLength < 18) base *= 0.68;
+        else if (textLength < 36) base *= 0.82;
+        else if (textLength > 120) base *= 1.06;
+
+        base *= (1 + (options.scale - 1) * 0.22);
+        return clamp(Math.round(base), 480, deviceCap);
+      }
+
+      function hexToRgb(hex) {
+        const normalized = hex.replace('#', '').trim();
+        const full = normalized.length === 3
+          ? normalized.split('').map(ch => ch + ch).join('')
+          : normalized;
+        return {
+          r: parseInt(full.slice(0, 2), 16),
+          g: parseInt(full.slice(2, 4), 16),
+          b: parseInt(full.slice(4, 6), 16)
+        };
+      }
+
+      function relativeLuminance(hex) {
+        const { r, g, b } = hexToRgb(hex);
+        const toLinear = (v) => {
+          const s = v / 255;
+          return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+        };
+        const R = toLinear(r);
+        const G = toLinear(g);
+        const B = toLinear(b);
+        return 0.2126 * R + 0.7152 * G + 0.0722 * B;
+      }
+
+      function contrastRatio(hexA, hexB) {
+        const l1 = relativeLuminance(hexA);
+        const l2 = relativeLuminance(hexB);
+        const lighter = Math.max(l1, l2);
+        const darker = Math.min(l1, l2);
+        return (lighter + 0.05) / (darker + 0.05);
+      }
+
+      function ensureReadableColors(bg, fg) {
+        const darkOptions = ['#000000', '#111111', '#1f1f1f', '#222222', '#173c78', '#3247b8', '#1a7772', '#237a43', '#a72323', '#7d1f8d'];
+        const lightOptions = ['#ffffff', '#fafafa', '#f6f2ec', '#fff4d6', '#d3e7ff', '#f7c2d5', '#ffef8a'];
+
+        if (contrastRatio(bg, fg) >= 3.2) return { bg, fg };
+
+        const bgLum = relativeLuminance(bg);
+        const candidates = bgLum > 0.45 ? darkOptions : lightOptions;
+        let best = candidates[0];
+        let bestRatio = contrastRatio(bg, best);
+
+        for (const option of candidates.slice(1)) {
+          const ratio = contrastRatio(bg, option);
+          if (ratio > bestRatio) {
+            best = option;
+            bestRatio = ratio;
+          }
+        }
+
+        return { bg, fg: best };
+      }
+
+      function getBackgroundBaseColor(options, flattenTransparent = false) {
+        if (options.background === 'custom') return options.backgroundColor.hex;
+        if (options.background === 'white') return '#ffffff';
+        if (options.background === 'transparent') return flattenTransparent ? '#ffffff' : '#ffffff';
+        return '#efe2c9';
+      }
+
+      function chooseOutlineStyle(pieceBg, pageBg) {
+        const candidates = ['#000000', '#1f1d1a', '#4d3b2f', '#7d664f', '#ffffff', '#f8f2ea', '#d8c4a9'];
+        let best = candidates[0];
+        let bestScore = -1;
+        for (const candidate of candidates) {
+          const score = Math.min(contrastRatio(candidate, pieceBg), contrastRatio(candidate, pageBg));
+          if (score > bestScore) {
+            bestScore = score;
+            best = candidate;
+          }
+        }
+        return {
+          color: best,
+          alpha: bestScore >= 4 ? 0.38 : bestScore >= 2.5 ? 0.32 : 0.5,
+          lineWidth: bestScore >= 3.2 ? 1.1 : 1.4
+        };
+      }
+
+      function getColorStyle(rand, mode) {
+        if (mode === 'bw') {
+          const darkBg = chance(rand, 0.28);
+          return ensureReadableColors(
+            darkBg ? (chance(rand, 0.6) ? '#111111' : '#000000') : pick(rand, ['#f7f5f0', '#ece8e2', '#ffffff', '#efeae5']),
+            darkBg ? '#ffffff' : pick(rand, ['#000000', '#151515', '#222222'])
+          );
+        }
+
+        if (mode === 'mostlybw') {
+          if (chance(rand, 0.72)) return getColorStyle(rand, 'bw');
+          return getColorStyle(rand, 'colorful');
+        }
+
+        if (mode === 'mixed') {
+          return chance(rand, 0.45) ? getColorStyle(rand, 'bw') : getColorStyle(rand, 'colorful');
+        }
+
+        let bg = pick(rand, PAPER_COLORS);
+        let fg = pick(rand, TEXT_COLORS);
+
+        const darkishBg = ['#2c2c2c', '#000000', '#44588f', '#744c8c', '#d83f31'].includes(bg);
+        if (darkishBg) fg = chance(rand, 0.72) ? '#fefefe' : pick(rand, ['#ffd84d', '#ffbf5c', '#fff4d6', '#f7c2d5', '#d3e7ff']);
+
+        if (bg === fg) fg = bg === '#000000' ? '#ffffff' : '#000000';
+
+        return ensureReadableColors(bg, fg);
+      }
+
+      function buildFontSpec(char, rand, options) {
+        const base = (/[.,;:!?'"`]/.test(char) ? randInt(rand, 22, 40) : randInt(rand, 34, 68)) * options.scale;
+        const weight = pick(rand, ['400', '500', '600', '700', '800', '900']);
+        const italic = chance(rand, 0.18) ? 'italic ' : '';
+        const family = pick(rand, FONT_FAMILIES);
+        const variantCaps = chance(rand, 0.07) ? 'small-caps ' : '';
+        const size = Math.round(base);
+        const lineHeight = size * (chance(rand, 0.2) ? 0.95 : 1);
+        return {
+          size,
+          lineHeight,
+          css: `${italic}${variantCaps}${weight} ${size}px ${family}`
+        };
+      }
+
+      function makePieceShape(rand, w, h, roughness) {
+        const kind = pick(rand, ['rect', 'skew', 'torn', 'clipped', 'crooked']);
+        const r = 4 + roughness * 0.06;
+        const pts = [];
+
+        if (kind === 'rect') {
+          return { kind, pts: [[0,0],[w,0],[w,h],[0,h]], radius: r };
+        }
+
+        if (kind === 'skew') {
+          const s = Math.min(w, h) * 0.18;
+          return { kind, pts: [[rand()*s,0],[w,rand()*s],[w-rand()*s,h],[0,h-rand()*s]], radius: 0 };
+        }
+
+        if (kind === 'clipped') {
+          const c = Math.min(w, h) * (0.13 + rand() * 0.18);
+          const corner = randInt(rand, 0, 3);
+          if (corner === 0) return { kind, pts: [[c,0],[w,0],[w,h],[0,h],[0,c]], radius: 0 };
+          if (corner === 1) return { kind, pts: [[0,0],[w-c,0],[w,c],[w,h],[0,h]], radius: 0 };
+          if (corner === 2) return { kind, pts: [[0,0],[w,0],[w,h-c],[w-c,h],[0,h]], radius: 0 };
+          return { kind, pts: [[0,0],[w,0],[w,h],[c,h],[0,h-c]], radius: 0 };
+        }
+
+        if (kind === 'crooked') {
+          const j = Math.min(w, h) * 0.14;
+          return {
+            kind,
+            pts: [
+              [rand()*j, rand()*j],
+              [w-rand()*j, rand()*j],
+              [w-rand()*j, h-rand()*j],
+              [rand()*j, h-rand()*j]
+            ],
+            radius: 0
+          };
+        }
+
+        const topSegments = 4 + randInt(rand, 0, 3);
+        const bottomSegments = 4 + randInt(rand, 0, 3);
+        const leftSegments = 2 + randInt(rand, 0, 2);
+        const rightSegments = 2 + randInt(rand, 0, 2);
+        const j = Math.max(2, roughness * 0.08);
+
+        for (let i = 0; i <= topSegments; i++) {
+          const x = (w / topSegments) * i;
+          pts.push([x, rand() * j]);
+        }
+        for (let i = 1; i <= rightSegments; i++) {
+          const y = (h / rightSegments) * i;
+          pts.push([w - rand() * j, y]);
+        }
+        for (let i = bottomSegments - 1; i >= 0; i--) {
+          const x = (w / bottomSegments) * i;
+          pts.push([x, h - rand() * j]);
+        }
+        for (let i = leftSegments - 1; i >= 1; i--) {
+          const y = (h / leftSegments) * i;
+          pts.push([rand() * j, y]);
+        }
+        return { kind, pts, radius: 0 };
+      }
+
+      function measureLetterTile(char, rand, options) {
+        const font = buildFontSpec(char, rand, options);
+        measureCtx.font = font.css;
+        const metrics = measureCtx.measureText(char);
+        const textWidth = Math.max(8, Math.ceil(metrics.width));
+        const overhangLeft = Math.abs(Math.min(0, metrics.actualBoundingBoxLeft || 0));
+        const overhangRight = Math.abs(Math.max(0, metrics.actualBoundingBoxRight || 0)) - textWidth;
+        const leftExtra = Math.max(0, overhangLeft);
+        const rightExtra = Math.max(0, overhangRight);
+
+        const padX = randInt(rand, 10, 22) * options.scale;
+        const padY = randInt(rand, 8, 18) * options.scale;
+        const colorStyle = getColorStyle(rand, options.colorMode);
+        const tileWidth = Math.ceil(textWidth + leftExtra + rightExtra + padX * 2);
+        const tileHeight = Math.ceil(font.lineHeight + padY * 2);
+
+        const roughness = 8 + options.messiness * 0.36;
+        const rotationMax = 0.05 + options.messiness / 650;
+        const baselineJitter = (options.messiness / 100) * 14;
+        const shadow = chance(rand, 0.84);
+        const border = chance(rand, 0.32);
+        const shape = makePieceShape(rand, tileWidth, tileHeight, roughness);
+        const stampNoise = chance(rand, 0.16);
+        const textScaleX = chance(rand, 0.1) ? (0.82 + rand() * 0.35) : 1;
+
+        return {
+          char,
+          fontCss: font.css,
+          fontSize: font.size,
+          lineHeight: font.lineHeight,
+          width: tileWidth,
+          height: tileHeight,
+          padX,
+          padY,
+          bg: colorStyle.bg,
+          fg: colorStyle.fg,
+          rotation: (rand() * 2 - 1) * rotationMax,
+          offsetY: (rand() * 2 - 1) * baselineJitter,
+          shadow,
+          border,
+          borderColor: chance(rand, 0.6) ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.22)',
+          shape,
+          stampNoise,
+          textScaleX,
+          texture: {
+            dots: randInt(rand, 5, 24),
+            lines: randInt(rand, 0, 5),
+            alpha: 0.03 + rand() * 0.08
+          }
+        };
+      }
+
+      function tokenizeText(text) {
+        const tokens = [];
+        let word = '';
+        for (let i = 0; i < text.length; i++) {
+          const ch = text[i];
+          if (ch === '\n') {
+            if (word) tokens.push({ type: 'word', text: word });
+            word = '';
+            tokens.push({ type: 'newline' });
+          } else if (ch === ' ' || ch === '\t') {
+            if (word) tokens.push({ type: 'word', text: word });
+            word = '';
+            tokens.push({ type: 'space', width: ch === '\t' ? 44 : 30 });
+          } else {
+            word += ch;
+          }
+        }
+        if (word) tokens.push({ type: 'word', text: word });
+        return tokens;
+      }
+
+      function layoutText(text, options, seed) {
+        const rand = mulberry32(seed);
+        const tokens = tokenizeText(text);
+        const textLength = text.replace(/\s+/g, '').length;
+        const maxLineWidth = getBaseMaxWidth(options, textLength);
+        const margin = Math.round(26 * options.scale);
+        const letterGapBase = 3 + options.messiness * 0.03;
+        const lineGap = Math.round(18 * options.scale + options.messiness * 0.10);
+        const pieces = [];
+        const lineRecords = [];
+        let currentLinePieces = [];
+        let x = margin;
+        let y = margin;
+        let lineHeight = 0;
+        let usedWidth = 0;
+
+        function finalizeLine(force = false) {
+          const occupiedWidth = Math.max(0, x - margin);
+          if (currentLinePieces.length) {
+            const minX = Math.min(...currentLinePieces.map(piece => piece.x));
+            const maxX = Math.max(...currentLinePieces.map(piece => piece.x + piece.width));
+            lineRecords.push({
+              pieces: [...currentLinePieces],
+              y,
+              height: lineHeight,
+              force,
+              occupiedWidth,
+              minX,
+              maxX,
+              width: maxX - minX
+            });
+          } else {
+            lineRecords.push({ pieces: [], y, height: lineHeight, force, occupiedWidth: 0, minX: margin, maxX: margin, width: 0 });
+          }
+          x = margin;
+          y += lineHeight + lineGap;
+          lineHeight = 0;
+          currentLinePieces = [];
+        }
+
+        function getWordLetters(wordText) {
+          const letters = [];
+          let totalWidth = 0;
+          for (const ch of wordText) {
+            const tile = measureLetterTile(ch, rand, options);
+            const gap = letterGapBase + rand() * (options.messiness / 18);
+            tile.gapAfter = gap;
+            letters.push(tile);
+            totalWidth += tile.width + gap;
+          }
+          if (letters.length) totalWidth -= letters[letters.length - 1].gapAfter;
+          return { letters, totalWidth };
+        }
+
+        for (const token of tokens) {
+          if (token.type === 'newline') {
+            if (lineHeight === 0) lineHeight = Math.round(34 * options.scale);
+            finalizeLine(true);
+            continue;
+          }
+
+          if (token.type === 'space') {
+            x += token.width * options.scale + 6 + rand() * 10;
+            usedWidth = Math.max(usedWidth, x);
+            continue;
+          }
+
+          const wordData = getWordLetters(token.text);
+          if (x > margin && x + wordData.totalWidth > maxLineWidth + margin) {
+            finalizeLine();
+          }
+
+          for (const tile of wordData.letters) {
+            if (x > margin && x + tile.width > maxLineWidth + margin) {
+              finalizeLine();
+            }
+
+            const px = x + (rand() * 2 - 1) * (options.messiness / 8);
+            const py = y + tile.offsetY;
+            tile.x = px;
+            tile.y = py;
+            pieces.push(tile);
+            currentLinePieces.push(tile);
+            x += tile.width + tile.gapAfter;
+            lineHeight = Math.max(lineHeight, tile.height + Math.abs(tile.offsetY) + 6);
+            usedWidth = Math.max(usedWidth, x);
+          }
+        }
+
+        if (lineHeight === 0) lineHeight = Math.round(50 * options.scale);
+        const finalOccupiedWidth = Math.max(0, x - margin);
+        if (currentLinePieces.length) {
+          const minX = Math.min(...currentLinePieces.map(piece => piece.x));
+          const maxX = Math.max(...currentLinePieces.map(piece => piece.x + piece.width));
+          lineRecords.push({
+            pieces: [...currentLinePieces],
+            y,
+            height: lineHeight,
+            force: false,
+            occupiedWidth: finalOccupiedWidth,
+            minX,
+            maxX,
+            width: maxX - minX
+          });
+        } else {
+          lineRecords.push({ pieces: [], y, height: lineHeight, force: false, occupiedWidth: 0, minX: margin, maxX: margin, width: 0 });
+        }
+
+        const contentHeight = y + lineHeight + margin;
+        const contentWidth = Math.max(240, Math.ceil(Math.max(usedWidth + margin - letterGapBase, 220)));
+
+        if (options.alignment === 'center') {
+          for (const line of lineRecords) {
+            if (!line.pieces.length) continue;
+            const targetLeft = Math.max(margin, (contentWidth - line.width) / 2);
+            const shift = targetLeft - line.minX;
+            for (const piece of line.pieces) {
+              piece.x += shift;
+            }
+          }
+        }
+
+        return {
+          pieces,
+          width: Math.max(240, Math.ceil(contentWidth)),
+          height: Math.max(180, Math.ceil(contentHeight)),
+          options,
+          seed
+        };
+      }
+
+      function roundRectPath(ctx, x, y, w, h, r) {
+        const rr = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + rr, y);
+        ctx.arcTo(x + w, y, x + w, y + h, rr);
+        ctx.arcTo(x + w, y + h, x, y + h, rr);
+        ctx.arcTo(x, y + h, x, y, rr);
+        ctx.arcTo(x, y, x + w, y, rr);
+        ctx.closePath();
+      }
+
+      function polygonPath(ctx, pts) {
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+        ctx.closePath();
+      }
+
+      function drawPaperTexture(ctx, w, h, texture) {
+        ctx.save();
+        ctx.globalAlpha = texture.alpha;
+        for (let i = 0; i < texture.dots; i++) {
+          const x = Math.random() * w;
+          const y = Math.random() * h;
+          const r = Math.random() * 1.3 + 0.25;
+          ctx.fillStyle = Math.random() > 0.5 ? '#000000' : '#ffffff';
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+        for (let i = 0; i < texture.lines; i++) {
+          ctx.globalAlpha = texture.alpha * 1.15;
+          ctx.beginPath();
+          const y = Math.random() * h;
+          ctx.moveTo(0, y);
+          ctx.lineTo(w, y + (Math.random() * 2 - 1) * 3);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function fillBackground(ctx, width, height, options, forExport, transparentOverride = false) {
+        ctx.clearRect(0, 0, width, height);
+        const mode = options.background;
+        if (mode === 'transparent' && !transparentOverride) return;
+
+        if (mode === 'custom') {
+          ctx.fillStyle = options.backgroundColor.hex;
+          ctx.fillRect(0, 0, width, height);
+          return;
+        }
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+      }
+
+      function renderLayout(canvas, layout, opts = {}) {
+        const exportScale = opts.scale || 1;
+        const width = Math.max(2, Math.round(layout.width * exportScale));
+        const height = Math.max(2, Math.round(layout.height * exportScale));
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(exportScale, 0, 0, exportScale, 0, 0);
+        ctx.imageSmoothingEnabled = true;
+        fillBackground(ctx, layout.width, layout.height, layout.options, !!opts.forExport, !!opts.flattenTransparent);
+        const pageBg = getBackgroundBaseColor(layout.options, !!opts.flattenTransparent);
+
+        for (const piece of layout.pieces) {
+          ctx.save();
+          ctx.translate(piece.x + piece.width / 2, piece.y + piece.height / 2);
+          ctx.rotate(piece.rotation);
+          ctx.translate(-piece.width / 2, -piece.height / 2);
+
+          if (piece.shadow) {
+            ctx.save();
+            ctx.globalAlpha = 0.15;
+            ctx.fillStyle = '#000000';
+            ctx.translate(3, 4);
+            if (piece.shape.radius) {
+              roundRectPath(ctx, 0, 0, piece.width, piece.height, piece.shape.radius);
+            } else {
+              polygonPath(ctx, piece.shape.pts);
+            }
+            ctx.fill();
+            ctx.restore();
+          }
+
+          if (piece.shape.radius) {
+            roundRectPath(ctx, 0, 0, piece.width, piece.height, piece.shape.radius);
+          } else {
+            polygonPath(ctx, piece.shape.pts);
+          }
+          ctx.fillStyle = piece.bg;
+          ctx.fill();
+
+          const outline = chooseOutlineStyle(piece.bg, pageBg);
+          ctx.save();
+          ctx.strokeStyle = outline.color;
+          ctx.globalAlpha = outline.alpha;
+          ctx.lineWidth = outline.lineWidth + (piece.border ? 0.25 : 0);
+          ctx.stroke();
+          ctx.restore();
+
+          drawPaperTexture(ctx, piece.width, piece.height, piece.texture);
+
+          ctx.save();
+          ctx.font = piece.fontCss;
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = piece.fg;
+          const centerY = piece.height / 2 + (piece.fontSize * 0.02);
+          const centerX = piece.width / 2;
+          ctx.translate(centerX, centerY);
+          ctx.scale(piece.textScaleX, 1);
+          const textWidth = ctx.measureText(piece.char).width;
+          if (piece.stampNoise) {
+            ctx.save();
+            ctx.globalAlpha = 0.12;
+            ctx.strokeStyle = piece.fg === '#ffffff' || piece.fg === '#fafafa' ? '#000000' : '#ffffff';
+            ctx.lineWidth = 0.8;
+            ctx.strokeText(piece.char, -textWidth / 2, 0);
+            ctx.restore();
+          }
+          ctx.fillText(piece.char, -textWidth / 2, 0);
+          if (chance(Math.random, 0.08)) {
+            ctx.globalAlpha = 0.15;
+            ctx.strokeStyle = piece.fg === '#000000' ? '#ffffff' : '#000000';
+            ctx.lineWidth = 0.7;
+            ctx.strokeText(piece.char, -textWidth / 2, 0);
+          }
+          ctx.restore();
+          ctx.restore();
+        }
+        return canvas;
+      }
+
+      function buildLayout(seed = Date.now() >>> 0) {
+        const text = textInput.value.replace(/\r\n/g, '\n');
+        if (!text.trim()) {
+          statusEl.textContent = 'Enter some text first';
+          currentLayout = layoutText('?', getOptions(), seed);
+          renderLayout(previewCanvas, currentLayout);
+          return;
+        }
+
+        const options = getOptions();
+        currentLayout = layoutText(text, options, seed);
+        renderLayout(previewCanvas, currentLayout);
+        statusEl.textContent = `${currentLayout.width} × ${currentLayout.height}px preview`;
+      }
+
+      function downloadBlob(blob, fileName) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+      }
+
+      function getExportCanvas(flattenTransparent, scale = 2) {
+        if (!currentLayout) buildLayout(currentSeed);
+        const exportCanvas = document.createElement('canvas');
+        renderLayout(exportCanvas, currentLayout, { scale, forExport: true, flattenTransparent });
+        return exportCanvas;
+      }
+
+      function slugifyText(text) {
+        const cleaned = (text || 'ransom-letter').trim().replace(/\s+/g, ' ').slice(0, 48);
+        return cleaned.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'ransom-letter';
+      }
+
+      async function exportPNG() {
+        const canvas = getExportCanvas(false, 2);
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        downloadBlob(blob, `${slugifyText(textInput.value)}.png`);
+      }
+
+      async function exportJPEG() {
+        const canvas = getExportCanvas(true, 2);
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+        downloadBlob(blob, `${slugifyText(textInput.value)}.jpg`);
+      }
+
+      function numberToLittleEndian(value, byteCount) {
+        const bytes = [];
+        for (let i = 0; i < byteCount; i++) {
+          bytes.push(value & 0xff);
+          value >>= 8;
+        }
+        return bytes;
+      }
+
+      function packCodes(codes, codeSize) {
+        const out = [];
+        let cur = 0;
+        let bits = 0;
+        for (const code of codes) {
+          cur |= code << bits;
+          bits += codeSize;
+          while (bits >= 8) {
+            out.push(cur & 0xff);
+            cur >>= 8;
+            bits -= 8;
+          }
+        }
+        if (bits > 0) out.push(cur & 0xff);
+        return out;
+      }
+
+      function lzwEncode(indices, minCodeSize) {
+        const clearCode = 1 << minCodeSize;
+        const endCode = clearCode + 1;
+        let dict = new Map();
+        for (let i = 0; i < clearCode; i++) dict.set(String(i), i);
+        let nextCode = endCode + 1;
+        let codeSize = minCodeSize + 1;
+        const codes = [clearCode];
+
+        let prefix = String(indices[0]);
+        for (let i = 1; i < indices.length; i++) {
+          const k = String(indices[i]);
+          const combo = prefix + ',' + k;
+          if (dict.has(combo)) {
+            prefix = combo;
+          } else {
+            codes.push(dict.get(prefix));
+            dict.set(combo, nextCode++);
+            prefix = k;
+            if (nextCode === (1 << codeSize) && codeSize < 12) {
+              codeSize++;
+            } else if (nextCode >= 4096) {
+              codes.push(clearCode);
+              dict = new Map();
+              for (let j = 0; j < clearCode; j++) dict.set(String(j), j);
+              nextCode = endCode + 1;
+              codeSize = minCodeSize + 1;
+            }
+          }
+        }
+        codes.push(dict.get(prefix));
+        codes.push(endCode);
+
+        const bytes = [];
+        dict = new Map(); // unused, prevent lint feelings
+        let outputCodeSize = minCodeSize + 1;
+        let thresholds = [];
+        let nextThreshold = 1 << outputCodeSize;
+        let currentNextCode = endCode + 1;
+        let temp = [];
+
+        function flushTemp() {
+          if (temp.length) {
+            bytes.push(...packCodes(temp, outputCodeSize));
+            temp = [];
+          }
+        }
+
+        // Rebuild code sizes in the same order the encoder used.
+        outputCodeSize = minCodeSize + 1;
+        currentNextCode = endCode + 1;
+        let reconDict = new Map();
+        for (let j = 0; j < clearCode; j++) reconDict.set(String(j), j);
+        let reconPrefix = String(indices[0]);
+        let codeIndex = 0;
+        temp.push(clearCode);
+
+        for (let i = 1; i < indices.length; i++) {
+          const k = String(indices[i]);
+          const combo = reconPrefix + ',' + k;
+          if (reconDict.has(combo)) {
+            reconPrefix = combo;
+          } else {
+            temp.push(reconDict.get(reconPrefix));
+            reconDict.set(combo, currentNextCode++);
+            reconPrefix = k;
+            if (currentNextCode === (1 << outputCodeSize) && outputCodeSize < 12) {
+              flushTemp();
+              outputCodeSize++;
+            } else if (currentNextCode >= 4096) {
+              temp.push(clearCode);
+              flushTemp();
+              reconDict = new Map();
+              for (let j = 0; j < clearCode; j++) reconDict.set(String(j), j);
+              currentNextCode = endCode + 1;
+              outputCodeSize = minCodeSize + 1;
+            }
+          }
+        }
+
+        temp.push(reconDict.get(reconPrefix));
+        temp.push(endCode);
+        flushTemp();
+        return bytes;
+      }
+
+      function createPalette332() {
+        const palette = [];
+        for (let r = 0; r < 8; r++) {
+          for (let g = 0; g < 8; g++) {
+            for (let b = 0; b < 4; b++) {
+              palette.push(
+                Math.round((r / 7) * 255),
+                Math.round((g / 7) * 255),
+                Math.round((b / 3) * 255)
+              );
+            }
+          }
+        }
+        return palette;
+      }
+
+      function rgbaToPaletteIndex(r, g, b) {
+        const ri = Math.round((r / 255) * 7);
+        const gi = Math.round((g / 255) * 7);
+        const bi = Math.round((b / 255) * 3);
+        return (ri << 5) | (gi << 2) | bi;
+      }
+
+      function encodeStaticGIF(canvas) {
+        const ctx = canvas.getContext('2d');
+        const { width, height } = canvas;
+        const data = ctx.getImageData(0, 0, width, height).data;
+        const indices = new Uint8Array(width * height);
+        for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+          const a = data[i + 3] / 255;
+          const bgBlend = 255 * (1 - a);
+          const r = Math.round(data[i] * a + bgBlend);
+          const g = Math.round(data[i + 1] * a + bgBlend);
+          const b = Math.round(data[i + 2] * a + bgBlend);
+          indices[p] = rgbaToPaletteIndex(r, g, b);
+        }
+
+        const palette = createPalette332();
+        const minCodeSize = 8;
+        const imageDataBytes = lzwEncode(indices, minCodeSize);
+        const bytes = [];
+
+        function pushString(str) {
+          for (let i = 0; i < str.length; i++) bytes.push(str.charCodeAt(i));
+        }
+
+        pushString('GIF89a');
+        bytes.push(...numberToLittleEndian(width, 2));
+        bytes.push(...numberToLittleEndian(height, 2));
+        bytes.push(0xF7); // global color table flag + 8-bit color resolution + 256 colors
+        bytes.push(0x00); // background color index
+        bytes.push(0x00); // pixel aspect ratio
+        bytes.push(...palette);
+
+        // Graphics Control Extension
+        bytes.push(0x21, 0xF9, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00);
+
+        // Image descriptor
+        bytes.push(0x2C);
+        bytes.push(...numberToLittleEndian(0, 2));
+        bytes.push(...numberToLittleEndian(0, 2));
+        bytes.push(...numberToLittleEndian(width, 2));
+        bytes.push(...numberToLittleEndian(height, 2));
+        bytes.push(0x00);
+
+        bytes.push(minCodeSize);
+        for (let i = 0; i < imageDataBytes.length; i += 255) {
+          const chunk = imageDataBytes.slice(i, i + 255);
+          bytes.push(chunk.length, ...chunk);
+        }
+        bytes.push(0x00); // block terminator
+        bytes.push(0x3B); // trailer
+
+        return new Blob([new Uint8Array(bytes)], { type: 'image/gif' });
+      }
+
+      async function exportGIF() {
+        const canvas = getExportCanvas(true, 1);
+        const blob = encodeStaticGIF(canvas);
+        downloadBlob(blob, `${slugifyText(textInput.value)}.gif`);
+      }
+
+      function generateNewSeed() {
+        currentSeed = (Date.now() ^ ((Math.random() * 0xffffffff) >>> 0)) >>> 0;
+        return currentSeed;
+      }
+
+      function regenerate() {
+        buildLayout(generateNewSeed());
+      }
+
+      function regenerateWithoutNewSeed() {
+        buildLayout(currentSeed);
+      }
+
+      generateBtn.addEventListener('click', regenerate);
+      regenerateBtn.addEventListener('click', regenerate);
+      pngBtn.addEventListener('click', exportPNG);
+      jpgBtn.addEventListener('click', exportJPEG);
+      gifBtn.addEventListener('click', exportGIF);
+
+      [backgroundSelect, alignmentSelect, colorModeSelect, maxWidthSelect].forEach(el => {
+        el.addEventListener('change', () => {
+          updateBadges();
+          regenerateWithoutNewSeed();
+        });
+      });
+      [messinessRange, scaleRange, bgRedRange, bgGreenRange, bgBlueRange].forEach(el => {
+        el.addEventListener('input', () => {
+          updateBadges();
+          regenerateWithoutNewSeed();
+        });
+      });
+
+      textInput.addEventListener('keydown', (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+          event.preventDefault();
+          regenerate();
+        }
+      });
+
+      window.addEventListener('resize', () => {
+        clearTimeout(window.__ransomResizeTimer);
+        window.__ransomResizeTimer = setTimeout(() => {
+          applyMobileMode();
+          regenerateWithoutNewSeed();
+        }, 120);
+      });
+
+      applyMobileMode();
+      updateBadges();
+      regenerateWithoutNewSeed();
+    })();
+  </script>
+</body>
+</html>

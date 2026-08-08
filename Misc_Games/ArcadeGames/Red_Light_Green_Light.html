@@ -313,7 +313,7 @@ button.primary{background:#3ba85d}
         <div class="helpItem"><b>Between Levels</b>The next level waits for you. Press Okay when you are ready to continue.</div>
         <div class="helpItem"><b>Difficulty</b>Easy uses the current rules. Hard makes CPU players more aggressive and activates two scanning beams during red light.</div>
         <div class="helpItem"><b>Stamina</b>Moving drains stamina. Stop before it empties and it refills normally. Fully exhausting it forces a short rest and much slower recovery before you can move again.</div>
-        <div class="helpItem"><b>Rolling Hazards</b>Barrels and logs roll down from the finish side and pass straight through scenery. They shove anyone they hit. If the shove happens in an exposed red scan, the knocked player is eliminated.</div>
+        <div class="helpItem"><b>Rolling Hazards</b>Barrels and logs roll down from the finish side in heavier waves of 3 to 5 and pass straight through scenery. They shove anyone they hit. If the shove happens in an exposed red scan, the knocked player is eliminated.</div>
         <div class="helpItem"><b>Course</b>Staggered obstacles prevent a completely straight run to the finish, so you need to weave through the field.</div>
       </div>
       <button class="action primary" id="closeHelpBtn">Got It</button>
@@ -536,7 +536,7 @@ function makeCharacter(x,y,isPlayer=false){
     x,y,r:isPlayer?10:9,vx:0,vy:0,
     moving:false,alive:true,finished:false,isPlayer,
     color:isPlayer?'#fff06e':`hsl(${Math.floor(rand(0,360))} 58% 63%)`,
-    speed:isPlayer?135:rand(84,118),
+    speed:isPlayer?101.25:rand(63,88.5),
     decision:rand(.2,.8),target:null,panic:rand(0,1),
     aggression:isPlayer?0:Math.random(),shoulderCooldown:rand(0,.6),
     stamina:100,staminaMax:100,
@@ -1189,7 +1189,7 @@ function updatePlayer(dt){
   const canMove=applyStamina(player,wantsMove,dt);
 
   if(canMove){
-    player.vx=v.x*135;player.vy=v.y*135;
+    player.vx=v.x*101.25;player.vy=v.y*101.25;
     player.moving=true;
     if(mag>.05){
       player.facingX=v.x/mag;player.facingY=v.y/mag;
@@ -1305,10 +1305,12 @@ function hazardSettings(){
   const hard=gameMode==='hard';
   const levelBoost=Math.min(2.0,(level-1)*.17);
   return {
-    minGap:Math.max(hard?2.0:2.8,(hard?3.0:4.1)-levelBoost),
-    maxGap:Math.max(hard?2.8:3.7,(hard?4.2:5.7)-levelBoost),
+    // Shorter gaps so new waves arrive more often.
+    minGap:Math.max(hard?1.15:1.55,(hard?1.9:2.45)-levelBoost),
+    maxGap:Math.max(hard?1.9:2.25,(hard?2.7:3.35)-levelBoost),
     speed:(hard?150:132)+Math.min(48,(level-1)*7),
-    maxOnField:hard?7:5
+    // More room for larger waves to coexist.
+    maxOnField:hard?17:14
   };
 }
 
@@ -1324,22 +1326,47 @@ function hazardBlockedAt(h,x,y){
   return false;
 }
 
-function spawnHazard(){
+function spawnHazardWave(){
   const hs=hazardSettings();
-  if(hazards.filter(h=>h.warning<=0&&h.y<H+50).length>=hs.maxOnField)return;
+  const active=hazards.filter(h=>h.warning<=0&&h.y<H+50).length;
+  const room=Math.max(0,hs.maxOnField-active);
+  if(room<=0)return;
 
-  const type=Math.random()<.72?'barrel':'log';
-  const r=type==='barrel'?15:19;
-  const x=rand(42,W-42);
+  // Heavier waves: usually 3 or 4 objects, with occasional 5-object waves.
+  const roll=Math.random();
+  const desired=roll<.18?5:(roll<.58?4:3);
+  const count=Math.min(desired,room);
+  const xs=[];
 
-  hazards.push({
-    type,x,y:126,r,
-    speed:hs.speed*rand(.88,1.12),
-    drift:rand(-24,24),
-    spin:rand(0,Math.PI*2),
-    warning:.72,
-    hits:new Set()
-  });
+  for(let i=0;i<count;i++){
+    let x=rand(48,W-48);
+
+    // Keep hazards in the same wave visibly separated.
+    for(let attempt=0;attempt<40;attempt++){
+      const trial=rand(48,W-48);
+      if(xs.every(px=>Math.abs(px-trial)>95)){
+        x=trial;
+        break;
+      }
+    }
+    xs.push(x);
+
+    const type=Math.random()<.72?'barrel':'log';
+    const r=type==='barrel'?15:19;
+
+    hazards.push({
+      type,
+      x,
+      y:126-rand(0,12),
+      r,
+      speed:hs.speed*rand(.88,1.12),
+      drift:rand(-24,24),
+      spin:rand(0,Math.PI*2),
+      // Tiny stagger prevents every object from appearing on the exact same frame.
+      warning:.62+i*rand(.04,.11),
+      hits:new Set()
+    });
+  }
 }
 
 function hazardHitsCharacter(h,ch){
@@ -1380,7 +1407,7 @@ function updateHazards(dt){
 
   hazardSpawnTimer-=dt;
   if(hazardSpawnTimer<=0){
-    spawnHazard();
+    spawnHazardWave();
     hazardSpawnTimer=rand(hs.minGap,hs.maxGap);
   }
 
