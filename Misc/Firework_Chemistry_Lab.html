@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Firework Chemistry Lab</title>
+<style>
+  :root{
+    --bg:#07111f;--panel:#0e1b2d;--panel2:#13243a;--line:#263a54;--text:#edf5ff;--muted:#9eb1c8;
+    --accent:#56b6ff;--good:#77e0a3;--warn:#ffd166;--danger:#ff7c86;--shadow:0 18px 50px rgba(0,0,0,.28);
+  }
+  *{box-sizing:border-box}
+  html{background:#040a12}
+  body{margin:0;background:radial-gradient(circle at 50% -10%,#142b49 0,#07111f 44%,#040a12 100%);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh;overflow-x:hidden}
+  button,select{font:inherit}
+  button{cursor:pointer}
+  .app{max-width:1440px;margin:0 auto;padding:18px}
+  header{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:14px}
+  h1{font-size:clamp(1.45rem,2.2vw,2.3rem);margin:0;font-weight:760;letter-spacing:-.03em}
+  .subtitle{color:var(--muted);font-size:.93rem;margin-top:5px;max-width:850px;line-height:1.4}
+  .safe{display:none}
+  .header-copy{max-width:980px}
+  .layout{display:grid;grid-template-columns:minmax(270px,.88fr) minmax(420px,1.24fr) minmax(290px,.9fr);gap:14px;align-items:start}
+  .panel{background:linear-gradient(180deg,rgba(18,35,57,.97),rgba(10,25,43,.97));border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
+  .panel-head{padding:14px 15px 11px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .panel-head h2{font-size:1rem;margin:0}
+  .panel-head small{color:var(--muted);text-align:right}
+
+  /* Scrollable areas remain easy to drag through, but now show a visible scrollbar when long. */
+  .ingredients,.shell-contents,.entries{scrollbar-width:thin;scrollbar-color:#496887 #091523}
+  .ingredients::-webkit-scrollbar,.shell-contents::-webkit-scrollbar,.entries::-webkit-scrollbar{width:10px;height:10px}
+  .ingredients::-webkit-scrollbar-track,.shell-contents::-webkit-scrollbar-track,.entries::-webkit-scrollbar-track{background:#091523;border-radius:999px}
+  .ingredients::-webkit-scrollbar-thumb,.shell-contents::-webkit-scrollbar-thumb,.entries::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#5a7da3,#385777);border-radius:999px;border:2px solid #091523}
+  .ingredients::-webkit-scrollbar-thumb:hover,.shell-contents::-webkit-scrollbar-thumb:hover,.entries::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#7095be,#486d94)}
+
+  .ingredients{padding:11px;display:grid;grid-template-columns:1fr 1fr;gap:9px;max-height:calc(100vh - 150px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
+  .chem{position:relative;border:1px solid #2b415c;background:#0c1a2c;border-radius:14px;padding:10px;min-height:104px;display:flex;flex-direction:column;gap:6px;user-select:none;transition:.15s transform,.15s border-color,.15s background,.15s opacity;cursor:grab;touch-action:pan-y}
+  .chem:active{cursor:grabbing}.chem.dragging{opacity:.48;transform:scale(.98)}.chem:hover{border-color:#456788;background:#10213a}
+  .chem-top{display:flex;justify-content:space-between;gap:7px;align-items:flex-start}
+  .chem-name{font-weight:730;font-size:.88rem;line-height:1.15}
+  .formula{color:var(--muted);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.75rem;margin-top:3px}
+  .chip{font-size:.65rem;padding:4px 6px;border-radius:999px;border:1px solid #39516d;color:#cfe4fa;white-space:nowrap}
+  .chem-effect{display:flex;align-items:center;gap:6px;font-size:.73rem;color:#a8bdd2;line-height:1.25}
+  .chem-bottom{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:auto}
+  .drag-cue{font-size:.69rem;color:#7892ac;letter-spacing:.01em}
+  .info,.ghost,.smallbtn{border-radius:10px;border:1px solid #35506f;color:var(--text);background:#142843;min-height:34px}
+  .info{width:38px}.info:hover,.ghost:hover,.smallbtn:hover{background:#1b3556}
+
+  .main{padding:14px}
+  .steps{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+  .step{color:#8fa5be;border:1px solid #31465f;border-radius:999px;padding:5px 9px;font-size:.75rem}.step.active{background:#173954;color:#d8f1ff;border-color:#4381a9}
+  .workbench{display:grid;grid-template-columns:1.12fr .88fr;gap:12px;align-items:stretch}
+  .shell-wrap,.controls-wrap{border:1px solid #2b405a;border-radius:16px;background:#081522;padding:12px;position:relative}
+  .section-label{font-size:.82rem;color:#b8c9dc;font-weight:700;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .shell-stage{height:292px;border-radius:16px;border:1px dashed #3b5571;position:relative;background:linear-gradient(#060d17,#071422 61%,#0a1c23 61%,#0d2b2a 100%);overflow:hidden;display:flex;align-items:flex-end;justify-content:center;transition:.16s border-color,.16s background,.16s box-shadow}
+  .shell-stage.over{border-color:#72caff;background:radial-gradient(circle at 50% 48%,rgba(86,182,255,.15),transparent 42%),linear-gradient(#060d17,#071422 61%,#0a1c23 61%,#0d2b2a 100%);box-shadow:inset 0 0 28px rgba(86,182,255,.13)}
+  .stars{position:absolute;inset:0;background-image:radial-gradient(#fff 1px,transparent 1px),radial-gradient(#fff 1px,transparent 1px);background-size:45px 45px,71px 71px;background-position:10px 5px,22px 31px;opacity:.46;pointer-events:none}
+  .shell-hint{position:absolute;top:11px;left:12px;right:12px;text-align:center;color:#839bb4;font-size:.76rem;line-height:1.35;pointer-events:none}
+  .hold-readout{position:absolute;top:55px;left:50%;transform:translateX(-50%);min-width:174px;text-align:center;border:1px solid #3c6286;background:rgba(9,28,47,.93);border-radius:999px;padding:7px 11px;font-size:.73rem;color:#dff4ff;opacity:0;transition:.14s;pointer-events:none;z-index:4}
+  .shell-stage.over .hold-readout{opacity:1}
+  .rocket{position:relative;width:82px;height:190px;margin-bottom:9px;filter:drop-shadow(0 8px 18px rgba(0,0,0,.35));pointer-events:none}
+  .rocket-body{position:absolute;left:21px;top:31px;width:42px;height:112px;background:linear-gradient(90deg,#e4edf5,#72879d 44%,#d7e2eb);border-radius:22px 22px 9px 9px;border:1px solid #d4e0ec;overflow:hidden}
+  .rocket-fill{position:absolute;left:0;right:0;bottom:0;height:0;transition:.2s height,.2s background;overflow:hidden;background:linear-gradient(180deg,rgba(86,182,255,.10),rgba(86,182,255,.02))}
+  .rocket-layers{position:absolute;inset:0;display:block}
+  .fill-layer{position:absolute;left:0;right:0;border-top:1px solid rgba(255,255,255,.18)}
+  .fill-layer.spark{background-blend-mode:screen;opacity:.92}
+  .rocket-tip{position:absolute;left:21px;top:0;width:42px;height:48px;background:#d85f65;clip-path:polygon(50% 0,100% 100%,0 100%)}
+  .rocket-fin-l,.rocket-fin-r{position:absolute;top:119px;width:24px;height:42px;background:#c54852}.rocket-fin-l{left:3px;clip-path:polygon(100% 0,100% 100%,0 100%)}.rocket-fin-r{right:3px;clip-path:polygon(0 0,100% 100%,0 100%)}
+  .rocket-stick{position:absolute;left:39px;top:143px;width:5px;height:47px;background:#87694c}
+  .shell-state{position:absolute;bottom:8px;left:9px;right:9px;text-align:center;font-size:.7rem;color:#a4b8ca;pointer-events:none}
+  .shell-actions{display:flex;gap:7px;justify-content:space-between;align-items:center;margin-top:9px;flex-wrap:wrap}.ghost{padding:8px 10px;flex:1}
+  .shell-cap{color:#8fa8c1;font-size:.75rem;white-space:nowrap}
+  .shell-contents{margin-top:10px;border-top:1px solid #223850;padding-top:7px;max-height:154px;overflow-y:auto;overflow-x:hidden;padding-right:4px}
+  .empty{color:#7f94aa;font-size:.82rem;padding:7px 2px}
+  .mix-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;align-items:center;padding:6px 0;border-bottom:1px solid rgba(43,64,90,.6)}.mix-row:last-child{border-bottom:0}
+  .mix-title{font-size:.8rem;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mix-meta{color:#8ea5bc;font-size:.7rem;margin-top:2px}
+  .remove-one{width:30px;height:30px;border-radius:8px;border:1px solid #4d4050;background:#2c1d29;color:#ffccd1}.remove-one:hover{background:#3c2434}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:-1px;margin-right:4px;border:1px solid rgba(255,255,255,.2)}
+
+  .controls-wrap{display:flex;flex-direction:column;gap:11px}
+  .control-block{border:1px solid #263d57;background:#0b1929;border-radius:12px;padding:10px}
+  .control-block label{display:block;font-size:.72rem;color:#93aac1;margin-bottom:5px;font-weight:650}
+  select{width:100%;border:1px solid #35506f;background:#12243b;color:var(--text);border-radius:9px;padding:8px 9px;outline:none}
+  .design-desc{font-size:.73rem;color:#9eb2c6;line-height:1.4;margin-top:7px;min-height:40px}
+  .status-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  .status-box{border:1px solid #263d57;background:#0b1929;border-radius:11px;padding:8px}.status-box label{display:block;color:#859db5;font-size:.64rem;text-transform:uppercase;letter-spacing:.05em}.status-box b{display:block;margin-top:3px;font-size:.84rem}
+  .launch{margin-top:auto;width:100%;min-height:48px;border:0;border-radius:12px;background:linear-gradient(180deg,#f4a340,#d36d25);color:#1b0e05;font-weight:860;font-size:1rem}.launch:hover{filter:brightness(1.06)}.launch:disabled{filter:grayscale(.7);opacity:.45;cursor:not-allowed}
+  .microcopy{font-size:.69rem;color:#738ca6;line-height:1.35}
+  .launch-row{display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px;align-items:stretch;margin-top:8px}
+  .sound-icon{width:44px;min-height:48px;border:1px solid #35506f;background:#142843;color:#fff;border-radius:12px;font-size:1.15rem;display:grid;place-items:center;padding:0}
+  .sound-icon:hover{background:#1b3556}.sound-icon[aria-pressed="false"]{opacity:.72}
+  .entry{cursor:pointer;transition:.15s border-color,.15s background,.15s transform}.entry:hover{border-color:#456a90;background:#10213a}.entry:active{transform:translateY(1px)}
+  .entry-load{color:#7fa9cf;font-size:.68rem;margin-top:5px}
+  .shell-stage.full{border-color:#e2a741;box-shadow:inset 0 0 30px rgba(226,167,65,.16)}
+  .shell-stage.full .hold-readout{opacity:1;background:rgba(77,48,9,.95);border-color:#d89a35;color:#ffe7b3}
+
+  .sky{margin-top:12px;border:1px solid #2b405a;border-radius:16px;overflow:hidden;background:#02060e;position:relative}
+  #skyCanvas{display:block;width:100%;height:330px;background:radial-gradient(circle at 50% 110%,#11233b 0,#040914 48%,#010307 100%)}
+  .sky-label{position:absolute;top:8px;left:10px;color:#8197ae;font-size:.72rem;pointer-events:none}
+
+  .results{padding:13px}
+  .result-preview{display:grid;grid-template-columns:78px 1fr;gap:11px;align-items:center;border-bottom:1px solid var(--line);padding-bottom:12px}
+  .swatch{width:78px;height:78px;border-radius:50%;border:1px solid #49617c;background:#7f8b97;box-shadow:0 0 24px rgba(255,255,255,.08);position:relative;overflow:hidden}.swatch:after{content:"";position:absolute;inset:14px;border-radius:50%;background:rgba(255,255,255,.12)}
+  .result-name{font-weight:800;font-size:1.05rem}.result-sub{color:var(--muted);font-size:.78rem;margin-top:4px;line-height:1.35}
+  .why{margin-top:8px;border:1px solid #35506f;background:#132843;color:#d9ebff;border-radius:9px;padding:6px 9px;font-size:.76rem}
+  .metrics{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:11px 0}.metric{border:1px solid #2b405a;background:#0b1929;border-radius:11px;padding:8px}.metric label{display:block;color:#8fa6bd;font-size:.65rem;text-transform:uppercase;letter-spacing:.06em}.metric b{display:block;margin-top:2px;font-size:.87rem}
+  .note{font-size:.77rem;color:#a9bdd1;line-height:1.4;background:#0b1929;border:1px solid #2b405a;border-radius:12px;padding:9px;margin-top:9px}.note.warn{border-color:#5b4b2e;background:#221b0e;color:#e9d3a5}
+  .notebook{margin-top:12px;border-top:1px solid var(--line);padding-top:12px}.notebook h3{font-size:.9rem;margin:0 0 8px}.book-actions{display:flex;gap:6px;margin-bottom:8px}.smallbtn{padding:7px 9px;font-size:.75rem}.entries{max-height:245px;overflow-y:auto;overflow-x:hidden}.entry{border:1px solid #263b54;background:#0b1929;border-radius:11px;padding:8px;margin-bottom:6px;font-size:.73rem}.entry-head{display:flex;justify-content:space-between;gap:8px}.entry-title{font-weight:700}.entry time{color:#7f95aa}.entry-mix{color:#a9bed2;margin-top:4px;line-height:1.38}
+
+  dialog{border:1px solid #36506d;border-radius:16px;background:#0f1e31;color:var(--text);max-width:590px;width:calc(100% - 30px);box-shadow:0 24px 80px rgba(0,0,0,.55);padding:0}dialog::backdrop{background:rgba(1,5,10,.76)}
+  .modal-head{padding:14px 15px;border-bottom:1px solid #2b405a;display:flex;justify-content:space-between;gap:10px;align-items:center}.modal-head h3{margin:0;font-size:1rem}.close{border:1px solid #35506f;background:#132843;color:#fff;border-radius:9px;width:34px;height:34px}.modal-body{padding:14px 15px;color:#c6d7e8;line-height:1.55;font-size:.87rem}.modal-body strong{color:#fff}.modal-body .formula-big{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:1.1rem;color:#9ed7ff}.modal-body ul{padding-left:19px;margin:8px 0}.source-note{font-size:.72rem;color:#8198af;border-top:1px solid #2b405a;padding-top:9px;margin-top:11px}
+  .confirm-card{padding:16px 16px 14px}.confirm-lead{margin:0;color:#dceafb;font-size:.9rem;line-height:1.5}.confirm-summary{margin:12px 0 0;border:1px solid #2d4662;background:#0a1828;border-radius:12px;padding:10px 11px}.confirm-summary b{display:block;color:#fff;font-size:.9rem}.confirm-summary span{display:block;margin-top:3px;color:#8fa8c1;font-size:.76rem}.confirm-warning{margin:10px 0 0;color:#8fa8c1;font-size:.76rem;line-height:1.4}.confirm-actions{display:flex;gap:8px;justify-content:flex-end;padding:0 16px 16px}.confirm-actions button{min-width:102px;min-height:38px;border-radius:10px;font-weight:750}.confirm-cancel{border:1px solid #35506f;background:#142843;color:#e9f4ff}.confirm-load{border:0;background:linear-gradient(180deg,#f4a340,#d36d25);color:#1b0e05}.confirm-load:hover,.confirm-cancel:hover{filter:brightness(1.07)}
+  .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%) translateY(20px);background:#162a43;color:#eaf5ff;border:1px solid #3a5d80;border-radius:999px;padding:9px 13px;font-size:.78rem;opacity:0;pointer-events:none;transition:.2s;z-index:50;box-shadow:0 12px 30px rgba(0,0,0,.35)}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .drag-ghost{position:fixed;left:0;top:0;z-index:60;pointer-events:none;border:1px solid #4a7397;background:#10233a;color:#f1f8ff;border-radius:11px;padding:8px 10px;max-width:180px;box-shadow:0 12px 30px rgba(0,0,0,.4);font-size:.78rem;opacity:.95;transform:translate(12px,12px)}
+  .drag-ghost b{display:block}.drag-ghost small{color:#9db5cb}
+
+  @media(max-width:1100px){.layout{grid-template-columns:320px 1fr}.right{grid-column:1/-1}.ingredients{max-height:680px}.results{display:grid;grid-template-columns:1fr 1fr;gap:16px}.notebook{border-top:0;border-left:1px solid var(--line);padding-top:0;padding-left:16px;margin-top:0}}
+  @media(max-width:780px){.app{padding:10px}.layout{grid-template-columns:1fr}.ingredients{grid-template-columns:1fr 1fr;max-height:520px}.workbench{grid-template-columns:1fr}.results{display:block}.notebook{border-left:0;border-top:1px solid var(--line);padding-left:0;padding-top:12px;margin-top:12px}header{align-items:flex-start}.safe{display:none}#skyCanvas{height:280px}.shell-stage{height:270px}}
+  @media(max-width:490px){.ingredients{grid-template-columns:1fr}.chem{min-height:94px}.panel{border-radius:14px}.main{padding:10px}.result-preview{grid-template-columns:64px 1fr}.swatch{width:64px;height:64px}.steps{display:none}.shell-stage{height:255px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="header-copy">
+      <h1>Firework Chemistry Lab</h1>
+      <div class="subtitle">Mix real firework colourants and spark metals, choose a burst, and test the chemistry.</div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <section class="panel">
+      <div class="panel-head"><h2>Chemical Shelf</h2><small>Drag into shell · hold to pour</small></div>
+      <div id="ingredientGrid" class="ingredients"></div>
+    </section>
+
+    <section class="panel">
+      <div class="main">
+        <div class="steps"><span id="s1" class="step active">1 Load chemistry</span><span id="s2" class="step">2 Choose design</span><span id="s3" class="step">3 Launch</span><span id="s4" class="step">4 Observe</span></div>
+
+        <div class="workbench">
+          <div class="shell-wrap">
+            <div class="section-label"><span>Virtual firework shell</span><span id="mixTotal">0 simulation units</span></div>
+            <div id="shellStage" class="shell-stage" aria-label="Virtual shell drop target">
+              <div class="stars"></div>
+              <div class="shell-hint">Drag a chemical here and keep holding it over the shell.<br>Hold longer to pour more; release over the shell to add it.</div>
+              <div id="holdReadout" class="hold-readout">Release to add · 0.0 u</div>
+              <div class="rocket" aria-hidden="true">
+                <div class="rocket-tip"></div>
+                <div class="rocket-body"><div id="rocketFill" class="rocket-fill"><div id="rocketLayers" class="rocket-layers"></div></div></div>
+                <div class="rocket-fin-l"></div><div class="rocket-fin-r"></div><div class="rocket-stick"></div>
+              </div>
+              <div id="shellState" class="shell-state">Shell empty</div>
+            </div>
+            <div class="shell-actions"><button id="clearMix" class="ghost" type="button">Empty shell</button><div id="shellCap" class="shell-cap">Capacity: 0 / 12.0 u</div></div>
+            <div id="shellContents" class="shell-contents"><div class="empty">Drag chemicals into the shell to begin.</div></div>
+          </div>
+
+          <div class="controls-wrap">
+            <div class="control-block">
+              <label for="designSelect">Burst design</label>
+              <select id="designSelect">
+                <option value="peony">Peony</option>
+                <option value="chrysanthemum">Chrysanthemum</option>
+                <option value="willow">Willow</option>
+                <option value="ring">Ring</option>
+                <option value="palm">Palm</option>
+                <option value="crossette">Crossette</option>
+                <option value="horsetail">Horsetail</option>
+                <option value="double-ring">Double ring</option>
+                <option value="heart">Heart</option>
+                <option value="smiley">Smiley face</option>
+              </select>
+              <div id="designDesc" class="design-desc"></div>
+            </div>
+
+            <div class="status-grid">
+              <div class="status-box"><label>Virtual reliability</label><b id="reliability">—</b></div>
+              <div class="status-box"><label>Shell load</label><b id="loadStatus">Empty</b></div>
+              <div class="status-box"><label>Colour preview</label><b id="previewName">—</b></div>
+              <div class="status-box"><label>Pattern complexity</label><b id="complexity">Basic</b></div>
+            </div>
+
+            <div class="microcopy">Simulation units, reliability, and dud rules are fictional game mechanics—not real firework measurements or recipes.</div>
+            <div class="launch-row"><button id="soundToggle" class="sound-icon" type="button" aria-pressed="true" aria-label="Turn sound off" title="Sound on">🔊</button><button id="launchBtn" class="launch" type="button" disabled>LAUNCH</button></div>
+          </div>
+        </div>
+
+        <div class="sky">
+          <div class="sky-label">Night-sky test range</div>
+          <canvas id="skyCanvas" width="820" height="330" aria-label="Animated virtual firework display"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel right">
+      <div class="panel-head"><h2>Observation</h2><small>Click Why? to learn</small></div>
+      <div class="results">
+        <div>
+          <div class="result-preview">
+            <button id="swatch" class="swatch" type="button" aria-label="Open colour explanation"></button>
+            <div><div id="resultName" class="result-name">No test yet</div><div id="resultSub" class="result-sub">Load the shell, choose a design, and launch it.</div><button id="whyBtn" class="why" type="button">Why did it look like that?</button></div>
+          </div>
+          <div class="metrics">
+            <div class="metric"><label>Launch result</label><b id="launchResult">—</b></div>
+            <div class="metric"><label>Colour purity</label><b id="purity">—</b></div>
+            <div class="metric"><label>Spark character</label><b id="spark">—</b></div>
+            <div class="metric"><label>Dominant source</label><b id="dominant">—</b></div>
+            <div class="metric"><label>Blue stability</label><b id="blueStability">—</b></div>
+            <div class="metric"><label>Pattern</label><b id="patternMetric">—</b></div>
+          </div>
+          <div id="scienceNote" class="note">This simulation uses real qualitative colour relationships while deliberately abstracting the energetic charge, construction, and real-world formulation.</div>
+          <div class="note warn"><strong>Safety:</strong> Some listed substances are hazardous in real life. The app does not provide explosive ingredients, real ratios, preparation methods, or construction instructions.</div>
+        </div>
+
+        <div class="notebook">
+          <h3>Experiment Notebook</h3>
+          <div class="book-actions"><button id="exportBook" class="smallbtn" type="button">Export</button><button id="importBook" class="smallbtn" type="button">Import</button><button id="clearBook" class="smallbtn" type="button">Clear notebook</button><input id="importBookInput" type="file" accept="application/json" hidden></div>
+          <div id="entries" class="entries"><div class="empty">Completed launches will be recorded here.</div></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<dialog id="infoDialog">
+  <div class="modal-head"><h3 id="modalTitle">Chemistry</h3><button id="closeDialog" class="close" type="button" aria-label="Close">×</button></div>
+  <div id="modalBody" class="modal-body"></div>
+</dialog>
+<dialog id="formulaDialog">
+  <div class="modal-head"><h3>Load saved formula?</h3><button id="closeFormulaDialog" class="close" type="button" aria-label="Close">×</button></div>
+  <div class="confirm-card">
+    <p class="confirm-lead">Load this notebook formula into the virtual shell?</p>
+    <div class="confirm-summary"><b id="formulaDialogPattern">Saved burst</b><span id="formulaDialogAmount">0 simulation units</span></div>
+    <p class="confirm-warning">The current shell contents will be replaced.</p>
+  </div>
+  <div class="confirm-actions"><button id="cancelFormulaLoad" class="confirm-cancel" type="button">Cancel</button><button id="confirmFormulaLoad" class="confirm-load" type="button">Load formula</button></div>
+</dialog>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  // Only colourants and visible spark materials are modeled. Energetic chemistry is intentionally absent.
+  const CHEMS = [
+    {id:'srco3', emitter:'sr', name:'Strontium carbonate', formula:'SrCO₃', family:'Colourant', color:'#ef2f3d', rgb:[239,47,61], hue:'crimson red', strength:1.05,
+      info:'Strontium compounds are strongly associated with red and crimson firework colours. The colour comes from characteristic light emitted by excited strontium-containing species.'},
+    {id:'srcl2', emitter:'sr', name:'Strontium chloride', formula:'SrCl₂', family:'Colourant', color:'#f0444e', rgb:[240,68,78], hue:'red', strength:1.0, moistureSensitive:true,
+      info:'Strontium chloride can produce red emission. Some metal chlorides are moisture-sensitive in real pyrotechnic chemistry, so this app gives chloride-heavy virtual shells a little more simulated dampness risk.'},
+    {id:'lico3', emitter:'li', name:'Lithium carbonate', formula:'Li₂CO₃', family:'Colourant', color:'#e83b67', rgb:[232,59,103], hue:'carmine red', strength:.82,
+      info:'Lithium compounds can contribute carmine or magenta-red light. In mixed colours, lithium gives a somewhat pinker red contribution than strontium.'},
+    {id:'cacl2', emitter:'ca', name:'Calcium chloride', formula:'CaCl₂', family:'Colourant', color:'#ff7a25', rgb:[255,122,37], hue:'orange', strength:.85, moistureSensitive:true,
+      info:'Calcium salts are associated with orange or red-orange emission. Calcium chloride is one commonly cited example in educational firework-colour tables.'},
+    {id:'caso4', emitter:'ca', name:'Calcium sulfate', formula:'CaSO₄', family:'Colourant', color:'#ff8735', rgb:[255,135,53], hue:'orange', strength:.78,
+      info:'Calcium sulfate is another calcium compound associated with orange colour. It demonstrates that the metal element is the major clue to the observed emission colour.'},
+    {id:'nacl', emitter:'na', name:'Sodium chloride', formula:'NaCl', family:'Colourant', color:'#ffd21f', rgb:[255,210,31], hue:'intense yellow', strength:2.55,
+      info:'Sodium produces an exceptionally intense yellow emission. Even a small sodium contribution can mask weaker colours, so sodium has unusually strong visual weight in this simulation.'},
+    {id:'baco3', emitter:'ba', name:'Barium carbonate', formula:'BaCO₃', family:'Colourant', color:'#56d56e', rgb:[86,213,110], hue:'green', strength:1.0,
+      info:'Barium compounds are associated with green firework colours. Real barium compounds can be toxic; here they exist only as virtual educational materials.'},
+    {id:'bacl2', emitter:'ba', name:'Barium chloride', formula:'BaCl₂', family:'Colourant', color:'#76d85a', rgb:[118,216,90], hue:'yellow-green', strength:1.03, moistureSensitive:true,
+      info:'Barium chloride is associated with yellow-green to green emission. As with several metal chlorides, the app models a small qualitative moisture-sensitivity penalty without using real formulations.'},
+    {id:'cucl', emitter:'cu', name:'Copper(I) chloride', formula:'CuCl', family:'Colourant', color:'#2b7fff', rgb:[43,127,255], hue:'blue', strength:.92, blue:true, moistureSensitive:true,
+      info:'Copper compounds are responsible for blue firework colours. Good blue is comparatively difficult: copper colour species can be sensitive to their thermal and chemical environment.'},
+    {id:'cuco3', emitter:'cu', name:'Basic copper carbonate', formula:'Cu₂(OH)₂CO₃', family:'Colourant', color:'#368eea', rgb:[54,142,234], hue:'blue / blue-green', strength:.84, blue:true,
+      info:'Basic copper carbonate is a copper colour source used in pyrotechnic chemistry. The app gives it a slightly greener, softer blue contribution than copper(I) chloride.'},
+    {id:'kcl', emitter:'k', name:'Potassium chloride', formula:'KCl', family:'Colourant', color:'#b78cff', rgb:[183,140,255], hue:'lilac / violet', strength:.62,
+      info:'Potassium salts can produce a lilac or violet flame. Their colour is relatively delicate and can be masked by stronger emitters such as sodium.'},
+    {id:'h3bo3', emitter:'b', name:'Boric acid', formula:'H₃BO₃', family:'Colourant', color:'#4be082', rgb:[75,224,130], hue:'green', strength:.72,
+      info:'Boron compounds can produce green emission. Boric acid is included as an educational boron example rather than as a recipe ingredient.'},
+    {id:'mg', name:'Magnesium', formula:'Mg', family:'Spark metal', color:'#fff8df', rgb:[255,248,223], hue:'brilliant white', strength:.25, spark:'brilliant white', white:1.0,
+      info:'Burning magnesium produces intense bright white light. In fireworks, metals can add incandescent brightness rather than the narrow emission of a flame-test colour.'},
+    {id:'al', name:'Aluminum', formula:'Al', family:'Spark metal', color:'#e8f1ff', rgb:[232,241,255], hue:'silver-white', strength:.2, spark:'silver-white', white:.85,
+      info:'Aluminum can create bright white or silvery incandescent effects. This is glowing hot metal rather than the same emission mechanism as a metal-ion colour.'},
+    {id:'ti', name:'Titanium', formula:'Ti', family:'Spark metal', color:'#d9e9ff', rgb:[217,233,255], hue:'silver sparks', strength:.18, spark:'silver branching', white:.65,
+      info:'Titanium is associated with bright silver or white sparks. The animation models it with longer bright trails.'},
+    {id:'fe', name:'Iron', formula:'Fe', family:'Spark metal', color:'#ffad46', rgb:[255,173,70], hue:'gold-orange sparks', strength:.18, spark:'gold-orange branching', gold:1.0,
+      info:'Hot iron particles can produce orange or gold branching sparks by incandescence.'}
+  ];
+
+  const DESIGNS = {
+    peony:{name:'Peony', complexity:'Basic', desc:'A classic round burst with points expanding evenly from the centre.'},
+    chrysanthemum:{name:'Chrysanthemum', complexity:'Basic', desc:'A round burst like a peony, but with longer visible trails.'},
+    willow:{name:'Willow', complexity:'Medium', desc:'Long, graceful trails hang and fall after the burst.'},
+    ring:{name:'Ring', complexity:'Medium', desc:'A clean circular ring instead of a filled sphere.'},
+    palm:{name:'Palm', complexity:'Medium', desc:'A small number of thick branches spread outward like palm fronds.'},
+    crossette:{name:'Crossette', complexity:'Advanced', desc:'Primary streaks travel outward, then split into smaller branches.'},
+    horsetail:{name:'Horsetail', complexity:'Medium', desc:'The burst pours downward in a cascading curtain.'},
+    'double-ring':{name:'Double ring', complexity:'Advanced', desc:'Two concentric rings; mixtures with several colourants may show different ring colours.'},
+    heart:{name:'Heart', complexity:'Advanced', desc:'Particles trace a stylized heart outline.'},
+    smiley:{name:'Smiley face', complexity:'Advanced', desc:'A circular face with two eyes and a curved smile.'}
+  };
+
+  const byId = Object.fromEntries(CHEMS.map(c => [c.id,c]));
+  const SHELL_CAPACITY = 12;
+  const state = {mix:{}, lastMix:null, last:null, design:'peony', notebook:loadNotebook(), soundOn:loadSoundPref()};
+  const grid = document.getElementById('ingredientGrid');
+  const shellStage = document.getElementById('shellStage');
+  const shellContents = document.getElementById('shellContents');
+  const rocketFill = document.getElementById('rocketFill');
+  const rocketLayers = document.getElementById('rocketLayers');
+  const holdReadout = document.getElementById('holdReadout');
+  const launchBtn = document.getElementById('launchBtn');
+  const designSelect = document.getElementById('designSelect');
+  const dialog = document.getElementById('infoDialog');
+  const formulaDialog = document.getElementById('formulaDialog');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalBody = document.getElementById('modalBody');
+  const toast = document.getElementById('toast');
+  const canvas = document.getElementById('skyCanvas');
+  const ctx = canvas.getContext('2d');
+  let particles=[], rocketAnim=null, raf=0, dragSession=null, dragTicker=0, audioCtx=null, pendingFormulaLoad=null;
+
+
+  function totalMix(){return Object.values(state.mix).reduce((s,q)=>s+(q||0),0);}
+  function remainingCapacity(){return Math.max(0,Math.round((SHELL_CAPACITY-totalMix())*10)/10);}
+  function loadSoundPref(){try{const raw=localStorage.getItem('fireworkChemSound');return raw===null?true:raw==='1';}catch{return true;}}
+  function saveSoundPref(){try{localStorage.setItem('fireworkChemSound',state.soundOn?'1':'0')}catch{}}
+  function updateSoundToggle(){const btn=document.getElementById('soundToggle');btn.textContent=state.soundOn?'🔊':'🔇';btn.setAttribute('aria-pressed',state.soundOn?'true':'false');btn.setAttribute('aria-label',state.soundOn?'Turn sound off':'Turn sound on');btn.title=state.soundOn?'Sound on':'Sound off';}
+  function ensureAudio(){if(!state.soundOn) return null; const Ctx=window.AudioContext||window.webkitAudioContext; if(!Ctx) return null; if(!audioCtx) audioCtx=new Ctx(); if(audioCtx.state==='suspended') audioCtx.resume(); return audioCtx;}
+  function playWhoosh(){const ctx=ensureAudio(); if(!ctx) return; const now=ctx.currentTime; const dur=.34; const buffer=ctx.createBuffer(1, ctx.sampleRate*dur, ctx.sampleRate); const data=buffer.getChannelData(0); for(let i=0;i<data.length;i++){ const t=i/data.length; data[i]=(Math.random()*2-1)*(1-t)*0.32; } const noise=ctx.createBufferSource(); noise.buffer=buffer; const filter=ctx.createBiquadFilter(); filter.type='bandpass'; filter.frequency.setValueAtTime(540,now); filter.frequency.exponentialRampToValueAtTime(120, now+dur); const gain=ctx.createGain(); gain.gain.setValueAtTime(.0001,now); gain.gain.exponentialRampToValueAtTime(.11,now+.03); gain.gain.exponentialRampToValueAtTime(.0001,now+dur); noise.connect(filter).connect(gain).connect(ctx.destination); noise.start(now); noise.stop(now+dur); }
+  function playBurst(result){const ctx=ensureAudio(); if(!ctx) return; const now=ctx.currentTime; const burstDur=result.launchOutcome==='Dud'?.18:result.launchOutcome==='Weak burst'?.42:.75; const buffer=ctx.createBuffer(1, Math.floor(ctx.sampleRate*burstDur), ctx.sampleRate); const data=buffer.getChannelData(0); for(let i=0;i<data.length;i++){ const t=i/data.length; data[i]=(Math.random()*2-1)*(1-t)*(result.launchOutcome==='Dud'?.22:.5); } const noise=ctx.createBufferSource(); noise.buffer=buffer; const low=ctx.createBiquadFilter(); low.type='lowpass'; low.frequency.setValueAtTime(result.launchOutcome==='Dud'?520:1600, now); low.frequency.exponentialRampToValueAtTime(result.launchOutcome==='Dud'?180:420, now+burstDur); const gain=ctx.createGain(); gain.gain.setValueAtTime(.0001,now); gain.gain.exponentialRampToValueAtTime(result.launchOutcome==='Dud'?.08:.22, now+.01); gain.gain.exponentialRampToValueAtTime(.0001, now+burstDur); noise.connect(low).connect(gain).connect(ctx.destination); noise.start(now); noise.stop(now+burstDur); if(result.launchOutcome!=='Dud'){ const osc=ctx.createOscillator(); const og=ctx.createGain(); osc.type='triangle'; osc.frequency.setValueAtTime(result.launchOutcome==='Weak burst'?220:330, now); osc.frequency.exponentialRampToValueAtTime(120, now+.35); og.gain.setValueAtTime(.0001,now); og.gain.exponentialRampToValueAtTime(.05,now+.015); og.gain.exponentialRampToValueAtTime(.0001,now+.42); osc.connect(og).connect(ctx.destination); osc.start(now); osc.stop(now+.44); }}
+  function fillLayerStyle(c){
+    if(c.family==='Spark metal'){
+      const dot = c.id==='fe' ? 'rgba(255,198,110,.75)' : c.id==='mg' ? 'rgba(255,250,220,.9)' : 'rgba(235,244,255,.82)';
+      const base = c.id==='fe' ? 'rgba(145,88,22,.82)' : 'rgba(92,108,126,.72)';
+      return `background:${base};background-image:radial-gradient(circle at 20% 28%, ${dot} 0 1.2px, transparent 1.6px),radial-gradient(circle at 65% 55%, ${dot} 0 1.2px, transparent 1.6px),radial-gradient(circle at 42% 80%, ${dot} 0 1.1px, transparent 1.5px),linear-gradient(180deg, rgba(255,255,255,.15), rgba(0,0,0,.12));background-size:18px 18px,21px 21px,16px 16px,100% 100%;`;
+    }
+    return `background:linear-gradient(180deg, ${c.color}, ${c.color}bb);`;
+  }
+  function renderRocketLayers(entries,total){
+    rocketLayers.innerHTML='';
+    if(!entries.length||total<=0){rocketFill.style.background='transparent';return;}
+    rocketFill.style.background='linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02))';
+    let used=0;
+    entries.forEach(([id,q])=>{
+      const c=byId[id]; if(!c||q<=0)return;
+      const layer=document.createElement('div');
+      layer.className='fill-layer'+(c.family==='Spark metal'?' spark':'');
+      const height=(q/total)*100;
+      layer.style.bottom=used+'%';
+      layer.style.height=height+'%';
+      layer.style.cssText += ';'+fillLayerStyle(c);
+      rocketLayers.appendChild(layer);
+      used += height;
+    });
+  }
+
+  function renderDragPreview(id,qty){
+    const baseEntries=Object.entries(state.mix).filter(([,q])=>q>0);
+    const tempQty=Math.min(qty,remainingCapacity());
+    const previewTotal=Math.min(SHELL_CAPACITY,totalMix()+tempQty);
+    rocketFill.style.height=Math.min(86,(previewTotal/SHELL_CAPACITY)*86)+'%';
+    document.getElementById('mixTotal').textContent=`${fmt(previewTotal)} / ${SHELL_CAPACITY.toFixed(1)} u`;
+    document.getElementById('shellCap').textContent=`Capacity: ${fmt(previewTotal)} / ${SHELL_CAPACITY.toFixed(1)} u`;
+    if(tempQty<=0){renderRocketLayers(baseEntries,totalMix());return;}
+    renderRocketLayers(baseEntries.concat([[id,tempQty]]),previewTotal);
+  }
+  function renderShelf(){
+    grid.innerHTML='';
+    CHEMS.forEach(c=>{
+      const el=document.createElement('div');
+      el.className='chem'; el.dataset.id=c.id;
+      el.innerHTML=`<div class="chem-top"><div><div class="chem-name">${c.name}</div><div class="formula">${c.formula}</div></div><span class="chip">${c.family}</span></div><div class="chem-effect"><span class="dot" style="background:${c.color}"></span>${c.hue}</div><div class="chem-bottom"><span class="drag-cue">Drag to shell</span><button class="info" type="button" aria-label="About ${c.name}">i</button></div>`;
+      el.querySelector('.info').addEventListener('pointerdown',e=>e.stopPropagation());
+      el.querySelector('.info').addEventListener('click',e=>{e.stopPropagation();showChemInfo(c);});
+      el.addEventListener('pointerdown',e=>startPointerDrag(e,c,el));
+      grid.appendChild(el);
+    });
+  }
+
+  function startPointerDrag(e,c,el){
+    if(e.button!==undefined && e.button!==0)return;
+    if(e.target.closest('button'))return;
+    dragSession={id:c.id,source:el,pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,x:e.clientX,y:e.clientY,active:false,inside:false,insideStarted:0,insideMs:0,ghost:null,fullNotified:false};
+    window.addEventListener('pointermove',movePointerDrag,{passive:false});
+    window.addEventListener('pointerup',endPointerDrag,{passive:false,once:true});
+    window.addEventListener('pointercancel',cancelPointerDrag,{passive:false,once:true});
+  }
+
+  function movePointerDrag(e){
+    const s=dragSession;if(!s||e.pointerId!==s.pointerId)return;
+    s.x=e.clientX;s.y=e.clientY;
+    if(!s.active && Math.hypot(s.x-s.startX,s.y-s.startY)>7){
+      s.active=true;s.source.classList.add('dragging');
+      s.ghost=document.createElement('div');s.ghost.className='drag-ghost';
+      const c=byId[s.id];s.ghost.innerHTML=`<b>${c.name}</b><small>${c.formula} · hold over shell</small>`;document.body.appendChild(s.ghost);
+      clearInterval(dragTicker);dragTicker=setInterval(updateDragReadout,60);
+    }
+    if(!s.active)return;
+    e.preventDefault();
+    s.ghost.style.left=s.x+'px';s.ghost.style.top=s.y+'px';
+    const inside=isInsideShell(s.x,s.y);
+    if(inside!==s.inside){
+      if(inside){s.insideStarted=performance.now();shellStage.classList.add('over');}
+      else{s.insideMs+=Math.max(0,performance.now()-s.insideStarted);s.insideStarted=0;shellStage.classList.remove('over');}
+      s.inside=inside;
+    }
+    updateDragReadout();
+  }
+
+  function updateDragReadout(){
+    const s=dragSession;if(!s||!s.active)return;
+    const ms=s.insideMs+(s.inside&&s.insideStarted?performance.now()-s.insideStarted:0);
+    const room=remainingCapacity();
+    if(room<=0){
+      shellStage.classList.add('full');
+      if(!s.fullNotified){pulseToast('Shell full');s.fullNotified=true;}
+      holdReadout.textContent='Shell full · 12.0 / 12.0 u';
+      document.getElementById('mixTotal').textContent='12 / 12.0 u';
+      document.getElementById('shellCap').textContent='Capacity: 12 / 12.0 u';
+      rocketFill.style.height='86%';
+      renderRocketLayers(Object.entries(state.mix).filter(([,q])=>q>0),totalMix());
+      return;
+    }
+    const rawQty=amountFromHold(ms);
+    const qty=Math.min(rawQty,room);
+    if(s.inside){
+      renderDragPreview(s.id,qty);
+      if(rawQty>=room-.001){
+        shellStage.classList.add('full');
+        if(!s.fullNotified){pulseToast('Shell full');s.fullNotified=true;}
+        holdReadout.textContent='Shell full · release to add the remaining '+room.toFixed(1)+' u';
+      }else{
+        shellStage.classList.remove('full');
+        holdReadout.textContent=`Release to add · about ${qty.toFixed(1)} u`;
+      }
+    }else{
+      shellStage.classList.remove('full');
+      const committed=totalMix();
+      document.getElementById('mixTotal').textContent=`${fmt(committed)} / ${SHELL_CAPACITY.toFixed(1)} u`;
+      document.getElementById('shellCap').textContent=`Capacity: ${fmt(committed)} / ${SHELL_CAPACITY.toFixed(1)} u`;
+      rocketFill.style.height=Math.min(86,(committed/SHELL_CAPACITY)*86)+'%';
+      renderRocketLayers(Object.entries(state.mix).filter(([,q])=>q>0),committed);
+      holdReadout.textContent=`Move over shell · ${qty.toFixed(1)} u held`;
+    }
+  }
+
+  function endPointerDrag(e){
+    const s=dragSession;if(!s||e.pointerId!==s.pointerId){cleanupDrag();return;}
+    if(s.active){
+      e.preventDefault();
+      if(s.inside&&s.insideStarted)s.insideMs+=Math.max(0,performance.now()-s.insideStarted);
+      const inside=isInsideShell(e.clientX,e.clientY);
+      if(inside){
+        const room=remainingCapacity();
+        if(room<=0){ pulseToast('Shell is full'); }
+        else {
+          const rawQty=amountFromHold(s.insideMs);
+          let qty;
+          if(rawQty>=room-.001) qty=room;
+          else {
+            const jitter=1+(Math.random()*.10-.05); // small fictional measuring variation
+            qty=Math.max(.2,Math.min(5,Math.round(rawQty*jitter*10)/10));
+          }
+          addChemical(s.id,qty);
+        }
+      }else pulseToast('Drag cancelled');
+    }
+    cleanupDrag();
+  }
+
+  function cancelPointerDrag(){cleanupDrag();}
+  function cleanupDrag(){
+    const s=dragSession;
+    if(s){s.source?.classList.remove('dragging');s.ghost?.remove();}
+    shellStage.classList.remove('over','full');holdReadout.textContent='Release to add · 0.0 u';
+    const committed=totalMix();
+    document.getElementById('mixTotal').textContent=`${fmt(committed)} / ${SHELL_CAPACITY.toFixed(1)} u`;
+    document.getElementById('shellCap').textContent=`Capacity: ${fmt(committed)} / ${SHELL_CAPACITY.toFixed(1)} u`;
+    rocketFill.style.height=Math.min(86,(committed/SHELL_CAPACITY)*86)+'%';
+    renderRocketLayers(Object.entries(state.mix).filter(([,q])=>q>0), committed);
+    clearInterval(dragTicker);dragTicker=0;dragSession=null;
+    window.removeEventListener('pointermove',movePointerDrag);window.removeEventListener('pointerup',endPointerDrag);window.removeEventListener('pointercancel',cancelPointerDrag);
+  }
+  function isInsideShell(x,y){const r=shellStage.getBoundingClientRect();return x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom;}
+  function amountFromHold(ms){if(ms<=0)return 0;return Math.min(5,Math.max(.2,.2+(ms/1000)*.95));}
+
+
+  function addChemical(id,qty){
+    const room=remainingCapacity();
+    if(room<=0){pulseToast('Shell is full');return;}
+    const actual=Math.round(Math.min(qty,room)*10)/10;
+    state.mix[id]=Math.round(((state.mix[id]||0)+actual)*10)/10;
+    renderShell();
+    pulseToast(`${byId[id].name}: +${actual.toFixed(1)} simulation units${actual<qty?' (capacity limit reached)':''}`);
+  }
+  function removeChemical(id){delete state.mix[id];renderShell();}
+
+  function renderShell(){
+    const entries=Object.entries(state.mix).filter(([,q])=>q>0);
+    const total=entries.reduce((s,[,q])=>s+q,0);
+    document.getElementById('mixTotal').textContent=`${fmt(total)} / ${SHELL_CAPACITY.toFixed(1)} u`;
+    document.getElementById('shellCap').textContent=`Capacity: ${fmt(total)} / ${SHELL_CAPACITY.toFixed(1)} u`;
+    launchBtn.disabled=total<=0;
+    const preview=calculate(state.mix,false);
+    const rel=assessReliability(state.mix,false);
+    document.getElementById('previewName').textContent=total?preview.name:'—';
+    document.getElementById('reliability').textContent=total?rel.label:'—';
+    document.getElementById('loadStatus').textContent=total?rel.loadLabel:'Empty';
+    const room=remainingCapacity();
+    document.getElementById('shellState').textContent=total?`${entries.length} material${entries.length===1?'':'s'} loaded · ${rel.label} virtual reliability · ${room<=0?'shell full':fmt(room)+' u free'}`:'Shell empty';
+    rocketFill.style.height=Math.min(86,(total/SHELL_CAPACITY)*86)+'%';
+    renderRocketLayers(entries,total);
+    setSteps(total?2:1);
+    if(!entries.length){shellContents.innerHTML='<div class="empty">Drag chemicals into the shell to begin.</div>';return;}
+    shellContents.innerHTML='';
+    entries.forEach(([id,q])=>{
+      const c=byId[id],row=document.createElement('div');row.className='mix-row';
+      row.innerHTML=`<div><div class="mix-title"><span class="dot" style="background:${c.color}"></span>${c.name}</div><div class="mix-meta">${c.formula} · ${fmt(q)} u</div></div><button class="remove-one" type="button" aria-label="Remove ${c.name}">×</button>`;
+      row.querySelector('button').addEventListener('click',()=>removeChemical(id));shellContents.appendChild(row);
+    });
+  }
+
+  function groupedEmitterAmounts(mix){
+    const out={};
+    for(const [id,q] of Object.entries(mix)){const c=byId[id];if(!c||c.family!=='Colourant')continue;const key=c.emitter||id;out[key]=(out[key]||0)+q*c.strength;}
+    return out;
+  }
+
+  function calculate(mix,withVariation=true){
+    const entries=Object.entries(mix).filter(([id,q])=>byId[id]&&q>0);
+    if(!entries.length)return{rgb:[127,139,151],css:'#7f8b97',name:'No colour',purity:0,spark:'None',dominant:'—',blueStability:'—',explain:'No colour-producing material is present.',tags:[],colorants:[],sparks:[]};
+    const colorants=entries.filter(([id])=>byId[id].family==='Colourant');
+    const sparks=entries.filter(([id])=>byId[id].family==='Spark metal');
+    const emitter=groupedEmitterAmounts(mix);
+    const totalSpark=sparks.reduce((s,[,q])=>s+q,0);
+    let rgb=[125,135,145],purity=55,dominant='Incandescence',name='White / metallic effect',explainParts=[],tags=[];
+
+    if(colorants.length){
+      let weights=colorants.map(([id,q])=>[id,q*byId[id].strength]);
+      const sodiumIndices=weights.map((x,i)=>byId[x[0]].emitter==='na'?i:-1).filter(i=>i>=0);
+      if(sodiumIndices.length){
+        const naWeight=sodiumIndices.reduce((s,i)=>s+weights[i][1],0),other=weights.reduce((s,[id,w])=>s+(byId[id].emitter==='na'?0:w),0);
+        if(naWeight>other*.18){sodiumIndices.forEach(i=>weights[i][1]*=1.45);tags.push('sodium-dominance');}
+      }
+      const wsum=weights.reduce((s,[,w])=>s+w,0);
+      rgb=[0,0,0];weights.forEach(([id,w])=>{const c=byId[id];for(let i=0;i<3;i++)rgb[i]+=c.rgb[i]*w/wsum;});
+      dominant=byId[weights.slice().sort((a,b)=>b[1]-a[1])[0][0]].name;
+      const emitterShares=Object.values(emitter).map(w=>w/Object.values(emitter).reduce((a,b)=>a+b,0)).sort((a,b)=>b-a);
+      purity=Math.round(96-Math.max(0,Object.keys(emitter).length-1)*7-(emitterShares[1]||0)*24);
+
+      const hasSr=(emitter.sr||0)>0,hasCu=(emitter.cu||0)>0,hasNa=(emitter.na||0)>0;
+      if(hasSr&&hasCu){
+        const ratio=emitter.sr/emitter.cu;
+        if(ratio>.55&&ratio<1.8&&(!hasNa||emitter.na<(emitter.sr+emitter.cu)*.12)){
+          rgb=[151,72,219];name='Purple';purity=Math.max(purity,84);tags.push('purple-pair');explainParts.push('Balanced strontium red and copper blue contributions combine visually toward purple.');
+        }
+      }
+      if(name==='White / metallic effect')name=nearestColorName(rgb);
+
+      if(hasNa){
+        const naShare=emitter.na/Object.values(emitter).reduce((a,b)=>a+b,0);
+        if(naShare>.22){name=naShare>.52?'Sodium yellow':'Warm yellow blend';purity=Math.max(34,purity-9);explainParts.push('Sodium has a very intense yellow emission, so it masks part of the weaker colour signal.');}
+      }
+
+      if(hasCu){
+        let stability=92-Math.min(42,totalSpark*6.5)-(hasNa?Math.min(34,(emitter.na||0)*6):0)-Math.max(0,Object.keys(emitter).length-2)*8;
+        if(withVariation)stability+=Math.random()*10-5;stability=Math.max(22,Math.min(96,Math.round(stability)));
+        if(stability<64){const wash=(64-stability)/90;rgb=rgb.map(v=>Math.round(v+(235-v)*wash));purity-=Math.round((64-stability)*.34);tags.push('blue-washout');explainParts.push('The copper-blue component was partly washed out because blue is modeled as less tolerant of a crowded or contaminated colour environment.');}
+        var blueStability=stability+'%';
+      }else var blueStability='Not applicable';
+
+      if(Object.keys(emitter).length>=4){purity-=10;tags.push('crowded');explainParts.push('Several different emitters compete at once, so the colour appears less spectrally clean and more muddied.');}
+    }else var blueStability='Not applicable';
+
+    if(sparks.length){
+      const white=sparks.reduce((s,[id,q])=>s+q*(byId[id].white||0),0),gold=sparks.reduce((s,[id,q])=>s+q*(byId[id].gold||0),0);
+      const bright=Math.min(.4,totalSpark*.055+white*.035);rgb=rgb.map(v=>Math.round(v+(255-v)*bright));
+      if(colorants.length)purity-=Math.round(Math.min(18,totalSpark*2.3));
+      explainParts.push('Burning metal particles add incandescent brightness and sparks on top of the ionic colour emission.');
+      var spark=gold>white*.75?'Gold-orange sparks':white>0?'Bright silver/white sparks':'Metal sparks';if(mix.ti)spark+=' · long trails';
+    }else var spark='Minimal';
+
+    purity=Math.max(22,Math.min(98,Math.round(purity+(withVariation?(Math.random()*6-3):0))));rgb=rgb.map(v=>Math.max(0,Math.min(255,Math.round(v))));
+    if(!explainParts.length&&colorants.length)explainParts.push(`${dominant} provides the strongest visible emission in this mixture.`);
+    return{rgb,css:rgbToHex(rgb),name,purity,spark,dominant,blueStability,explain:explainParts.join(' '),tags,colorants,sparks};
+  }
+
+  function assessReliability(mix,randomize=true){
+    const entries=Object.entries(mix).filter(([id,q])=>byId[id]&&q>0),total=entries.reduce((s,[,q])=>s+q,0),types=entries.length;
+    const sparkTotal=entries.filter(([id])=>byId[id].family==='Spark metal').reduce((s,[,q])=>s+q,0);
+    const moistureLoad=entries.reduce((s,[id,q])=>s+(byId[id].moistureSensitive?Math.min(q,2.5):0),0);
+    let risk=.025;
+    if(total>8)risk+=Math.min(.24,(total-8)*.018);
+    if(types>4)risk+=Math.min(.20,(types-4)*.045);
+    if(sparkTotal>5)risk+=Math.min(.13,(sparkTotal-5)*.025);
+    risk+=Math.min(.11,moistureLoad*.009);
+    risk=Math.max(.02,Math.min(.48,risk));
+    let label=risk<.10?'High':risk<.23?'Moderate':'Low';
+    let loadLabel=total<3.5?'Light':total<7.5?'Balanced':total<SHELL_CAPACITY?'Heavy':'Full';
+    if(!randomize)return{risk,label,loadLabel};
+    const roll=Math.random();
+    if(roll<risk*.52)return{risk,label,loadLabel,outcome:'Dud',factor:.06,reason:chooseDudReason({total,types,sparkTotal,moistureLoad})};
+    if(roll<risk)return{risk,label,loadLabel,outcome:'Weak burst',factor:.34,reason:chooseDudReason({total,types,sparkTotal,moistureLoad})};
+    if(roll<risk+Math.min(.14,risk*.7))return{risk,label,loadLabel,outcome:'Partial burst',factor:.62,reason:'The fictional shell experienced a small ignition/packing variation, so only part of the visual load dispersed cleanly.'};
+    return{risk,label,loadLabel,outcome:'Clean launch',factor:1,reason:'The virtual shell ignited and dispersed normally.'};
+  }
+
+  function chooseDudReason(x){
+    const candidates=[];
+    if(x.total>10)candidates.push('The virtual shell was overloaded with decorative material, diluting the fictional base charge enough to give unreliable ignition.');
+    if(x.types>5)candidates.push('Too many different visual materials crowded the virtual shell, increasing the game’s chance of an uneven or failed burn.');
+    if(x.moistureLoad>2)candidates.push('Moisture-sensitive colour salts contributed to a simulated dampness problem, interfering with reliable ignition.');
+    if(x.sparkTotal>6)candidates.push('A very heavy spark-metal load made the fictional shell harder to ignite evenly.');
+    candidates.push('A random simulated moisture or packing variation interfered with reliable ignition.');
+    return candidates[Math.floor(Math.random()*candidates.length)];
+  }
+
+  function nearestColorName([r,g,b]){const refs=[['Crimson red',[235,45,62]],['Red-orange',[247,78,40]],['Orange',[255,128,34]],['Yellow',[255,210,31]],['Yellow-green',[115,211,89]],['Green',[64,201,99]],['Blue-green',[41,170,192]],['Blue',[44,116,242]],['Violet',[158,104,237]],['Pink-red',[232,66,112]],['Pale white',[235,240,245]]];return refs.map(x=>[x[0],Math.hypot(r-x[1][0],g-x[1][1],b-x[1][2])]).sort((a,b)=>a[1]-b[1])[0][0];}
+  function rgbToHex(rgb){return '#'+rgb.map(v=>v.toString(16).padStart(2,'0')).join('');}
+  function fmt(n){return Number(n).toFixed(Math.abs(n-Math.round(n))<.001?0:1);}
+
+  function updateDesign(){state.design=designSelect.value;const d=DESIGNS[state.design];document.getElementById('designDesc').textContent=d.desc;document.getElementById('complexity').textContent=d.complexity;if(Object.keys(state.mix).length)setSteps(2);}
+  designSelect.addEventListener('change',updateDesign);
+  document.getElementById('soundToggle').addEventListener('click',()=>{state.soundOn=!state.soundOn; updateSoundToggle(); saveSoundPref(); if(state.soundOn) ensureAudio();});
+  document.getElementById('clearMix').addEventListener('click',()=>{state.mix={};renderShell();});
+  launchBtn.addEventListener('click',launch);
+  function setSteps(n){for(let i=1;i<=4;i++)document.getElementById('s'+i).classList.toggle('active',i===n);}
+
+  function launch(){
+    if(!Object.keys(state.mix).length)return;
+    setSteps(3);launchBtn.disabled=true;playWhoosh();
+    const snapshot=JSON.parse(JSON.stringify(state.mix)),result=calculate(snapshot,true),rel=assessReliability(snapshot,true);
+    result.launchOutcome=rel.outcome;result.failureReason=rel.reason;result.effectFactor=rel.factor;result.pattern=DESIGNS[state.design].name;result.design=state.design;result.reliability=rel.label;
+    state.last=result;state.lastMix=snapshot;
+    animateFirework(result,()=>{showResult(result);recordExperiment(result,snapshot);setSteps(4);launchBtn.disabled=false;});
+  }
+
+  function resizeCanvas(){const rect=canvas.getBoundingClientRect(),dpr=Math.min(2,window.devicePixelRatio||1),w=Math.max(300,Math.round(rect.width*dpr)),h=Math.round(parseFloat(getComputedStyle(canvas).height)*dpr);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}}
+  window.addEventListener('resize',resizeCanvas);resizeCanvas();
+
+  function animateFirework(result,done){
+    resizeCanvas();particles=[];
+    const low=result.launchOutcome==='Dud';
+    rocketAnim={x:canvas.width*.5,y:canvas.height*.96,vy:low?-canvas.height*.004:-canvas.height*.0125,phase:'rise',result,done,burstY:low?canvas.height*.78:canvas.height*(.28+Math.random()*.16),frames:0};
+    if(raf)cancelAnimationFrame(raf);let last=performance.now();
+    function frame(t){const dt=Math.min(2.2,(t-last)/16.67);last=t;ctx.clearRect(0,0,canvas.width,canvas.height);drawSky();
+      if(rocketAnim&&rocketAnim.phase==='rise'){
+        rocketAnim.frames+=dt;rocketAnim.y+=rocketAnim.vy*dt;rocketAnim.vy*=.998;drawRocketDot(rocketAnim.x,rocketAnim.y);
+        if(rocketAnim.y<=rocketAnim.burstY||rocketAnim.frames>185){burst(rocketAnim.x,rocketAnim.y,result);rocketAnim.phase='burst';}
+      }
+      updateParticles(dt);drawParticles();
+      if(rocketAnim&&rocketAnim.phase==='burst'&&particles.length===0){const cb=rocketAnim.done;rocketAnim=null;cancelAnimationFrame(raf);raf=0;cb&&cb();return;}
+      raf=requestAnimationFrame(frame);
+    }
+    raf=requestAnimationFrame(frame);
+  }
+
+  function drawSky(){ctx.fillStyle='#02060e';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.globalAlpha=.55;ctx.fillStyle='#dce8ff';for(let i=0;i<48;i++){const x=(i*137.3)%canvas.width,y=(i*71.7)%(canvas.height*.68);ctx.fillRect(x,y,Math.max(1,canvas.width/850),Math.max(1,canvas.width/850));}ctx.globalAlpha=1;const g=ctx.createLinearGradient(0,canvas.height*.75,0,canvas.height);g.addColorStop(0,'rgba(9,22,34,0)');g.addColorStop(1,'rgba(24,55,61,.65)');ctx.fillStyle=g;ctx.fillRect(0,canvas.height*.65,canvas.width,canvas.height*.35);}
+  function drawRocketDot(x,y){const scale=canvas.width/820;ctx.save();ctx.fillStyle='#ffcf72';ctx.shadowBlur=18;ctx.shadowColor='#ff9b38';ctx.beginPath();ctx.arc(x,y,3.5*scale,0,Math.PI*2);ctx.fill();ctx.restore();for(let i=0;i<2;i++)particles.push({kind:'p',x,y:y+3,vx:(Math.random()-.5)*.4,vy:1.1+Math.random()*.7,life:22,max:22,size:1.7*scale,color:'#ffad55',gravity:.02*scale,trail:false});}
+
+  function makeParticle(x,y,vx,vy,color,life,size,gravity,trail=true,extra={}){particles.push({kind:'p',x,y,vx,vy,color,life,max:life,size,gravity,trail,...extra});}
+  function effectColors(result){return [result.css];}
+  function pickColor(cols,i=0){return cols[i%cols.length];}
+
+  function burst(x,y,result){ playBurst(result);
+    const scale=canvas.width/820,cols=effectColors(result),f=result.effectFactor;
+    if(result.launchOutcome==='Dud'){
+      for(let i=0;i<7;i++){const a=Math.random()*Math.PI*2,s=(.4+Math.random()*1.2)*scale;makeParticle(x,y,Math.cos(a)*s,Math.sin(a)*s,result.css,18+Math.random()*16,1.4*scale,.08*scale,true);}
+      return;
+    }
+    const design=result.design;
+    if(design==='ring'||design==='double-ring')spawnRing(x,y,result,scale,cols,f,design==='double-ring');
+    else if(design==='heart')spawnHeart(x,y,result,scale,cols,f);
+    else if(design==='smiley')spawnSmiley(x,y,result,scale,cols,f);
+    else if(design==='palm')spawnPalm(x,y,result,scale,cols,f);
+    else if(design==='horsetail')spawnHorsetail(x,y,result,scale,cols,f);
+    else if(design==='crossette')spawnCrossette(x,y,result,scale,cols,f);
+    else spawnRadial(x,y,result,scale,cols,f,design);
+    addMetalSparks(x,y,result,scale,f);
+  }
+
+  function spawnRadial(x,y,result,scale,cols,f,design){
+    const n=Math.round((86+result.purity*.42)*f),long=design==='chrysanthemum'||design==='willow';
+    for(let i=0;i<n;i++){
+      const a=Math.random()*Math.PI*2;let s=(2.4+Math.random()*4.0)*scale;
+      if(design==='willow')s*=.72;
+      const life=(design==='willow'?128:long?102:76)+Math.random()*(design==='willow'?48:36);
+      const gravity=(design==='willow'?.085:.055)*scale;
+      makeParticle(x,y,Math.cos(a)*s,Math.sin(a)*s,pickColor(cols,i),life,(1.3+Math.random()*1.6)*scale,gravity,true,{drag:design==='willow'?.985:.991});
+    }
+  }
+  function spawnRing(x,y,result,scale,cols,f,doubleRing){
+    const rings=doubleRing?[1,.58]:[1],base=Math.max(20,Math.round(92*f));
+    rings.forEach((radius,ri)=>{const n=Math.round(base*(ri?0.72:1));for(let i=0;i<n;i++){const a=(i/n)*Math.PI*2+(Math.random()-.5)*.025,s=(4.9*radius+(Math.random()-.5)*.35)*scale;makeParticle(x,y,Math.cos(a)*s,Math.sin(a)*s,pickColor(cols,ri),78+Math.random()*25,1.7*scale,.045*scale,true);}});
+  }
+  function spawnHeart(x,y,result,scale,cols,f){
+    const n=Math.max(28,Math.round(100*f));for(let i=0;i<n;i++){const t=(i/n)*Math.PI*2,X=16*Math.pow(Math.sin(t),3),Y=13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t);const mag=5.1*scale/18;makeParticle(x,y,-X*mag,-Y*mag,pickColor(cols,i),90+Math.random()*18,1.7*scale,.04*scale,true);}
+  }
+  function spawnSmiley(x,y,result,scale,cols,f){
+    const ringN=Math.max(24,Math.round(70*f));for(let i=0;i<ringN;i++){const a=i/ringN*Math.PI*2,s=4.8*scale;makeParticle(x,y,Math.cos(a)*s,Math.sin(a)*s,pickColor(cols,0),88+Math.random()*12,1.6*scale,.035*scale,true);}
+    for(const ex of [-1,1])for(let j=0;j<7;j++){const ox=ex*(1.35+Math.random()*.22)*scale,oy=(-1.25+Math.random()*.45)*scale;makeParticle(x,y,ox,oy,pickColor(cols,1),88,1.9*scale,.035*scale,true);}
+    const mouthN=Math.max(12,Math.round(24*f));for(let i=0;i<mouthN;i++){const a=Math.PI*.20+(i/(mouthN-1))*Math.PI*.60;const vx=Math.cos(a)*2.8*scale,vy=Math.sin(a)*2.55*scale;makeParticle(x,y,vx,vy,pickColor(cols,1),88,1.7*scale,.035*scale,true);}
+  }
+  function spawnPalm(x,y,result,scale,cols,f){
+    const branches=Math.max(5,Math.round(8*f));for(let b=0;b<branches;b++){const a=(Math.PI*1.08)+(b/(branches-1))*Math.PI*.84+(Math.random()-.5)*.08;for(let j=0;j<6;j++){const s=(2.1+j*.58+Math.random()*.25)*scale;makeParticle(x,y,Math.cos(a)*s,Math.sin(a)*s,pickColor(cols,b),96+Math.random()*30,2.0*scale,.065*scale,true,{drag:.987});}}
+  }
+  function spawnHorsetail(x,y,result,scale,cols,f){
+    const n=Math.max(34,Math.round(92*f));for(let i=0;i<n;i++){const a=-Math.PI/2+(Math.random()-.5)*1.18,s=(1.8+Math.random()*3.0)*scale;makeParticle(x,y,Math.cos(a)*s,Math.sin(a)*s,pickColor(cols,i),108+Math.random()*42,1.7*scale,.095*scale,true,{drag:.988});}
+  }
+  function spawnCrossette(x,y,result,scale,cols,f){
+    const n=Math.max(12,Math.round(28*f));for(let i=0;i<n;i++){const a=i/n*Math.PI*2+(Math.random()-.5)*.12,s=(3.3+Math.random()*1.5)*scale;makeParticle(x,y,Math.cos(a)*s,Math.sin(a)*s,pickColor(cols,i),82+Math.random()*15,2.0*scale,.05*scale,true,{splitAt:43+Math.random()*9,splitDone:false});}
+  }
+  function addMetalSparks(x,y,result,scale,f){(result.sparks||[]).forEach(([id,q])=>{const c=byId[id],count=Math.round(q*12*f);for(let i=0;i<count;i++){const a=Math.random()*Math.PI*2,s=(2+Math.random()*5.2)*scale;makeParticle(x,y,Math.cos(a)*s,Math.sin(a)*s,c.color,(id==='ti'?112:76)+Math.random()*42,(1.2+Math.random()*1.7)*scale,(id==='fe'?.075:.045)*scale,true,{spark:id,drag:.99});}});}
+
+  function updateParticles(dt){
+    const additions=[];
+    for(const p of particles){
+      p.x+=p.vx*dt;p.y+=p.vy*dt;const drag=p.drag||.991;p.vx*=Math.pow(drag,dt);p.vy=(p.vy+p.gravity*dt)*Math.pow(.996,dt);p.life-=dt;
+      if(p.splitAt&&!p.splitDone&&p.life<=p.splitAt){p.splitDone=true;for(let k=0;k<4;k++){const a=Math.atan2(p.vy,p.vx)+(k-1.5)*.52;const s=Math.hypot(p.vx,p.vy)*.65;additions.push({kind:'p',x:p.x,y:p.y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,color:p.color,life:45,max:45,size:p.size*.75,gravity:p.gravity*1.1,trail:true,drag:.989});}p.life=0;}
+    }
+    if(additions.length)particles.push(...additions);
+    particles=particles.filter(p=>p.life>0&&p.x>-50&&p.x<canvas.width+50&&p.y<canvas.height+70);
+  }
+  function drawParticles(){for(const p of particles){const alpha=Math.max(0,Math.min(1,p.life/p.max));ctx.save();ctx.globalAlpha=alpha;ctx.strokeStyle=p.color;ctx.fillStyle=p.color;ctx.shadowBlur=p.spark?8:13;ctx.shadowColor=p.color;if(p.trail){ctx.lineWidth=Math.max(1,p.size*.62);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x-p.vx*2.8,p.y-p.vy*2.8);ctx.stroke();}else{ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();}ctx.restore();}}
+
+  function showResult(r){
+    const sw=document.getElementById('swatch');sw.style.background=`radial-gradient(circle at 40% 35%,#fff 0 3%,${r.css} 18%,${r.css} 54%,#101825 100%)`;sw.style.boxShadow=`0 0 30px ${r.css}55`;
+    document.getElementById('resultName').textContent=r.launchOutcome==='Dud'?'Dud':r.name;
+    document.getElementById('resultSub').textContent=r.launchOutcome==='Clean launch'?`${r.pattern} · ${r.css.toUpperCase()} · qualitative chemistry model`:`${r.launchOutcome} · ${r.pattern}`;
+    document.getElementById('launchResult').textContent=r.launchOutcome;document.getElementById('purity').textContent=r.launchOutcome==='Dud'?'Not observed':r.purity+'%';document.getElementById('spark').textContent=r.launchOutcome==='Dud'?'Minimal':r.spark;document.getElementById('dominant').textContent=r.dominant;document.getElementById('blueStability').textContent=r.blueStability;document.getElementById('patternMetric').textContent=r.pattern;
+    document.getElementById('scienceNote').textContent=r.launchOutcome==='Clean launch'?r.explain:`${r.failureReason} ${r.launchOutcome==='Dud'?'The colour chemistry was loaded, but there was not enough successful virtual ignition to display it normally.':'The chemistry still appeared, but the burst was reduced.'}`;
+  }
+
+  function showChemInfo(c){
+    modalTitle.textContent=c.name;modalBody.innerHTML=`<div class="formula-big">${c.formula}</div><p><strong>Simulated effect:</strong> ${c.hue}${c.spark?` · ${c.spark}`:''}</p><p>${c.info}</p><p><strong>In this app:</strong> drag time controls fictional simulation units only. A small random variation is added to each pour. These amounts do not correspond to grams, percentages, or real firework ratios.</p><div class="source-note">Science basis: qualitative firework-colour relationships from American Chemical Society and Open University educational materials. Energetic ingredients and real formulations are intentionally omitted.</div>`;dialog.showModal();
+  }
+
+  function showWhy(){
+    const r=state.last;if(!r){modalTitle.textContent='How the simulation works';modalBody.innerHTML='<p>Heat can excite electrons in atoms or ions. When they return to lower-energy states, they emit photons at characteristic wavelengths, which is why different metal-containing compounds can produce different colours.</p><p>Metals such as magnesium, aluminum, titanium, and iron can also glow by <strong>incandescence</strong>, creating bright white, silver, or gold-orange sparks.</p><p>The burst shapes are visual simulations of familiar patterns such as peony, chrysanthemum, willow, crossette, rings, hearts, and faces. The app does not model real shell construction.</p><div class="source-note">The explosive charge, ratios, preparation, and construction are deliberately abstracted.</div>';dialog.showModal();return;}
+    const mix=Object.entries(state.lastMix||{}).map(([id,q])=>`<li><strong>${byId[id].name}</strong> (${byId[id].formula}) — ${fmt(q)} simulation units</li>`).join('');
+    modalTitle.textContent='Why this launch looked this way';
+    modalBody.innerHTML=`<p><strong>Launch:</strong> ${r.launchOutcome}. <strong>Design:</strong> ${r.pattern}.</p><p>${r.failureReason}</p>${r.launchOutcome!=='Dud'?`<p><strong>Colour result:</strong> ${r.name}, ${r.purity}% simulated colour purity.</p><p>${r.explain}</p>`:''}<ul>${mix}</ul><p>Sodium is intentionally modeled as a very strong yellow emitter. Copper-blue is less forgiving, and crowded mixtures lose colour purity. Spark metals are treated as incandescent effects layered on top of the ionic colour.</p><p>Duds and weak bursts come from fictional shell-load, crowding, moisture, and packing rules. They are deliberately not predictive real-world formulation rules.</p><div class="source-note">Educational colour model only; not a pyrotechnic formulation tool.</div>`;dialog.showModal();
+  }
+
+  document.getElementById('whyBtn').addEventListener('click',showWhy);document.getElementById('swatch').addEventListener('click',showWhy);document.getElementById('closeDialog').addEventListener('click',()=>dialog.close());dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close();});
+
+  function recordExperiment(r,mix){const rec={id:Date.now(),time:new Date().toISOString(),mix,design:r.design,pattern:r.pattern,outcome:r.launchOutcome,name:r.name,color:r.css,purity:r.purity,spark:r.spark};state.notebook.unshift(rec);state.notebook=state.notebook.slice(0,60);saveNotebook();renderNotebook();}
+  function loadNotebook(){try{const v2=JSON.parse(localStorage.getItem('fireworkChemNotebookV2')||'[]');if(v2.length)return v2;const legacy=JSON.parse(localStorage.getItem('fireworkChemNotebook')||'[]');return Array.isArray(legacy)?legacy:[]}catch{return[]}}
+  function saveNotebook(){try{localStorage.setItem('fireworkChemNotebookV2',JSON.stringify(state.notebook))}catch{}}
+  function loadFormulaFromNotebook(rec){
+    const mix={}; let total=0;
+    for(const [id,raw] of Object.entries(rec.mix||{})){
+      if(!byId[id])continue;
+      const q=Math.max(0,Number(raw)||0);
+      if(q<=0||total>=SHELL_CAPACITY)continue;
+      const allowed=Math.min(q,SHELL_CAPACITY-total);
+      if(allowed>0){mix[id]=Math.round(allowed*10)/10;total+=allowed;}
+    }
+    if(!Object.keys(mix).length){pulseToast('This notebook entry has no loadable formula');return;}
+    pendingFormulaLoad={rec,mix,total};
+    const label=rec.pattern||DESIGNS[rec.design]?.name||'Saved burst';
+    document.getElementById('formulaDialogPattern').textContent=label;
+    document.getElementById('formulaDialogAmount').textContent=`${fmt(total)} simulation unit${Math.abs(total-1)<.001?'':'s'}`;
+    formulaDialog.showModal();
+  }
+
+  function closeFormulaLoadDialog(){pendingFormulaLoad=null;if(formulaDialog.open)formulaDialog.close();}
+  function confirmFormulaLoad(){
+    if(!pendingFormulaLoad){closeFormulaLoadDialog();return;}
+    const {rec,mix}=pendingFormulaLoad;
+    state.mix=mix;
+    if(rec.design&&DESIGNS[rec.design]){state.design=rec.design;designSelect.value=rec.design;updateDesign();}
+    closeFormulaLoadDialog();
+    renderShell();
+    shellStage.scrollIntoView({behavior:'smooth',block:'center'});
+    pulseToast('Formula loaded into shell');
+  }
+
+  document.getElementById('confirmFormulaLoad').addEventListener('click',confirmFormulaLoad);
+  document.getElementById('cancelFormulaLoad').addEventListener('click',closeFormulaLoadDialog);
+  document.getElementById('closeFormulaDialog').addEventListener('click',closeFormulaLoadDialog);
+  formulaDialog.addEventListener('click',e=>{if(e.target===formulaDialog)closeFormulaLoadDialog();});
+
+  function renderNotebook(){
+    const el=document.getElementById('entries');
+    if(!state.notebook.length){el.innerHTML='<div class="empty">Completed launches will be recorded here.</div>';return;}
+    el.innerHTML='';
+    state.notebook.forEach((r,i)=>{
+      const d=document.createElement('div');d.className='entry';d.setAttribute('role','button');d.tabIndex=0;d.title='Load this formula into the shell';
+      const details=Object.entries(r.mix||{}).map(([id,q])=>`${byId[id]?.formula||id} ${fmt(q)}u`).join(' · ');
+      d.innerHTML=`<div class="entry-head"><div class="entry-title"><span class="dot" style="background:${r.color||'#888'}"></span>#${state.notebook.length-i} ${r.outcome||'Launch'} — ${r.name||'Result'}</div><time>${new Date(r.time).toLocaleString()}</time></div><div class="entry-mix">${r.pattern||DESIGNS[r.design]?.name||'Peony'} · ${details}<br>${r.outcome==='Dud'?'No normal burst':`Purity ${r.purity}% · ${r.spark}`}</div><div class="entry-load">Click to load this formula</div>`;
+      d.addEventListener('click',()=>loadFormulaFromNotebook(r));
+      d.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();loadFormulaFromNotebook(r);}});
+      el.appendChild(d);
+    });
+  }
+  document.getElementById('clearBook').addEventListener('click',()=>{if(confirm('Clear the experiment notebook?')){state.notebook=[];saveNotebook();renderNotebook();}});
+  document.getElementById('exportBook').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({app:'Firework Chemistry Lab',exported:new Date().toISOString(),experiments:state.notebook},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Firework-Chemistry-Notebook.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);});
+  document.getElementById('importBook').addEventListener('click',()=>document.getElementById('importBookInput').click());
+  document.getElementById('importBookInput').addEventListener('change',async e=>{
+    const file=e.target.files&&e.target.files[0]; if(!file) return;
+    try{
+      const raw=await file.text(); const parsed=JSON.parse(raw);
+      const incoming=Array.isArray(parsed)?parsed:Array.isArray(parsed.experiments)?parsed.experiments:null;
+      if(!incoming) throw new Error('Bad format');
+      const mapped=incoming.filter(x=>x && typeof x==='object');
+      const mode=state.notebook.length && confirm('Click OK to replace the current notebook. Click Cancel to merge with it.') ? 'replace' : 'merge';
+      let next = mode==='replace' ? mapped : state.notebook.concat(mapped);
+      const seen=new Set();
+      next=next.filter(rec=>{ const key=JSON.stringify([rec.time||'', rec.design||'', rec.outcome||'', rec.name||'', rec.color||'', rec.mix||{}]); if(seen.has(key)) return false; seen.add(key); return true; });
+      next.sort((a,b)=>new Date(b.time||0)-new Date(a.time||0));
+      state.notebook=next.slice(0,120); saveNotebook(); renderNotebook(); pulseToast(`Imported ${mapped.length} notebook entr${mapped.length===1?'y':'ies'}`);
+    }catch(err){ pulseToast('Could not import notebook'); }
+    e.target.value='';
+  });
+
+  function pulseToast(msg){toast.textContent=msg;toast.classList.add('show');clearTimeout(pulseToast.t);pulseToast.t=setTimeout(()=>toast.classList.remove('show'),1350);}
+
+  renderShelf();updateDesign();updateSoundToggle();renderShell();renderNotebook();drawSky();
+})();
+</script>
+</body>
+</html>
