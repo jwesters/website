@@ -5,7 +5,7 @@ make_indexGen.py
 Generate a polished static index page for jwesters.github.io/website or a similar folder tree.
 
 What this version does differently:
-- Groups apps by what they are for, not just by repository folder.
+- Groups apps by purpose, using the reorganized repository folders as the primary source of truth.
 - Keeps a Recent Changes section at the bottom.
 - Keeps an optional repository-folder view at the bottom for maintenance.
 - Excludes root-level files by default, matching the previous generator.
@@ -264,7 +264,28 @@ CUSTOM_ICONS = {'BillboardNumberOne.html': '🎵',
  'Grade6_ELA.html': '📚',
  'Grade6_Math.html': '➗',
  'Grade6_Science.html': '🔬',
- 'Grade6_Social.html': '🌎'}
+ 'Grade6_Social.html': '🌎',
+ 'Creative_Tools': '🎨',
+ 'Learning_Reference': '📘',
+ 'Sports_Fitness': '🏃',
+ 'Utilities': '🛠️',
+ 'Generators': '⚙️',
+ 'Simulations': '🧪',
+ 'Accessibility_Communication': '🗣️',
+ 'Classroom_Utilities': '🍎',
+ 'Documents_Files': '📄',
+ 'Web_Sharing': '🔗',
+ 'Reading': '📖',
+ 'Wellness': '🫁',
+ 'Audio': '🔊',
+ 'Basketball': '🏀',
+ 'Fitness_Tools': '🏃',
+ 'Driver_Education': '🚗',
+ 'MemoryGames': '🧠',
+ 'Firework_Chemistry_Lab.html': '🎆',
+ 'Nuclear_Consequences_Educational_Map.html': '☢️',
+ 'Link_Card.html': '🔗',
+ 'Bingo_Caller.html': '🎟️'}
 
 # Keyword rules. Longest keyword match wins.
 ICON_RULES = [('canadian', '🇨🇦'),
@@ -363,6 +384,7 @@ ICON_RULES = [('canadian', '🇨🇦'),
  ('tool', '🛠️'),
  ('randomizer', '🎲'),
  ('tetris', '🧱'),
+ ('kolumn', '🧱'),
  ('tetromino', '🧱'),
  ('hangman', '🪓'),
  ('maze', '🧩'),
@@ -425,6 +447,12 @@ ACRONYMS = {
     "QR", "SIM", "WEBP", "WTW",
 }
 ACRONYM_LOOKUP = {acro.casefold(): acro for acro in ACRONYMS}
+
+# Exact display-name overrides for filenames whose intended title cannot be
+# inferred cleanly from underscores/camel case alone.
+DISPLAY_NAME_OVERRIDES = {
+    "ultimate_tic_tac_toe_4x4_3inarow.html": "Ultimate Tic Tac Toe 4 X 4 3 In A Row",
+}
 ACRONYM_PATTERN = re.compile("|".join(re.escape(acro) for acro in sorted(ACRONYMS, key=len, reverse=True)))
 
 
@@ -437,6 +465,9 @@ CATEGORY_ORDER = [
     "Literacy & ELA",
     "Science & Social Studies",
     "Teacher Tools",
+    "Learning & Reference",
+    "Sports & Fitness",
+    "Utilities & Tools",
     "Art, Media & Creation",
     "Music & Ear Training",
     "Arcade & Action Games",
@@ -450,6 +481,9 @@ CATEGORY_ICONS = {
     "Literacy & ELA": "📚",
     "Science & Social Studies": "🌎",
     "Teacher Tools": "🍎",
+    "Learning & Reference": "📘",
+    "Sports & Fitness": "🏃",
+    "Utilities & Tools": "🛠️",
     "Art, Media & Creation": "🎨",
     "Music & Ear Training": "🎵",
     "Arcade & Action Games": "🕹",
@@ -460,10 +494,11 @@ CATEGORY_ICONS = {
 
 # Subcategory icons are used as a safe fallback when a filename does not have
 # a clear icon match. This prevents a file from inheriting the wrong icon just
-# because it lives inside a broad folder such as Science, Social, or ArcadeGames.
+# because it lives inside a broad folder.
 SUBCATEGORY_ICONS = {
     "ELA Practice & Spelling": "📚",
     "Writing & Word Work": "✍️",
+    "Typing & Keyboarding": "⌨️",
     "Reading Tools": "📖",
     "Word Work Generators": "🔎",
     "Math Practice & Assessments": "➗",
@@ -472,13 +507,24 @@ SUBCATEGORY_ICONS = {
     "Number Sense & Problem Solving": "🔢",
     "Math Games": "🎲",
     "Science": "🔬",
+    "Science Simulations & Labs": "🧪",
     "Social Studies": "🌎",
     "Subject Practice & Tests": "📝",
     "Classroom Utilities": "🍎",
     "Accessibility & Communication": "🗣️",
     "Timers & Routines": "⏱️",
+    "Driver Education": "🚗",
+    "Basketball": "🏀",
+    "Fitness Tools": "🏃",
+    "Audio Tools": "🔊",
+    "Document & File Tools": "📄",
+    "General Utilities": "🛠️",
+    "Reading Utilities": "📖",
+    "Wellness Tools": "🫁",
+    "Web & Sharing Tools": "🔗",
     "Art & Image Tools": "🎨",
     "Comic & Annotation Tools": "💬",
+    "Creative Generators": "⚙️",
     "Ear Training": "👂",
     "Guitar, Chords & Theory": "🎸",
     "Music & Practice Tools": "🎵",
@@ -494,19 +540,61 @@ SUBCATEGORY_ICONS = {
     "Geography Games": "🌍",
     "Party & Word Games": "🎡",
     "Other Games": "🎮",
-    "Miscellaneous Tools": "🛠️",
 }
+
+# Some apps may temporarily exist in more than one repository location while
+# folders are being reorganized. These titles should appear only once in the
+# generated indexes. Matching is based on the displayed title, not the path.
+DEDUPLICATE_DISPLAY_TITLES = {
+    "airplane race game",
+}
+
+
+def deduplicate_entries(entries: List["FileEntry"]) -> List["FileEntry"]:
+    """Remove known duplicate app cards while preferring their canonical folder."""
+    if not entries:
+        return entries
+
+    def preference(entry: "FileEntry") -> tuple[int, int, str]:
+        rel = normalize_path(entry.rel_path).casefold()
+
+        # Canonical home for Airplane Race Game.
+        if display_name(entry.name, strip_extension=True).casefold() == "airplane race game":
+            canonical = 0 if "misc_games/arcadegames/" in rel else 1
+            return (canonical, len(rel), rel)
+
+        return (0, len(rel), rel)
+
+    grouped: Dict[str, List["FileEntry"]] = {}
+    passthrough: List["FileEntry"] = []
+
+    for entry in entries:
+        title_key = display_name(entry.name, strip_extension=True).casefold()
+        if title_key in DEDUPLICATE_DISPLAY_TITLES:
+            grouped.setdefault(title_key, []).append(entry)
+        else:
+            passthrough.append(entry)
+
+    for title_key, duplicates in grouped.items():
+        duplicates.sort(key=preference)
+        passthrough.append(duplicates[0])
+
+    return passthrough
+
 
 EDUCATIONAL_CATEGORIES = {
     "Math & Numeracy",
     "Literacy & ELA",
     "Science & Social Studies",
     "Teacher Tools",
+    "Learning & Reference",
+    "Sports & Fitness",
     "Art, Media & Creation",
     "Music & Ear Training",
     "Strategy, Board & Logic Games",
     "Word, Trivia & Quiz Games",
 }
+
 
 # Exact filenames that should never appear in indexEDU.html. Exact excludes win
 # over category rules and keyword rules. Keep these case-insensitive.
@@ -574,9 +662,52 @@ EDUCATIONAL_INCLUDE_KEYWORDS = (
 # The first matching rule wins, so keep specific rules above broad rules.
 # Tokens are checked against the full relative path and filename.
 CATEGORY_RULES: List[Tuple[Tuple[str, ...], str, str]] = [
+    # -----------------------------------------------------------------------
+    # New directory structure: explicit folder rules come first.
+    # This makes the repository layout the primary source of truth and keeps
+    # broad filename keywords from pulling moved apps into the wrong category.
+    # -----------------------------------------------------------------------
+
+    # Science simulations moved out of Misc.
+    (("subject_specific/science/simulations/",), "Science & Social Studies", "Science Simulations & Labs"),
+
+    # Teacher Tools subfolders must be checked before the broad Teacher_Tools rule.
+    (("teacher_tools/accessibility_communication/",), "Teacher Tools", "Accessibility & Communication"),
+    (("teacher_tools/classroom_utilities/",), "Teacher Tools", "Classroom Utilities"),
+
+    # Learning / reference.
+    (("learning_reference/driver_education/",), "Learning & Reference", "Driver Education"),
+
+    # Sports / fitness.
+    (("sports_fitness/basketball/",), "Sports & Fitness", "Basketball"),
+    (("sports_fitness/fitness_tools/",), "Sports & Fitness", "Fitness Tools"),
+
+    # Utilities. These rules intentionally come before older QR/audio/EPUB
+    # keyword rules so the new Utilities folders win.
+    (("utilities/audio/",), "Utilities & Tools", "Audio Tools"),
+    (("utilities/documents_files/",), "Utilities & Tools", "Document & File Tools"),
+    (("utilities/general/",), "Utilities & Tools", "General Utilities"),
+    (("utilities/reading/",), "Utilities & Tools", "Reading Utilities"),
+    (("utilities/wellness/",), "Utilities & Tools", "Wellness Tools"),
+    (("utilities/web_sharing/",), "Utilities & Tools", "Web & Sharing Tools"),
+
+    # Creative Tools. Music gets its more specific rules later, before the
+    # general creative_tools/music/ fallback.
+    (("creative_tools/generators/",), "Art, Media & Creation", "Creative Generators"),
+    (("creative_tools/art/",), "Art, Media & Creation", "Art & Image Tools"),
+
+    # New game subfolder.
+    (("misc_games/memorygames/",), "Word, Trivia & Quiz Games", "Memory Games"),
+
+    # -----------------------------------------------------------------------
     # Subject-specific / curriculum folders
+    # -----------------------------------------------------------------------
+    # Specific ELA files must come before the broad Subject_Specific/ELA rule.
+    (("subject_specific/ela/typing-test", "subject_specific/ela/typing_test"), "Literacy & ELA", "Typing & Keyboarding"),
+    (("subject_specific/ela/madlib",), "Literacy & ELA", "Writing & Word Work"),
+
     # Keep ELA-specific names here, before Science/Social rules, so files like
-    # "Alberta ELA Practice.html" do not fall into a broader Alberta/Social folder grouping.
+    # "Alberta ELA Practice.html" do not fall into a broader grouping.
     ((
         "subject_specific/ela/",
         "grade6_ela",
@@ -601,57 +732,88 @@ CATEGORY_RULES: List[Tuple[Tuple[str, ...], str, str]] = [
     (("grade5_social", "grade6_social", "social"), "Science & Social Studies", "Social Studies"),
     (("subjecttests",), "Science & Social Studies", "Subject Practice & Tests"),
 
+    # -----------------------------------------------------------------------
+    # Explicit cross-folder exceptions
+    # -----------------------------------------------------------------------
+    # Bingo Card Generator is a classroom utility even though the file is
+    # physically stored inside Math_Games/MathBingo.
+    (("bingocardgenerator.html",), "Teacher Tools", "Classroom Utilities"),
+
+    # -----------------------------------------------------------------------
     # Math
+    # -----------------------------------------------------------------------
     (("math_games/mathfacts/", "factscount", "four_facts", "operationmemory", "operationsgames"), "Math & Numeracy", "Math Facts & Operations"),
-    (("multiplication", "multi_", "division", "long_division", "divisibility"), "Math & Numeracy", "Multiplication & Division"),
+    # Do NOT use generic "multi_" here: it incorrectly matches filenames such
+    # as multiplayer. Use specific multiplication terms instead.
+    (("multiplication", "multi_2_and_3", "division", "long_division", "divisibility"), "Math & Numeracy", "Multiplication & Division"),
     (("algebra", "input_output", "input-output", "pedmas", "decimal", "fraction", "target_number"), "Math & Numeracy", "Number Sense & Problem Solving"),
-    (("mathbingo", "bingo"), "Math & Numeracy", "Math Games"),
+    # Generic "bingo" is intentionally omitted so Bingo Caller can remain a
+    # classroom utility. Actual Math Bingo files/folders still match mathbingo.
+    (("mathbingo",), "Math & Numeracy", "Math Games"),
     (("cartesian", "dice_grid", "7dice", "15-tictactoe", "telling_time", "10frames", "magic-square"), "Math & Numeracy", "Number Sense & Problem Solving"),
     (("math_games/",), "Math & Numeracy", "Math Games"),
 
+    # -----------------------------------------------------------------------
     # Literacy, language, and reading
+    # -----------------------------------------------------------------------
     (("acrostic", "haiku", "poem", "raft", "pwim", "fry", "word_scrambler", "wordle", "madlib"), "Literacy & ELA", "Writing & Word Work"),
     (("epub_reader", "reading"), "Literacy & ELA", "Reading Tools"),
     (("wordsearchgenerator", "word_search", "wordsearch"), "Literacy & ELA", "Word Work Generators"),
 
+    # -----------------------------------------------------------------------
     # Teacher/classroom tools
-    (("teacher_tools/", "attendance", "random_group", "word_cloud", "qr_creator", "dice_roller", "random_card"), "Teacher Tools", "Classroom Utilities"),
+    # -----------------------------------------------------------------------
     (("clickable_aac", "aac_word_board"), "Teacher Tools", "Accessibility & Communication"),
-    (("tabata", "timer_accuracy"), "Teacher Tools", "Timers & Routines"),
+    (("attendance", "random_group", "word_cloud", "dice_roller", "random_card", "bingo_caller"), "Teacher Tools", "Classroom Utilities"),
+    (("teacher_tools/",), "Teacher Tools", "Classroom Utilities"),
 
+    # -----------------------------------------------------------------------
     # Art, media, creation
-    (("art related/", "comic", "pointillism", "rorschach", "mandala", "image_to_ascii", "ascii_art", "reveal_color"), "Art, Media & Creation", "Art & Image Tools"),
+    # -----------------------------------------------------------------------
     (("annotator", "blank_comic"), "Art, Media & Creation", "Comic & Annotation Tools"),
+    (("art related/", "comic", "pointillism", "rorschach", "mandala", "image_to_ascii", "ascii_art", "reveal_color"), "Art, Media & Creation", "Art & Image Tools"),
 
+    # -----------------------------------------------------------------------
     # Music
-    (("ear_training/", "ear_training", "chord_ear", "interval", "melody", "mode_recognition", "scale_recognition", "pitch_higher", "note_in_chord"), "Music & Ear Training", "Ear Training"),
+    # -----------------------------------------------------------------------
+    (("creative_tools/music/ear_training/", "ear_training/", "ear_training", "chord_ear", "interval", "melody", "mode_recognition", "scale_recognition", "pitch_higher", "note_in_chord"), "Music & Ear Training", "Ear Training"),
     (("guitar", "ukulele", "harmonic", "build_the_chord", "chord_progression", "chord_finder", "scale_mapper"), "Music & Ear Training", "Guitar, Chords & Theory"),
-    (("music/", "breathing_voice"), "Music & Ear Training", "Music & Practice Tools"),
+    (("creative_tools/music/", "music/"), "Music & Ear Training", "Music & Practice Tools"),
 
+    # -----------------------------------------------------------------------
     # Arcade/action
-    (("arcadegames/", "arcade", "jezzball", "pacman", "ghost", "pong", "snake", "runner", "target_practice", "pool_ball", "drop", "sky_stacker", "antisimon"), "Arcade & Action Games", "Arcade Games"),
-    (("tetris_games/", "tetris", "typing_tetris"), "Arcade & Action Games", "Tetris & Falling Blocks"),
+    # -----------------------------------------------------------------------
+    # Specific falling-block families come before the broad ArcadeGames folder
+    # rule so they stay together even when stored inside ArcadeGames.
+    (("kolumn", "tetris_games/", "tetris", "typing_tetris"), "Arcade & Action Games", "Tetris & Falling Blocks"),
+    (("line_draw", "arcadegames/", "arcade", "jezzball", "pacman", "ghost", "pong", "snake", "runner", "target_practice", "pool_ball", "drop", "sky_stacker", "antisimon", "timer_accuracy", "airplane race game"), "Arcade & Action Games", "Arcade Games"),
     (("arrow_escape", "paint_maze"), "Arcade & Action Games", "Action Challenges"),
 
+    # -----------------------------------------------------------------------
     # Strategy/board/logic
+    # -----------------------------------------------------------------------
     (("cardgames/", "card_games/", "card-games/", "cardgames", "card_games", "card-games", "solitaire"), "Strategy, Board & Logic Games", "Card & Solitaire Games"),
     (("chessgames/", "chess", "knight-tour", "knights-tour"), "Strategy, Board & Logic Games", "Chess & Knight Games"),
     (("connectfour/", "connect4", "connect_4"), "Strategy, Board & Logic Games", "Connect Four Variants"),
-    (("strategy_games/", "shikaku", "go_local", "go.html", "hex", "nim", "ataxx", "minesweeper", "dots-and-boxes", "bridgit", "obstruction", "battleship", "checkers", "snakes_and_ladders", "snakes-and-ladders", "sim.html", "hold-the-line", "black-hole", "rabbit_hunt"), "Strategy, Board & Logic Games", "Strategy & Logic Games"),
+    (("sliding number puzzle", "sliding_number_puzzle", "strategy_games/", "shikaku", "go_local", "go.html", "hex", "nim", "ataxx", "minesweeper", "dots-and-boxes", "bridgit", "obstruction", "battleship", "checkers", "snakes_and_ladders", "snakes-and-ladders", "sim.html", "hold-the-line", "black-hole", "rabbit_hunt"), "Strategy, Board & Logic Games", "Strategy & Logic Games"),
     (("tictactoegames/", "tic_tac_toe", "tictactoe", "ultimate_tic", "order-and-chaos", "exact-four", "row_call"), "Strategy, Board & Logic Games", "Tic-Tac-Toe Variants"),
-    (("maze", "line_draw", "hexa", "sudoku"), "Strategy, Board & Logic Games", "Mazes & Logic Puzzles"),
+    (("maze", "hexa", "sudoku"), "Strategy, Board & Logic Games", "Mazes & Logic Puzzles"),
 
+    # -----------------------------------------------------------------------
     # Word, trivia, quizzes, memory
-    (("dle_and_thisorthat_games/", "dle", "thisorthat", "truth_or_bologna", "realcity", "citypop", "billboard", "hockey", "soccer", "weightgame", "canprices", "polygon_guess", "numdle", "binarydle"), "Word, Trivia & Quiz Games", "Trivia & Guessing Games"),
+    # -----------------------------------------------------------------------
+    (("dle_and_thisorthat_games/", "dle", "thisorthat", "truth_or_bologna", "realcity", "citypop", "billboard", "hockey", "soccer", "weightgame", "canprices", "polygon_guess", "numdle", "binarydle", "canadian trivia game", "geography trivia game", "history date challenge", "kids teens trivia"), "Word, Trivia & Quiz Games", "Trivia & Guessing Games"),
     (("wordgames/", "hangman", "scrabble", "boggle", "word-ladder", "word_maker", "unusual_words", "word_memory"), "Word, Trivia & Quiz Games", "Word Games"),
     (("number_memory", "draw_from_memory", "major-system"), "Word, Trivia & Quiz Games", "Memory Games"),
     (("canada_click", "world_click"), "Word, Trivia & Quiz Games", "Geography Games"),
     (("scattergories", "wheel_of_fortune"), "Word, Trivia & Quiz Games", "Party & Word Games"),
 
-    # Fallback broad folders
+    # Fallback broad game folder only. There is intentionally NO Misc fallback:
+    # Misc was removed from the repository structure and should not silently map
+    # to Teacher Tools if an old folder is accidentally reintroduced.
     (("misc_games/",), "Strategy, Board & Logic Games", "Other Games"),
-    (("misc/",), "Teacher Tools", "Miscellaneous Tools"),
 ]
+
 
 
 # ---------------------------------------------------------------------------
@@ -838,7 +1000,12 @@ def slugify(s: str) -> str:
 
 @lru_cache(maxsize=None)
 def display_name(name: str, *, strip_extension: bool = False) -> str:
-    raw = Path(name).name
+    base = Path(name).name
+    override = DISPLAY_NAME_OVERRIDES.get(base.casefold())
+    if override:
+        return override
+
+    raw = base
     if strip_extension:
         raw = Path(raw).stem
 
@@ -1069,6 +1236,8 @@ def scan_files(
                 mtime=mtime,
             )
         )
+
+    entries = deduplicate_entries(entries)
 
     category_rank = {category: index for index, category in enumerate(CATEGORY_ORDER)}
     entries.sort(

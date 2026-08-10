@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>QR Code Generator</title>
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; padding: 24px; max-width: 720px; margin: 0 auto; }
+    h1 { margin: 0 0 12px; }
+    .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; }
+    label { font-weight: 600; display: block; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    input {
+      flex: 1;
+      min-width: 260px;
+      padding: 10px 12px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      outline: none;
+    }
+    button {
+      padding: 10px 14px;
+      font-size: 16px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      background: #fff;
+      cursor: pointer;
+    }
+    button:hover { background: #f6f6f6; }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+    #qr {
+      margin-top: 16px;
+      padding: 12px;
+      border: 1px dashed #ccc;
+      border-radius: 12px;
+      background: #fafafa;
+      display: inline-block;
+      min-height: 244px; /* keeps area stable */
+      min-width: 244px;
+    }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .help { font-size: 14px; color: #555; margin-top: 8px; }
+    .error { color: #b00020; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+  <h1>QR Code Generator</h1>
+
+  <div class="card">
+    <label for="url">Enter a website</label>
+    <div class="row">
+      <input id="url" type="text" placeholder="https://example.com" autocomplete="off" />
+      <button id="generate" type="button">Generate</button>
+      <button id="clear" type="button">Clear</button>
+    </div>
+
+    <div class="help">Tip: If you type <code>google.com</code>, it will automatically add <code>https://</code>.</div>
+
+    <div id="qr" aria-label="QR code will appear here"></div>
+
+    <div class="actions">
+      <button id="png" type="button" disabled>Download PNG</button>
+      <button id="jpg" type="button" disabled>Download JPG</button>
+    </div>
+
+    <div class="help" id="status"></div>
+  </div>
+
+  <!-- QR code library -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+
+  <script>
+    const urlInput = document.getElementById("url");
+    const qrBox = document.getElementById("qr");
+    const status = document.getElementById("status");
+    const btnPNG = document.getElementById("png");
+    const btnJPG = document.getElementById("jpg");
+    const btnGenerate = document.getElementById("generate");
+    const btnClear = document.getElementById("clear");
+
+    function setStatus(msg, isError = false) {
+      status.textContent = msg || "";
+      status.className = "help" + (isError ? " error" : "");
+    }
+
+    function normalizeUrl(input) {
+      let url = (input || "").trim();
+      if (!url) return "";
+      if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+      return url;
+    }
+
+    // Stricter "basic" validation: blocks single-letter domains like "h"
+    function isValidUrl(url) {
+      try {
+        const parsed = new URL(url);
+
+        // Must be http/https
+        if (!["http:", "https:"].includes(parsed.protocol)) return false;
+
+        const host = parsed.hostname; // e.g., "example.com"
+
+        // Must have at least one dot (.)
+        if (!host.includes(".")) return false;
+
+        // No empty parts
+        const parts = host.split(".");
+        if (parts.some(p => p.length < 1)) return false;
+
+        // TLD should be at least 2 chars (e.g., .com, .ca)
+        const tld = parts[parts.length - 1];
+        if (tld.length < 2) return false;
+
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    function clearAll() {
+      qrBox.innerHTML = "";
+      btnPNG.disabled = true;
+      btnJPG.disabled = true;
+      setStatus("");
+    }
+
+    function generateQR() {
+      clearAll();
+
+      const raw = urlInput.value;
+      if (!raw.trim()) {
+        setStatus("Please enter a website URL.", true);
+        return;
+      }
+
+      const url = normalizeUrl(raw);
+
+      if (!isValidUrl(url)) {
+        setStatus("That doesn’t look like a valid website address (try something like example.com).", true);
+        return;
+      }
+
+      // Put normalized URL back in the box for clarity
+      urlInput.value = url;
+
+      new QRCode(qrBox, {
+        text: url,
+        width: 220,
+        height: 220,
+        correctLevel: QRCode.CorrectLevel.M
+      });
+
+      btnPNG.disabled = false;
+      btnJPG.disabled = false;
+      setStatus("QR code generated.");
+    }
+
+    function downloadImage(type) {
+      // qrcodejs may render <canvas> or <img>, depending on browser.
+      const canvas = qrBox.querySelector("canvas");
+      const img = qrBox.querySelector("img");
+
+      let dataURL = "";
+
+      if (canvas) {
+        dataURL = canvas.toDataURL(`image/${type}`);
+      } else if (img) {
+        // Convert img -> canvas so JPEG works reliably (and add white background)
+        const c = document.createElement("canvas");
+        c.width = img.naturalWidth || img.width;
+        c.height = img.naturalHeight || img.height;
+        const ctx = c.getContext("2d");
+
+        // White background for JPG
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, c.width, c.height);
+
+        ctx.drawImage(img, 0, 0);
+        dataURL = c.toDataURL(`image/${type}`);
+      }
+
+      if (!dataURL) {
+        setStatus("Couldn’t find the QR image to download.", true);
+        return;
+      }
+
+      const a = document.createElement("a");
+      a.href = dataURL;
+      a.download = `qr-code.${type === "jpeg" ? "jpg" : type}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+
+    btnGenerate.addEventListener("click", generateQR);
+    btnClear.addEventListener("click", () => {
+      urlInput.value = "";
+      clearAll();
+      urlInput.focus();
+    });
+
+    urlInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") generateQR();
+    });
+
+    btnPNG.addEventListener("click", () => downloadImage("png"));
+    btnJPG.addEventListener("click", () => downloadImage("jpeg"));
+  </script>
+</body>
+</html>
