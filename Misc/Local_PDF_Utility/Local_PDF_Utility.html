@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Local PDF Utility</title>
+<style>
+:root{--bg:#f4f5f7;--panel:#fff;--ink:#18202a;--muted:#68717d;--line:#d8dde3;--accent:#1769aa;--accent2:#0f568e;--good:#1f7a4d;--warn:#9a6413;--danger:#ad3030;--shadow:0 10px 28px rgba(20,30,45,.08);--radius:14px}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif} button,input,select,textarea{font:inherit} button{cursor:pointer}
+.shell{max-width:1080px;margin:0 auto;padding:28px 18px 48px}.top{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:18px}.brand h1{font-size:30px;line-height:1.1;margin:0 0 7px;letter-spacing:-.03em}.brand p{margin:0;color:var(--muted);max-width:660px}.privacy{white-space:nowrap;background:#edf7f1;color:#21633f;border:1px solid #cce7d6;border-radius:999px;padding:8px 12px;font-weight:700;font-size:13px}
+.local-note{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--good);border-radius:10px;padding:12px 14px;margin-bottom:18px;color:#35404c}.local-note strong{color:#1d5d3c}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:#e8ebef;padding:6px;border-radius:12px;margin-bottom:18px}.tab{border:0;background:transparent;border-radius:9px;padding:11px 12px;font-weight:750;color:#5c6672}.tab.active{background:var(--panel);color:var(--ink);box-shadow:0 1px 5px rgba(0,0,0,.08)}
+.panel{display:none}.panel.active{display:block}.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;margin-bottom:16px}.card h2{font-size:20px;margin:0 0 5px}.card h3{font-size:16px;margin:0 0 7px}.sub{color:var(--muted);margin:0 0 16px}.drop{border:2px dashed #bfc7d1;border-radius:12px;padding:28px 18px;text-align:center;background:#fafbfc;transition:.15s}.drop.drag{border-color:var(--accent);background:#f2f8fd}.drop strong{display:block;font-size:16px;margin-bottom:4px}.drop span{color:var(--muted);font-size:13px}.drop button{margin-top:12px}.file-input{display:none}
+.btn{border:1px solid #bcc4ce;background:#fff;color:#25303b;border-radius:9px;padding:9px 13px;font-weight:700}.btn:hover{background:#f5f7f9}.btn.primary{border-color:var(--accent);background:var(--accent);color:#fff}.btn.primary:hover{background:var(--accent2)}.btn.danger{color:var(--danger)}.btn.small{padding:6px 9px;font-size:13px}.btn:disabled{opacity:.45;cursor:not-allowed}.actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:16px}.grow{flex:1}
+.list{display:flex;flex-direction:column;gap:9px;margin-top:15px}.file-row{display:grid;grid-template-columns:30px minmax(0,1fr) auto;align-items:center;gap:10px;padding:11px;border:1px solid var(--line);border-radius:10px;background:#fff}.drag-handle{font-size:18px;color:#8b949f;cursor:grab;text-align:center;user-select:none}.file-row.dragging{opacity:.45}.file-name{font-weight:720;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.meta{font-size:12px;color:var(--muted);margin-top:2px}.row-actions{display:flex;gap:6px;align-items:center}
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:flex;flex-direction:column;gap:6px}.field label{font-weight:700;font-size:13px}.field input,.field select,.field textarea{width:100%;border:1px solid #c6cdd6;border-radius:8px;padding:9px 10px;background:#fff;color:var(--ink)}.field textarea{min-height:74px;resize:vertical}.help{font-size:12px;color:var(--muted)}
+.file-summary{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px;border:1px solid var(--line);border-radius:10px;margin-top:14px}.file-summary .left{min-width:0}.file-summary .name{font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.file-summary .details{font-size:12px;color:var(--muted);margin-top:3px}.file-summary .right{display:flex;gap:7px;flex-shrink:0}
+.mode-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:15px 0}.mode{display:block;border:1px solid var(--line);border-radius:11px;padding:12px;background:#fff;cursor:pointer}.mode input{margin-right:7px}.mode strong{font-size:14px}.mode p{margin:5px 0 0 24px;color:var(--muted);font-size:12px}.mode.selected{border-color:#78aeda;background:#f5faff}
+.mode-options{border-top:1px solid #edf0f3;padding-top:15px}.option-box{display:none}.option-box.active{display:block}
+.preset-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:15px 0}.preset{border:1px solid var(--line);border-radius:11px;padding:13px;background:#fff;cursor:pointer}.preset input{margin-right:7px}.preset strong{font-size:14px}.preset p{font-size:12px;color:var(--muted);margin:6px 0 0 24px}.preset.selected{border-color:#78aeda;background:#f5faff}
+.status{display:none;margin-top:14px;border-radius:10px;padding:11px 12px;background:#f5f7f9;border:1px solid #e0e4e9}.status.show{display:block}.status.good{background:#eef8f2;border-color:#cde8d7;color:#255e40}.status.warn{background:#fff8e9;border-color:#edd9ab;color:#795111}.status.bad{background:#fff0f0;border-color:#edcaca;color:#8d2929}.progress{height:8px;border-radius:999px;background:#e3e7ec;overflow:hidden;margin-top:9px}.bar{height:100%;width:0;background:var(--accent);transition:width .15s}
+.result-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.stat{background:#fff;border:1px solid var(--line);border-radius:9px;padding:10px}.stat b{display:block;font-size:17px}.stat span{font-size:11px;color:var(--muted)}
+.notice{padding:11px 12px;background:#fff8e9;border:1px solid #eedbb0;border-radius:9px;color:#705019;font-size:13px}.footer{color:#808995;text-align:center;font-size:12px;margin-top:20px}
+.modal{position:fixed;inset:0;background:rgba(18,24,32,.72);display:none;align-items:center;justify-content:center;padding:20px;z-index:30}.modal.open{display:flex}.modal-box{width:min(1000px,96vw);height:min(820px,92vh);background:#fff;border-radius:13px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 28px 70px rgba(0,0,0,.35)}.modal-head{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line)}.modal-title{font-weight:750;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.modal-head .grow{min-width:0}.modal-head input{width:80px;border:1px solid #c6cdd6;border-radius:7px;padding:6px 7px}.pdf-frame{border:0;width:100%;flex:1;background:#52565d}
+@media(max-width:720px){.shell{padding:18px 12px 36px}.top{display:block}.privacy{display:inline-block;margin-top:12px}.brand h1{font-size:26px}.card{padding:15px}.field-grid,.mode-grid,.preset-grid{grid-template-columns:1fr}.file-row{grid-template-columns:24px minmax(0,1fr)}.row-actions{grid-column:2;justify-content:flex-start}.file-summary{align-items:flex-start;flex-direction:column}.file-summary .right{width:100%;flex-wrap:wrap}.tabs{gap:4px}.tab{padding:10px 6px;font-size:14px}.result-stats{grid-template-columns:1fr}.modal{padding:0}.modal-box{width:100vw;height:100vh;border-radius:0}.modal-head{flex-wrap:wrap}.modal-title{width:100%}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="top">
+    <div class="brand"><h1>Local PDF Utility</h1><p>Merge, split, and compress PDFs directly in your browser.</p></div>
+    <div class="privacy">Local only</div>
+  </div>
+  <div class="local-note"><strong>Your files stay on this device.</strong> Nothing is uploaded to a server. PDF processing happens locally in your browser, and this app works offline.</div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-tab="merge">Merge</button>
+    <button class="tab" data-tab="split">Split</button>
+    <button class="tab" data-tab="compress">Compress</button>
+  </div>
+
+  <section id="merge" class="panel active">
+    <div class="card">
+      <h2>Merge PDFs</h2><p class="sub">Add two or more PDFs, put them in the order you want, then combine them into one file.</p>
+      <div class="drop" id="mergeDrop"><strong>Drop PDF files here</strong><span>or choose files from your device</span><br><button class="btn" id="mergeChoose">Choose PDFs</button><input id="mergeInput" class="file-input" type="file" accept="application/pdf,.pdf" multiple></div>
+      <div id="mergeList" class="list"></div>
+      <div class="actions">
+        <div class="field grow"><label for="mergeName">Output filename</label><input id="mergeName" value="merged.pdf"></div>
+        <button class="btn primary" id="mergeRun" disabled>Merge PDFs</button>
+        <button class="btn" id="mergeClear" disabled>Clear</button>
+      </div>
+      <div id="mergeStatus" class="status"><div class="statusText"></div><div class="progress"><div class="bar"></div></div></div>
+    </div>
+  </section>
+
+  <section id="split" class="panel">
+    <div class="card">
+      <h2>Split a PDF</h2><p class="sub">Extract pages, create custom parts, split every few pages, or save every page as its own PDF.</p>
+      <div class="drop" id="splitDrop"><strong>Drop one PDF here</strong><span>or choose a file from your device</span><br><button class="btn" id="splitChoose">Choose PDF</button><input id="splitInput" class="file-input" type="file" accept="application/pdf,.pdf"></div>
+      <div id="splitSummary"></div>
+
+      <div class="mode-grid" id="splitModes">
+        <label class="mode selected"><input type="radio" name="splitMode" value="extract" checked><strong>Extract pages</strong><p>One new PDF from selected pages.</p></label>
+        <label class="mode"><input type="radio" name="splitMode" value="groups"><strong>Custom parts</strong><p>Make several PDFs from page groups.</p></label>
+        <label class="mode"><input type="radio" name="splitMode" value="every"><strong>Every X pages</strong><p>Break the document into equal-size chunks.</p></label>
+        <label class="mode"><input type="radio" name="splitMode" value="pages"><strong>Each page</strong><p>Save every page as a separate PDF inside a ZIP.</p></label>
+      </div>
+
+      <div class="mode-options">
+        <div class="option-box active" data-modebox="extract"><div class="field"><label for="extractPages">Pages to extract</label><input id="extractPages" placeholder="1, 3, 5-8"><div class="help">Use commas and ranges. Page order is kept as entered.</div></div></div>
+        <div class="option-box" data-modebox="groups"><div class="field"><label for="groupPages">Page groups</label><textarea id="groupPages" placeholder="1-3 / 4-7 / 8-10"></textarea><div class="help">Separate parts with a slash, semicolon, or new line.</div></div></div>
+        <div class="option-box" data-modebox="every"><div class="field"><label for="everyPages">Pages per part</label><input id="everyPages" type="number" min="1" step="1" value="5"></div></div>
+        <div class="option-box" data-modebox="pages"><div class="notice">Each page will become its own PDF. All page PDFs will be downloaded together in a ZIP file.</div></div>
+      </div>
+
+      <div class="actions"><button class="btn primary" id="splitRun" disabled>Split PDF</button><button class="btn" id="splitClear" disabled>Clear</button></div>
+      <div id="splitStatus" class="status"><div class="statusText"></div><div class="progress"><div class="bar"></div></div></div>
+    </div>
+  </section>
+
+  <section id="compress" class="panel">
+    <div class="card">
+      <h2>Compress a PDF</h2><p class="sub">Clean the PDF structure and, on stronger settings, reduce the size and quality of embedded JPEG images.</p>
+      <div class="drop" id="compressDrop"><strong>Drop one PDF here</strong><span>or choose a file from your device</span><br><button class="btn" id="compressChoose">Choose PDF</button><input id="compressInput" class="file-input" type="file" accept="application/pdf,.pdf"></div>
+      <div id="compressSummary"></div>
+
+      <div class="preset-grid" id="compressPresets">
+        <label class="preset selected"><input type="radio" name="compressPreset" value="light" checked><strong>Light</strong><p>Lossless stream optimization. Best for preserving quality.</p></label>
+        <label class="preset"><input type="radio" name="compressPreset" value="medium"><strong>Medium</strong><p>Also recompresses JPEG images at moderate quality.</p></label>
+        <label class="preset"><input type="radio" name="compressPreset" value="strong"><strong>Strong</strong><p>More image downscaling and lower JPEG quality.</p></label>
+      </div>
+      <div class="notice">Compression results vary. Text and vector content stay intact; Medium and Strong can soften images. Password-protected PDFs are not supported.</div>
+      <div class="actions"><button class="btn primary" id="compressRun" disabled>Compress PDF</button><button class="btn" id="compressClear" disabled>Clear</button></div>
+      <div id="compressStatus" class="status"><div class="statusText"></div><div class="progress"><div class="bar"></div></div><div class="resultArea"></div></div>
+    </div>
+  </section>
+
+  <div class="footer">No account. No upload. No server-side storage.</div>
+</div>
+
+<div class="modal" id="previewModal" aria-hidden="true">
+  <div class="modal-box">
+    <div class="modal-head"><div class="modal-title grow" id="previewTitle">Preview</div><label>Page <input id="previewPage" type="number" min="1" value="1"></label><button class="btn small" id="previewGo">Go</button><button class="btn small" id="previewClose">Close</button></div>
+    <iframe id="previewFrame" class="pdf-frame" title="PDF preview"></iframe>
+  </div>
+</div>
+<script src="jszip.min.js"></script>
+<script>
+(() => {
+'use strict';
+
+// ---------- Small helpers ----------
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const fmtBytes = n => { if (!Number.isFinite(n)) return '-'; const u=['B','KB','MB','GB']; let i=0,v=n; while(v>=1024&&i<u.length-1){v/=1024;i++} return `${v.toFixed(i?1:0)} ${u[i]}`; };
+const cleanPdfName = (name, fallback='output.pdf') => { let n=(name||'').trim()||fallback; if(!/\.pdf$/i.test(n)) n += '.pdf'; return n.replace(/[\\/:*?"<>|]+/g,'_'); };
+const baseName = name => (name||'document').replace(/\.pdf$/i,'');
+const tick = () => new Promise(r => setTimeout(r,0));
+const isPdfFile = f => f && (/\.pdf$/i.test(f.name) || f.type === 'application/pdf');
+function downloadBlob(blob, name){ const a=document.createElement('a'); const url=URL.createObjectURL(blob); a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000); }
+function setStatus(id, text, pct=null, kind=''){ const el=$(id); el.className='status show'+(kind?' '+kind:''); el.querySelector('.statusText').textContent=text; const bar=el.querySelector('.bar'); if(bar) bar.style.width=(pct==null?0:Math.max(0,Math.min(100,pct)))+'%'; }
+function hideStatus(id){ const el=$(id); el.className='status'; const r=el.querySelector('.resultArea'); if(r) r.innerHTML=''; }
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function bytesToBin(bytes){ let out=''; const size=0x8000; for(let i=0;i<bytes.length;i+=size){ out += String.fromCharCode(...bytes.subarray(i,i+size)); } return out; }
+function binToBytes(s){ const out=new Uint8Array(s.length); for(let i=0;i<s.length;i++) out[i]=s.charCodeAt(i)&255; return out; }
+function concatBytes(chunks){ let n=0; for(const c of chunks)n+=c.length; const out=new Uint8Array(n); let p=0; for(const c of chunks){out.set(c,p);p+=c.length} return out; }
+function globalKey(doc,key){ return `${doc.id}|${key}`; }
+
+// ---------- Minimal PDF syntax parser ----------
+const isWsCode = c => c===0||c===9||c===10||c===12||c===13||c===32;
+const isDelimChar = ch => !ch || /[\x00\x09\x0a\x0c\x0d\x20()<>\[\]{}/%]/.test(ch);
+function skipWs(s,i){ while(i<s.length){ const c=s.charCodeAt(i); if(isWsCode(c)){i++;continue} if(s[i]==='%'){ while(i<s.length && s[i]!=='\n' && s[i]!=='\r') i++; continue } break } return i; }
+function readToken(s,i){ const st=i; while(i<s.length && !isDelimChar(s[i])) i++; return {tok:s.slice(st,i),i}; }
+function parseValue(s,i){
+  i=skipWs(s,i); if(i>=s.length) throw new Error('Unexpected end of PDF object');
+  const ch=s[i];
+  if(ch==='<' && s[i+1]==='<'){
+    i+=2; const e=[];
+    while(true){ i=skipWs(s,i); if(s[i]==='>'&&s[i+1]==='>'){i+=2;break} const k=parseValue(s,i); if(k.v.t!=='name') throw new Error('Dictionary key is not a name'); i=k.i; const v=parseValue(s,i); i=v.i; e.push({k:k.v.r,v:v.v}); }
+    return {v:{t:'dict',e},i};
+  }
+  if(ch==='['){ i++; const a=[]; while(true){ i=skipWs(s,i); if(s[i]===']'){i++;break} const v=parseValue(s,i); a.push(v.v); i=v.i; } return {v:{t:'arr',a},i}; }
+  if(ch==='('){ const st=i; let depth=0; while(i<s.length){ const c=s[i++]; if(c==='\\'){ if(i<s.length){ if(s[i]==='\r'&&s[i+1]==='\n') i+=2; else i++; } continue } if(c==='(') depth++; else if(c===')'){ depth--; if(depth===0) break; } } return {v:{t:'lit',r:s.slice(st,i)},i}; }
+  if(ch==='<'){ const st=i++; while(i<s.length&&s[i]!=='>')i++; if(i<s.length)i++; return {v:{t:'hex',r:s.slice(st,i)},i}; }
+  if(ch==='/'){ i++; const st=i; while(i<s.length&&!isDelimChar(s[i]))i++; return {v:{t:'name',r:s.slice(st,i)},i}; }
+  const one=readToken(s,i); if(!one.tok) throw new Error('Bad token'); i=one.i;
+  if(/^[+-]?(?:\d+\.?\d*|\.\d+)$/.test(one.tok)){
+    const save=i; let j=skipWs(s,i); const two=readToken(s,j);
+    if(/^\d+$/.test(one.tok)&&/^\d+$/.test(two.tok)){ let k=skipWs(s,two.i); const three=readToken(s,k); if(three.tok==='R') return {v:{t:'ref',o:+one.tok,g:+two.tok},i:three.i}; }
+    return {v:{t:'num',r:one.tok,n:+one.tok},i:save};
+  }
+  if(one.tok==='true'||one.tok==='false') return {v:{t:'bool',v:one.tok==='true'},i};
+  if(one.tok==='null') return {v:{t:'null'},i};
+  return {v:{t:'kw',r:one.tok},i};
+}
+function cloneNode(n){ if(!n||typeof n!=='object') return n; if(n.t==='dict') return {t:'dict',e:n.e.map(x=>({k:x.k,v:cloneNode(x.v)}))}; if(n.t==='arr') return {t:'arr',a:n.a.map(cloneNode)}; return {...n}; }
+function decodeName(r){ return r.replace(/#([0-9a-fA-F]{2})/g,(_,h)=>String.fromCharCode(parseInt(h,16))); }
+function dictIndex(d,key){ if(!d||d.t!=='dict')return -1; return d.e.findIndex(x=>decodeName(x.k)===key); }
+function dictGet(d,key){ const i=dictIndex(d,key); return i<0?null:d.e[i].v; }
+function dictSet(d,key,v){ const i=dictIndex(d,key); if(i<0)d.e.push({k:key,v});else d.e[i].v=v; }
+function dictDelete(d,key){ const i=dictIndex(d,key); if(i>=0)d.e.splice(i,1); }
+const N = n => ({t:'num',r:String(n),n:+n});
+const Name = r => ({t:'name',r});
+const RefNew = n => ({t:'refnew',n});
+const Arr = a => ({t:'arr',a});
+const Dict = entries => ({t:'dict',e:Object.entries(entries).map(([k,v])=>({k,v}))});
+function nameValue(n){ return n&&n.t==='name'?decodeName(n.r):null; }
+function numValue(n){ return n&&n.t==='num'?n.n:null; }
+function boolValue(n){ return n&&n.t==='bool'?n.v:null; }
+function objectType(obj){ return nameValue(obj&&obj.value&&obj.value.t==='dict'?dictGet(obj.value,'Type'):null); }
+function keyForRef(r){ return `${r.o}:${r.g}`; }
+function resolveRef(doc,r){ if(!r||r.t!=='ref')return null; return doc.objects.get(keyForRef(r)) || doc.objects.get(`${r.o}:0`) || null; }
+function extractLastRef(text,key){ const tail=text.slice(Math.max(0,text.length-600000)); const re=new RegExp('\\/'+key+'\\s+(\\d+)\\s+(\\d+)\\s+R','g'); let m,last=null; while((m=re.exec(tail)))last={t:'ref',o:+m[1],g:+m[2]}; return last; }
+function filterNames(d){ const f=dictGet(d,'Filter'); if(!f)return []; if(f.t==='name')return [nameValue(f)]; if(f.t==='arr')return f.a.filter(x=>x.t==='name').map(nameValue); return []; }
+function hasSingleFlate(d){ const f=filterNames(d); return f.length===1&&(f[0]==='FlateDecode'||f[0]==='Fl'); }
+function hasSingleJpeg(d){ const f=filterNames(d); return f.length===1&&(f[0]==='DCTDecode'||f[0]==='DCT'); }
+
+async function inflateBytes(bytes){ if(!('DecompressionStream' in window)) throw new Error('This browser does not support local Flate decompression. Try a current version of Chrome, Edge, Firefox, or Safari.'); const ds=new DecompressionStream('deflate'); return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(ds)).arrayBuffer()); }
+async function deflateBytes(bytes){ if(!('CompressionStream' in window)) throw new Error('This browser does not support local compression streams. Try a current version of Chrome, Edge, Firefox, or Safari.'); const cs=new CompressionStream('deflate'); return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(cs)).arrayBuffer()); }
+
+let docCounter=1;
+async function parsePdfFile(file, progress){
+  const bytes=new Uint8Array(await file.arrayBuffer());
+  if(bytes.length<8 || bytesToBin(bytes.subarray(0,8)).indexOf('%PDF-')<0) throw new Error('This file does not appear to be a valid PDF.');
+  progress&&progress('Reading PDF structure...',8);
+  const text=bytesToBin(bytes);
+  const objects=new Map(); let pos=0;
+  const hdr=/(^|[\x00\r\n])(\d+)\s+(\d+)\s+obj\b/g;
+  while(pos<text.length){ hdr.lastIndex=pos; const m=hdr.exec(text); if(!m)break; const objStart=m.index+m[1].length; const o=+m[2],g=+m[3]; let p=hdr.lastIndex; let parsed;
+    try{ parsed=parseValue(text,p); p=skipWs(text,parsed.i); }catch(err){ pos=Math.max(hdr.lastIndex,objStart+1); continue; }
+    let stream=null,endObj=-1;
+    if(text.slice(p,p+6)==='stream' && parsed.v.t==='dict'){
+      let rawStart=p+6; if(text[rawStart]==='\r'&&text[rawStart+1]==='\n')rawStart+=2; else if(text[rawStart]==='\n'||text[rawStart]==='\r')rawStart++;
+      let rawEnd=-1, endStream=-1; const lenNode=dictGet(parsed.v,'Length');
+      if(lenNode&&lenNode.t==='num'&&lenNode.n>=0&&rawStart+lenNode.n<=bytes.length){ const candidate=rawStart+lenNode.n; const endKeyword=skipWs(text,candidate); if(text.slice(endKeyword,endKeyword+9)==='endstream'){rawEnd=candidate;endStream=endKeyword;} }
+      if(rawEnd<0){ let q=rawStart; while(true){ const c=text.indexOf('endstream',q); if(c<0)break; let z=skipWs(text,c+9); if(text.slice(z,z+6)==='endobj'){rawEnd=c;endStream=c; if(rawEnd>=2&&text[rawEnd-2]==='\r'&&text[rawEnd-1]==='\n')rawEnd-=2; else if(rawEnd>=1&&(text[rawEnd-1]==='\n'||text[rawEnd-1]==='\r'))rawEnd--; break;} q=c+9; } }
+      if(rawEnd<0){ pos=Math.max(hdr.lastIndex,objStart+1); continue; }
+      stream=bytes.slice(rawStart,rawEnd); let z=skipWs(text,endStream+9); if(text.slice(z,z+6)==='endobj')endObj=z+6;
+    } else { let z=skipWs(text,p); if(text.slice(z,z+6)==='endobj')endObj=z+6; else { const c=text.indexOf('endobj',z); if(c>=0)endObj=c+6; } }
+    if(endObj<0){pos=Math.max(hdr.lastIndex,objStart+1);continue;}
+    const key=`${o}:${g}`; objects.set(key,{key,o,g,value:parsed.v,stream}); pos=endObj;
+  }
+  const doc={id:docCounter++,file,bytes,text,objects,pages:[],catalogKey:null,infoRef:null};
+  const enc=extractLastRef(text,'Encrypt'); if(enc) throw new Error('Password-protected or encrypted PDFs are not supported.');
+  progress&&progress('Reading compressed PDF objects...',22);
+  await unpackObjectStreams(doc);
+  locateDocumentStructure(doc);
+  if(!doc.pages.length) throw new Error('I could not find any pages in this PDF. It may use a PDF feature this local parser does not support.');
+  progress&&progress(`Ready - ${doc.pages.length} page${doc.pages.length===1?'':'s'}.`,100);
+  return doc;
+}
+
+async function unpackObjectStreams(doc){
+  const streams=[...doc.objects.values()].filter(o=>objectType(o)==='ObjStm'&&o.stream);
+  for(let si=0;si<streams.length;si++){
+    const obj=streams[si],d=obj.value; const n=numValue(dictGet(d,'N')), first=numValue(dictGet(d,'First')); if(!Number.isInteger(n)||!Number.isInteger(first))continue;
+    let data=obj.stream;
+    const f=filterNames(d); if(f.length){ if(f.length===1&&(f[0]==='FlateDecode'||f[0]==='Fl')){ try{data=await inflateBytes(data)}catch{continue} } else continue; }
+    if(first<0||first>data.length)continue; const head=bytesToBin(data.subarray(0,first)).trim().split(/\s+/); if(head.length<n*2)continue;
+    const nums=[]; for(let i=0;i<n;i++)nums.push({o:+head[i*2],off:+head[i*2+1]});
+    for(let i=0;i<nums.length;i++){ const st=first+nums[i].off,en=i+1<nums.length?first+nums[i+1].off:data.length; if(st<first||en<st||en>data.length)continue; const body=bytesToBin(data.subarray(st,en)); try{ const pv=parseValue(body,0); const key=`${nums[i].o}:0`; if(!doc.objects.has(key))doc.objects.set(key,{key,o:nums[i].o,g:0,value:pv.v,stream:null,fromObjStm:true}); }catch{} }
+    if(si%3===0)await tick();
+  }
+}
+
+function locateDocumentStructure(doc){
+  const rootRef=extractLastRef(doc.text,'Root'); const infoRef=extractLastRef(doc.text,'Info'); doc.infoRef=infoRef;
+  let catalog=rootRef?resolveRef(doc,rootRef):null; if(!catalog||catalog.value.t!=='dict')catalog=[...doc.objects.values()].find(o=>objectType(o)==='Catalog')||null;
+  if(catalog)doc.catalogKey=catalog.key;
+  const pages=[]; const seen=new Set(); const inheritable=['Resources','MediaBox','CropBox','Rotate','BleedBox','TrimBox','ArtBox','UserUnit'];
+  function walk(refOrObj, inherited={}){ const obj=refOrObj&&refOrObj.t==='ref'?resolveRef(doc,refOrObj):refOrObj; if(!obj||seen.has(obj.key)||obj.value.t!=='dict')return; seen.add(obj.key); const d=obj.value,type=objectType(obj); const next={...inherited}; for(const k of inheritable){ const v=dictGet(d,k); if(v)next[k]=v; }
+    if(type==='Page'){ pages.push({key:obj.key,obj,inherited:next}); return; }
+    const kids=dictGet(d,'Kids'); if(kids&&kids.t==='arr'){ for(const kid of kids.a) if(kid.t==='ref')walk(kid,next); }
+  }
+  if(catalog){ const pr=dictGet(catalog.value,'Pages'); if(pr)walk(pr,{}); }
+  if(!pages.length){ const fallback=[...doc.objects.values()].filter(o=>objectType(o)==='Page').sort((a,b)=>a.o-b.o); for(const o of fallback)pages.push({key:o.key,obj:o,inherited:{}}); }
+  doc.pages=pages;
+}
+
+function makePageClone(info){ const d=cloneNode(info.obj.value); for(const [k,v] of Object.entries(info.inherited)){ if(!dictGet(d,k))dictSet(d,k,cloneNode(v)); } dictDelete(d,'Parent'); return d; }
+function walkRefs(node,cb,dictKey=null){ if(!node)return; if(node.t==='ref'){cb(node,dictKey);return} if(node.t==='arr'){for(const x of node.a)walkRefs(x,cb,dictKey);return} if(node.t==='dict'){for(const x of node.e)walkRefs(x.v,cb,decodeName(x.k));} }
+function collectPageClosure(doc,pageInfos,pageClones){ const selected=new Set(pageInfos.map(p=>p.key)); const included=new Set(selected); const q=[...selected]; while(q.length){ const key=q.shift(); const obj=doc.objects.get(key); const node=pageClones.get(key)||obj?.value; if(!node)continue; walkRefs(node,(r,dk)=>{ if(dk==='Length')return; const target=resolveRef(doc,r); if(!target)return; const type=objectType(target); if(type==='Catalog'||type==='Pages'||type==='XRef'||type==='ObjStm')return; if(type==='Page'&&!selected.has(target.key))return; if(!included.has(target.key)){included.add(target.key);q.push(target.key)} }); }
+  return included;
+}
+
+function serializeNode(node,sourceId,map){ if(!node)return 'null'; switch(node.t){
+  case 'dict': return '<< '+node.e.map(x=>'/'+x.k+' '+serializeNode(x.v,sourceId,map)).join(' ')+' >>';
+  case 'arr': return '[ '+node.a.map(x=>serializeNode(x,sourceId,map)).join(' ')+' ]';
+  case 'name': return '/'+node.r; case 'num': return node.r; case 'lit': case 'hex': return node.r; case 'bool': return node.v?'true':'false'; case 'null': return 'null'; case 'kw': return node.r;
+  case 'refnew': return `${node.n} 0 R`;
+  case 'ref': { let n=map.get(`${sourceId}|${node.o}:${node.g}`); if(!n)n=map.get(`${sourceId}|${node.o}:0`); return n?`${n} 0 R`:'null'; }
+  default:return 'null'; }
+}
+function makeStreamDict(dict,stream){ const d=cloneNode(dict); dictSet(d,'Length',N(stream.length)); return d; }
+function writePdfObject(num,node,stream,sourceId,map){ const chunks=[]; chunks.push(binToBytes(`${num} 0 obj\n`)); if(stream){ const d=makeStreamDict(node,stream); chunks.push(binToBytes(serializeNode(d,sourceId,map)+'\nstream\n')); chunks.push(stream); chunks.push(binToBytes('\nendstream\nendobj\n')); } else chunks.push(binToBytes(serializeNode(node,sourceId,map)+'\nendobj\n')); return concatBytes(chunks); }
+function assemblePdf(entries,map,rootNum,infoNum=null){ const chunks=[binToBytes('%PDF-1.7\n%\xFF\xFF\xFF\xFF\n')]; let total=chunks[0].length; const offsets=[0];
+  for(const e of entries){ offsets[e.num]=total; const b=writePdfObject(e.num,e.value,e.stream,e.sourceId,map); chunks.push(b); total+=b.length; }
+  const xrefPos=total; const size=Math.max(...entries.map(e=>e.num))+1; let x=`xref\n0 ${size}\n0000000000 65535 f \n`; for(let i=1;i<size;i++)x+=(String(offsets[i]||0).padStart(10,'0'))+' 00000 n \n'; x+=`trailer\n<< /Size ${size} /Root ${rootNum} 0 R`+(infoNum?` /Info ${infoNum} 0 R`:'')+` >>\nstartxref\n${xrefPos}\n%%EOF\n`; chunks.push(binToBytes(x)); return concatBytes(chunks); }
+
+async function buildPagePdf(selections,progress){
+  // selections: [{doc, pages:[pageInfo,...]}] in desired output order
+  const map=new Map(), includedByDoc=new Map(), cloneByDoc=new Map(); let all=[];
+  for(const sel of selections){ const clones=new Map(sel.pages.map(p=>[p.key,makePageClone(p)])); cloneByDoc.set(sel.doc.id,clones); const inc=collectPageClosure(sel.doc,sel.pages,clones); includedByDoc.set(sel.doc.id,inc); for(const key of inc)all.push({doc:sel.doc,key}); }
+  // de-duplicate by source object
+  const seen=new Set(); all=all.filter(x=>{const g=globalKey(x.doc,x.key);if(seen.has(g))return false;seen.add(g);return true});
+  all.sort((a,b)=>a.doc.id-b.doc.id || a.doc.objects.get(a.key).o-b.doc.objects.get(b.key).o);
+  let num=1; for(const x of all)map.set(globalKey(x.doc,x.key),num++); const pagesNum=num++,catalogNum=num++;
+  const selectedKeys=new Set(selections.flatMap(s=>s.pages.map(p=>globalKey(s.doc,p.key)))); const entries=[]; let done=0;
+  for(const x of all){ const obj=x.doc.objects.get(x.key); let value=obj.value; if(selectedKeys.has(globalKey(x.doc,x.key))){ value=cloneNode(cloneByDoc.get(x.doc.id).get(x.key)); dictSet(value,'Parent',RefNew(pagesNum)); }
+    entries.push({num:map.get(globalKey(x.doc,x.key)),sourceId:x.doc.id,value,stream:obj.stream}); done++; if(done%40===0){progress&&progress('Copying PDF objects...',Math.min(82,25+done/Math.max(1,all.length)*55));await tick();} }
+  const kids=[]; for(const sel of selections)for(const p of sel.pages)kids.push(RefNew(map.get(globalKey(sel.doc,p.key))));
+  entries.push({num:pagesNum,sourceId:0,value:Dict({Type:Name('Pages'),Kids:Arr(kids),Count:N(kids.length)}),stream:null});
+  entries.push({num:catalogNum,sourceId:0,value:Dict({Type:Name('Catalog'),Pages:RefNew(pagesNum)}),stream:null});
+  progress&&progress('Writing PDF...',90); await tick(); const out=assemblePdf(entries,map,catalogNum); progress&&progress('Done.',100); return out;
+}
+
+// ---------- Compression ----------
+async function optimizeLossless(obj){ if(!obj.stream||obj.stream.length<512||obj.value.t!=='dict')return null; const d=obj.value, filters=filterNames(d);
+  try{
+    if(filters.length===0){ const c=await deflateBytes(obj.stream); if(c.length+24<obj.stream.length){ const nd=cloneNode(d); dictSet(nd,'Filter',Name('FlateDecode')); dictDelete(nd,'DecodeParms'); return {value:nd,stream:c,saved:obj.stream.length-c.length}; } }
+    else if(hasSingleFlate(d)){ const raw=await inflateBytes(obj.stream); const c=await deflateBytes(raw); if(c.length+8<obj.stream.length){ return {value:cloneNode(d),stream:c,saved:obj.stream.length-c.length}; } }
+  }catch{}
+  return null;
+}
+async function imageBitmapFromJpeg(bytes){ const blob=new Blob([bytes],{type:'image/jpeg'}); if('createImageBitmap' in window)return await createImageBitmap(blob); return await new Promise((resolve,reject)=>{const img=new Image();const u=URL.createObjectURL(blob);img.onload=()=>{URL.revokeObjectURL(u);resolve(img)};img.onerror=e=>{URL.revokeObjectURL(u);reject(e)};img.src=u;}); }
+async function recompressJpeg(obj,preset){ if(!obj.stream||obj.value.t!=='dict'||!hasSingleJpeg(obj.value))return null; if(objectType(obj)!==null && objectType(obj)!=='XObject'){} const subtype=nameValue(dictGet(obj.value,'Subtype')); if(subtype!=='Image')return null; if(dictGet(obj.value,'Decode')||boolValue(dictGet(obj.value,'ImageMask'))===true)return null;
+  const quality=preset==='medium'?.72:.50, maxDim=preset==='medium'?2400:1600;
+  try{ const img=await imageBitmapFromJpeg(obj.stream); const iw=img.width||img.naturalWidth, ih=img.height||img.naturalHeight; if(!iw||!ih){img.close&&img.close();return null} const scale=Math.min(1,maxDim/Math.max(iw,ih)); const w=Math.max(1,Math.round(iw*scale)),h=Math.max(1,Math.round(ih*scale)); const canvas=document.createElement('canvas'); canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d',{alpha:false});ctx.drawImage(img,0,0,w,h);img.close&&img.close(); const blob=await new Promise(r=>canvas.toBlob(r,'image/jpeg',quality)); canvas.width=canvas.height=1; if(!blob)return null; const b=new Uint8Array(await blob.arrayBuffer()); if(b.length>=obj.stream.length*.98)return null; const nd=cloneNode(obj.value);dictSet(nd,'Width',N(w));dictSet(nd,'Height',N(h));dictSet(nd,'BitsPerComponent',N(8));dictSet(nd,'ColorSpace',Name('DeviceRGB'));dictSet(nd,'Filter',Name('DCTDecode'));dictDelete(nd,'DecodeParms');dictDelete(nd,'Decode'); return {value:nd,stream:b,saved:obj.stream.length-b.length}; }catch{return null}
+}
+async function compressDocument(doc,preset,progress){ const eligible=[...doc.objects.values()].filter(o=>o.value&&objectType(o)!=='XRef'&&objectType(o)!=='ObjStm'); const map=new Map(); let num=1; eligible.sort((a,b)=>a.o-b.o||a.g-b.g); for(const o of eligible)map.set(globalKey(doc,o.key),num++);
+  const overrides=new Map(); const streams=eligible.filter(o=>o.stream); let saved=0,jpegCount=0; for(let i=0;i<streams.length;i++){ const o=streams[i]; progress&&progress(`Optimizing stream ${i+1} of ${streams.length}...`,10+(i/Math.max(1,streams.length))*72); let best=await optimizeLossless(o); if(preset!=='light'&&hasSingleJpeg(o.value)){ const j=await recompressJpeg(o,preset); if(j && (!best || j.stream.length<best.stream.length)){best=j;jpegCount++;} }
+    if(best){overrides.set(o.key,best);saved+=best.saved||0} if(i%4===0)await tick(); }
+  const entries=eligible.map(o=>{const ov=overrides.get(o.key);return{num:map.get(globalKey(doc,o.key)),sourceId:doc.id,value:ov?ov.value:o.value,stream:ov?ov.stream:o.stream}});
+  const rootNum=map.get(globalKey(doc,doc.catalogKey)); if(!rootNum)throw new Error('Could not preserve the PDF catalog while compressing.'); let infoNum=null; if(doc.infoRef){const io=resolveRef(doc,doc.infoRef);if(io)infoNum=map.get(globalKey(doc,io.key))||null}
+  progress&&progress('Writing compressed PDF...',88);await tick(); const out=assemblePdf(entries,map,rootNum,infoNum); progress&&progress('Done.',100); return {bytes:out,streamSavings:saved,jpegCount}; }
+
+// ---------- Page range parsing ----------
+function parsePageSpec(spec,maxPages){ const parts=String(spec||'').split(',').map(x=>x.trim()).filter(Boolean); if(!parts.length)throw new Error('Enter at least one page or page range.'); const out=[]; for(const p of parts){ const m=p.match(/^(\d+)\s*-\s*(\d+)$/); if(m){let a=+m[1],b=+m[2];if(a<1||b<1||a>maxPages||b>maxPages)throw new Error(`Page range ${p} is outside this PDF.`); const step=a<=b?1:-1;for(let x=a;;x+=step){out.push(x);if(x===b)break}} else if(/^\d+$/.test(p)){const n=+p;if(n<1||n>maxPages)throw new Error(`Page ${n} is outside this PDF.`);out.push(n)} else throw new Error(`I couldn't understand "${p}".`); } return out; }
+function splitGroupsSpec(spec,maxPages){ const gs=String(spec||'').split(/\s*(?:\/|;|\r?\n)\s*/).map(x=>x.trim()).filter(Boolean); if(!gs.length)throw new Error('Enter at least one page group.'); return gs.map(g=>parsePageSpec(g,maxPages)); }
+
+// ---------- Preview ----------
+let previewUrl=null, previewFile=null, previewMax=1;
+function openPreview(file,pages,page=1){ if(previewUrl)URL.revokeObjectURL(previewUrl); previewUrl=URL.createObjectURL(file);previewFile=file;previewMax=pages||1;$('#previewTitle').textContent=file.name;$('#previewPage').max=previewMax;$('#previewPage').value=Math.min(Math.max(1,page),previewMax);showPreviewPage();$('#previewModal').classList.add('open');$('#previewModal').setAttribute('aria-hidden','false'); }
+function showPreviewPage(){ if(!previewUrl)return; const p=Math.min(previewMax,Math.max(1,+$('#previewPage').value||1));$('#previewPage').value=p;$('#previewFrame').src=previewUrl+`#page=${p}&zoom=page-width`; }
+function closePreview(){ $('#previewFrame').src='about:blank';$('#previewModal').classList.remove('open');$('#previewModal').setAttribute('aria-hidden','true'); if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null} }
+$('#previewGo').onclick=showPreviewPage;$('#previewClose').onclick=closePreview;$('#previewModal').addEventListener('click',e=>{if(e.target.id==='previewModal')closePreview()});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#previewModal').classList.contains('open'))closePreview()});
+
+// ---------- Generic drop zones ----------
+function wireDrop(drop,choose,input,onFiles,multiple=false){ choose.onclick=()=>input.click(); input.onchange=()=>{const fs=[...input.files];input.value='';onFiles(multiple?fs:fs.slice(0,1))}; ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag')})); ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag')})); drop.addEventListener('drop',e=>{const fs=[...e.dataTransfer.files].filter(isPdfFile);onFiles(multiple?fs:fs.slice(0,1))}); }
+
+// ---------- Merge UI ----------
+let mergeDocs=[];
+wireDrop($('#mergeDrop'),$('#mergeChoose'),$('#mergeInput'),addMergeFiles,true);
+async function addMergeFiles(files){ files=files.filter(isPdfFile); if(!files.length)return; hideStatus('#mergeStatus'); for(const f of files){ try{ setStatus('#mergeStatus',`Reading ${f.name}...`,5); const doc=await parsePdfFile(f,(t,p)=>setStatus('#mergeStatus',`${f.name}: ${t}`,p)); mergeDocs.push(doc); renderMerge(); }catch(e){setStatus('#mergeStatus',`${f.name}: ${e.message}`,0,'bad')} } if(mergeDocs.length)setStatus('#mergeStatus',`${mergeDocs.length} PDF${mergeDocs.length===1?'':'s'} ready.`,100,'good'); }
+function renderMerge(){ const list=$('#mergeList');list.innerHTML=''; mergeDocs.forEach((d,i)=>{const row=document.createElement('div');row.className='file-row';row.draggable=true;row.dataset.i=i;row.innerHTML=`<div class="drag-handle" title="Drag to reorder">⋮⋮</div><div><div class="file-name">${escapeHtml(d.file.name)}</div><div class="meta">${d.pages.length} page${d.pages.length===1?'':'s'} · ${fmtBytes(d.file.size)}</div></div><div class="row-actions"><button class="btn small up" title="Move up">↑</button><button class="btn small down" title="Move down">↓</button><button class="btn small preview">Preview</button><button class="btn small danger remove">Remove</button></div>`; row.querySelector('.preview').onclick=()=>openPreview(d.file,d.pages.length);row.querySelector('.remove').onclick=()=>{mergeDocs.splice(i,1);renderMerge()};row.querySelector('.up').onclick=()=>{if(i){[mergeDocs[i-1],mergeDocs[i]]=[mergeDocs[i],mergeDocs[i-1]];renderMerge()}};row.querySelector('.down').onclick=()=>{if(i<mergeDocs.length-1){[mergeDocs[i+1],mergeDocs[i]]=[mergeDocs[i],mergeDocs[i+1]];renderMerge()}};
+    row.addEventListener('dragstart',()=>row.classList.add('dragging'));row.addEventListener('dragend',()=>row.classList.remove('dragging'));row.addEventListener('dragover',e=>e.preventDefault());row.addEventListener('drop',e=>{e.preventDefault();const from=+document.querySelector('.file-row.dragging')?.dataset.i;if(Number.isInteger(from)&&from!==i){const [x]=mergeDocs.splice(from,1);mergeDocs.splice(i,0,x);renderMerge()}});list.appendChild(row)}); $('#mergeRun').disabled=mergeDocs.length<2;$('#mergeClear').disabled=!mergeDocs.length; }
+$('#mergeClear').onclick=()=>{mergeDocs=[];renderMerge();hideStatus('#mergeStatus')};
+$('#mergeRun').onclick=async()=>{ if(mergeDocs.length<2)return; try{$('#mergeRun').disabled=true;setStatus('#mergeStatus','Preparing pages...',3); const sels=mergeDocs.map(d=>({doc:d,pages:d.pages})); const out=await buildPagePdf(sels,(t,p)=>setStatus('#mergeStatus',t,p)); const name=cleanPdfName($('#mergeName').value,'merged.pdf');downloadBlob(new Blob([out],{type:'application/pdf'}),name);setStatus('#mergeStatus',`Merged ${mergeDocs.length} PDFs into ${name}.`,100,'good');}catch(e){setStatus('#mergeStatus',e.message,0,'bad')}finally{$('#mergeRun').disabled=mergeDocs.length<2} };
+
+// ---------- Split UI ----------
+let splitDoc=null;
+wireDrop($('#splitDrop'),$('#splitChoose'),$('#splitInput'),async files=>{const f=files[0];if(!f)return;try{setStatus('#splitStatus',`Reading ${f.name}...`,5);splitDoc=await parsePdfFile(f,(t,p)=>setStatus('#splitStatus',t,p));renderSingleSummary('#splitSummary',splitDoc,'split');$('#splitRun').disabled=false;$('#splitClear').disabled=false;setStatus('#splitStatus',`${splitDoc.pages.length} pages ready.`,100,'good')}catch(e){splitDoc=null;renderSingleSummary('#splitSummary',null,'split');setStatus('#splitStatus',e.message,0,'bad')}},false);
+function renderSingleSummary(target,doc,kind){ const el=$(target);if(!doc){el.innerHTML='';return} el.innerHTML=`<div class="file-summary"><div class="left"><div class="name">${escapeHtml(doc.file.name)}</div><div class="details">${doc.pages.length} page${doc.pages.length===1?'':'s'} · ${fmtBytes(doc.file.size)}</div></div><div class="right"><button class="btn small preview">Preview PDF</button><button class="btn small replace">Choose another</button></div></div>`;el.querySelector('.preview').onclick=()=>openPreview(doc.file,doc.pages.length);el.querySelector('.replace').onclick=()=>$('#'+kind+'Input').click(); }
+$$('input[name="splitMode"]').forEach(r=>r.addEventListener('change',()=>{$$('#splitModes .mode').forEach(m=>m.classList.toggle('selected',m.querySelector('input').checked));$$('.option-box').forEach(b=>b.classList.toggle('active',b.dataset.modebox===r.value))}));
+$('#splitClear').onclick=()=>{splitDoc=null;renderSingleSummary('#splitSummary',null,'split');$('#splitRun').disabled=true;$('#splitClear').disabled=true;hideStatus('#splitStatus')};
+$('#splitRun').onclick=async()=>{if(!splitDoc)return; const mode=$('input[name="splitMode"]:checked').value; try{$('#splitRun').disabled=true;setStatus('#splitStatus','Preparing split...',2); let groups=[]; if(mode==='extract')groups=[parsePageSpec($('#extractPages').value,splitDoc.pages.length)]; else if(mode==='groups')groups=splitGroupsSpec($('#groupPages').value,splitDoc.pages.length); else if(mode==='every'){const n=Math.floor(+$('#everyPages').value);if(!n||n<1)throw new Error('Pages per part must be at least 1.');for(let s=1;s<=splitDoc.pages.length;s+=n){const g=[];for(let p=s;p<Math.min(s+n,splitDoc.pages.length+1);p++)g.push(p);groups.push(g)}} else {for(let p=1;p<=splitDoc.pages.length;p++)groups.push([p]);}
+    const root=baseName(splitDoc.file.name); if(groups.length===1){const pages=groups[0].map(n=>splitDoc.pages[n-1]);const out=await buildPagePdf([{doc:splitDoc,pages}],(t,p)=>setStatus('#splitStatus',t,p));const name=`${root}_pages_${groups[0].join('-')}.pdf`;downloadBlob(new Blob([out],{type:'application/pdf'}),name);setStatus('#splitStatus',`Created ${name}.`,100,'good');}
+    else {const zip=new JSZip();for(let i=0;i<groups.length;i++){const g=groups[i];setStatus('#splitStatus',`Creating part ${i+1} of ${groups.length}...`,5+(i/groups.length)*82);const pages=g.map(n=>splitDoc.pages[n-1]);const out=await buildPagePdf([{doc:splitDoc,pages}]);const label=mode==='pages'?`page_${String(g[0]).padStart(3,'0')}`:`part_${String(i+1).padStart(2,'0')}_pages_${g[0]}-${g[g.length-1]}`;zip.file(`${root}_${label}.pdf`,out);await tick()} setStatus('#splitStatus','Building ZIP...',92);const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}},m=>setStatus('#splitStatus','Building ZIP...',92+m.percent*.08));downloadBlob(blob,`${root}_split.zip`);setStatus('#splitStatus',`Created ${groups.length} PDFs in ${root}_split.zip.`,100,'good');}
+  }catch(e){setStatus('#splitStatus',e.message,0,'bad')}finally{$('#splitRun').disabled=!splitDoc} };
+
+// ---------- Compress UI ----------
+let compressDoc=null;
+wireDrop($('#compressDrop'),$('#compressChoose'),$('#compressInput'),async files=>{const f=files[0];if(!f)return;try{setStatus('#compressStatus',`Reading ${f.name}...`,5);compressDoc=await parsePdfFile(f,(t,p)=>setStatus('#compressStatus',t,p));renderSingleSummary('#compressSummary',compressDoc,'compress');$('#compressRun').disabled=false;$('#compressClear').disabled=false;setStatus('#compressStatus',`${compressDoc.pages.length} pages ready for compression.`,100,'good')}catch(e){compressDoc=null;renderSingleSummary('#compressSummary',null,'compress');setStatus('#compressStatus',e.message,0,'bad')}},false);
+$$('input[name="compressPreset"]').forEach(r=>r.addEventListener('change',()=>$$('#compressPresets .preset').forEach(p=>p.classList.toggle('selected',p.querySelector('input').checked))));
+$('#compressClear').onclick=()=>{compressDoc=null;renderSingleSummary('#compressSummary',null,'compress');$('#compressRun').disabled=true;$('#compressClear').disabled=true;hideStatus('#compressStatus')};
+$('#compressRun').onclick=async()=>{if(!compressDoc)return;const preset=$('input[name="compressPreset"]:checked').value;try{$('#compressRun').disabled=true;const result=await compressDocument(compressDoc,preset,(t,p)=>setStatus('#compressStatus',t,p));const original=compressDoc.bytes.length,attempt=result.bytes.length;let finalBytes=result.bytes,changed=true;if(attempt>=original){finalBytes=compressDoc.bytes;changed=false}const final=finalBytes.length;const pct=original?Math.max(0,(1-final/original)*100):0;const name=`${baseName(compressDoc.file.name)}_compressed.pdf`;downloadBlob(new Blob([finalBytes],{type:'application/pdf'}),name);const area=$('#compressStatus .resultArea');area.innerHTML=`<div class="result-stats"><div class="stat"><b>${fmtBytes(original)}</b><span>Original</span></div><div class="stat"><b>${fmtBytes(final)}</b><span>${changed?'Compressed':'Best available'}</span></div><div class="stat"><b>${pct.toFixed(1)}%</b><span>Smaller</span></div></div>`;setStatus('#compressStatus',changed?`Compressed PDF downloaded as ${name}.`:`This PDF was already well optimized. An unchanged copy was downloaded as ${name}.`,100,changed?'good':'warn');area.innerHTML=`<div class="result-stats"><div class="stat"><b>${fmtBytes(original)}</b><span>Original</span></div><div class="stat"><b>${fmtBytes(final)}</b><span>${changed?'Compressed':'Unchanged'}</span></div><div class="stat"><b>${pct.toFixed(1)}%</b><span>Smaller</span></div></div>`;}catch(e){setStatus('#compressStatus',e.message,0,'bad')}finally{$('#compressRun').disabled=!compressDoc} };
+
+// ---------- Tabs ----------
+$$('.tab').forEach(t=>t.onclick=()=>{$$('.tab').forEach(x=>x.classList.toggle('active',x===t));$$('.panel').forEach(p=>p.classList.toggle('active',p.id===t.dataset.tab))});
+
+// Expose a few core functions for local smoke tests.
+window.LocalPdfUtilityTest={parsePdfFile,buildPagePdf,compressDocument};
+})();
+</script>
+</body>
+</html>
