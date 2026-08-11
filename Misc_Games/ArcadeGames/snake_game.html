@@ -113,7 +113,12 @@
     @media (max-width:760px){
       .topbar{grid-template-columns:1fr 1fr}
     }
-  </style>
+  
+/* Mobile redesign 2026-08 */
+.mobileSwipeHint{display:none}@media(max-width:700px),(hover:none) and (pointer:coarse){body{padding:5px;align-items:flex-start}.card{padding:6px;border-radius:12px}.topbar{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-bottom:4px}.topbar>div:first-child{grid-column:1/-1;text-align:center}.topbar h1{font-size:1.1rem}.pill{min-width:0;padding:4px 2px}.pill .label{font-size:.62rem}.pill .value{font-size:.88rem}.controls{margin:0;justify-content:center}.controls button{padding:5px 10px;font-size:.78rem}.boardWrap{padding:3px;border-radius:10px}.boardWrap canvas{width:min(100%,calc(100dvh - 155px));max-height:calc(100dvh - 155px);touch-action:none}.mobileSwipeHint{display:block;position:absolute;left:50%;bottom:8px;transform:translateX(-50%);z-index:4;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.82);font-size:11px;font-weight:800;color:#4c6680;pointer-events:none;opacity:.86;white-space:nowrap}.overlayBox{padding:10px}.overlayBox p{font-size:.88rem;margin:5px auto}}
+@media(orientation:landscape) and (max-height:500px) and (pointer:coarse){.topbar{display:none}.card{display:block;width:auto}.main{display:grid;grid-template-columns:auto 82px;gap:6px;align-items:center}.boardWrap{grid-column:1;grid-row:1}.controls{display:flex;grid-column:2;grid-row:1;margin:0}.controls button{width:100%;min-height:48px}.boardWrap canvas{height:calc(100dvh - 20px);width:auto;max-width:100%;max-height:none;aspect-ratio:1/1}.mobileSwipeHint{bottom:5px}}
+
+</style>
 </head>
 <body>
   <div class="app">
@@ -136,6 +141,7 @@
 
         <div class="boardWrap">
           <canvas id="game" width="816" height="816" aria-label="Snake board"></canvas>
+<div class="mobileSwipeHint">Swipe on the board to steer</div>
           <div class="overlay" id="overlay">
             <div class="overlayBox">
               <div id="overlayInner"></div>
@@ -820,6 +826,26 @@
     }
   }, {passive:false});
 
+  // Mobile: swipe directly on the board. This keeps the whole field visible.
+  let mobileSwipeStart = null;
+  canvas.style.touchAction = 'none';
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse') return;
+    mobileSwipeStart = {x:e.clientX,y:e.clientY,id:e.pointerId};
+    try{ canvas.setPointerCapture(e.pointerId); }catch{}
+    e.preventDefault();
+  });
+  canvas.addEventListener('pointerup', (e) => {
+    if (!mobileSwipeStart || mobileSwipeStart.id !== e.pointerId) return;
+    const dx=e.clientX-mobileSwipeStart.x, dy=e.clientY-mobileSwipeStart.y;
+    mobileSwipeStart=null;
+    if (Math.max(Math.abs(dx),Math.abs(dy)) < 18) return;
+    const key = Math.abs(dx)>Math.abs(dy) ? (dx>0?'ArrowRight':'ArrowLeft') : (dy>0?'ArrowDown':'ArrowUp');
+    document.dispatchEvent(new KeyboardEvent('keydown',{key,code:key,bubbles:true,cancelable:true}));
+    e.preventDefault();
+  });
+  canvas.addEventListener('pointercancel',()=>{mobileSwipeStart=null});
+
   restartBtn.addEventListener('click', newGame);
 
   buildLevel(1);
@@ -842,105 +868,5 @@
   requestAnimationFrame(loop);
 })();
 </script>
-
-
-<style id="mobile-touch-controls-style">
-  .mobile-touch-controls{display:none}
-  @media (hover:none), (pointer:coarse), (max-width:700px){
-    html{scroll-padding-bottom:150px}
-    body{overflow-x:hidden}
-    canvas{max-width:100%}
-    .mobile-touch-controls{
-      display:flex; flex-direction:column; gap:8px;
-      position:sticky; bottom:max(6px, env(safe-area-inset-bottom)); z-index:999;
-      width:min(100%,620px); margin:10px auto 4px; padding:10px;
-      border-radius:14px; background:rgba(15,23,42,.92); color:#fff;
-      box-shadow:0 8px 28px rgba(0,0,0,.3); backdrop-filter:blur(8px);
-      -webkit-backdrop-filter:blur(8px); touch-action:none; user-select:none; -webkit-user-select:none;
-    }
-    .mobile-touch-controls .mtc-title{font:700 12px/1.2 system-ui,sans-serif; text-align:center; opacity:.82; letter-spacing:.03em}
-    .mobile-touch-controls .mtc-row{display:flex; justify-content:center; align-items:center; gap:8px; flex-wrap:wrap}
-    .mobile-touch-controls .mtc-split{display:grid; grid-template-columns:1fr 1fr; gap:10px}
-    .mobile-touch-controls .mtc-group{display:flex; flex-direction:column; align-items:center; gap:5px; min-width:0}
-    .mobile-touch-controls .mtc-group-label{font:700 12px/1.2 system-ui,sans-serif; opacity:.85}
-    .mobile-touch-controls button{
-      appearance:none; -webkit-appearance:none; border:1px solid rgba(255,255,255,.24);
-      background:rgba(255,255,255,.12); color:#fff; border-radius:11px;
-      min-width:52px; min-height:48px; padding:8px 12px; margin:0;
-      font:700 18px/1 system-ui,sans-serif; cursor:pointer; touch-action:none;
-      -webkit-tap-highlight-color:transparent;
-    }
-    .mobile-touch-controls button.mtc-wide{min-width:84px; font-size:14px}
-    .mobile-touch-controls button.mtc-small{min-width:46px; min-height:44px; padding:6px 9px; font-size:16px}
-    .mobile-touch-controls button:active,.mobile-touch-controls button.is-held{transform:translateY(1px); background:rgba(255,255,255,.25)}
-    .mobile-touch-controls .mtc-dpad{display:grid; grid-template-columns:46px 46px 46px; grid-template-rows:44px 44px 44px; gap:4px}
-    .mobile-touch-controls .mtc-dpad button{min-width:46px; min-height:44px; padding:4px}
-    .mobile-touch-controls .mtc-up{grid-column:2;grid-row:1}.mobile-touch-controls .mtc-left{grid-column:1;grid-row:2}
-    .mobile-touch-controls .mtc-right{grid-column:3;grid-row:2}.mobile-touch-controls .mtc-down{grid-column:2;grid-row:3}
-  }
-  @media (max-width:390px){
-    .mobile-touch-controls{padding:8px; gap:6px}
-    .mobile-touch-controls .mtc-row{gap:6px}
-    .mobile-touch-controls button{min-width:48px; min-height:46px; padding:7px 9px}
-    .mobile-touch-controls .mtc-split{gap:6px}
-    .mobile-touch-controls .mtc-dpad{grid-template-columns:42px 42px 42px; grid-template-rows:42px 42px 42px}
-    .mobile-touch-controls .mtc-dpad button{min-width:42px; min-height:42px}
-  }
-</style>
-
-<div class="mobile-touch-controls" aria-label="Touch controls"><div class="mtc-title">Swipe-free touch steering</div><div class="mtc-row"><div class="mtc-dpad">
-<button class="mtc-up mtc-small" data-key="ArrowUp" aria-label="Up">▲</button>
-<button class="mtc-left mtc-small" data-key="ArrowLeft" aria-label="Left">◀</button>
-<button class="mtc-right mtc-small" data-key="ArrowRight" aria-label="Right">▶</button>
-<button class="mtc-down mtc-small" data-key="ArrowDown" aria-label="Down">▼</button>
-</div></div></div>
-
-<script id="mobile-touch-controls-script">
-(() => {
-  const root = document.querySelector('.mobile-touch-controls');
-  if (!root) return;
-  const keyInfo = {
-    ArrowLeft:['ArrowLeft','ArrowLeft'], ArrowRight:['ArrowRight','ArrowRight'],
-    ArrowUp:['ArrowUp','ArrowUp'], ArrowDown:['ArrowDown','ArrowDown'],
-    Space:[' ','Space'], Enter:['Enter','Enter'],
-    KeyW:['w','KeyW'], KeyA:['a','KeyA'], KeyS:['s','KeyS'], KeyD:['d','KeyD'],
-    KeyX:['x','KeyX'], KeyZ:['z','KeyZ'], KeyP:['p','KeyP'], KeyR:['r','KeyR']
-  };
-  function fire(code, type, repeat=false){
-    const info = keyInfo[code] || [code, code];
-    const ev = new KeyboardEvent(type, {key:info[0], code:info[1], bubbles:true, cancelable:true, repeat});
-    document.dispatchEvent(ev);
-  }
-  root.querySelectorAll('button[data-key]').forEach(btn => {
-    let timer=null, repeater=null, held=false;
-    const code=btn.dataset.key;
-    const repeatable=btn.hasAttribute('data-repeat');
-    const stop=() => {
-      if (!held) return;
-      held=false; btn.classList.remove('is-held');
-      clearTimeout(timer); clearInterval(repeater); timer=repeater=null;
-      fire(code,'keyup',false);
-    };
-    btn.addEventListener('pointerdown', e => {
-      e.preventDefault();
-      if (held) return;
-      held=true; btn.classList.add('is-held');
-      try{btn.setPointerCapture(e.pointerId)}catch{}
-      fire(code,'keydown',false);
-      if (repeatable){
-        timer=setTimeout(() => {
-          if (!held) return;
-          repeater=setInterval(() => { if (held) fire(code,'keydown',true); }, 75);
-        }, 260);
-      }
-    });
-    btn.addEventListener('pointerup', e => {e.preventDefault(); stop();});
-    btn.addEventListener('pointercancel', stop);
-    btn.addEventListener('lostpointercapture', stop);
-    btn.addEventListener('contextmenu', e => e.preventDefault());
-  });
-})();
-</script>
-
 </body>
 </html>
