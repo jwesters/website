@@ -170,6 +170,7 @@
     els.strategyGrid.hidden = list.length === 0;
     els.strategyGrid.innerHTML = list.map(s => {
       const saved = state.favorites.has(s.id);
+      const primaryResource = s.resources?.[0];
       return `<article class="strategy-card" data-id="${s.id}">
         <div class="preview-wrap"><img loading="lazy" src="${escapeHtml(s.preview)}" alt="Preview graphic for ${escapeHtml(s.name)}"></div>
         <div class="card-body">
@@ -177,7 +178,7 @@
           <h2>${escapeHtml(s.name)}</h2>
           <p class="summary">${escapeHtml(s.summary)}</p>
           <div class="quick"><span>◷ ${escapeHtml(s.time)}</span><span>◉ ${escapeHtml(s.group)}</span></div>
-          <div class="card-actions"><button class="primary-button" data-open="${s.id}">Explore strategy</button>${s.resources?.length ? `<a class="secondary-button" href="${escapeHtml(s.resources[0].file)}" target="_blank" rel="noopener">PDF</a>`:''}</div>
+          <div class="card-actions"><button class="primary-button" data-open="${s.id}">Explore strategy</button>${primaryResource ? `<a class="secondary-button" href="${escapeHtml(primaryResource.file)}" target="_blank" rel="noopener">PDF</a>`:''}${primaryResource?.doc ? `<a class="secondary-button docx-button" href="${escapeHtml(primaryResource.doc)}" download>DOCX</a>`:''}</div>
         </div>
       </article>`;
     }).join('');
@@ -195,7 +196,7 @@
   function openStrategy(id, updateHash=false) {
     const s = byId.get(id);
     if (!s || !els.dialog) return;
-    const resourceLinks = (s.resources || []).map(r => `<a class="resource-link" href="${escapeHtml(r.file)}" target="_blank" rel="noopener"><span>${escapeHtml(r.label)}</span><b>Open PDF ↗</b></a>`).join('');
+    const resourceLinks = (s.resources || []).map(r => `<div class="resource-item"><strong class="resource-item-title">${escapeHtml(r.label)}</strong><div class="resource-downloads"><a class="resource-link" href="${escapeHtml(r.file)}" target="_blank" rel="noopener">Open PDF ↗</a>${r.doc ? `<a class="resource-link docx-link" href="${escapeHtml(r.doc)}" download>Download DOCX ↓</a>` : ''}</div></div>`).join('');
     const related = (s.related || []).map(id => byId.get(id)).filter(Boolean);
     els.dialogContent.innerHTML = `
       <section class="detail-hero">

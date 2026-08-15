@@ -36,11 +36,13 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Fishbone - Causes",
-        "file": "pdfs/graphic-organizers/fishbone-causes.pdf"
+        "file": "pdfs/graphic-organizers/fishbone-causes.pdf",
+        "doc": "docs/graphic-organizers/fishbone-causes.docx"
       },
       {
         "label": "Fishbone - Problem & Factors",
-        "file": "pdfs/graphic-organizers/fishbone-problem-solution.pdf"
+        "file": "pdfs/graphic-organizers/fishbone-problem-solution.pdf",
+        "doc": "docs/graphic-organizers/fishbone-problem-solution.docx"
       }
     ],
     "related": [
@@ -87,11 +89,13 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Place Mat - 4 Person",
-        "file": "pdfs/graphic-organizers/placemat-4-person.pdf"
+        "file": "pdfs/graphic-organizers/placemat-4-person.pdf",
+        "doc": "docs/graphic-organizers/placemat-4-person.docx"
       },
       {
         "label": "Place Mat - 3 Person",
-        "file": "pdfs/graphic-organizers/placemat-3-person.pdf"
+        "file": "pdfs/graphic-organizers/placemat-3-person.pdf",
+        "doc": "docs/graphic-organizers/placemat-3-person.docx"
       }
     ],
     "related": [
@@ -137,11 +141,13 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Venn - 2 Circle",
-        "file": "pdfs/graphic-organizers/venn-2-circle.pdf"
+        "file": "pdfs/graphic-organizers/venn-2-circle.pdf",
+        "doc": "docs/graphic-organizers/venn-2-circle.docx"
       },
       {
         "label": "Venn - 3 Circle",
-        "file": "pdfs/graphic-organizers/venn-3-circle.pdf"
+        "file": "pdfs/graphic-organizers/venn-3-circle.pdf",
+        "doc": "docs/graphic-organizers/venn-3-circle.docx"
       }
     ],
     "related": [
@@ -187,7 +193,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "PMI Organizer",
-        "file": "pdfs/graphic-organizers/pmi.pdf"
+        "file": "pdfs/graphic-organizers/pmi.pdf",
+        "doc": "docs/graphic-organizers/pmi.docx"
       }
     ],
     "related": [
@@ -233,7 +240,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "CAF Organizer",
-        "file": "pdfs/graphic-organizers/caf.pdf"
+        "file": "pdfs/graphic-organizers/caf.pdf",
+        "doc": "docs/graphic-organizers/caf.docx"
       }
     ],
     "related": [
@@ -280,7 +288,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "EBS Organizer",
-        "file": "pdfs/graphic-organizers/ebs.pdf"
+        "file": "pdfs/graphic-organizers/ebs.pdf",
+        "doc": "docs/graphic-organizers/ebs.docx"
       }
     ],
     "related": [
@@ -326,7 +335,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Ranking Ladder",
-        "file": "pdfs/graphic-organizers/ranking-ladder.pdf"
+        "file": "pdfs/graphic-organizers/ranking-ladder.pdf",
+        "doc": "docs/graphic-organizers/ranking-ladder.docx"
       }
     ],
     "related": [
@@ -372,11 +382,13 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Linear Flow Chart",
-        "file": "pdfs/graphic-organizers/flow-chart-linear.pdf"
+        "file": "pdfs/graphic-organizers/flow-chart-linear.pdf",
+        "doc": "docs/graphic-organizers/flow-chart-linear.docx"
       },
       {
         "label": "Branching Flow Chart",
-        "file": "pdfs/graphic-organizers/flow-chart-branching.pdf"
+        "file": "pdfs/graphic-organizers/flow-chart-branching.pdf",
+        "doc": "docs/graphic-organizers/flow-chart-branching.docx"
       }
     ],
     "related": [
@@ -421,7 +433,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "T-Chart",
-        "file": "pdfs/graphic-organizers/t-chart.pdf"
+        "file": "pdfs/graphic-organizers/t-chart.pdf",
+        "doc": "docs/graphic-organizers/t-chart.docx"
       }
     ],
     "related": [
@@ -467,7 +480,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Timeline",
-        "file": "pdfs/graphic-organizers/timeline.pdf"
+        "file": "pdfs/graphic-organizers/timeline.pdf",
+        "doc": "docs/graphic-organizers/timeline.docx"
       }
     ],
     "related": [
@@ -513,7 +527,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Comparison Matrix",
-        "file": "pdfs/graphic-organizers/matrix.pdf"
+        "file": "pdfs/graphic-organizers/matrix.pdf",
+        "doc": "docs/graphic-organizers/matrix.docx"
       }
     ],
     "related": [
@@ -560,7 +575,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Word Web",
-        "file": "pdfs/graphic-organizers/word-web.pdf"
+        "file": "pdfs/graphic-organizers/word-web.pdf",
+        "doc": "docs/graphic-organizers/word-web.docx"
       }
     ],
     "related": [
@@ -606,7 +622,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Mind Map Starter",
-        "file": "pdfs/graphic-organizers/mind-map.pdf"
+        "file": "pdfs/graphic-organizers/mind-map.pdf",
+        "doc": "docs/graphic-organizers/mind-map.docx"
       }
     ],
     "related": [
@@ -652,7 +669,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Concept Map Starter",
-        "file": "pdfs/graphic-organizers/concept-map.pdf"
+        "file": "pdfs/graphic-organizers/concept-map.pdf",
+        "doc": "docs/graphic-organizers/concept-map.docx"
       }
     ],
     "related": [
@@ -698,7 +716,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Iceberg Diagram",
-        "file": "pdfs/graphic-organizers/iceberg.pdf"
+        "file": "pdfs/graphic-organizers/iceberg.pdf",
+        "doc": "docs/graphic-organizers/iceberg.docx"
       }
     ],
     "related": [
@@ -744,7 +763,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "See-Think-Wonder Organizer",
-        "file": "pdfs/thinking-critical/see-think-wonder.pdf"
+        "file": "pdfs/thinking-critical/see-think-wonder.pdf",
+        "doc": "docs/thinking-critical/see-think-wonder.docx"
       }
     ],
     "related": [
@@ -789,7 +809,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Think-Puzzle-Explore Organizer",
-        "file": "pdfs/thinking-critical/think-puzzle-explore.pdf"
+        "file": "pdfs/thinking-critical/think-puzzle-explore.pdf",
+        "doc": "docs/thinking-critical/think-puzzle-explore.docx"
       }
     ],
     "related": [
@@ -835,7 +856,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Compass Points Organizer",
-        "file": "pdfs/thinking-critical/compass-points.pdf"
+        "file": "pdfs/thinking-critical/compass-points.pdf",
+        "doc": "docs/thinking-critical/compass-points.docx"
       }
     ],
     "related": [
@@ -881,7 +903,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Headlines Reflection Sheet",
-        "file": "pdfs/thinking-critical/headlines.pdf"
+        "file": "pdfs/thinking-critical/headlines.pdf",
+        "doc": "docs/thinking-critical/headlines.docx"
       }
     ],
     "related": [
@@ -927,7 +950,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Color-Symbol-Image Organizer",
-        "file": "pdfs/thinking-critical/color-symbol-image.pdf"
+        "file": "pdfs/thinking-critical/color-symbol-image.pdf",
+        "doc": "docs/thinking-critical/color-symbol-image.docx"
       }
     ],
     "related": [
@@ -976,15 +1000,18 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "3-2-1 Bridge",
-        "file": "pdfs/thinking-critical/3-2-1-bridge.pdf"
+        "file": "pdfs/thinking-critical/3-2-1-bridge.pdf",
+        "doc": "docs/thinking-critical/3-2-1-bridge.docx"
       },
       {
         "label": "I Used to Think / Now I Think",
-        "file": "pdfs/thinking-critical/used-to-think-now.pdf"
+        "file": "pdfs/thinking-critical/used-to-think-now.pdf",
+        "doc": "docs/thinking-critical/used-to-think-now.docx"
       },
       {
         "label": "Connect-Extend-Challenge",
-        "file": "pdfs/thinking-critical/connect-extend-challenge.pdf"
+        "file": "pdfs/thinking-critical/connect-extend-challenge.pdf",
+        "doc": "docs/thinking-critical/connect-extend-challenge.docx"
       }
     ],
     "related": [
@@ -1032,11 +1059,13 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Claim-Support-Question",
-        "file": "pdfs/thinking-critical/claim-support-question.pdf"
+        "file": "pdfs/thinking-critical/claim-support-question.pdf",
+        "doc": "docs/thinking-critical/claim-support-question.docx"
       },
       {
         "label": "What Makes You Say That?",
-        "file": "pdfs/thinking-critical/what-makes-you-say-that.pdf"
+        "file": "pdfs/thinking-critical/what-makes-you-say-that.pdf",
+        "doc": "docs/thinking-critical/what-makes-you-say-that.docx"
       }
     ],
     "related": [
@@ -1085,11 +1114,13 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Perspective-Taking Organizer",
-        "file": "pdfs/thinking-critical/perspective-taking.pdf"
+        "file": "pdfs/thinking-critical/perspective-taking.pdf",
+        "doc": "docs/thinking-critical/perspective-taking.docx"
       },
       {
         "label": "Step In-Step Out-Step Back",
-        "file": "pdfs/thinking-critical/step-in-step-out-step-back.pdf"
+        "file": "pdfs/thinking-critical/step-in-step-out-step-back.pdf",
+        "doc": "docs/thinking-critical/step-in-step-out-step-back.docx"
       }
     ],
     "related": [
@@ -1138,11 +1169,13 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Parts-Purposes-Complexities",
-        "file": "pdfs/thinking-critical/parts-purposes-complexities.pdf"
+        "file": "pdfs/thinking-critical/parts-purposes-complexities.pdf",
+        "doc": "docs/thinking-critical/parts-purposes-complexities.docx"
       },
       {
         "label": "Parts-People-Interactions",
-        "file": "pdfs/thinking-critical/parts-people-interactions.pdf"
+        "file": "pdfs/thinking-critical/parts-people-interactions.pdf",
+        "doc": "docs/thinking-critical/parts-people-interactions.docx"
       }
     ],
     "related": [
@@ -1189,7 +1222,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "The 4 Cs Organizer",
-        "file": "pdfs/thinking-critical/four-cs.pdf"
+        "file": "pdfs/thinking-critical/four-cs.pdf",
+        "doc": "docs/thinking-critical/four-cs.docx"
       }
     ],
     "related": [
@@ -1234,7 +1268,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Explanation Game Organizer",
-        "file": "pdfs/thinking-critical/explanation-game.pdf"
+        "file": "pdfs/thinking-critical/explanation-game.pdf",
+        "doc": "docs/thinking-critical/explanation-game.docx"
       }
     ],
     "related": [
@@ -1280,7 +1315,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "S-I-T Organizer",
-        "file": "pdfs/thinking-critical/sit.pdf"
+        "file": "pdfs/thinking-critical/sit.pdf",
+        "doc": "docs/thinking-critical/sit.docx"
       }
     ],
     "related": [
@@ -1326,7 +1362,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Tug of War Organizer",
-        "file": "pdfs/thinking-critical/tug-of-war.pdf"
+        "file": "pdfs/thinking-critical/tug-of-war.pdf",
+        "doc": "docs/thinking-critical/tug-of-war.docx"
       }
     ],
     "related": [
@@ -1372,7 +1409,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Beauty and Truth Organizer",
-        "file": "pdfs/thinking-critical/beauty-and-truth.pdf"
+        "file": "pdfs/thinking-critical/beauty-and-truth.pdf",
+        "doc": "docs/thinking-critical/beauty-and-truth.docx"
       }
     ],
     "related": [
@@ -1417,7 +1455,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Beginning-Middle-End Organizer",
-        "file": "pdfs/thinking-critical/beginning-middle-end.pdf"
+        "file": "pdfs/thinking-critical/beginning-middle-end.pdf",
+        "doc": "docs/thinking-critical/beginning-middle-end.docx"
       }
     ],
     "related": [
@@ -1463,7 +1502,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Imagine If... Redesign Sheet",
-        "file": "pdfs/thinking-critical/imagine-if.pdf"
+        "file": "pdfs/thinking-critical/imagine-if.pdf",
+        "doc": "docs/thinking-critical/imagine-if.docx"
       }
     ],
     "related": [
@@ -1508,7 +1548,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Take Note Sheet",
-        "file": "pdfs/thinking-critical/take-note.pdf"
+        "file": "pdfs/thinking-critical/take-note.pdf",
+        "doc": "docs/thinking-critical/take-note.docx"
       }
     ],
     "related": [
@@ -1553,7 +1594,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Right-Angle Thinking Organizer",
-        "file": "pdfs/thinking-critical/right-angle-thinking.pdf"
+        "file": "pdfs/thinking-critical/right-angle-thinking.pdf",
+        "doc": "docs/thinking-critical/right-angle-thinking.docx"
       }
     ],
     "related": [
@@ -1599,11 +1641,13 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Six Thinking Hats Organizer",
-        "file": "pdfs/thinking-critical/six-thinking-hats.pdf"
+        "file": "pdfs/thinking-critical/six-thinking-hats.pdf",
+        "doc": "docs/thinking-critical/six-thinking-hats.docx"
       },
       {
         "label": "Six Thinking Hats Discussion Cards",
-        "file": "pdfs/thinking-critical/six-thinking-hats-cards.pdf"
+        "file": "pdfs/thinking-critical/six-thinking-hats-cards.pdf",
+        "doc": "docs/thinking-critical/six-thinking-hats-cards.docx"
       }
     ],
     "related": [
@@ -1651,7 +1695,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Synectics Analogy Organizer",
-        "file": "pdfs/thinking-critical/synectics.pdf"
+        "file": "pdfs/thinking-critical/synectics.pdf",
+        "doc": "docs/thinking-critical/synectics.docx"
       }
     ],
     "related": [
@@ -1698,7 +1743,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Inductive Thinking Process Sheet",
-        "file": "pdfs/thinking-critical/inductive-thinking.pdf"
+        "file": "pdfs/thinking-critical/inductive-thinking.pdf",
+        "doc": "docs/thinking-critical/inductive-thinking.docx"
       }
     ],
     "related": [
@@ -1745,11 +1791,13 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Socratic Discussion Preparation",
-        "file": "pdfs/discussion-questioning/socratic-preparation.pdf"
+        "file": "pdfs/discussion-questioning/socratic-preparation.pdf",
+        "doc": "docs/discussion-questioning/socratic-preparation.docx"
       },
       {
         "label": "Socratic Talk Moves",
-        "file": "pdfs/discussion-questioning/socratic-talk-moves.pdf"
+        "file": "pdfs/discussion-questioning/socratic-talk-moves.pdf",
+        "doc": "docs/discussion-questioning/socratic-talk-moves.docx"
       }
     ],
     "related": [
@@ -1797,11 +1845,13 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Fishbowl Observer Tracker",
-        "file": "pdfs/discussion-questioning/fishbowl-observer.pdf"
+        "file": "pdfs/discussion-questioning/fishbowl-observer.pdf",
+        "doc": "docs/discussion-questioning/fishbowl-observer.docx"
       },
       {
         "label": "Fishbowl Role Cards",
-        "file": "pdfs/discussion-questioning/fishbowl-role-cards.pdf"
+        "file": "pdfs/discussion-questioning/fishbowl-role-cards.pdf",
+        "doc": "docs/discussion-questioning/fishbowl-role-cards.docx"
       }
     ],
     "related": [
@@ -1849,7 +1899,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Save the Last Word Organizer",
-        "file": "pdfs/discussion-questioning/save-the-last-word.pdf"
+        "file": "pdfs/discussion-questioning/save-the-last-word.pdf",
+        "doc": "docs/discussion-questioning/save-the-last-word.docx"
       }
     ],
     "related": [
@@ -1896,7 +1947,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Town Hall Circle Organizer",
-        "file": "pdfs/discussion-questioning/town-hall-circle.pdf"
+        "file": "pdfs/discussion-questioning/town-hall-circle.pdf",
+        "doc": "docs/discussion-questioning/town-hall-circle.docx"
       }
     ],
     "related": [
@@ -1943,7 +1995,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Micro Lab Triad Sheet",
-        "file": "pdfs/discussion-questioning/micro-lab.pdf"
+        "file": "pdfs/discussion-questioning/micro-lab.pdf",
+        "doc": "docs/discussion-questioning/micro-lab.docx"
       }
     ],
     "related": [
@@ -1990,11 +2043,13 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Accountable Talk Student Moves",
-        "file": "pdfs/discussion-questioning/accountable-talk-moves.pdf"
+        "file": "pdfs/discussion-questioning/accountable-talk-moves.pdf",
+        "doc": "docs/discussion-questioning/accountable-talk-moves.docx"
       },
       {
         "label": "Accountable Talk Discussion Tracker",
-        "file": "pdfs/discussion-questioning/accountable-talk-tracker.pdf"
+        "file": "pdfs/discussion-questioning/accountable-talk-tracker.pdf",
+        "doc": "docs/discussion-questioning/accountable-talk-tracker.docx"
       }
     ],
     "related": [
@@ -2043,7 +2098,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Question-Generation Organizer",
-        "file": "pdfs/discussion-questioning/question-generation.pdf"
+        "file": "pdfs/discussion-questioning/question-generation.pdf",
+        "doc": "docs/discussion-questioning/question-generation.docx"
       }
     ],
     "related": [
@@ -2090,7 +2146,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "QFT Original Companion",
-        "file": "pdfs/discussion-questioning/qft-companion.pdf"
+        "file": "pdfs/discussion-questioning/qft-companion.pdf",
+        "doc": "docs/discussion-questioning/qft-companion.docx"
       }
     ],
     "related": [
@@ -2137,7 +2194,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Learn to Listen Reflection Sheet",
-        "file": "pdfs/discussion-questioning/learn-to-listen.pdf"
+        "file": "pdfs/discussion-questioning/learn-to-listen.pdf",
+        "doc": "docs/discussion-questioning/learn-to-listen.docx"
       }
     ],
     "related": [
@@ -2184,7 +2242,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Back-to-Back / Face-to-Face Round Tracker",
-        "file": "pdfs/discussion-questioning/back-to-back-face-to-face.pdf"
+        "file": "pdfs/discussion-questioning/back-to-back-face-to-face.pdf",
+        "doc": "docs/discussion-questioning/back-to-back-face-to-face.docx"
       }
     ],
     "related": [
@@ -2230,7 +2289,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Say Something Reader Card",
-        "file": "pdfs/discussion-questioning/say-something-reader-card.pdf"
+        "file": "pdfs/discussion-questioning/say-something-reader-card.pdf",
+        "doc": "docs/discussion-questioning/say-something-reader-card.docx"
       }
     ],
     "related": [
@@ -2276,7 +2336,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Say and Switch Role Cards",
-        "file": "pdfs/discussion-questioning/say-and-switch-cards.pdf"
+        "file": "pdfs/discussion-questioning/say-and-switch-cards.pdf",
+        "doc": "docs/discussion-questioning/say-and-switch-cards.docx"
       }
     ],
     "related": [
@@ -2323,7 +2384,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Science Talk Organizer",
-        "file": "pdfs/discussion-questioning/science-talk.pdf"
+        "file": "pdfs/discussion-questioning/science-talk.pdf",
+        "doc": "docs/discussion-questioning/science-talk.docx"
       }
     ],
     "related": [
@@ -2370,7 +2432,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Riddle Discussion Organizer",
-        "file": "pdfs/discussion-questioning/riddle-discussion.pdf"
+        "file": "pdfs/discussion-questioning/riddle-discussion.pdf",
+        "doc": "docs/discussion-questioning/riddle-discussion.docx"
       }
     ],
     "related": [
@@ -2418,7 +2481,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Peer Instruction Concept Question Sheet",
-        "file": "pdfs/discussion-questioning/peer-instruction.pdf"
+        "file": "pdfs/discussion-questioning/peer-instruction.pdf",
+        "doc": "docs/discussion-questioning/peer-instruction.docx"
       }
     ],
     "related": [
@@ -2503,11 +2567,13 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Five Elements Checklist",
-        "file": "pdfs/cooperative-learning/five-elements-checklist.pdf"
+        "file": "pdfs/cooperative-learning/five-elements-checklist.pdf",
+        "doc": "docs/cooperative-learning/five-elements-checklist.docx"
       },
       {
         "label": "Group Processing Reflection",
-        "file": "pdfs/cooperative-learning/group-processing.pdf"
+        "file": "pdfs/cooperative-learning/group-processing.pdf",
+        "doc": "docs/cooperative-learning/group-processing.docx"
       }
     ],
     "related": [
@@ -2552,7 +2618,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Think-Pair-Share / Square Sheet",
-        "file": "pdfs/cooperative-learning/think-pair-family.pdf"
+        "file": "pdfs/cooperative-learning/think-pair-family.pdf",
+        "doc": "docs/cooperative-learning/think-pair-family.docx"
       }
     ],
     "related": [
@@ -2592,11 +2659,13 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Number / Letter Cards",
-        "file": "pdfs/cooperative-learning/numbered-heads-cards.pdf"
+        "file": "pdfs/cooperative-learning/numbered-heads-cards.pdf",
+        "doc": "docs/cooperative-learning/numbered-heads-cards.docx"
       },
       {
         "label": "Team Readiness Check",
-        "file": "pdfs/cooperative-learning/numbered-heads-check.pdf"
+        "file": "pdfs/cooperative-learning/numbered-heads-check.pdf",
+        "doc": "docs/cooperative-learning/numbered-heads-check.docx"
       }
     ],
     "related": [
@@ -2636,7 +2705,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Round Robin Team Mat",
-        "file": "pdfs/cooperative-learning/round-robin.pdf"
+        "file": "pdfs/cooperative-learning/round-robin.pdf",
+        "doc": "docs/cooperative-learning/round-robin.docx"
       }
     ],
     "related": [
@@ -2676,7 +2746,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Inside / Outside Circle Prompt Tracker",
-        "file": "pdfs/cooperative-learning/inside-outside-circles.pdf"
+        "file": "pdfs/cooperative-learning/inside-outside-circles.pdf",
+        "doc": "docs/cooperative-learning/inside-outside-circles.docx"
       }
     ],
     "related": [
@@ -2717,11 +2788,13 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Four Corners Signs",
-        "file": "pdfs/cooperative-learning/four-corners-signs.pdf"
+        "file": "pdfs/cooperative-learning/four-corners-signs.pdf",
+        "doc": "docs/cooperative-learning/four-corners-signs.docx"
       },
       {
         "label": "Four Corners Reflection",
-        "file": "pdfs/cooperative-learning/four-corners-reflection.pdf"
+        "file": "pdfs/cooperative-learning/four-corners-reflection.pdf",
+        "doc": "docs/cooperative-learning/four-corners-reflection.docx"
       }
     ],
     "related": [
@@ -2762,7 +2835,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Graffiti Station Sheet",
-        "file": "pdfs/cooperative-learning/graffiti-station.pdf"
+        "file": "pdfs/cooperative-learning/graffiti-station.pdf",
+        "doc": "docs/cooperative-learning/graffiti-station.docx"
       }
     ],
     "related": [
@@ -2802,7 +2876,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Three-Step Interview Notes",
-        "file": "pdfs/cooperative-learning/three-step-interview.pdf"
+        "file": "pdfs/cooperative-learning/three-step-interview.pdf",
+        "doc": "docs/cooperative-learning/three-step-interview.docx"
       }
     ],
     "related": [
@@ -2843,7 +2918,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Pairs Check Practice Sheet",
-        "file": "pdfs/cooperative-learning/pairs-check.pdf"
+        "file": "pdfs/cooperative-learning/pairs-check.pdf",
+        "doc": "docs/cooperative-learning/pairs-check.docx"
       }
     ],
     "related": [
@@ -2884,11 +2960,13 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Printable Talking Chips",
-        "file": "pdfs/cooperative-learning/talking-chips.pdf"
+        "file": "pdfs/cooperative-learning/talking-chips.pdf",
+        "doc": "docs/cooperative-learning/talking-chips.docx"
       },
       {
         "label": "Participation Reflection",
-        "file": "pdfs/cooperative-learning/talking-chips-reflection.pdf"
+        "file": "pdfs/cooperative-learning/talking-chips-reflection.pdf",
+        "doc": "docs/cooperative-learning/talking-chips-reflection.docx"
       }
     ],
     "related": [
@@ -2929,7 +3007,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Group Carousel Station Record",
-        "file": "pdfs/cooperative-learning/group-carousel.pdf"
+        "file": "pdfs/cooperative-learning/group-carousel.pdf",
+        "doc": "docs/cooperative-learning/group-carousel.docx"
       }
     ],
     "related": [
@@ -2970,7 +3049,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Gallery Tour Feedback Sheet",
-        "file": "pdfs/cooperative-learning/gallery-tour.pdf"
+        "file": "pdfs/cooperative-learning/gallery-tour.pdf",
+        "doc": "docs/cooperative-learning/gallery-tour.docx"
       }
     ],
     "related": [
@@ -3011,7 +3091,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Walk About Recording Sheet",
-        "file": "pdfs/cooperative-learning/walk-about.pdf"
+        "file": "pdfs/cooperative-learning/walk-about.pdf",
+        "doc": "docs/cooperative-learning/walk-about.docx"
       }
     ],
     "related": [
@@ -3052,11 +3133,13 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Jigsaw Expert Sheet",
-        "file": "pdfs/cooperative-learning/jigsaw-expert.pdf"
+        "file": "pdfs/cooperative-learning/jigsaw-expert.pdf",
+        "doc": "docs/cooperative-learning/jigsaw-expert.docx"
       },
       {
         "label": "Jigsaw Home Group Synthesis",
-        "file": "pdfs/cooperative-learning/jigsaw-home-group.pdf"
+        "file": "pdfs/cooperative-learning/jigsaw-home-group.pdf",
+        "doc": "docs/cooperative-learning/jigsaw-home-group.docx"
       }
     ],
     "related": [
@@ -3097,7 +3180,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "STAD Team Learning Record",
-        "file": "pdfs/cooperative-learning/stad-team-record.pdf"
+        "file": "pdfs/cooperative-learning/stad-team-record.pdf",
+        "doc": "docs/cooperative-learning/stad-team-record.docx"
       }
     ],
     "related": [
@@ -3138,11 +3222,13 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "TGT Team Score Sheet",
-        "file": "pdfs/cooperative-learning/tgt-score-sheet.pdf"
+        "file": "pdfs/cooperative-learning/tgt-score-sheet.pdf",
+        "doc": "docs/cooperative-learning/tgt-score-sheet.docx"
       },
       {
         "label": "TGT Question Card Template",
-        "file": "pdfs/cooperative-learning/tgt-question-cards.pdf"
+        "file": "pdfs/cooperative-learning/tgt-question-cards.pdf",
+        "doc": "docs/cooperative-learning/tgt-question-cards.docx"
       }
     ],
     "related": [
@@ -3184,7 +3270,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Group Investigation Planner",
-        "file": "pdfs/cooperative-learning/group-investigation.pdf"
+        "file": "pdfs/cooperative-learning/group-investigation.pdf",
+        "doc": "docs/cooperative-learning/group-investigation.docx"
       }
     ],
     "related": [
@@ -3230,7 +3317,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Cooperative Review Structure Planner",
-        "file": "pdfs/cooperative-learning/cooperative-review-planner.pdf"
+        "file": "pdfs/cooperative-learning/cooperative-review-planner.pdf",
+        "doc": "docs/cooperative-learning/cooperative-review-planner.docx"
       }
     ],
     "related": [
@@ -3271,7 +3359,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Team Analysis Evidence Sheet",
-        "file": "pdfs/cooperative-learning/team-analysis.pdf"
+        "file": "pdfs/cooperative-learning/team-analysis.pdf",
+        "doc": "docs/cooperative-learning/team-analysis.docx"
       }
     ],
     "related": [
@@ -3313,11 +3402,13 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Academic Controversy Evidence Planner",
-        "file": "pdfs/cooperative-learning/academic-controversy.pdf"
+        "file": "pdfs/cooperative-learning/academic-controversy.pdf",
+        "doc": "docs/cooperative-learning/academic-controversy.docx"
       },
       {
         "label": "Academic Controversy Consensus Sheet",
-        "file": "pdfs/cooperative-learning/academic-controversy-consensus.pdf"
+        "file": "pdfs/cooperative-learning/academic-controversy-consensus.pdf",
+        "doc": "docs/cooperative-learning/academic-controversy-consensus.docx"
       }
     ],
     "related": [
@@ -3366,15 +3457,18 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Anticipation Guide",
-        "file": "pdfs/reading-literacy/anticipation-guide.pdf"
+        "file": "pdfs/reading-literacy/anticipation-guide.pdf",
+        "doc": "docs/reading-literacy/anticipation-guide.docx"
       },
       {
         "label": "First Lines / Mystery Quotes",
-        "file": "pdfs/reading-literacy/first-lines-mystery-quotes.pdf"
+        "file": "pdfs/reading-literacy/first-lines-mystery-quotes.pdf",
+        "doc": "docs/reading-literacy/first-lines-mystery-quotes.docx"
       },
       {
         "label": "Possible Sentences",
-        "file": "pdfs/reading-literacy/possible-sentences.pdf"
+        "file": "pdfs/reading-literacy/possible-sentences.pdf",
+        "doc": "docs/reading-literacy/possible-sentences.docx"
       }
     ],
     "related": [
@@ -3415,11 +3509,13 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Reciprocal Teaching Organizer",
-        "file": "pdfs/reading-literacy/reciprocal-teaching.pdf"
+        "file": "pdfs/reading-literacy/reciprocal-teaching.pdf",
+        "doc": "docs/reading-literacy/reciprocal-teaching.docx"
       },
       {
         "label": "Reciprocal Teaching Role Cards",
-        "file": "pdfs/reading-literacy/reciprocal-teaching-cards.pdf"
+        "file": "pdfs/reading-literacy/reciprocal-teaching-cards.pdf",
+        "doc": "docs/reading-literacy/reciprocal-teaching-cards.docx"
       }
     ],
     "related": [
@@ -3459,7 +3555,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "QAR Organizer",
-        "file": "pdfs/reading-literacy/qar.pdf"
+        "file": "pdfs/reading-literacy/qar.pdf",
+        "doc": "docs/reading-literacy/qar.docx"
       }
     ],
     "related": [
@@ -3500,7 +3597,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "DRTA Prediction Cycle",
-        "file": "pdfs/reading-literacy/drta.pdf"
+        "file": "pdfs/reading-literacy/drta.pdf",
+        "doc": "docs/reading-literacy/drta.docx"
       }
     ],
     "related": [
@@ -3541,7 +3639,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Think-Aloud Prompt Card",
-        "file": "pdfs/reading-literacy/think-alouds.pdf"
+        "file": "pdfs/reading-literacy/think-alouds.pdf",
+        "doc": "docs/reading-literacy/think-alouds.docx"
       }
     ],
     "related": [
@@ -3581,7 +3680,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Questioning the Author Discussion Sheet",
-        "file": "pdfs/reading-literacy/questioning-the-author.pdf"
+        "file": "pdfs/reading-literacy/questioning-the-author.pdf",
+        "doc": "docs/reading-literacy/questioning-the-author.docx"
       }
     ],
     "related": [
@@ -3622,7 +3722,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Text Connections Organizer",
-        "file": "pdfs/reading-literacy/text-connections.pdf"
+        "file": "pdfs/reading-literacy/text-connections.pdf",
+        "doc": "docs/reading-literacy/text-connections.docx"
       }
     ],
     "related": [
@@ -3663,7 +3764,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Annotation Key & Reading Sheet",
-        "file": "pdfs/reading-literacy/annotating-text.pdf"
+        "file": "pdfs/reading-literacy/annotating-text.pdf",
+        "doc": "docs/reading-literacy/annotating-text.docx"
       }
     ],
     "related": [
@@ -3704,7 +3806,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Listen-Read-Discuss Organizer",
-        "file": "pdfs/reading-literacy/listen-read-discuss.pdf"
+        "file": "pdfs/reading-literacy/listen-read-discuss.pdf",
+        "doc": "docs/reading-literacy/listen-read-discuss.docx"
       }
     ],
     "related": [
@@ -3745,7 +3848,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Reading Guide Template",
-        "file": "pdfs/reading-literacy/reading-guide.pdf"
+        "file": "pdfs/reading-literacy/reading-guide.pdf",
+        "doc": "docs/reading-literacy/reading-guide.docx"
       }
     ],
     "related": [
@@ -3786,7 +3890,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Paragraph Shrinking Coach Card",
-        "file": "pdfs/reading-literacy/paragraph-shrinking.pdf"
+        "file": "pdfs/reading-literacy/paragraph-shrinking.pdf",
+        "doc": "docs/reading-literacy/paragraph-shrinking.docx"
       }
     ],
     "related": [
@@ -3825,7 +3930,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Story Map",
-        "file": "pdfs/reading-literacy/story-map.pdf"
+        "file": "pdfs/reading-literacy/story-map.pdf",
+        "doc": "docs/reading-literacy/story-map.docx"
       }
     ],
     "related": [
@@ -3865,7 +3971,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Story / Process Sequence",
-        "file": "pdfs/reading-literacy/story-sequence.pdf"
+        "file": "pdfs/reading-literacy/story-sequence.pdf",
+        "doc": "docs/reading-literacy/story-sequence.docx"
       }
     ],
     "related": [
@@ -3905,7 +4012,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Visual Imagery Reading Sheet",
-        "file": "pdfs/reading-literacy/visual-imagery.pdf"
+        "file": "pdfs/reading-literacy/visual-imagery.pdf",
+        "doc": "docs/reading-literacy/visual-imagery.docx"
       }
     ],
     "related": [
@@ -3954,11 +4062,13 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Fluency Practice Tracker",
-        "file": "pdfs/reading-literacy/fluency-tracker.pdf"
+        "file": "pdfs/reading-literacy/fluency-tracker.pdf",
+        "doc": "docs/reading-literacy/fluency-tracker.docx"
       },
       {
         "label": "Partner Fluency Feedback",
-        "file": "pdfs/reading-literacy/partner-fluency-feedback.pdf"
+        "file": "pdfs/reading-literacy/partner-fluency-feedback.pdf",
+        "doc": "docs/reading-literacy/partner-fluency-feedback.docx"
       }
     ],
     "related": [
@@ -3999,7 +4109,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Reader's Theater Rehearsal Sheet",
-        "file": "pdfs/reading-literacy/readers-theater.pdf"
+        "file": "pdfs/reading-literacy/readers-theater.pdf",
+        "doc": "docs/reading-literacy/readers-theater.docx"
       }
     ],
     "related": [
@@ -4040,7 +4151,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "CIRC Reading-Writing Team Sheet",
-        "file": "pdfs/reading-literacy/circ.pdf"
+        "file": "pdfs/reading-literacy/circ.pdf",
+        "doc": "docs/reading-literacy/circ.docx"
       }
     ],
     "related": [
@@ -4080,7 +4192,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Gist & Vocabulary Reading Sheet",
-        "file": "pdfs/reading-literacy/gist-vocabulary.pdf"
+        "file": "pdfs/reading-literacy/gist-vocabulary.pdf",
+        "doc": "docs/reading-literacy/gist-vocabulary.docx"
       }
     ],
     "related": [
@@ -4121,7 +4234,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Collaborative Reading Protocol Sheet",
-        "file": "pdfs/reading-literacy/collaborative-reading.pdf"
+        "file": "pdfs/reading-literacy/collaborative-reading.pdf",
+        "doc": "docs/reading-literacy/collaborative-reading.docx"
       }
     ],
     "related": [
@@ -4161,7 +4275,9 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Double Entry Journal",
-        "file": "pdfs/writing-vocabulary/double-entry-journal.pdf"
+        "file": "pdfs/writing-vocabulary/double-entry-journal.pdf",
+
+        "doc": "docs/writing-vocabulary/double-entry-journal.docx"
       }
     ],
     "related": [
@@ -4201,7 +4317,9 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Triple Entry Journal",
-        "file": "pdfs/writing-vocabulary/triple-entry-journal.pdf"
+        "file": "pdfs/writing-vocabulary/triple-entry-journal.pdf",
+
+        "doc": "docs/writing-vocabulary/triple-entry-journal.docx"
       }
     ],
     "related": [
@@ -4241,7 +4359,9 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "RAFT Writing Planner",
-        "file": "pdfs/writing-vocabulary/raft-writing.pdf"
+        "file": "pdfs/writing-vocabulary/raft-writing.pdf",
+
+        "doc": "docs/writing-vocabulary/raft-writing.docx"
       }
     ],
     "related": [
@@ -4281,7 +4401,9 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Found Poem Builder",
-        "file": "pdfs/writing-vocabulary/found-poem.pdf"
+        "file": "pdfs/writing-vocabulary/found-poem.pdf",
+
+        "doc": "docs/writing-vocabulary/found-poem.docx"
       }
     ],
     "related": [
@@ -4321,11 +4443,15 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Writing Conference Form",
-        "file": "pdfs/writing-vocabulary/writing-conference.pdf"
+        "file": "pdfs/writing-vocabulary/writing-conference.pdf",
+
+        "doc": "docs/writing-vocabulary/writing-conference.docx"
       },
       {
         "label": "Peer Conference Stems",
-        "file": "pdfs/writing-vocabulary/peer-conference-stems.pdf"
+        "file": "pdfs/writing-vocabulary/peer-conference-stems.pdf",
+
+        "doc": "docs/writing-vocabulary/peer-conference-stems.docx"
       }
     ],
     "related": [
@@ -4364,7 +4490,9 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Rapid Writing Page",
-        "file": "pdfs/writing-vocabulary/rapid-writing.pdf"
+        "file": "pdfs/writing-vocabulary/rapid-writing.pdf",
+
+        "doc": "docs/writing-vocabulary/rapid-writing.docx"
       }
     ],
     "related": [
@@ -4403,7 +4531,9 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Frayer Model",
-        "file": "pdfs/writing-vocabulary/frayer-model.pdf"
+        "file": "pdfs/writing-vocabulary/frayer-model.pdf",
+
+        "doc": "docs/writing-vocabulary/frayer-model.docx"
       }
     ],
     "related": [
@@ -4442,7 +4572,9 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Semantic Feature Analysis Grid",
-        "file": "pdfs/writing-vocabulary/semantic-feature-analysis.pdf"
+        "file": "pdfs/writing-vocabulary/semantic-feature-analysis.pdf",
+
+        "doc": "docs/writing-vocabulary/semantic-feature-analysis.docx"
       }
     ],
     "related": [
@@ -4482,7 +4614,9 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Semantic Gradient",
-        "file": "pdfs/writing-vocabulary/semantic-gradient.pdf"
+        "file": "pdfs/writing-vocabulary/semantic-gradient.pdf",
+
+        "doc": "docs/writing-vocabulary/semantic-gradient.docx"
       }
     ],
     "related": [
@@ -4522,7 +4656,9 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Contextual Redefinition Chart",
-        "file": "pdfs/writing-vocabulary/contextual-redefinition.pdf"
+        "file": "pdfs/writing-vocabulary/contextual-redefinition.pdf",
+
+        "doc": "docs/writing-vocabulary/contextual-redefinition.docx"
       }
     ],
     "related": [
@@ -4562,7 +4698,9 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "SVES Vocabulary Elaboration",
-        "file": "pdfs/writing-vocabulary/sves.pdf"
+        "file": "pdfs/writing-vocabulary/sves.pdf",
+
+        "doc": "docs/writing-vocabulary/sves.docx"
       }
     ],
     "related": [
@@ -4602,7 +4740,9 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Word Hunt Record",
-        "file": "pdfs/writing-vocabulary/word-hunt.pdf"
+        "file": "pdfs/writing-vocabulary/word-hunt.pdf",
+
+        "doc": "docs/writing-vocabulary/word-hunt.docx"
       }
     ],
     "related": [
@@ -4642,7 +4782,9 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Interactive Word Wall Cards",
-        "file": "pdfs/writing-vocabulary/interactive-word-wall-cards.pdf"
+        "file": "pdfs/writing-vocabulary/interactive-word-wall-cards.pdf",
+
+        "doc": "docs/writing-vocabulary/interactive-word-wall-cards.docx"
       }
     ],
     "related": [
@@ -4682,7 +4824,9 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Volley for Vocabulary",
-        "file": "pdfs/writing-vocabulary/volley-vocabulary.pdf"
+        "file": "pdfs/writing-vocabulary/volley-vocabulary.pdf",
+
+        "doc": "docs/writing-vocabulary/volley-vocabulary.docx"
       }
     ],
     "related": [
@@ -4722,7 +4866,9 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Sentence Routines - Combine, Deconstruct, Expand",
-        "file": "pdfs/writing-vocabulary/sentence-level-routines.pdf"
+        "file": "pdfs/writing-vocabulary/sentence-level-routines.pdf",
+
+        "doc": "docs/writing-vocabulary/sentence-level-routines.docx"
       }
     ],
     "related": [
@@ -4762,7 +4908,9 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Paragraph Hamburger",
-        "file": "pdfs/writing-vocabulary/paragraph-hamburger.pdf"
+        "file": "pdfs/writing-vocabulary/paragraph-hamburger.pdf",
+
+        "doc": "docs/writing-vocabulary/paragraph-hamburger.docx"
       }
     ],
     "related": [
@@ -4802,7 +4950,9 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Sketchnotes Starter",
-        "file": "pdfs/writing-vocabulary/sketchnotes.pdf"
+        "file": "pdfs/writing-vocabulary/sketchnotes.pdf",
+
+        "doc": "docs/writing-vocabulary/sketchnotes.docx"
       }
     ],
     "related": [
@@ -4841,11 +4991,15 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Academic Language Frames",
-        "file": "pdfs/writing-vocabulary/academic-language-frames.pdf"
+        "file": "pdfs/writing-vocabulary/academic-language-frames.pdf",
+
+        "doc": "docs/writing-vocabulary/academic-language-frames.docx"
       },
       {
         "label": "Paragraph Frame Builder",
-        "file": "pdfs/writing-vocabulary/paragraph-frame-builder.pdf"
+        "file": "pdfs/writing-vocabulary/paragraph-frame-builder.pdf",
+
+        "doc": "docs/writing-vocabulary/paragraph-frame-builder.docx"
       }
     ],
     "related": [
@@ -4887,11 +5041,13 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Inquiry Cycle Planner",
-        "file": "pdfs/inquiry-problem-solving/inquiry-cycle.pdf"
+        "file": "pdfs/inquiry-problem-solving/inquiry-cycle.pdf",
+        "doc": "docs/inquiry-problem-solving/inquiry-cycle.docx"
       },
       {
         "label": "Inquiry Evidence Log",
-        "file": "pdfs/inquiry-problem-solving/inquiry-evidence-log.pdf"
+        "file": "pdfs/inquiry-problem-solving/inquiry-evidence-log.pdf",
+        "doc": "docs/inquiry-problem-solving/inquiry-evidence-log.docx"
       }
     ],
     "related": [
@@ -4931,7 +5087,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Scientific Inquiry Record",
-        "file": "pdfs/inquiry-problem-solving/scientific-inquiry.pdf"
+        "file": "pdfs/inquiry-problem-solving/scientific-inquiry.pdf",
+        "doc": "docs/inquiry-problem-solving/scientific-inquiry.docx"
       }
     ],
     "related": [
@@ -4971,7 +5128,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Open-Ended Problem Solver",
-        "file": "pdfs/inquiry-problem-solving/open-ended-problem-solving.pdf"
+        "file": "pdfs/inquiry-problem-solving/open-ended-problem-solving.pdf",
+        "doc": "docs/inquiry-problem-solving/open-ended-problem-solving.docx"
       }
     ],
     "related": [
@@ -5010,11 +5168,13 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "PBL Know / Need / Plan",
-        "file": "pdfs/inquiry-problem-solving/pbl-know-need-plan.pdf"
+        "file": "pdfs/inquiry-problem-solving/pbl-know-need-plan.pdf",
+        "doc": "docs/inquiry-problem-solving/pbl-know-need-plan.docx"
       },
       {
         "label": "PBL Solution & Evidence",
-        "file": "pdfs/inquiry-problem-solving/pbl-solution-evidence.pdf"
+        "file": "pdfs/inquiry-problem-solving/pbl-solution-evidence.pdf",
+        "doc": "docs/inquiry-problem-solving/pbl-solution-evidence.docx"
       }
     ],
     "related": [
@@ -5054,7 +5214,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Case Analysis Sheet",
-        "file": "pdfs/inquiry-problem-solving/case-analysis.pdf"
+        "file": "pdfs/inquiry-problem-solving/case-analysis.pdf",
+        "doc": "docs/inquiry-problem-solving/case-analysis.docx"
       }
     ],
     "related": [
@@ -5094,7 +5255,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Inquiry Chart (I-Chart)",
-        "file": "pdfs/inquiry-problem-solving/inquiry-chart.pdf"
+        "file": "pdfs/inquiry-problem-solving/inquiry-chart.pdf",
+        "doc": "docs/inquiry-problem-solving/inquiry-chart.docx"
       }
     ],
     "related": [
@@ -5138,7 +5300,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Exit Tickets - 3 Per Page",
-        "file": "pdfs/assessment-for-learning/exit-tickets-3up.pdf"
+        "file": "pdfs/assessment-for-learning/exit-tickets-3up.pdf",
+        "doc": "docs/assessment-for-learning/exit-tickets-3up.docx"
       }
     ],
     "related": [
@@ -5183,11 +5346,13 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Peer Feedback Ladder",
-        "file": "pdfs/assessment-for-learning/peer-feedback-ladder.pdf"
+        "file": "pdfs/assessment-for-learning/peer-feedback-ladder.pdf",
+        "doc": "docs/assessment-for-learning/peer-feedback-ladder.docx"
       },
       {
         "label": "Praise - Question - Suggest",
-        "file": "pdfs/assessment-for-learning/praise-question-suggest.pdf"
+        "file": "pdfs/assessment-for-learning/praise-question-suggest.pdf",
+        "doc": "docs/assessment-for-learning/praise-question-suggest.docx"
       }
     ],
     "related": [
@@ -5234,7 +5399,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "A / B / C / D Response Cards",
-        "file": "pdfs/assessment-for-learning/abcd-response-cards.pdf"
+        "file": "pdfs/assessment-for-learning/abcd-response-cards.pdf",
+        "doc": "docs/assessment-for-learning/abcd-response-cards.docx"
       }
     ],
     "related": [
@@ -5277,11 +5443,13 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Hinge Question Planner",
-        "file": "pdfs/assessment-for-learning/hinge-question-planner.pdf"
+        "file": "pdfs/assessment-for-learning/hinge-question-planner.pdf",
+        "doc": "docs/assessment-for-learning/hinge-question-planner.docx"
       },
       {
         "label": "A / B / C / D Response Cards",
-        "file": "pdfs/assessment-for-learning/abcd-response-cards.pdf"
+        "file": "pdfs/assessment-for-learning/abcd-response-cards.pdf",
+        "doc": "docs/assessment-for-learning/abcd-response-cards.docx"
       }
     ],
     "related": [
@@ -5325,7 +5493,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Rubric Analysis Sheet",
-        "file": "pdfs/assessment-for-learning/rubric-analysis.pdf"
+        "file": "pdfs/assessment-for-learning/rubric-analysis.pdf",
+        "doc": "docs/assessment-for-learning/rubric-analysis.docx"
       }
     ],
     "related": [
@@ -5366,7 +5535,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Application Cards",
-        "file": "pdfs/assessment-for-learning/application-cards.pdf"
+        "file": "pdfs/assessment-for-learning/application-cards.pdf",
+        "doc": "docs/assessment-for-learning/application-cards.docx"
       }
     ],
     "related": [
@@ -5407,7 +5577,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Directed Paraphrasing",
-        "file": "pdfs/assessment-for-learning/directed-paraphrasing.pdf"
+        "file": "pdfs/assessment-for-learning/directed-paraphrasing.pdf",
+        "doc": "docs/assessment-for-learning/directed-paraphrasing.docx"
       }
     ],
     "related": [
@@ -5448,7 +5619,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Empty Outline",
-        "file": "pdfs/assessment-for-learning/empty-outline.pdf"
+        "file": "pdfs/assessment-for-learning/empty-outline.pdf",
+        "doc": "docs/assessment-for-learning/empty-outline.docx"
       }
     ],
     "related": [
@@ -5491,7 +5663,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "One-Minute Elevator Pitch",
-        "file": "pdfs/assessment-for-learning/one-minute-elevator-pitch.pdf"
+        "file": "pdfs/assessment-for-learning/one-minute-elevator-pitch.pdf",
+        "doc": "docs/assessment-for-learning/one-minute-elevator-pitch.docx"
       }
     ],
     "related": [
@@ -5571,7 +5744,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Retrieval Practice - Brain Dump & Check",
-        "file": "pdfs/learning-memory/retrieval-practice.pdf"
+        "file": "pdfs/learning-memory/retrieval-practice.pdf",
+        "doc": "docs/learning-memory/retrieval-practice.docx"
       }
     ],
     "related": [
@@ -5615,7 +5789,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Spaced Practice Planner",
-        "file": "pdfs/learning-memory/spaced-practice.pdf"
+        "file": "pdfs/learning-memory/spaced-practice.pdf",
+        "doc": "docs/learning-memory/spaced-practice.docx"
       }
     ],
     "related": [
@@ -5658,7 +5833,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Interleaving Planner",
-        "file": "pdfs/learning-memory/interleaving.pdf"
+        "file": "pdfs/learning-memory/interleaving.pdf",
+        "doc": "docs/learning-memory/interleaving.docx"
       }
     ],
     "related": [
@@ -5701,7 +5877,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Elaboration Prompts",
-        "file": "pdfs/learning-memory/elaboration.pdf"
+        "file": "pdfs/learning-memory/elaboration.pdf",
+        "doc": "docs/learning-memory/elaboration.docx"
       }
     ],
     "related": [
@@ -5742,7 +5919,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Dual Coding - Words + Visual",
-        "file": "pdfs/learning-memory/dual-coding.pdf"
+        "file": "pdfs/learning-memory/dual-coding.pdf",
+        "doc": "docs/learning-memory/dual-coding.docx"
       }
     ],
     "related": [
@@ -5783,7 +5961,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Concrete Examples Organizer",
-        "file": "pdfs/learning-memory/concrete-examples.pdf"
+        "file": "pdfs/learning-memory/concrete-examples.pdf",
+        "doc": "docs/learning-memory/concrete-examples.docx"
       }
     ],
     "related": [
@@ -5828,7 +6007,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Mnemonic Builder",
-        "file": "pdfs/learning-memory/mnemonic-builder.pdf"
+        "file": "pdfs/learning-memory/mnemonic-builder.pdf",
+        "doc": "docs/learning-memory/mnemonic-builder.docx"
       }
     ],
     "related": [
@@ -5871,7 +6051,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Worked Examples - Model, Fade, Solve",
-        "file": "pdfs/learning-memory/worked-examples.pdf"
+        "file": "pdfs/learning-memory/worked-examples.pdf",
+        "doc": "docs/learning-memory/worked-examples.docx"
       }
     ],
     "related": [
@@ -5914,7 +6095,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Strategic Learning - Plan, Monitor, Adjust, Evaluate",
-        "file": "pdfs/learning-memory/strategic-learning.pdf"
+        "file": "pdfs/learning-memory/strategic-learning.pdf",
+        "doc": "docs/learning-memory/strategic-learning.docx"
       }
     ],
     "related": [
@@ -5958,7 +6140,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "PWIM Companion Sheet",
-        "file": "pdfs/multilingual-language-support/pwim-companion.pdf"
+        "file": "pdfs/multilingual-language-support/pwim-companion.pdf",
+        "doc": "docs/multilingual-language-support/pwim-companion.docx"
       }
     ],
     "related": [
@@ -6002,7 +6185,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Cognate Collector",
-        "file": "pdfs/multilingual-language-support/cognate-collector.pdf"
+        "file": "pdfs/multilingual-language-support/cognate-collector.pdf",
+        "doc": "docs/multilingual-language-support/cognate-collector.docx"
       }
     ],
     "related": [
@@ -6043,7 +6227,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Multilingual Glossary Template",
-        "file": "pdfs/multilingual-language-support/multilingual-glossary.pdf"
+        "file": "pdfs/multilingual-language-support/multilingual-glossary.pdf",
+        "doc": "docs/multilingual-language-support/multilingual-glossary.docx"
       }
     ],
     "related": [
@@ -6084,7 +6269,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Picture Retell - 6 Frames",
-        "file": "pdfs/multilingual-language-support/picture-retell.pdf"
+        "file": "pdfs/multilingual-language-support/picture-retell.pdf",
+        "doc": "docs/multilingual-language-support/picture-retell.docx"
       }
     ],
     "related": [
@@ -6127,7 +6313,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "TPR Action Cards",
-        "file": "pdfs/multilingual-language-support/tpr-action-cards.pdf"
+        "file": "pdfs/multilingual-language-support/tpr-action-cards.pdf",
+        "doc": "docs/multilingual-language-support/tpr-action-cards.docx"
       }
     ],
     "related": [
@@ -6171,7 +6358,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Realia & Manipulatives Language Lab",
-        "file": "pdfs/multilingual-language-support/realia-language-lab.pdf"
+        "file": "pdfs/multilingual-language-support/realia-language-lab.pdf",
+        "doc": "docs/multilingual-language-support/realia-language-lab.docx"
       }
     ],
     "related": [
@@ -6217,7 +6405,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Dictation & Reconstruction Organizer",
-        "file": "pdfs/multilingual-language-support/dictation-reconstruction.pdf"
+        "file": "pdfs/multilingual-language-support/dictation-reconstruction.pdf",
+        "doc": "docs/multilingual-language-support/dictation-reconstruction.docx"
       }
     ],
     "related": [
@@ -6258,7 +6447,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Annotated Diagram Template",
-        "file": "pdfs/multilingual-language-support/annotated-diagram.pdf"
+        "file": "pdfs/multilingual-language-support/annotated-diagram.pdf",
+        "doc": "docs/multilingual-language-support/annotated-diagram.docx"
       }
     ],
     "related": [
@@ -6301,7 +6491,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Anchor Chart Builder",
-        "file": "pdfs/multilingual-language-support/anchor-chart-builder.pdf"
+        "file": "pdfs/multilingual-language-support/anchor-chart-builder.pdf",
+        "doc": "docs/multilingual-language-support/anchor-chart-builder.docx"
       }
     ],
     "related": [
@@ -6341,7 +6532,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Direct Instruction Companion",
-        "file": "pdfs/instructional-models/direct-instruction.pdf"
+        "file": "pdfs/instructional-models/direct-instruction.pdf",
+        "doc": "docs/instructional-models/direct-instruction.docx"
       }
     ],
     "related": [
@@ -6382,7 +6574,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Mastery Learning Planner",
-        "file": "pdfs/instructional-models/mastery-learning.pdf"
+        "file": "pdfs/instructional-models/mastery-learning.pdf",
+        "doc": "docs/instructional-models/mastery-learning.docx"
       }
     ],
     "related": [
@@ -6423,7 +6616,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Concept Attainment Companion",
-        "file": "pdfs/instructional-models/concept-attainment.pdf"
+        "file": "pdfs/instructional-models/concept-attainment.pdf",
+        "doc": "docs/instructional-models/concept-attainment.docx"
       }
     ],
     "related": [
@@ -6463,7 +6657,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Concept Formation Organizer",
-        "file": "pdfs/instructional-models/concept-formation.pdf"
+        "file": "pdfs/instructional-models/concept-formation.pdf",
+        "doc": "docs/instructional-models/concept-formation.docx"
       }
     ],
     "related": [
@@ -6503,7 +6698,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Simulation Planning Sheet",
-        "file": "pdfs/instructional-models/simulation.pdf"
+        "file": "pdfs/instructional-models/simulation.pdf",
+        "doc": "docs/instructional-models/simulation.docx"
       }
     ],
     "related": [
@@ -6543,7 +6739,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Role-Play Planning Sheet",
-        "file": "pdfs/instructional-models/role-play-drama.pdf"
+        "file": "pdfs/instructional-models/role-play-drama.pdf",
+        "doc": "docs/instructional-models/role-play-drama.docx"
       }
     ],
     "related": [
@@ -6583,7 +6780,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "TBL Planning Sheet",
-        "file": "pdfs/instructional-models/team-based-learning.pdf"
+        "file": "pdfs/instructional-models/team-based-learning.pdf",
+        "doc": "docs/instructional-models/team-based-learning.docx"
       }
     ],
     "related": [
@@ -6623,7 +6821,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Nondirective Conference Sheet",
-        "file": "pdfs/instructional-models/nondirective-teaching.pdf"
+        "file": "pdfs/instructional-models/nondirective-teaching.pdf",
+        "doc": "docs/instructional-models/nondirective-teaching.docx"
       }
     ],
     "related": [
@@ -6663,7 +6862,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Advance Organizer Template",
-        "file": "pdfs/instructional-models/advance-organizers.pdf"
+        "file": "pdfs/instructional-models/advance-organizers.pdf",
+        "doc": "docs/instructional-models/advance-organizers.docx"
       }
     ],
     "related": [
@@ -6703,7 +6903,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Lecture / Drill Planner",
-        "file": "pdfs/instructional-models/lecture-drill.pdf"
+        "file": "pdfs/instructional-models/lecture-drill.pdf",
+        "doc": "docs/instructional-models/lecture-drill.docx"
       }
     ],
     "related": [
@@ -6742,7 +6943,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Modeling Reflection Sheet",
-        "file": "pdfs/instructional-models/demonstration-modeling.pdf"
+        "file": "pdfs/instructional-models/demonstration-modeling.pdf",
+        "doc": "docs/instructional-models/demonstration-modeling.docx"
       }
     ],
     "related": [
@@ -6782,7 +6984,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Peer Tutoring Companion",
-        "file": "pdfs/instructional-models/peer-tutoring.pdf"
+        "file": "pdfs/instructional-models/peer-tutoring.pdf",
+        "doc": "docs/instructional-models/peer-tutoring.docx"
       }
     ],
     "related": [
@@ -6822,7 +7025,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Gradual Release Planner",
-        "file": "pdfs/instructional-models/gradual-release.pdf"
+        "file": "pdfs/instructional-models/gradual-release.pdf",
+        "doc": "docs/instructional-models/gradual-release.docx"
       }
     ],
     "related": [
@@ -6862,7 +7066,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Workshop Planning Sheet",
-        "file": "pdfs/instructional-models/workshop-model.pdf"
+        "file": "pdfs/instructional-models/workshop-model.pdf",
+        "doc": "docs/instructional-models/workshop-model.docx"
       }
     ],
     "related": [
@@ -6902,7 +7107,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Number Talks Record Sheet",
-        "file": "pdfs/mathematics-science-routines/number-talks.pdf"
+        "file": "pdfs/mathematics-science-routines/number-talks.pdf",
+        "doc": "docs/mathematics-science-routines/number-talks.docx"
       }
     ],
     "related": [
@@ -6942,7 +7148,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "MLR1 Companion",
-        "file": "pdfs/mathematics-science-routines/mlr1-stronger-clearer.pdf"
+        "file": "pdfs/mathematics-science-routines/mlr1-stronger-clearer.pdf",
+        "doc": "docs/mathematics-science-routines/mlr1-stronger-clearer.docx"
       }
     ],
     "related": [
@@ -6982,7 +7189,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "MLR2 Companion",
-        "file": "pdfs/mathematics-science-routines/mlr2-collect-display.pdf"
+        "file": "pdfs/mathematics-science-routines/mlr2-collect-display.pdf",
+        "doc": "docs/mathematics-science-routines/mlr2-collect-display.docx"
       }
     ],
     "related": [
@@ -7022,7 +7230,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "MLR3 Companion",
-        "file": "pdfs/mathematics-science-routines/mlr3-critique-correct-clarify.pdf"
+        "file": "pdfs/mathematics-science-routines/mlr3-critique-correct-clarify.pdf",
+        "doc": "docs/mathematics-science-routines/mlr3-critique-correct-clarify.docx"
       }
     ],
     "related": [
@@ -7062,7 +7271,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "MLR4 Companion",
-        "file": "pdfs/mathematics-science-routines/mlr4-information-gap.pdf"
+        "file": "pdfs/mathematics-science-routines/mlr4-information-gap.pdf",
+        "doc": "docs/mathematics-science-routines/mlr4-information-gap.docx"
       }
     ],
     "related": [
@@ -7102,7 +7312,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "MLR6 Companion",
-        "file": "pdfs/mathematics-science-routines/mlr6-three-reads.pdf"
+        "file": "pdfs/mathematics-science-routines/mlr6-three-reads.pdf",
+        "doc": "docs/mathematics-science-routines/mlr6-three-reads.docx"
       }
     ],
     "related": [
@@ -7142,7 +7353,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "MLR7 Companion",
-        "file": "pdfs/mathematics-science-routines/mlr7-compare-connect.pdf"
+        "file": "pdfs/mathematics-science-routines/mlr7-compare-connect.pdf",
+        "doc": "docs/mathematics-science-routines/mlr7-compare-connect.docx"
       }
     ],
     "related": [
@@ -7182,7 +7394,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "MLR8 Companion",
-        "file": "pdfs/mathematics-science-routines/mlr8-discussion-supports.pdf"
+        "file": "pdfs/mathematics-science-routines/mlr8-discussion-supports.pdf",
+        "doc": "docs/mathematics-science-routines/mlr8-discussion-supports.docx"
       }
     ],
     "related": [
@@ -7222,7 +7435,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Notice and Wonder Sheet",
-        "file": "pdfs/mathematics-science-routines/notice-and-wonder.pdf"
+        "file": "pdfs/mathematics-science-routines/notice-and-wonder.pdf",
+        "doc": "docs/mathematics-science-routines/notice-and-wonder.docx"
       }
     ],
     "related": [
@@ -7262,7 +7476,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "WODB Companion",
-        "file": "pdfs/mathematics-science-routines/which-one-doesnt-belong.pdf"
+        "file": "pdfs/mathematics-science-routines/which-one-doesnt-belong.pdf",
+        "doc": "docs/mathematics-science-routines/which-one-doesnt-belong.docx"
       }
     ],
     "related": [
@@ -7302,7 +7517,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Error Analysis Sheet",
-        "file": "pdfs/mathematics-science-routines/error-analysis.pdf"
+        "file": "pdfs/mathematics-science-routines/error-analysis.pdf",
+        "doc": "docs/mathematics-science-routines/error-analysis.docx"
       }
     ],
     "related": [
@@ -7342,7 +7558,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Estimation Routine Sheet",
-        "file": "pdfs/mathematics-science-routines/estimation-routine.pdf"
+        "file": "pdfs/mathematics-science-routines/estimation-routine.pdf",
+        "doc": "docs/mathematics-science-routines/estimation-routine.docx"
       }
     ],
     "related": [
@@ -7382,7 +7599,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Card Sort Mat",
-        "file": "pdfs/mathematics-science-routines/card-sort.pdf"
+        "file": "pdfs/mathematics-science-routines/card-sort.pdf",
+        "doc": "docs/mathematics-science-routines/card-sort.docx"
       }
     ],
     "related": [
@@ -7422,7 +7640,8 @@ window.STRATEGIES = [
     "resources": [
       {
         "label": "Data Talk Sheet",
-        "file": "pdfs/mathematics-science-routines/data-talk.pdf"
+        "file": "pdfs/mathematics-science-routines/data-talk.pdf",
+        "doc": "docs/mathematics-science-routines/data-talk.docx"
       }
     ],
     "related": [
