@@ -9,6 +9,8 @@ What this version does differently:
 - Keeps a Recent Changes section at the bottom.
 - Keeps an optional repository-folder view at the bottom for maintenance.
 - Excludes root-level files by default, matching the previous generator.
+- Always excludes source.html files from generated indexes.
+- Labels index.html links with the page's HTML title instead of "Index".
 - Can hide filenames containing "nsfw" with --hide-nsfw.
 - Also writes an education-only indexEDU.html by default.
 - Always keeps NSFW filenames/paths out of indexEDU.html.
@@ -33,6 +35,7 @@ import re
 from functools import lru_cache
 from dataclasses import dataclass, field
 from datetime import datetime
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Dict, Iterable, List, Sequence, Tuple
 from urllib.parse import quote
@@ -559,7 +562,7 @@ def deduplicate_entries(entries: List["FileEntry"]) -> List["FileEntry"]:
         rel = normalize_path(entry.rel_path).casefold()
 
         # Canonical home for Airplane Race Game.
-        if display_name(entry.name, strip_extension=True).casefold() == "airplane race game":
+        if entry.title.casefold() == "airplane race game":
             canonical = 0 if "misc_games/arcadegames/" in rel else 1
             return (canonical, len(rel), rel)
 
@@ -569,7 +572,7 @@ def deduplicate_entries(entries: List["FileEntry"]) -> List["FileEntry"]:
     passthrough: List["FileEntry"] = []
 
     for entry in entries:
-        title_key = display_name(entry.name, strip_extension=True).casefold()
+        title_key = entry.title.casefold()
         if title_key in DEDUPLICATE_DISPLAY_TITLES:
             grouped.setdefault(title_key, []).append(entry)
         else:
@@ -824,6 +827,7 @@ CATEGORY_RULES: List[Tuple[Tuple[str, ...], str, str]] = [
 class FileEntry:
     name: str
     rel_path: str
+    title: str
     category: str
     subcategory: str
     icon: str
@@ -1025,6 +1029,61 @@ def display_name(name: str, *, strip_extension: bool = False) -> str:
     return " ".join(words)
 
 
+class PageTitleParser(HTMLParser):
+    """Collect the text from the first HTML title element."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.in_title = False
+        self.finished = False
+        self.parts: List[str] = []
+
+    def handle_starttag(self, tag: str, attrs: List[Tuple[str, str | None]]) -> None:
+        if not self.finished and tag.casefold() == "title":
+            self.in_title = True
+
+    def handle_endtag(self, tag: str) -> None:
+        if self.in_title and tag.casefold() == "title":
+            self.in_title = False
+            self.finished = True
+
+    def handle_data(self, data: str) -> None:
+        if self.in_title:
+            self.parts.append(data)
+
+
+def html_page_title(path: Path) -> str:
+    """Read an HTML page's title without loading a large single-file app fully."""
+    try:
+        with path.open("rb") as html_file:
+            head = html_file.read(512 * 1024)
+    except OSError:
+        return ""
+
+    parser = PageTitleParser()
+    try:
+        parser.feed(head.decode("utf-8-sig", errors="replace"))
+        parser.close()
+    except Exception:
+        return ""
+
+    return re.sub(r"\s+", " ", "".join(parser.parts)).strip()
+
+
+def title_for_path(path: Path) -> str:
+    """Choose the visible link title, with special handling for index.html."""
+    if path.name.casefold() != "index.html":
+        return display_name(path.name, strip_extension=True)
+
+    page_title = html_page_title(path)
+    if page_title:
+        return page_title
+
+    if path.parent.name:
+        return display_name(path.parent.name)
+    return "Home"
+
+
 def should_exclude_dir(dirname: str, exclude_dirs: Sequence[str]) -> bool:
     d = dirname.casefold()
     return any(d == x.casefold() for x in exclude_dirs)
@@ -1044,6 +1103,8 @@ def should_include_file(
     lower_fn = path.name.casefold()
 
     if path.suffix.casefold() not in exts_norm:
+        return False
+    if lower_fn == "sources.html":
         return False
     if not include_root_files and "/" not in rel:
         return False
@@ -1230,6 +1291,7 @@ def scan_files(
             FileEntry(
                 name=Path(rel).name,
                 rel_path=rel,
+                title=title_for_path(path),
                 category=category,
                 subcategory=subcategory,
                 icon=icon_for_file(rel, category, subcategory),
@@ -1244,7 +1306,7 @@ def scan_files(
         key=lambda item: (
             category_rank.get(item.category, 999),
             item.subcategory.casefold(),
-            display_name(item.name, strip_extension=True).casefold(),
+            item.title.casefold(),
         )
     )
     return entries
@@ -1329,7 +1391,7 @@ INDEX_JS = '(function () {\n  const input = document.getElementById(\'site-searc
 def render_app_item(entry: FileEntry, recent_paths: set[str], show_path: bool = False) -> str:
     badge = '<span class="new-badge">NEW</span>' if entry.rel_path in recent_paths else ""
     path_note = f'<span class="path-note">{esc(entry.rel_path)}</span>' if show_path else ""
-    title = display_name(entry.name, strip_extension=True)
+    title = entry.title
     search_text = f"{title} {entry.name} {entry.rel_path} {entry.category} {entry.subcategory}"
     return (
         f'<li class="app-item" data-path="{esc(entry.rel_path)}" data-search="{esc(search_text.casefold())}">'
@@ -1355,7 +1417,7 @@ def render_recent_section(recent: Sequence[FileEntry], recent_days: int) -> str:
     for entry in recent:
         changed_abs = absolute_day_label(entry.mtime or 0)
         changed_iso = changed_date_iso(entry.mtime or 0)
-        title = display_name(entry.name, strip_extension=True)
+        title = entry.title
         search_text = f"{title} {entry.name} {entry.rel_path} {entry.category} {entry.subcategory}"
         items.append(
             f'<li class="app-item recent-item" data-path="{esc(entry.rel_path)}" data-search="{esc(search_text.casefold())}">'
@@ -1383,7 +1445,7 @@ def group_entries(entries: Sequence[FileEntry]) -> Dict[str, Dict[str, List[File
 
     for subgroups in grouped.values():
         for items in subgroups.values():
-            items.sort(key=lambda item: display_name(item.name, strip_extension=True).casefold())
+            items.sort(key=lambda item: item.title.casefold())
 
     return grouped
 
@@ -1450,7 +1512,7 @@ def render_category_sections(entries: Sequence[FileEntry], recent_paths: set[str
 
 
 def render_folder_files(files: List[FileEntry], recent_paths: set[str]) -> str:
-    files_sorted = sorted(files, key=lambda item: display_name(item.name, strip_extension=True).casefold())
+    files_sorted = sorted(files, key=lambda item: item.title.casefold())
     items = [render_app_item(entry, recent_paths, show_path=False) for entry in files_sorted]
     return '<ul class="app-list folder-list">' + "\n".join(items) + '</ul>'
 
