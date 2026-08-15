@@ -1,0 +1,7435 @@
+window.STRATEGIES = [
+  {
+    "id": "fishbone",
+    "name": "Fishbone",
+    "aliases": [
+      "Fish Bone",
+      "Ishikawa diagram",
+      "cause-and-effect diagram"
+    ],
+    "category": "Graphic Organizers & Visual Thinking",
+    "type": "Graphic Organizer / Tactic",
+    "time": "10-25 min",
+    "group": "Individual, pairs, or small groups",
+    "preview": "assets/previews/fishbone.svg",
+    "summary": "A cause-and-effect organizer that helps students break a complicated outcome or problem into contributing factors instead of jumping to a single explanation.",
+    "useWhen": [
+      "Students need to analyze why something happened",
+      "A problem has several possible causes",
+      "You want students to organize evidence before discussing or writing",
+      "A class is oversimplifying a complex issue"
+    ],
+    "avoidWhen": [
+      "The task is simply sequencing events",
+      "Students do not yet have enough information to propose meaningful causes",
+      "You need to compare two items rather than analyze causation"
+    ],
+    "steps": [
+      "Write the effect, outcome, or problem at the head of the fish.",
+      "Choose useful major cause categories. They can be teacher-provided at first and student-generated later.",
+      "Students add specific causes along each branch and connect evidence or examples to them.",
+      "Ask groups to identify patterns, interactions, missing causes, or the causes they believe matter most.",
+      "Use the completed organizer as the basis for discussion, explanation, decision making, or writing."
+    ],
+    "example": "After studying a local ecosystem, students place ‘declining fish population’ at the head. Branches such as habitat, water quality, food supply, human activity, and climate help them organize evidence before proposing explanations.",
+    "teacherTip": "The categories are not the learning goal. If students are ready, let them invent categories instead of forcing every idea into a preset six-branch template.",
+    "resources": [
+      {
+        "label": "Fishbone - Causes",
+        "file": "pdfs/graphic-organizers/fishbone-causes.pdf"
+      },
+      {
+        "label": "Fishbone - Problem & Factors",
+        "file": "pdfs/graphic-organizers/fishbone-problem-solution.pdf"
+      }
+    ],
+    "related": [
+      "caf",
+      "flow-chart",
+      "iceberg",
+      "concept-map"
+    ],
+    "sourceNote": "Beyond Monet treats Fish Bone as an instructional tactic and graphic organizer for analytical thinking."
+  },
+  {
+    "id": "placemat",
+    "name": "Place Mat",
+    "aliases": [
+      "Placemat",
+      "Consensus Placemat"
+    ],
+    "category": "Graphic Organizers & Visual Thinking",
+    "type": "Cooperative Structure",
+    "time": "10-20 min",
+    "group": "3-4 students",
+    "preview": "assets/previews/placemat.svg",
+    "summary": "A cooperative structure that protects individual thinking time and then moves a group toward discussion and consensus.",
+    "useWhen": [
+      "You want every student to contribute before group discussion",
+      "A group must compare several solutions or viewpoints",
+      "You want a visible record of individual and shared thinking",
+      "Dominant voices are crowding out quieter students"
+    ],
+    "avoidWhen": [
+      "The task has only one short recall answer",
+      "Students need extended independent writing",
+      "Consensus would wrongly imply that only one viewpoint is acceptable"
+    ],
+    "steps": [
+      "Place one large mat in the centre of each group and give each student a personal section.",
+      "Pose one rich question or problem. Students first write silently in their own sections.",
+      "Students take turns explaining their ideas. Encourage questions and comparison rather than simply reading answers.",
+      "The group decides what belongs in the centre: a consensus, synthesis, strongest solution, or list of shared conclusions.",
+      "Optionally have groups compare their centre sections with another group or the whole class."
+    ],
+    "example": "In math, four students independently solve a proportional-reasoning problem using any method. They then compare strategies and put the clearest general method in the centre, noting where methods differ.",
+    "teacherTip": "The centre does not always need to mean ‘everyone agrees.’ It can instead hold a synthesis, unresolved question, or best-supported conclusion.",
+    "resources": [
+      {
+        "label": "Place Mat - 4 Person",
+        "file": "pdfs/graphic-organizers/placemat-4-person.pdf"
+      },
+      {
+        "label": "Place Mat - 3 Person",
+        "file": "pdfs/graphic-organizers/placemat-3-person.pdf"
+      }
+    ],
+    "related": [
+      "venn",
+      "matrix",
+      "ranking-ladder"
+    ],
+    "sourceNote": "Beyond Monet presents Place Mat as a cooperative-learning structure; Columbia CPET also describes it as a concrete individual-to-consensus routine."
+  },
+  {
+    "id": "venn",
+    "name": "Venn Diagram",
+    "aliases": [
+      "Venn",
+      "Venn Diagram"
+    ],
+    "category": "Graphic Organizers & Visual Thinking",
+    "type": "Graphic Organizer / Tactic",
+    "time": "5-20 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/venn.svg",
+    "summary": "A visual comparison organizer that makes unique and shared attributes visible at the same time.",
+    "useWhen": [
+      "Students are comparing two or three concepts",
+      "Similarities matter as much as differences",
+      "You want evidence organized before comparison writing",
+      "Students need to test category membership or overlapping attributes"
+    ],
+    "avoidWhen": [
+      "There are many items or many criteria - use a matrix instead",
+      "The relationship is hierarchical or causal",
+      "The overlap would become so crowded that the diagram stops clarifying thinking"
+    ],
+    "steps": [
+      "Name the items or concepts being compared.",
+      "Record unique features in the non-overlapping regions.",
+      "Record shared features in the overlap.",
+      "Ask students to support important entries with examples or evidence.",
+      "Use the completed diagram to generate a comparison statement, paragraph, discussion, or decision."
+    ],
+    "example": "Students compare biography and autobiography. The overlap contains features shared by both forms; the outer sections capture differences in author, point of view, and evidence.",
+    "teacherTip": "A Venn diagram becomes more powerful when students must justify why each idea belongs in a particular region instead of merely filling space.",
+    "resources": [
+      {
+        "label": "Venn - 2 Circle",
+        "file": "pdfs/graphic-organizers/venn-2-circle.pdf"
+      },
+      {
+        "label": "Venn - 3 Circle",
+        "file": "pdfs/graphic-organizers/venn-3-circle.pdf"
+      }
+    ],
+    "related": [
+      "matrix",
+      "t-chart",
+      "concept-map"
+    ],
+    "sourceNote": "Beyond Monet identifies Venn Diagram as a graphic-organizer tactic; Reading Rockets also recommends Venn diagrams for compare/contrast comprehension."
+  },
+  {
+    "id": "pmi",
+    "name": "PMI - Plus, Minus, Interesting",
+    "aliases": [
+      "PMI",
+      "Plus Minus Interesting"
+    ],
+    "category": "Graphic Organizers & Visual Thinking",
+    "type": "Thinking Tactic",
+    "time": "5-15 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/pmi.svg",
+    "summary": "A deliberate thinking routine that moves students beyond an immediate yes/no reaction by requiring attention to positives, negatives, and interesting possibilities.",
+    "useWhen": [
+      "Evaluating an idea, proposal, design, or solution",
+      "Students are making a quick emotional judgment",
+      "You want balanced thinking before debate or decision making",
+      "A class needs to surface unexpected implications"
+    ],
+    "avoidWhen": [
+      "The task requires evidence for two formal sides of an argument - EBS may fit better",
+      "The issue is purely factual and not evaluative",
+      "Students have not yet learned enough about the topic to generate meaningful points"
+    ],
+    "steps": [
+      "State the idea or proposal clearly.",
+      "List plausible pluses without debating them yet.",
+      "List plausible minuses.",
+      "List things that are interesting, uncertain, surprising, or worth investigating.",
+      "Review all three columns before making a judgment or choosing a next step."
+    ],
+    "example": "Before deciding whether a city should replace a road lane with a protected bike lane, students generate benefits, drawbacks, and interesting consequences they would want data about.",
+    "teacherTip": "Protect the ‘Interesting’ column. It should not become a miscellaneous bin; use it for possibilities, questions, and implications that are neither simply positive nor negative.",
+    "resources": [
+      {
+        "label": "PMI Organizer",
+        "file": "pdfs/graphic-organizers/pmi.pdf"
+      }
+    ],
+    "related": [
+      "ebs",
+      "caf",
+      "ranking-ladder"
+    ],
+    "sourceNote": "Beyond Monet identifies PMI as one of de Bono's CoRT tactics and describes it as supporting analytical decision making."
+  },
+  {
+    "id": "caf",
+    "name": "CAF - Consider All Factors",
+    "aliases": [
+      "CAF",
+      "Consider All Factors"
+    ],
+    "category": "Graphic Organizers & Visual Thinking",
+    "type": "Thinking Tactic",
+    "time": "5-15 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/caf.svg",
+    "summary": "A broadening routine that asks students to deliberately identify relevant factors before deciding, explaining, planning, or judging.",
+    "useWhen": [
+      "Students are overlooking important variables",
+      "A decision has many constraints",
+      "A problem needs careful scoping before solutions are proposed",
+      "You want students to distinguish relevant from irrelevant information"
+    ],
+    "avoidWhen": [
+      "A narrow question already specifies the only relevant variables",
+      "Students need to compare two explicit sides rather than generate factors",
+      "The class is ready to prioritize rather than broaden the field"
+    ],
+    "steps": [
+      "State the decision, issue, or question.",
+      "Generate as many potentially relevant factors as possible.",
+      "Clarify or combine duplicate factors.",
+      "Identify which factors are most important and explain why.",
+      "Revisit the original decision or question using the fuller set of considerations."
+    ],
+    "example": "Before designing a school garden, students consider sunlight, soil, water access, cost, student traffic, growing season, maintenance, accessibility, and the plants' purposes.",
+    "teacherTip": "Separate generation from evaluation. Students usually produce a wider range of factors when they are not judging every idea as soon as it appears.",
+    "resources": [
+      {
+        "label": "CAF Organizer",
+        "file": "pdfs/graphic-organizers/caf.pdf"
+      }
+    ],
+    "related": [
+      "pmi",
+      "fishbone",
+      "ranking-ladder"
+    ],
+    "sourceNote": "CAF is a de Bono CoRT thinking tactic commonly used to widen decision making before evaluation."
+  },
+  {
+    "id": "ebs",
+    "name": "EBS - Examine Both Sides",
+    "aliases": [
+      "EBS",
+      "Examine Both Sides",
+      "Examine Both Sides of an Argument"
+    ],
+    "category": "Graphic Organizers & Visual Thinking",
+    "type": "Thinking Tactic",
+    "time": "10-20 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/ebs.svg",
+    "summary": "A structured way to develop and examine more than one side of an argument before students commit to a position.",
+    "useWhen": [
+      "An issue has competing claims or perspectives",
+      "Students need practice arguing fairly rather than defending only their first opinion",
+      "Preparing for debate, persuasive writing, or Academic Controversy",
+      "You want evidence considered before a conclusion"
+    ],
+    "avoidWhen": [
+      "The issue does not genuinely have two defensible sides",
+      "Presenting 'both sides' would create a false balance between evidence-based and unsupported claims",
+      "The goal is simply to list pros and cons of a proposal - PMI may be simpler"
+    ],
+    "steps": [
+      "Frame a clear claim or question.",
+      "Develop Side A with reasons and supporting evidence.",
+      "Develop Side B with comparable care.",
+      "Identify the strongest point and weakest point on each side.",
+      "Only then ask students to state a position, synthesis, or remaining uncertainty."
+    ],
+    "example": "Students examine arguments for and against mandatory school uniforms, using survey data, policy examples, and stakeholder perspectives before writing a recommendation.",
+    "teacherTip": "Require comparable standards of evidence on both sides. The purpose is disciplined perspective-taking, not pretending every claim is equally strong.",
+    "resources": [
+      {
+        "label": "EBS Organizer",
+        "file": "pdfs/graphic-organizers/ebs.pdf"
+      }
+    ],
+    "related": [
+      "pmi",
+      "venn",
+      "academic-controversy"
+    ],
+    "sourceNote": "Beyond Monet identifies EBS as a de Bono CoRT tactic and connects it to analytical and critical thinking."
+  },
+  {
+    "id": "ranking-ladder",
+    "name": "Ranking Ladder",
+    "aliases": [
+      "Ranking",
+      "Ranking Ladder"
+    ],
+    "category": "Graphic Organizers & Visual Thinking",
+    "type": "Graphic Organizer / Tactic",
+    "time": "10-20 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/ranking-ladder.svg",
+    "summary": "An organizer that forces students to prioritize options according to explicit or emerging criteria instead of treating every idea as equally important.",
+    "useWhen": [
+      "Students must prioritize causes, solutions, evidence, values, or events",
+      "You want discussion around criteria and justification",
+      "Several answers may be defensible if well supported",
+      "A group needs to move from brainstorming toward decision making"
+    ],
+    "avoidWhen": [
+      "The items cannot meaningfully be ordered",
+      "The criteria are fixed and quantitative - a matrix may be more transparent",
+      "The purpose is categorization rather than ranking"
+    ],
+    "steps": [
+      "Generate or provide the items to rank.",
+      "Clarify the criterion: most important, most likely, strongest evidence, greatest impact, etc.",
+      "Students make an initial ranking.",
+      "Pairs or groups compare rankings and challenge one another's reasoning.",
+      "Students revise if persuaded and explain the final top and bottom choices."
+    ],
+    "example": "After learning several causes of the First World War, students rank the causes by how much they contributed to the outbreak and defend the top three with evidence.",
+    "teacherTip": "The conversation about *why* the order differs is usually more valuable than the final ladder itself.",
+    "resources": [
+      {
+        "label": "Ranking Ladder",
+        "file": "pdfs/graphic-organizers/ranking-ladder.pdf"
+      }
+    ],
+    "related": [
+      "caf",
+      "matrix",
+      "pmi"
+    ],
+    "sourceNote": "Beyond Monet names Ranking Ladders among graphic organizers that can be integrated with more complex mapping processes."
+  },
+  {
+    "id": "flow-chart",
+    "name": "Flow Chart",
+    "aliases": [
+      "Flowchart",
+      "Flow Chart"
+    ],
+    "category": "Graphic Organizers & Visual Thinking",
+    "type": "Graphic Organizer",
+    "time": "10-25 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/flow-chart.svg",
+    "summary": "A visual representation of sequence, process, or branching decisions that emphasizes how one step leads to another.",
+    "useWhen": [
+      "Students need to explain a process or algorithm",
+      "Sequence and conditional decisions matter",
+      "You want students to diagnose where a process breaks down",
+      "Students are planning procedures, experiments, or solutions"
+    ],
+    "avoidWhen": [
+      "The main goal is showing conceptual relationships rather than sequence",
+      "Events occur simultaneously and a linear diagram would mislead",
+      "The information is better compared in a matrix or Venn diagram"
+    ],
+    "steps": [
+      "Identify the starting point and end point.",
+      "List the essential steps or decisions between them.",
+      "Arrange steps in order and add branches where different conditions produce different paths.",
+      "Use arrows and short labels to make relationships explicit.",
+      "Test the chart with an example and revise any ambiguous path."
+    ],
+    "example": "Students diagram how a bill can move from proposal through debate, voting, amendment, and final approval, including branches for what happens when a vote fails.",
+    "teacherTip": "Ask students to walk another person through the chart without extra explanation. If the listener gets lost, the flow chart needs revision.",
+    "resources": [
+      {
+        "label": "Linear Flow Chart",
+        "file": "pdfs/graphic-organizers/flow-chart-linear.pdf"
+      },
+      {
+        "label": "Branching Flow Chart",
+        "file": "pdfs/graphic-organizers/flow-chart-branching.pdf"
+      }
+    ],
+    "related": [
+      "timeline",
+      "concept-map",
+      "fishbone"
+    ],
+    "sourceNote": "Beyond Monet uses Flow Chart as a distinct organizer and contrasts it with Concept Mapping."
+  },
+  {
+    "id": "t-chart",
+    "name": "T-Chart",
+    "aliases": [
+      "T Chart"
+    ],
+    "category": "Graphic Organizers & Visual Thinking",
+    "type": "Graphic Organizer",
+    "time": "5-15 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/t-chart.svg",
+    "summary": "A simple two-column organizer for sorting information into two meaningful categories.",
+    "useWhen": [
+      "Students need a quick two-way sort",
+      "You want to contrast examples/non-examples, observations/inferences, claims/evidence, or two viewpoints",
+      "A lightweight organizer is enough",
+      "Students need a scaffold before discussion or writing"
+    ],
+    "avoidWhen": [
+      "Important overlap must be represented - use a Venn diagram",
+      "More than two categories or several comparison criteria are needed",
+      "The relationship is causal or sequential"
+    ],
+    "steps": [
+      "Choose two category labels that reflect the thinking goal.",
+      "Students place ideas, evidence, or examples in the appropriate column.",
+      "Ask students to justify ambiguous entries.",
+      "Look for patterns, gaps, or exceptions.",
+      "Use the chart to produce a conclusion, comparison, or next question."
+    ],
+    "example": "During a science demonstration, students record direct observations in one column and inferences about what those observations might mean in the other.",
+    "teacherTip": "The quality of the T-chart comes from the column labels. ‘Good/Bad’ usually produces shallower thinking than a disciplinary distinction such as ‘Observation/Inference.’",
+    "resources": [
+      {
+        "label": "T-Chart",
+        "file": "pdfs/graphic-organizers/t-chart.pdf"
+      }
+    ],
+    "related": [
+      "venn",
+      "matrix",
+      "ebs"
+    ],
+    "sourceNote": "T-Charts are widely used graphic organizers for two-category sorting and comparison."
+  },
+  {
+    "id": "timeline",
+    "name": "Time Line",
+    "aliases": [
+      "Timeline",
+      "Time Line"
+    ],
+    "category": "Graphic Organizers & Visual Thinking",
+    "type": "Graphic Organizer",
+    "time": "10-30 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/timeline.svg",
+    "summary": "A sequence organizer that makes chronology, duration, turning points, and changes over time visible.",
+    "useWhen": [
+      "Chronological order matters",
+      "Students need to connect events to causes or consequences",
+      "You want students to notice gaps, clusters, or turning points",
+      "A process unfolds over a meaningful span of time"
+    ],
+    "avoidWhen": [
+      "Relationships are conceptual rather than chronological",
+      "Sequence is unimportant to the learning goal",
+      "Too many events would turn the timeline into a dense list"
+    ],
+    "steps": [
+      "Define the time span and the scale.",
+      "Select events that are important enough to include.",
+      "Place events in chronological position.",
+      "Add concise annotations such as causes, effects, significance, or evidence.",
+      "Ask students to identify patterns, turning points, and periods of change or continuity."
+    ],
+    "example": "Students create a timeline of a novel's events, then annotate where a character's decisions change the direction of the story.",
+    "teacherTip": "Do not let chronology become the endpoint. Add a thinking prompt: Which event was the turning point? What changed fastest? What caused the next event?",
+    "resources": [
+      {
+        "label": "Timeline",
+        "file": "pdfs/graphic-organizers/timeline.pdf"
+      }
+    ],
+    "related": [
+      "flow-chart",
+      "matrix",
+      "fishbone"
+    ],
+    "sourceNote": "Beyond Monet distinguishes Time Lines from Concept Maps and identifies them as organizers that can be integrated into larger mapping processes."
+  },
+  {
+    "id": "matrix",
+    "name": "Matrix",
+    "aliases": [
+      "Comparison Matrix",
+      "Feature Matrix"
+    ],
+    "category": "Graphic Organizers & Visual Thinking",
+    "type": "Graphic Organizer",
+    "time": "10-30 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/matrix.svg",
+    "summary": "A grid that compares several items across the same criteria, making patterns and differences easier to detect than in paragraph notes.",
+    "useWhen": [
+      "More than two items must be compared",
+      "The same criteria apply to every item",
+      "Students need to classify or detect patterns across a data set",
+      "A Venn diagram would become too crowded"
+    ],
+    "avoidWhen": [
+      "There are only two categories and a T-chart would be clearer",
+      "The goal is sequence, hierarchy, or causation",
+      "Criteria are so open-ended that forcing them into rows would distort the task"
+    ],
+    "steps": [
+      "Put the items being compared across the top.",
+      "Put meaningful criteria down the side.",
+      "Fill each cell with concise evidence, features, values, or symbols.",
+      "Scan rows and columns for patterns, similarities, differences, or exceptions.",
+      "Use those patterns to support classification, explanation, ranking, or conclusions."
+    ],
+    "example": "Students compare renewable-energy sources across cost, reliability, environmental effects, geographic limits, and storage needs before recommending a mix for a community.",
+    "teacherTip": "Have students help choose the criteria whenever possible. Selecting the dimensions of comparison is itself an important thinking task.",
+    "resources": [
+      {
+        "label": "Comparison Matrix",
+        "file": "pdfs/graphic-organizers/matrix.pdf"
+      }
+    ],
+    "related": [
+      "venn",
+      "ranking-ladder",
+      "t-chart"
+    ],
+    "sourceNote": "Beyond Monet connects matrices with Concept Formation and classification work."
+  },
+  {
+    "id": "word-web",
+    "name": "Word Web / Word Webbing",
+    "aliases": [
+      "Word Web",
+      "Word Webbing",
+      "Semantic Web"
+    ],
+    "category": "Graphic Organizers & Visual Thinking",
+    "type": "Graphic Organizer",
+    "time": "5-20 min",
+    "group": "Individual, pairs, groups, or whole class",
+    "preview": "assets/previews/word-web.svg",
+    "summary": "A flexible web that collects words, ideas, examples, and associations around a central topic without requiring the formal relationships of a concept map.",
+    "useWhen": [
+      "Activating prior knowledge",
+      "Generating vocabulary or associations",
+      "Brainstorming subtopics before writing or inquiry",
+      "Students need a quick visual cluster rather than a formal hierarchy"
+    ],
+    "avoidWhen": [
+      "Students must explicitly state relationships between concepts - use a concept map",
+      "The goal is a ranked hierarchy or precise sequence",
+      "A loose association web would hide rather than clarify structure"
+    ],
+    "steps": [
+      "Write the central word or topic in the middle.",
+      "Add connected words or ideas around it.",
+      "Group related ideas and add secondary branches where useful.",
+      "Discuss which connections are obvious, surprising, weak, or missing.",
+      "Use the web to launch reading, writing, vocabulary study, or a more formal organizer."
+    ],
+    "example": "Before a unit on probability, students web words and situations they associate with chance: likelihood, random, weather forecast, games, risk, percent, impossible, certain, and fairness.",
+    "teacherTip": "A word web is intentionally looser than a concept map. Do not label it a concept map unless students are making explicit propositions between concepts.",
+    "resources": [
+      {
+        "label": "Word Web",
+        "file": "pdfs/graphic-organizers/word-web.pdf"
+      }
+    ],
+    "related": [
+      "mind-map",
+      "concept-map",
+      "caf"
+    ],
+    "sourceNote": "Beyond Monet explicitly distinguishes Word Webs, Mind Maps, and Concept Maps rather than treating the three as interchangeable."
+  },
+  {
+    "id": "mind-map",
+    "name": "Mind Mapping",
+    "aliases": [
+      "Mind Map",
+      "Mind Mapping"
+    ],
+    "category": "Graphic Organizers & Visual Thinking",
+    "type": "Instructional Strategy / Complex Organizer",
+    "time": "15-45 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/mind-map.svg",
+    "summary": "A radiant mapping process that begins with a central idea and uses branching keywords, imagery, colour, and spatial organization to build and remember a network of ideas.",
+    "useWhen": [
+      "Students need to generate and organize a broad field of ideas",
+      "You want a memorable visual overview",
+      "Students are reviewing or synthesizing a topic",
+      "Creative association and connection are useful"
+    ],
+    "avoidWhen": [
+      "The learning goal requires precise labeled propositions between concepts - use a concept map",
+      "Students are being graded mainly on artistic appearance",
+      "A simple web or list would accomplish the same goal more efficiently"
+    ],
+    "steps": [
+      "Place a clear central idea or image near the centre.",
+      "Create major branches for key dimensions or subtopics.",
+      "Use short keywords rather than sentences on branches.",
+      "Add smaller branches for examples, details, evidence, images, and connections.",
+      "Review the whole map: reorganize, connect related branches, and use it to explain or retrieve learning."
+    ],
+    "example": "After a unit on energy, students create a central ‘Energy’ map with branches for forms, transformations, conservation, sources, everyday examples, and environmental consequences.",
+    "teacherTip": "Teach the process before assessing it. Beyond Monet cautions against judging the effect of a mapping strategy before students and teachers have become skilled at using it.",
+    "resources": [
+      {
+        "label": "Mind Map Starter",
+        "file": "pdfs/graphic-organizers/mind-map.pdf"
+      }
+    ],
+    "related": [
+      "word-web",
+      "concept-map",
+      "flow-chart"
+    ],
+    "sourceNote": "Beyond Monet treats Mind Mapping as a complex organizer/instructional strategy, emphasizing its radiant structure and use of images and colour."
+  },
+  {
+    "id": "concept-map",
+    "name": "Concept Mapping",
+    "aliases": [
+      "Concept Map",
+      "Concept Mapping"
+    ],
+    "category": "Graphic Organizers & Visual Thinking",
+    "type": "Instructional Strategy / Complex Organizer",
+    "time": "20-50 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/concept-map.svg",
+    "summary": "A structured map of concepts and the meaningful relationships between them, usually using labeled connecting lines to form propositions.",
+    "useWhen": [
+      "Students need to show how ideas relate, not merely list them",
+      "You want misconceptions or missing relationships to become visible",
+      "Students are synthesizing a complex topic",
+      "You want students to explain the structure of their understanding"
+    ],
+    "avoidWhen": [
+      "A quick brainstorm or association web is enough",
+      "The task is primarily chronological",
+      "Students have never been taught how linking words turn connected boxes into meaningful propositions"
+    ],
+    "steps": [
+      "Identify the major concepts in the topic.",
+      "Arrange them in a useful structure, often moving from broader to more specific ideas.",
+      "Connect related concepts with lines or arrows.",
+      "Write linking words on the lines so connected concepts form meaningful statements.",
+      "Add cross-links where different regions of the map relate, then test the map by reading its propositions aloud."
+    ],
+    "example": "Students map the water cycle using concepts such as evaporation, condensation, precipitation, energy, atmosphere, surface water, and groundwater. Linking phrases explain *how* the concepts connect.",
+    "teacherTip": "The linking words matter. Two boxes joined by an unlabeled line may show association; a concept map should make the relationship understandable.",
+    "resources": [
+      {
+        "label": "Concept Map Starter",
+        "file": "pdfs/graphic-organizers/concept-map.pdf"
+      }
+    ],
+    "related": [
+      "mind-map",
+      "word-web",
+      "matrix"
+    ],
+    "sourceNote": "Beyond Monet distinguishes Concept Mapping from Mind Mapping and notes that concept maps make relationships explicit; Cornell also recommends concept mapping as an active-learning technique."
+  },
+  {
+    "id": "iceberg",
+    "name": "Iceberg Diagram",
+    "aliases": [
+      "Iceberg Model",
+      "Iceberg Diagram"
+    ],
+    "category": "Graphic Organizers & Visual Thinking",
+    "type": "Visual Thinking Organizer",
+    "time": "10-25 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/iceberg.svg",
+    "summary": "A visual metaphor for separating what is immediately visible from deeper causes, structures, assumptions, beliefs, or contexts that may help explain it.",
+    "useWhen": [
+      "Students are analyzing complex social, historical, literary, or systems-based situations",
+      "Surface events may be produced by deeper structures",
+      "You want students to distinguish observation from interpretation",
+      "A topic benefits from asking what lies beneath an obvious outcome"
+    ],
+    "avoidWhen": [
+      "The topic is a simple direct cause-and-effect chain",
+      "Students lack evidence for deeper claims",
+      "The metaphor would encourage unsupported speculation rather than disciplined inference"
+    ],
+    "steps": [
+      "Describe the observable event, behaviour, text evidence, or outcome above the waterline.",
+      "Below the line, generate plausible deeper influences such as causes, systems, values, beliefs, assumptions, or context.",
+      "Mark which below-surface ideas are supported by evidence and which remain hypotheses.",
+      "Look for interactions among deeper factors.",
+      "Use the organizer to build a more nuanced explanation or identify questions for further inquiry."
+    ],
+    "example": "Students place a historical protest above the waterline, then analyze below-surface political structures, economic pressures, cultural beliefs, earlier events, and individual motivations that contributed to it.",
+    "teacherTip": "Keep ‘below the surface’ evidence-based. Ask students to label inference separately from confirmed information.",
+    "resources": [
+      {
+        "label": "Iceberg Diagram",
+        "file": "pdfs/graphic-organizers/iceberg.pdf"
+      }
+    ],
+    "related": [
+      "fishbone",
+      "concept-map",
+      "caf"
+    ],
+    "sourceNote": "Iceberg diagrams are widely used in systems thinking and historical/social analysis to distinguish visible events from deeper influences."
+  },
+  {
+    "id": "see-think-wonder",
+    "name": "See-Think-Wonder",
+    "aliases": [
+      "See Think Wonder",
+      "I See I Think I Wonder"
+    ],
+    "category": "Thinking & Critical Thinking",
+    "type": "Thinking Routine",
+    "time": "8-20 min",
+    "group": "Individual, pairs, or whole class",
+    "preview": "assets/previews/see-think-wonder.svg",
+    "summary": "A three-part routine that slows students down: first observe carefully, then interpret, then turn curiosity into questions.",
+    "useWhen": [
+      "Students are jumping to conclusions before noticing details",
+      "An image, object, demonstration, graph, phenomenon, or text excerpt can launch inquiry",
+      "You want to surface prior thinking without immediately correcting it",
+      "Students need practice separating evidence from interpretation"
+    ],
+    "avoidWhen": [
+      "The task is simple recall with little to observe or interpret",
+      "Students already have a well-defined research question and need to move directly into investigation",
+      "The stimulus is so ambiguous that students have no meaningful evidence to work from"
+    ],
+    "steps": [
+      "Present a rich stimulus and give students quiet observation time.",
+      "Ask students to record only what they can actually see, hear, or otherwise observe.",
+      "Invite interpretations: what do they think is happening or what might the evidence mean?",
+      "Ask what the stimulus makes them wonder. Collect questions without rushing to answer them.",
+      "Use selected wonderings to launch discussion, reading, investigation, or later reflection."
+    ],
+    "example": "Before a science unit on forces, students study a photo sequence of a skateboarder moving through a ramp. They list visible details, propose explanations for the changing motion, and generate questions that can become investigation prompts.",
+    "teacherTip": "Protect the difference between seeing and thinking. When a student gives an interpretation in the See stage, ask what observable detail led them there rather than simply rejecting the response.",
+    "resources": [
+      {
+        "label": "See-Think-Wonder Organizer",
+        "file": "pdfs/thinking-critical/see-think-wonder.pdf"
+      }
+    ],
+    "related": [
+      "evidence-reasoning",
+      "think-puzzle-explore",
+      "beginning-middle-end"
+    ],
+    "sourceNote": "Project Zero thinking routine. The explanation and printable here are original classroom companions, not reproductions of Project Zero handouts."
+  },
+  {
+    "id": "think-puzzle-explore",
+    "name": "Think-Puzzle-Explore",
+    "aliases": [
+      "Think Puzzle Explore"
+    ],
+    "category": "Thinking & Critical Thinking",
+    "type": "Thinking Routine",
+    "time": "10-20 min",
+    "group": "Individual to small group / class",
+    "preview": "assets/previews/think-puzzle-explore.svg",
+    "summary": "A launch routine that activates what students think they know, identifies genuine puzzles, and turns curiosity into possible directions for inquiry.",
+    "useWhen": [
+      "Beginning a new topic, concept, text, phenomenon, or inquiry",
+      "You want to see misconceptions and partial understandings without using a quiz",
+      "Students need help generating meaningful questions",
+      "You want students to have some ownership over what gets explored"
+    ],
+    "avoidWhen": [
+      "Students have essentially no prior encounter with the topic",
+      "The lesson goal is a narrow procedural skill rather than inquiry",
+      "You will not have time or freedom to revisit any of the questions students generate"
+    ],
+    "steps": [
+      "Name the topic or present a short provocation.",
+      "Students record what they currently think they know; encourage tentative language where appropriate.",
+      "Students identify puzzles: uncertainty, contradiction, confusion, or questions.",
+      "Students choose what they would most like to explore and suggest ways they could investigate it.",
+      "Return to the original responses later so students can see what changed."
+    ],
+    "example": "At the start of a history unit on industrialization, students write what they think changed in people’s lives, what puzzles them about rapid urban growth, and which questions they would want to investigate using photographs, maps, census data, or first-person accounts.",
+    "teacherTip": "“Think” is not the same as “list facts.” Allow students to record current theories and assumptions so they have something meaningful to revise later.",
+    "resources": [
+      {
+        "label": "Think-Puzzle-Explore Organizer",
+        "file": "pdfs/thinking-critical/think-puzzle-explore.pdf"
+      }
+    ],
+    "related": [
+      "see-think-wonder",
+      "reflecting-changes",
+      "take-note"
+    ],
+    "sourceNote": "Project Zero thinking routine; app content is an original synthesis."
+  },
+  {
+    "id": "compass-points",
+    "name": "Compass Points",
+    "aliases": [
+      "E W N S routine",
+      "Excited Worrisome Need to Know Stance"
+    ],
+    "category": "Thinking & Critical Thinking",
+    "type": "Thinking Routine",
+    "time": "10-25 min",
+    "group": "Individual, groups, or whole class",
+    "preview": "assets/previews/compass-points.svg",
+    "summary": "A four-lens routine for examining a proposal before taking a position: promise, concern, missing information, and current stance or next step.",
+    "useWhen": [
+      "Students are evaluating a proposal, choice, policy, plan, or design",
+      "The class is forming opinions too quickly",
+      "A decision has both benefits and risks",
+      "Students need to identify what information is missing before deciding"
+    ],
+    "avoidWhen": [
+      "There is no real proposition or decision to examine",
+      "The task requires evidence on many competing positions rather than one proposal",
+      "Students would be unsafe or pressured by publicly revealing a personal stance"
+    ],
+    "steps": [
+      "Present one clearly worded proposal or choice.",
+      "Begin with what seems promising or exciting about it.",
+      "Identify worries, risks, drawbacks, or possible unintended consequences.",
+      "List what students still need to know before evaluating it fairly.",
+      "Students state a current stance or propose a next step, with permission to remain undecided."
+    ],
+    "example": "A school is considering replacing some traditional homework with weekly choice-based practice. Students use Compass Points to consider benefits, worries, information they need about workload and feedback, and what they currently recommend.",
+    "teacherTip": "The strongest part is often Need to Know. Do not let the activity become a dressed-up pros-and-cons list; use missing information to improve the quality of the eventual judgment.",
+    "resources": [
+      {
+        "label": "Compass Points Organizer",
+        "file": "pdfs/thinking-critical/compass-points.pdf"
+      }
+    ],
+    "related": [
+      "pmi",
+      "ebs",
+      "tug-of-war",
+      "six-thinking-hats"
+    ],
+    "sourceNote": "Project Zero thinking routine; prompt wording in this app is paraphrased."
+  },
+  {
+    "id": "headlines",
+    "name": "Headlines",
+    "aliases": [
+      "Headline routine"
+    ],
+    "category": "Thinking & Critical Thinking",
+    "type": "Thinking Routine",
+    "time": "5-12 min",
+    "group": "Individual, pairs, or class",
+    "preview": "assets/previews/headlines.svg",
+    "summary": "A concise synthesis routine in which students create a headline that captures what they believe is the most important idea, then justify that choice.",
+    "useWhen": [
+      "Closing a discussion, lesson, reading, investigation, or unit segment",
+      "Students need to identify the essence rather than retell everything",
+      "You want a fast way to compare different interpretations of what mattered",
+      "You plan to revisit the same topic and track how thinking changes"
+    ],
+    "avoidWhen": [
+      "Students have not had enough experience with the topic to identify central ideas",
+      "The learning goal is detailed note-taking rather than synthesis",
+      "A catchy phrase would substitute for actual understanding unless evidence is required"
+    ],
+    "steps": [
+      "Give students a short quiet pause to review the learning.",
+      "Students write one headline that captures the core idea as they understand it now.",
+      "Require a brief explanation or piece of evidence showing why that headline fits.",
+      "Share several headlines and notice differences in emphasis.",
+      "If revisiting the topic later, compare the new headline with the earlier one and discuss what changed."
+    ],
+    "example": "After comparing several methods for solving linear equations, students write a headline for the day’s learning. One group writes “Same Balance, Different Moves” and supports it by showing how equivalent operations preserve equality.",
+    "teacherTip": "Do not turn this into a contest for clever wording. A plain headline backed by strong reasoning is more valuable than a memorable slogan with weak understanding.",
+    "resources": [
+      {
+        "label": "Headlines Reflection Sheet",
+        "file": "pdfs/thinking-critical/headlines.pdf"
+      }
+    ],
+    "related": [
+      "take-note",
+      "color-symbol-image",
+      "reflecting-changes"
+    ],
+    "sourceNote": "Project Zero thinking routine; app explanation and printable are original."
+  },
+  {
+    "id": "color-symbol-image",
+    "name": "Color-Symbol-Image (CSI)",
+    "aliases": [
+      "CSI",
+      "Color Symbol Image"
+    ],
+    "category": "Thinking & Critical Thinking",
+    "type": "Thinking Routine",
+    "time": "12-25 min",
+    "group": "Individual then pairs / groups",
+    "preview": "assets/previews/color-symbol-image.svg",
+    "summary": "A synthesis routine that asks students to represent important ideas through a color, a simple symbol, and a fuller image or metaphor, then explain the choices.",
+    "useWhen": [
+      "Students need to distill a reading, video, discussion, or experience",
+      "You want nonverbal representation without giving up rigorous explanation",
+      "Students benefit from metaphor and visual association",
+      "A class has gathered many ideas and needs to select what matters most"
+    ],
+    "avoidWhen": [
+      "Students have too little content to make meaningful choices",
+      "The color or drawing could become decoration without explanation",
+      "A student has accessibility needs that make a visual response unnecessarily restrictive; offer alternate modes"
+    ],
+    "steps": [
+      "Students identify several ideas they consider important from the learning.",
+      "Choose a color that represents one key idea and explain the connection.",
+      "Choose or create a simple symbol for another important idea and explain it.",
+      "Create a fuller image, visual metaphor, or scene for a third idea.",
+      "Share in pairs or groups, focusing on the reasoning rather than artistic skill."
+    ],
+    "example": "After reading a novel chapter about loyalty and betrayal, a student chooses gray for uncertainty, a frayed rope as a symbol of weakening trust, and a bridge in fog as an image for the character’s next choice.",
+    "teacherTip": "Make the explanation mandatory. CSI becomes a thinking routine only when students articulate how the representation connects to the underlying idea.",
+    "resources": [
+      {
+        "label": "Color-Symbol-Image Organizer",
+        "file": "pdfs/thinking-critical/color-symbol-image.pdf"
+      }
+    ],
+    "related": [
+      "headlines",
+      "mind-map",
+      "synectics"
+    ],
+    "sourceNote": "Project Zero thinking routine; this is an original companion resource."
+  },
+  {
+    "id": "reflecting-changes",
+    "name": "Reflecting on Changes in Thinking",
+    "aliases": [
+      "3-2-1 Bridge",
+      "321 Bridge",
+      "I Used to Think Now I Think",
+      "Connect Extend Challenge",
+      "Connect-Extend-Challenge"
+    ],
+    "category": "Thinking & Critical Thinking",
+    "type": "Thinking Routine Family",
+    "time": "8-20 min",
+    "group": "Individual, pairs, or class",
+    "preview": "assets/previews/reflecting-changes.svg",
+    "summary": "A family of routines for making learning visible by comparing earlier thinking with current understanding and naming the connections, extensions, challenges, or shifts.",
+    "useWhen": [
+      "Students have enough prior thinking to compare with later understanding",
+      "You want reflection to focus on conceptual change rather than “I liked it”",
+      "A misconception has been revised through evidence",
+      "You want students to identify what still remains challenging"
+    ],
+    "avoidWhen": [
+      "Students never recorded or expressed any earlier thinking and would have to invent it",
+      "The activity is so brief that there has been no meaningful opportunity for thinking to change",
+      "Reflection would replace needed practice or feedback rather than complement it"
+    ],
+    "steps": [
+      "Choose the variation that matches the purpose: before/after bridge, used-to/now, or connect/extend/challenge.",
+      "Give students quiet time to reconstruct their earlier thinking honestly.",
+      "Students record current understanding and identify specific changes or extensions.",
+      "Ask what evidence, experience, discussion, or feedback caused the shift.",
+      "Use remaining challenges as a bridge to the next learning task."
+    ],
+    "example": "At the start of a probability unit, students complete the first half of a 3-2-1 Bridge about randomness. After simulations and theoretical work, they complete the second half and explain why their belief that “random means evenly alternating” changed.",
+    "teacherTip": "Do not reward students for claiming that everything changed. Sometimes stronger learning means becoming more precise, adding conditions, or gaining confidence in an idea that was already partly correct.",
+    "resources": [
+      {
+        "label": "3-2-1 Bridge",
+        "file": "pdfs/thinking-critical/3-2-1-bridge.pdf"
+      },
+      {
+        "label": "I Used to Think / Now I Think",
+        "file": "pdfs/thinking-critical/used-to-think-now.pdf"
+      },
+      {
+        "label": "Connect-Extend-Challenge",
+        "file": "pdfs/thinking-critical/connect-extend-challenge.pdf"
+      }
+    ],
+    "related": [
+      "think-puzzle-explore",
+      "headlines",
+      "take-note"
+    ],
+    "sourceNote": "Family of Project Zero thinking routines. The app groups related variations while preserving each name in search."
+  },
+  {
+    "id": "evidence-reasoning",
+    "name": "Evidence-Based Reasoning Routines",
+    "aliases": [
+      "What Makes You Say That?",
+      "Claim Support Question",
+      "Claim-Support-Question",
+      "CSQ"
+    ],
+    "category": "Thinking & Critical Thinking",
+    "type": "Thinking Routine Family",
+    "time": "8-20 min",
+    "group": "Individual, pairs, small groups, or class",
+    "preview": "assets/previews/evidence-reasoning.svg",
+    "summary": "A family of routines that makes the reasoning underneath an interpretation visible by asking students to state claims, point to support, and surface questions or uncertainty.",
+    "useWhen": [
+      "Students offer opinions or interpretations without evidence",
+      "You are analyzing an image, artifact, poem, data display, historical source, or phenomenon",
+      "Students need practice distinguishing a claim from support",
+      "You want disagreement to become evidence-focused rather than personal"
+    ],
+    "avoidWhen": [
+      "There is no evidence available yet and students would only guess",
+      "The task is pure factual recall",
+      "The class needs to learn what counts as relevant or credible evidence before the routine can be productive"
+    ],
+    "steps": [
+      "Invite an observation, interpretation, explanation, or claim.",
+      "Ask what specifically makes the student say that; point back to evidence or reasoning.",
+      "If using Claim-Support-Question, separate the claim, the support, and what remains unresolved.",
+      "Invite alternative interpretations and ask what evidence supports them.",
+      "Revise claims as new evidence appears rather than treating the first answer as final."
+    ],
+    "example": "Students examine a graph showing two variables rising together. One student claims that one variable causes the other. The class identifies what the graph does support, what it does not prove, and what additional evidence would be needed to make a causal claim.",
+    "teacherTip": "“What makes you say that?” should sound curious, not prosecutorial. The goal is to reveal reasoning, including partial reasoning, so it can be improved.",
+    "resources": [
+      {
+        "label": "Claim-Support-Question",
+        "file": "pdfs/thinking-critical/claim-support-question.pdf"
+      },
+      {
+        "label": "What Makes You Say That?",
+        "file": "pdfs/thinking-critical/what-makes-you-say-that.pdf"
+      }
+    ],
+    "related": [
+      "see-think-wonder",
+      "tug-of-war",
+      "beauty-and-truth"
+    ],
+    "sourceNote": "Project Zero routines for reasoning with evidence; this app uses original descriptions and worksheets."
+  },
+  {
+    "id": "perspective-taking",
+    "name": "Perspective-Taking Routines",
+    "aliases": [
+      "Circle of Viewpoints",
+      "Step Inside",
+      "Step In Step Out Step Back",
+      "Think Feel Care",
+      "Head Heart Conscience"
+    ],
+    "category": "Thinking & Critical Thinking",
+    "type": "Thinking Routine Family",
+    "time": "12-30 min",
+    "group": "Individual, pairs, groups, or class",
+    "preview": "assets/previews/perspective-taking.svg",
+    "summary": "A family of routines for examining how an issue, event, system, text, or problem may look different from another position while recognizing the limits of what we can infer.",
+    "useWhen": [
+      "A text, event, system, or dilemma contains multiple roles or stakeholders",
+      "Students are treating one perspective as the only reasonable one",
+      "You want empathy to be grounded in evidence rather than stereotype",
+      "Students need to notice how their own position shapes interpretation"
+    ],
+    "avoidWhen": [
+      "Students would be asked to impersonate a lived identity in a way that trivializes or stereotypes it",
+      "There is insufficient information to make even tentative inferences",
+      "A real participant can speak for themselves and should not be replaced by student speculation"
+    ],
+    "steps": [
+      "Identify several relevant viewpoints or positions.",
+      "Choose one and distinguish what is known from what is inferred.",
+      "Explore what that person or role might perceive, know, value, need, fear, or care about.",
+      "Ask what additional information would be needed to understand the viewpoint responsibly.",
+      "Step back and reflect on how the student’s own assumptions shaped the interpretation."
+    ],
+    "example": "While studying a proposed dam, students examine the situation from the perspectives of downstream residents, local government, an Indigenous community, farmers, wildlife researchers, and electricity users. They then identify what evidence they would need before claiming to understand each perspective.",
+    "teacherTip": "Perspective taking is not mind reading. Build in a “What do we still need to learn?” step so students do not confuse empathy with certainty.",
+    "resources": [
+      {
+        "label": "Perspective-Taking Organizer",
+        "file": "pdfs/thinking-critical/perspective-taking.pdf"
+      },
+      {
+        "label": "Step In-Step Out-Step Back",
+        "file": "pdfs/thinking-critical/step-in-step-out-step-back.pdf"
+      }
+    ],
+    "related": [
+      "tug-of-war",
+      "beauty-and-truth",
+      "parts-systems"
+    ],
+    "sourceNote": "Groups several Project Zero perspective-taking routines while keeping their names searchable."
+  },
+  {
+    "id": "parts-systems",
+    "name": "Parts & Systems Thinking Routines",
+    "aliases": [
+      "Parts Purposes Complexities",
+      "Parts-Purposes-Complexities",
+      "Parts People Interactions",
+      "Parts-People-Interactions"
+    ],
+    "category": "Thinking & Critical Thinking",
+    "type": "Thinking Routine Family",
+    "time": "15-35 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/parts-systems.svg",
+    "summary": "A family of routines that helps students analyze an object or system by identifying components, purposes, people, relationships, dependencies, and sources of complexity.",
+    "useWhen": [
+      "Students are studying a system rather than an isolated fact",
+      "You want learners to move beyond naming parts to explaining functions and interactions",
+      "A design, ecosystem, institution, machine, process, or organization can be examined from several levels",
+      "Students need groundwork before proposing improvements"
+    ],
+    "avoidWhen": [
+      "The object or topic is too simple to have meaningful interactions",
+      "Students have not yet encountered enough of the system to identify parts or relationships",
+      "The learning goal is a linear sequence rather than a system of interacting components"
+    ],
+    "steps": [
+      "Define the boundary of the object or system being studied.",
+      "List important parts or components.",
+      "Ask what purpose or function each part serves.",
+      "Add people, roles, users, or stakeholders when relevant.",
+      "Trace interactions, dependencies, feedback, tradeoffs, and points of complexity.",
+      "Use questions that emerge to guide deeper investigation or redesign."
+    ],
+    "example": "Students analyze a public transit system. They identify vehicles, routes, schedules, payment systems and stops; the purposes of each; the people who use or operate them; and how delays, accessibility, cost, maintenance, and route design interact.",
+    "teacherTip": "Systems thinking becomes powerful when arrows and relationships appear. A list of parts is only the first step.",
+    "resources": [
+      {
+        "label": "Parts-Purposes-Complexities",
+        "file": "pdfs/thinking-critical/parts-purposes-complexities.pdf"
+      },
+      {
+        "label": "Parts-People-Interactions",
+        "file": "pdfs/thinking-critical/parts-people-interactions.pdf"
+      }
+    ],
+    "related": [
+      "imagine-if",
+      "concept-map",
+      "perspective-taking"
+    ],
+    "sourceNote": "Project Zero Agency by Design routines; companion worksheets are original."
+  },
+  {
+    "id": "four-cs",
+    "name": "The 4 Cs",
+    "aliases": [
+      "4 Cs",
+      "Four Cs",
+      "Connections Challenge Concepts Changes"
+    ],
+    "category": "Thinking & Critical Thinking",
+    "type": "Thinking Routine",
+    "time": "10-20 min",
+    "group": "Individual then pairs / groups",
+    "preview": "assets/previews/four-cs.svg",
+    "summary": "A four-lens reflection routine for connecting ideas, challenging assumptions, identifying concepts worth retaining, and considering changes in thinking or action.",
+    "useWhen": [
+      "Students have finished a substantial text, discussion, film, or learning experience",
+      "You want more depth than a generic summary",
+      "A source contains ideas students can agree with, challenge, and connect",
+      "You want reflection to include implications, not just comprehension"
+    ],
+    "avoidWhen": [
+      "The text or stimulus is too short or simple to support four lenses",
+      "Students have not learned how to challenge an idea respectfully and with reasons",
+      "The task is mainly factual retrieval"
+    ],
+    "steps": [
+      "Students identify meaningful connections to prior knowledge, experience, or other learning.",
+      "They identify an idea, claim, position, or assumption they want to challenge or question.",
+      "They select key concepts worth remembering and explain why they matter.",
+      "They identify a change suggested by the learning: in understanding, attitude, action, or further inquiry.",
+      "Share selectively and compare how different students emphasized different Cs."
+    ],
+    "example": "After reading competing accounts of a historical event, students connect the sources to prior learning, challenge one assumption in an account, identify a concept such as perspective or power, and explain how the sources changed the way they think about historical “facts.”",
+    "teacherTip": "Challenge does not mean “find something wrong.” Students can challenge an assumption by asking for more evidence or by identifying a tension they are not ready to resolve.",
+    "resources": [
+      {
+        "label": "The 4 Cs Organizer",
+        "file": "pdfs/thinking-critical/four-cs.pdf"
+      }
+    ],
+    "related": [
+      "evidence-reasoning",
+      "reflecting-changes",
+      "take-note"
+    ],
+    "sourceNote": "Visible-thinking routine associated with Project Zero / Making Thinking Visible; worksheet wording is original."
+  },
+  {
+    "id": "explanation-game",
+    "name": "The Explanation Game",
+    "aliases": [
+      "Explanation Game"
+    ],
+    "category": "Thinking & Critical Thinking",
+    "type": "Thinking Routine",
+    "time": "10-25 min",
+    "group": "Pairs, groups, or whole class",
+    "preview": "assets/previews/explanation-game.svg",
+    "summary": "A collaborative routine for turning careful observations into why-questions, possible explanations, and reasons that can later be tested or investigated.",
+    "useWhen": [
+      "Students are examining a puzzling object, event, source, pattern, or phenomenon",
+      "You want causal reasoning before students receive a ready-made explanation",
+      "The class needs practice generating multiple hypotheses",
+      "You want questions to arise from observation rather than from a worksheet list"
+    ],
+    "avoidWhen": [
+      "The phenomenon is unsafe or impossible to observe meaningfully",
+      "Students lack prerequisite knowledge needed even to propose tentative explanations",
+      "You need students to learn an established explanation first because guessing would reinforce a harmful misconception"
+    ],
+    "steps": [
+      "Someone notices a specific feature and states it clearly.",
+      "Turn the observation into a why or how question.",
+      "Group members propose possible explanations or purposes.",
+      "Ask what makes each explanation plausible and what evidence it would predict.",
+      "Record unresolved puzzles and choose which explanations could be checked through reading, data, observation, or experiment."
+    ],
+    "example": "Students observe that condensation forms on the outside of a cold metal cup. They ask why the outside becomes wet, generate several explanations, and decide what observations would distinguish water leaking through the cup from water coming from the surrounding air.",
+    "teacherTip": "Keep hypotheses provisional. The routine is about building explanatory thinking, not rewarding the first student who happens to know the accepted answer.",
+    "resources": [
+      {
+        "label": "Explanation Game Organizer",
+        "file": "pdfs/thinking-critical/explanation-game.pdf"
+      }
+    ],
+    "related": [
+      "see-think-wonder",
+      "evidence-reasoning",
+      "inductive-thinking"
+    ],
+    "sourceNote": "Project Zero thinking routine; original app explanation and printable."
+  },
+  {
+    "id": "sit",
+    "name": "S-I-T: Surprising, Interesting, Troubling",
+    "aliases": [
+      "SIT",
+      "Surprising Interesting Troubling"
+    ],
+    "category": "Thinking & Critical Thinking",
+    "type": "Thinking Routine",
+    "time": "5-15 min",
+    "group": "Individual then pairs / class",
+    "preview": "assets/previews/sit.svg",
+    "summary": "A quick processing routine in which students identify one surprising, one interesting, and one troubling aspect of a stimulus, then explain why each stood out.",
+    "useWhen": [
+      "Students have encountered provocative, counterintuitive, or emotionally complex material",
+      "You want everyone to enter a discussion with something to contribute",
+      "A video, text, image, result, or event contains several layers worth processing",
+      "You need a short but meaningful reflection or exit response"
+    ],
+    "avoidWhen": [
+      "The material is emotionally intense and students need a more carefully facilitated response than a quick routine",
+      "“Troubling” could pressure students to disclose personal experiences",
+      "The content is too routine to produce meaningful distinctions"
+    ],
+    "steps": [
+      "Students individually review the stimulus.",
+      "Identify one idea, detail, or result that was surprising and explain why.",
+      "Identify one that was interesting or worth pursuing and explain why.",
+      "Identify one that was troubling, concerning, or complicating and explain why.",
+      "Debrief in pairs or class, or use responses to choose what needs clarification or discussion next."
+    ],
+    "example": "After examining a data set on local water use, students note one surprising pattern, one trend they want to investigate, and one result that troubles them because it raises a fairness or sustainability concern.",
+    "teacherTip": "Define troubling broadly as something that concerns, unsettles, or complicates the issue; it does not need to be personally upsetting.",
+    "resources": [
+      {
+        "label": "S-I-T Organizer",
+        "file": "pdfs/thinking-critical/sit.pdf"
+      }
+    ],
+    "related": [
+      "take-note",
+      "beauty-and-truth",
+      "headlines"
+    ],
+    "sourceNote": "Facing History teaching strategy; this app uses an original companion worksheet."
+  },
+  {
+    "id": "tug-of-war",
+    "name": "Tug of War",
+    "aliases": [
+      "Tug of War Thinking Routine",
+      "Tug for Fairness"
+    ],
+    "category": "Thinking & Critical Thinking",
+    "type": "Thinking Routine",
+    "time": "15-30 min",
+    "group": "Small groups or whole class",
+    "preview": "assets/previews/tug-of-war.svg",
+    "summary": "A dilemma routine that makes competing reasons visible as “tugs” pulling toward different sides, while leaving room for uncertainty and what-if questions.",
+    "useWhen": [
+      "Students are examining a fairness dilemma or two-sided tension",
+      "An issue looks simple at first but contains competing values or consequences",
+      "You want students to generate reasons for more than the side they personally prefer",
+      "The class needs a visual way to show that reasons can have different strength"
+    ],
+    "avoidWhen": [
+      "The issue has many distinct positions that would be distorted into only two sides",
+      "Students lack the background knowledge to generate informed reasons",
+      "The topic is personally sensitive and public positioning would pressure or expose students"
+    ],
+    "steps": [
+      "State a genuine dilemma with two contrasting pulls.",
+      "Students generate reasons, evidence, consequences, or values pulling toward each side.",
+      "Place those “tugs” along a rope or diagram and discuss which are stronger, conditional, or connected.",
+      "Generate what-if questions and identify missing information that could alter the balance.",
+      "Reflect on whether thinking shifted, remained uncertain, or became more nuanced."
+    ],
+    "example": "A class considers whether a city should convert a vacant lot into housing or a public park. Students map affordability, community space, tax revenue, environmental effects, access, and neighborhood needs as competing tugs rather than treating the issue as a simple vote.",
+    "teacherTip": "Do not force a final winner. The instructional value often lies in seeing why a reasonable person could feel pulled in more than one direction.",
+    "resources": [
+      {
+        "label": "Tug of War Organizer",
+        "file": "pdfs/thinking-critical/tug-of-war.pdf"
+      }
+    ],
+    "related": [
+      "compass-points",
+      "ebs",
+      "academic-controversy",
+      "perspective-taking"
+    ],
+    "sourceNote": "Project Zero thinking routine. The downloadable sheet is an original classroom companion."
+  },
+  {
+    "id": "beauty-and-truth",
+    "name": "Beauty and Truth",
+    "aliases": [
+      "Beauty & Truth"
+    ],
+    "category": "Thinking & Critical Thinking",
+    "type": "Thinking Routine",
+    "time": "15-30 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/beauty-and-truth.svg",
+    "summary": "A critical analysis routine for examining how beauty, style, emotional appeal, or compelling presentation can both reveal and conceal aspects of truth.",
+    "useWhen": [
+      "Analyzing photographs, advertisements, journalism, art, literature, infographics, or persuasive media",
+      "Students need to separate emotional or aesthetic impact from evidence",
+      "A source is compelling precisely because of how it is presented",
+      "You want to discuss representation without assuming attractive equals accurate"
+    ],
+    "avoidWhen": [
+      "The concept of “beauty” would distract from a simpler source-evaluation task",
+      "Students need foundational media-literacy vocabulary first",
+      "The material is sensitive and aesthetic analysis could trivialize suffering without careful framing"
+    ],
+    "steps": [
+      "Identify what is beautiful, appealing, polished, moving, or compelling in the representation.",
+      "Identify what seems truthful, accurate, revealing, or well-supported.",
+      "Ask how the beauty or presentation helps reveal something important.",
+      "Ask how the same presentation might hide, distort, simplify, or bias perception.",
+      "Compare the representation with additional evidence or perspectives when possible."
+    ],
+    "example": "Students compare two climate-change infographics. They discuss which visual choices make each persuasive, which data are genuinely informative, and whether dramatic color scales or cropped axes reveal urgency or distort the size of differences.",
+    "teacherTip": "Treat “beauty” as a broad idea that can include elegance, emotional pull, dramatic storytelling, or polished design—not just prettiness.",
+    "resources": [
+      {
+        "label": "Beauty and Truth Organizer",
+        "file": "pdfs/thinking-critical/beauty-and-truth.pdf"
+      }
+    ],
+    "related": [
+      "evidence-reasoning",
+      "perspective-taking",
+      "color-symbol-image"
+    ],
+    "sourceNote": "Project Zero thinking routine; original companion resource."
+  },
+  {
+    "id": "beginning-middle-end",
+    "name": "Beginning, Middle, End",
+    "aliases": [
+      "Beginning Middle End"
+    ],
+    "category": "Thinking & Critical Thinking",
+    "type": "Thinking Routine",
+    "time": "10-25 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/beginning-middle-end.svg",
+    "summary": "A narrative inference routine that treats a still moment as a possible beginning, middle, or end and asks students to reason about what could come before or after.",
+    "useWhen": [
+      "A still image, artifact, diagram, moment, or scene contains clues that can support inference",
+      "You want imagination constrained by evidence",
+      "Students are exploring cause, consequence, sequence, or point of view",
+      "A visual can launch writing without becoming a free-association prompt"
+    ],
+    "avoidWhen": [
+      "The learning goal requires a fixed factual chronology and imaginative alternatives would confuse it",
+      "Students have no evidence in the stimulus to justify their narratives",
+      "The task is better served by a simple timeline or sequence organizer"
+    ],
+    "steps": [
+      "Present a still image or moment and allow close observation first.",
+      "Choose one lens: what if this is the beginning, the middle, or the end?",
+      "Students build a plausible before/after narrative using visible clues.",
+      "Ask which details support the proposed story and what remains uncertain.",
+      "Compare different plausible narratives and discuss how evidence constrains imagination."
+    ],
+    "example": "Students examine a historical photograph of a crowded railway platform. One group treats it as the middle of a migration story and infers what may have happened before and what might happen next, identifying which details support each inference.",
+    "teacherTip": "The goal is not to guess the photographer’s “correct story.” Reward plausible reasoning tied to details in the source.",
+    "resources": [
+      {
+        "label": "Beginning-Middle-End Organizer",
+        "file": "pdfs/thinking-critical/beginning-middle-end.pdf"
+      }
+    ],
+    "related": [
+      "see-think-wonder",
+      "perspective-taking",
+      "timeline"
+    ],
+    "sourceNote": "Project Zero Artful Thinking routine; printable is an original companion."
+  },
+  {
+    "id": "imagine-if",
+    "name": "Imagine If...",
+    "aliases": [
+      "Imagine If"
+    ],
+    "category": "Thinking & Critical Thinking",
+    "type": "Thinking Routine",
+    "time": "15-35 min",
+    "group": "Individual, pairs, or design groups",
+    "preview": "assets/previews/imagine-if.svg",
+    "summary": "A creative redesign routine that pushes students to improve an object or system through purposeful lenses such as effectiveness, efficiency, responsibility, and appeal.",
+    "useWhen": [
+      "Students have analyzed how an object or system currently works",
+      "You want divergent thinking with useful constraints",
+      "A design challenge needs more than “make it better”",
+      "Students need to consider users, consequences, and tradeoffs while generating ideas"
+    ],
+    "avoidWhen": [
+      "Students do not yet understand the existing object or system",
+      "The task has no room for redesign or alternatives",
+      "Students are being asked to solve a safety-critical problem without adequate technical knowledge or supervision"
+    ],
+    "steps": [
+      "Choose an object or system students understand.",
+      "Generate ways it could work more effectively.",
+      "Generate ways it could be more efficient or easier to use.",
+      "Consider how it could be fairer, safer, more responsible, or better for people/community/environment.",
+      "Consider how clarity, appeal, or beauty could improve the experience.",
+      "Select promising ideas and test them against real constraints and user needs."
+    ],
+    "example": "After analyzing the school lunch line as a system, students propose changes to reduce wait time, improve accessibility, reduce food waste, and make choices easier to understand. They then compare which redesigns help one goal while hurting another.",
+    "teacherTip": "Creative constraints improve this routine. Ask students to redesign for a specific user, budget, material limit, or environmental condition instead of generating unlimited fantasy ideas.",
+    "resources": [
+      {
+        "label": "Imagine If... Redesign Sheet",
+        "file": "pdfs/thinking-critical/imagine-if.pdf"
+      }
+    ],
+    "related": [
+      "parts-systems",
+      "synectics",
+      "caf"
+    ],
+    "sourceNote": "Project Zero Agency by Design routine; original companion worksheet."
+  },
+  {
+    "id": "take-note",
+    "name": "Take Note",
+    "aliases": [
+      "Take Note routine"
+    ],
+    "category": "Thinking & Critical Thinking",
+    "type": "Thinking Routine",
+    "time": "3-8 min",
+    "group": "Individual then optional share",
+    "preview": "assets/previews/take-note.svg",
+    "summary": "A focused consolidation routine in which students capture one especially important point, puzzle, question, or interesting idea after a learning episode.",
+    "useWhen": [
+      "Students need to listen, watch, or participate fully without writing continuously",
+      "You want a brief pause for consolidation after a lecture, film, reading, demonstration, or discussion",
+      "Students need practice deciding what is worth carrying forward",
+      "You want a quick entry point into pair or whole-class discussion"
+    ],
+    "avoidWhen": [
+      "Students need a detailed record of procedures, evidence, or reference information",
+      "The learning episode contains several required facts that cannot be reduced to one note",
+      "Students have not yet learned enough to judge significance without support"
+    ],
+    "steps": [
+      "After the learning episode, stop and give students quiet thinking time.",
+      "Ask them to choose one focus: most important point, biggest puzzle, question worth discussing, or something especially interesting.",
+      "Students record the chosen idea clearly.",
+      "Add a short explanation of why it matters, what it connects to, or what they want to do with it next.",
+      "Optionally share notes and compare what different students considered significant."
+    ],
+    "example": "After a teacher demonstration of equivalent fractions, students choose one Take Note focus. One records the key idea that multiplying numerator and denominator by the same nonzero number preserves value; another records a puzzle about why division works the same way.",
+    "teacherTip": "This is not a replacement for all note-taking. It is a deliberate consolidation move used after students have had a chance to attend closely to the learning itself.",
+    "resources": [
+      {
+        "label": "Take Note Sheet",
+        "file": "pdfs/thinking-critical/take-note.pdf"
+      }
+    ],
+    "related": [
+      "headlines",
+      "reflecting-changes",
+      "sit"
+    ],
+    "sourceNote": "Project Zero thinking routine; original companion design."
+  },
+  {
+    "id": "right-angle-thinking",
+    "name": "Right-Angle Thinking",
+    "aliases": [
+      "Right Angle Thinking"
+    ],
+    "category": "Thinking & Critical Thinking",
+    "type": "Thinking Tactic",
+    "time": "10-20 min",
+    "group": "Individual or pairs",
+    "preview": "assets/previews/right-angle-thinking.svg",
+    "summary": "A two-part thinking organizer that records interesting or important information and then deliberately turns into associated thoughts, questions, implications, or connections.",
+    "useWhen": [
+      "Students are reading, viewing, listening, or observing and you want them to process rather than copy notes",
+      "A source contains information that should trigger questions or connections",
+      "Students need a visible distinction between information and their response to it",
+      "You want a simple bridge from comprehension into analysis"
+    ],
+    "avoidWhen": [
+      "Students need a complete factual record for later reference",
+      "The task is already heavily interpretive and there is little source information to anchor it",
+      "Students would benefit more from a specific evidence-based organizer such as Claim-Support-Question"
+    ],
+    "steps": [
+      "Students record selected important or interesting information from the source.",
+      "At the “right-angle” turn, move from source information into associated thinking.",
+      "For each selected item, add a connection, implication, question, feeling, application, or inference.",
+      "Share selected associations and ask which are strongest or most useful.",
+      "Return to the source to check whether interpretations are supported or need revision."
+    ],
+    "example": "While watching a geography documentary, students record a statistic about urban growth in the information section. At the turn, they write questions about infrastructure, connect the statistic to migration, and note a possible effect on water demand.",
+    "teacherTip": "The physical turn matters because it reminds students that the second section is not more copying. It is where they do something intellectually with the information.",
+    "resources": [
+      {
+        "label": "Right-Angle Thinking Organizer",
+        "file": "pdfs/thinking-critical/right-angle-thinking.pdf"
+      }
+    ],
+    "related": [
+      "take-note",
+      "double-entry-journal",
+      "evidence-reasoning"
+    ],
+    "sourceNote": "Beyond Monet lists Right Angle Thinking among possible strategies for visualizing/associating ideas. Other teaching resources describe it as linking interesting information to associated thoughts; this app uses an original layout."
+  },
+  {
+    "id": "six-thinking-hats",
+    "name": "Six Thinking Hats",
+    "aliases": [
+      "de Bono Six Thinking Hats",
+      "Six Hats"
+    ],
+    "category": "Thinking & Critical Thinking",
+    "type": "Thinking Tactic",
+    "time": "15-40 min",
+    "group": "Individuals or groups",
+    "preview": "assets/previews/six-thinking-hats.svg",
+    "summary": "Edward de Bono’s parallel-thinking method uses six named modes—information, feelings, caution, value, creativity, and process—to examine an issue without mixing every kind of thinking at once.",
+    "useWhen": [
+      "A decision or issue is getting stuck in argument or one habitual mode of thinking",
+      "Students need to generate alternatives as well as evaluate them",
+      "A group needs permission to consider feelings, evidence, risks, benefits, and process separately",
+      "You want to structure complex discussion without assigning permanent “personality roles”"
+    ],
+    "avoidWhen": [
+      "Students treat hats as personality labels such as “you are the negative one”",
+      "A simple task does not need six modes",
+      "The class has not learned how to distinguish evidence, feeling, caution, and benefit and would use the labels superficially"
+    ],
+    "steps": [
+      "Introduce the six modes and make clear that hats describe temporary thinking, not people.",
+      "Define the focus question or decision.",
+      "Choose a sequence that fits the task rather than always using the same order.",
+      "In group work, have everyone use the same hat at the same time so the thinking is parallel.",
+      "Record what each mode contributes, then use Blue Hat thinking to summarize, decide, or identify next steps."
+    ],
+    "example": "A class evaluates a proposal to ban phones during instructional time. White gathers relevant information, Red surfaces reactions, Yellow identifies benefits, Black examines risks and drawbacks, Green generates alternatives, and Blue organizes what should happen next.",
+    "teacherTip": "Avoid assigning six students six different hats for the whole discussion. The method is strongest when the group deliberately shifts together from one mode to another.",
+    "resources": [
+      {
+        "label": "Six Thinking Hats Organizer",
+        "file": "pdfs/thinking-critical/six-thinking-hats.pdf"
+      },
+      {
+        "label": "Six Thinking Hats Discussion Cards",
+        "file": "pdfs/thinking-critical/six-thinking-hats-cards.pdf"
+      }
+    ],
+    "related": [
+      "compass-points",
+      "pmi",
+      "academic-controversy",
+      "synectics"
+    ],
+    "sourceNote": "Edward de Bono method. Beyond Monet presents Six Thinking Hats as a tactic that can support more complex strategies. Hat descriptions here are paraphrased from de Bono materials."
+  },
+  {
+    "id": "synectics",
+    "name": "Synectics",
+    "aliases": [
+      "Synectics Strategy",
+      "William Gordon Synectics"
+    ],
+    "category": "Thinking & Critical Thinking",
+    "type": "Creative Thinking Strategy",
+    "time": "15-40 min",
+    "group": "Individuals or collaborative groups",
+    "preview": "assets/previews/synectics.svg",
+    "summary": "A structured creative-thinking strategy associated with William J. J. Gordon that uses analogies and metaphors to break fixed patterns and generate fresh understanding or solutions.",
+    "useWhen": [
+      "Students are stuck in conventional solutions or descriptions",
+      "A concept can be understood through analogy or metaphor",
+      "You want creative thinking to be systematic rather than simply “brainstorm anything”",
+      "Writing, design, problem solving, or concept development would benefit from unusual connections"
+    ],
+    "avoidWhen": [
+      "Students lack enough understanding of the target concept to judge whether an analogy is useful",
+      "The analogy could introduce a dangerous scientific misconception unless carefully debriefed",
+      "The task requires precision first and creativity later"
+    ],
+    "steps": [
+      "Clarify the concept, problem, or situation enough that students understand what they are working on.",
+      "Generate a direct analogy to something from a different domain.",
+      "Explore a personal analogy by imagining being inside or becoming part of the problem.",
+      "Create a symbolic or compressed metaphor that captures an important tension or quality.",
+      "Use fantasy or impossible possibilities to break normal constraints.",
+      "Return to the original problem and harvest ideas that are actually useful or revealing."
+    ],
+    "example": "Students designing a quieter school hallway compare hallway traffic to river flow, imagine themselves as a student trying to move through a bottleneck, create a “pressure valve” metaphor, and invent impossible solutions before returning to practical ideas about entry points and passing patterns.",
+    "teacherTip": "The strange analogy is not the final answer. Always include the return step: what useful insight does the analogy give us about the real concept or problem?",
+    "resources": [
+      {
+        "label": "Synectics Analogy Organizer",
+        "file": "pdfs/thinking-critical/synectics.pdf"
+      }
+    ],
+    "related": [
+      "color-symbol-image",
+      "imagine-if"
+    ],
+    "sourceNote": "Beyond Monet lists Synectics as an instructional approach; external instructional literature traces the model to William J. J. Gordon and its use of analogy and metaphor."
+  },
+  {
+    "id": "inductive-thinking",
+    "name": "Inductive Thinking",
+    "aliases": [
+      "Hilda Taba Inductive Thinking",
+      "Taba Inductive Thinking"
+    ],
+    "category": "Thinking & Critical Thinking",
+    "type": "Instructional Strategy",
+    "time": "20-60+ min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/inductive-thinking.svg",
+    "summary": "A complex information-processing strategy in which students classify data, develop labels and relationships, make inferences, and apply or test emerging generalizations.",
+    "useWhen": [
+      "Students can work with a rich set of examples, objects, statements, data, images, or cases",
+      "You want students to derive categories and relationships instead of receiving them first",
+      "Classification itself reveals important concepts or misconceptions",
+      "The learning goal includes analysis, inference, transfer, or examination of generalizations"
+    ],
+    "avoidWhen": [
+      "The data set is too small or obvious to support genuine classification",
+      "The teacher has already predetermined every category and only wants students to sort into given bins",
+      "Students lack the background knowledge to notice meaningful attributes or relationships",
+      "Time is too limited to discuss and defend how groups were formed"
+    ],
+    "steps": [
+      "Present or collect a meaningful data set and a clear focus.",
+      "Students enumerate or examine the data and group items by attributes they notice.",
+      "Only after grouping, students develop labels and explain the criteria for each group.",
+      "Students identify relationships among groups and explore those relationships.",
+      "Students make inferences or tentative generalizations from the patterns.",
+      "Apply, test, transfer, or challenge the generalizations with new cases and possible exceptions."
+    ],
+    "example": "Students receive a mixed set of triangles without category labels. They group them in several defensible ways, name the attributes they used, compare relationships among the groups, and then test their emerging definitions against new triangle examples.",
+    "teacherTip": "Do not label too early. Beyond Monet specifically warns that predetermined labels can limit the divergent nature of the inductive process; students should first notice and defend how the data fit together.",
+    "resources": [
+      {
+        "label": "Inductive Thinking Process Sheet",
+        "file": "pdfs/thinking-critical/inductive-thinking.pdf"
+      }
+    ],
+    "related": [
+      "matrix",
+      "evidence-reasoning"
+    ],
+    "sourceNote": "Based on Hilda Taba’s inductive process as presented in Beyond Monet, including grouping data, labeling groups, identifying relationships, and making inferences."
+  },
+  {
+    "id": "socratic-method",
+    "name": "Socratic Method",
+    "aliases": [
+      "Socratic",
+      "Socratic Dialogue",
+      "Socratic Seminar"
+    ],
+    "category": "Discussion & Questioning",
+    "type": "Discussion Strategy Family",
+    "time": "25-60+ min",
+    "group": "Small group or whole class",
+    "preview": "assets/previews/socratic-method.svg",
+    "summary": "A text- or idea-centered dialogue in which students question, reason, listen, and revise together rather than merely answer a teacher’s sequence of recitation questions.",
+    "useWhen": [
+      "A text, issue, concept, or problem can support several defensible interpretations",
+      "Students have evidence or prior learning they can bring into a sustained discussion",
+      "The goal includes listening, questioning, reasoning, and revising ideas",
+      "You want students to take greater responsibility for carrying the discussion"
+    ],
+    "avoidWhen": [
+      "Students have not prepared enough content to discuss meaningfully",
+      "The teacher intends to ask nearly every question and evaluate each response",
+      "The topic requires direct safety guidance or factual correction before open discussion",
+      "A public seminar would pressure students to disclose personal beliefs or experiences"
+    ],
+    "steps": [
+      "Establish one rich central question and give students time to prepare evidence and their own questions.",
+      "Review discussion norms: listen accurately, address ideas rather than people, invite quieter voices, and ground claims.",
+      "Launch the discussion, then reduce teacher talk so students question and respond directly to one another.",
+      "Use occasional prompts to clarify reasoning, request evidence, test assumptions, or reopen a line of inquiry.",
+      "Close with reflection: what did the group understand better, what remains unresolved, and what idea changed?"
+    ],
+    "example": "After reading two accounts of a historical protest, students discuss: “When does civil disobedience become justified?” They cite the sources, question assumptions about law and justice, and revise their interpretations as peers introduce evidence.",
+    "teacherTip": "Beyond Monet explicitly warns that talking at students and occasionally asking questions is not Socratic Dialogue. The quality comes from genuine exchange and the shared search for understanding, not the label “Socratic.”",
+    "resources": [
+      {
+        "label": "Socratic Discussion Preparation",
+        "file": "pdfs/discussion-questioning/socratic-preparation.pdf"
+      },
+      {
+        "label": "Socratic Talk Moves",
+        "file": "pdfs/discussion-questioning/socratic-talk-moves.pdf"
+      }
+    ],
+    "related": [
+      "fishbowl",
+      "accountable-talk",
+      "question-generation",
+      "qft"
+    ],
+    "sourceNote": "Beyond Monet distinguishes Socratic Dialogue from stand-up recitation. Facing History’s Socratic Seminar guidance emphasizes student-facilitated discussion toward shared understanding of a text."
+  },
+  {
+    "id": "fishbowl",
+    "name": "Fishbowl",
+    "aliases": [
+      "Fish Bowl",
+      "Fishbowl Discussion"
+    ],
+    "category": "Discussion & Questioning",
+    "type": "Discussion Structure",
+    "time": "20-50 min",
+    "group": "Whole class with rotating inner/outer circles",
+    "preview": "assets/previews/fishbowl-discussion.svg",
+    "summary": "A discussion structure in which a smaller inner circle talks while an outer circle listens closely, tracks the thinking, and later rotates into the conversation.",
+    "useWhen": [
+      "You want students to practice both contributing and listening",
+      "A full-class discussion has too many simultaneous voices",
+      "Students benefit from observing what productive discussion looks and sounds like",
+      "A difficult or complex topic needs more structure than open whole-class talk"
+    ],
+    "avoidWhen": [
+      "The outer circle is likely to become passive spectators",
+      "The prompt has one quick correct answer",
+      "Observation becomes a personality or behavior score rather than attention to ideas",
+      "Students have no preparation and the inner circle would be forced to improvise"
+    ],
+    "steps": [
+      "Choose a rich prompt and give everyone preparation time.",
+      "Seat a small inner circle for discussion and an outer circle for focused observation.",
+      "Give outer-circle students a thinking task: track evidence, questions, connections, or how ideas develop.",
+      "Rotate speakers or allow a structured tap-in/tap-out system so more voices enter.",
+      "Debrief both the content and the discussion process; use outer-circle notes to reopen important ideas."
+    ],
+    "example": "Students discuss whether a character’s final decision was responsible. Six students begin in the centre while the outer group tracks evidence and unanswered questions; after eight minutes the circles rotate.",
+    "teacherTip": "Do not make the outer circle count interruptions or score classmates as its main job. Give observers an intellectual listening task so they remain part of the learning.",
+    "resources": [
+      {
+        "label": "Fishbowl Observer Tracker",
+        "file": "pdfs/discussion-questioning/fishbowl-observer.pdf"
+      },
+      {
+        "label": "Fishbowl Role Cards",
+        "file": "pdfs/discussion-questioning/fishbowl-role-cards.pdf"
+      }
+    ],
+    "related": [
+      "socratic-method",
+      "accountable-talk",
+      "town-hall-circle",
+      "learn-listen"
+    ],
+    "sourceNote": "Facing History describes Fishbowl as a structured discussion for practicing both contributor and listener roles."
+  },
+  {
+    "id": "save-last-word",
+    "name": "Save the Last Word for Me",
+    "aliases": [
+      "Save the Last Word",
+      "Last Word Protocol"
+    ],
+    "category": "Discussion & Questioning",
+    "type": "Discussion Protocol",
+    "time": "20-35 min",
+    "group": "Triads or small groups",
+    "preview": "assets/previews/save-last-word.svg",
+    "summary": "A text-response protocol in which one student selects a passage, peers discuss it first, and the selector speaks last to explain why the passage mattered.",
+    "useWhen": [
+      "Students need to discuss a reading, film, image, or source with equitable airtime",
+      "Frequent speakers need practice listening before responding",
+      "Reserved students benefit from a predictable turn structure",
+      "You want interpretation to begin with a specific passage or moment"
+    ],
+    "avoidWhen": [
+      "The source is too short to support meaningful choices",
+      "Students have not independently read or viewed the material",
+      "The class needs a freer debate rather than disciplined listening",
+      "Students would simply repeat the same interpretation without evidence or explanation"
+    ],
+    "steps": [
+      "Each student selects a short passage or specific moment and notes why it stood out, keeping the reason private at first.",
+      "In groups of three, the first student reads or describes the selection without explaining it.",
+      "The other two students discuss what they think is important, puzzling, or meaningful about it while the selector listens.",
+      "The selector gets the last word and explains the reason for choosing it, responding to what was heard if useful.",
+      "Repeat until each student has selected and received the last word."
+    ],
+    "example": "After reading a short story, a student chooses one sentence from the ending. Two peers discuss what the sentence suggests about the narrator; only after they finish does the selector explain why it changed her interpretation.",
+    "teacherTip": "The “last word” should add meaning, not correct classmates. The power comes from hearing other interpretations before revealing your own.",
+    "resources": [
+      {
+        "label": "Save the Last Word Organizer",
+        "file": "pdfs/discussion-questioning/save-the-last-word.pdf"
+      }
+    ],
+    "related": [
+      "learn-listen",
+      "say-something",
+      "socratic-method"
+    ],
+    "sourceNote": "Facing History uses Save the Last Word for Me to structure active speaking and listening around a text."
+  },
+  {
+    "id": "town-hall-circle",
+    "name": "Town Hall Circle",
+    "aliases": [
+      "Town Hall Discussion",
+      "Town Hall"
+    ],
+    "category": "Discussion & Questioning",
+    "type": "Discussion Structure",
+    "time": "30-60 min",
+    "group": "Whole class with source/perspective groups",
+    "preview": "assets/previews/town-hall-circle.svg",
+    "summary": "A rotating town-hall-style discussion in which students bring evidence from different sources or perspectives into one shared conversation and listen across viewpoints.",
+    "useWhen": [
+      "A topic contains several legitimate stakeholder or source perspectives",
+      "Students need to compare how access to different evidence shapes a viewpoint",
+      "You want movement between source preparation and whole-class discussion",
+      "The goal includes perspective, evidence, and civic-style deliberation"
+    ],
+    "avoidWhen": [
+      "Perspectives would be stereotyped or assigned without adequate source material",
+      "The issue has become a role-play of identities rather than analysis of evidence",
+      "Students do not yet understand the underlying content",
+      "The format would pressure students to publicly defend a personal political or moral identity"
+    ],
+    "steps": [
+      "Provide several readings, sources, or stakeholder perspectives on the same issue.",
+      "Students prepare in source groups, identifying evidence and what their perspective emphasizes.",
+      "Open the town hall with a small active discussion circle while classmates listen.",
+      "Students tap in, rotate, or enter according to the chosen structure, bringing ideas from their source while responding to others.",
+      "Debrief how the different evidence changed, complicated, or strengthened understanding of the issue."
+    ],
+    "example": "During a water-use unit, groups study farmers, municipal planners, environmental scientists, and household users. The town hall asks how a drought plan should allocate limited water and what evidence should drive the decision.",
+    "teacherTip": "Give students sources, not caricatures. A strong town hall helps them compare evidence and priorities; it should not become “pretend to be a type of person.”",
+    "resources": [
+      {
+        "label": "Town Hall Circle Organizer",
+        "file": "pdfs/discussion-questioning/town-hall-circle.pdf"
+      }
+    ],
+    "related": [
+      "fishbowl",
+      "perspective-taking",
+      "academic-controversy"
+    ],
+    "sourceNote": "Facing History includes Town Hall Circle as a strategy for sharing and broadening perspectives on a common topic."
+  },
+  {
+    "id": "micro-lab",
+    "name": "Micro Lab",
+    "aliases": [
+      "Micro Lab Protocol",
+      "MicroLab"
+    ],
+    "category": "Discussion & Questioning",
+    "type": "Discussion Protocol",
+    "time": "12-25 min",
+    "group": "Triads",
+    "preview": "assets/previews/micro-lab.svg",
+    "summary": "A tightly structured triad protocol: each person receives uninterrupted airtime, brief silence follows each turn, and only then does the group open into discussion.",
+    "useWhen": [
+      "One or two students tend to dominate small-group talk",
+      "Students need guaranteed thinking and listening time before open discussion",
+      "You want group members to hear complete ideas before reacting",
+      "A reflective prompt benefits from slower, more attentive conversation"
+    ],
+    "avoidWhen": [
+      "The task requires rapid collaborative problem solving from the start",
+      "Students need immediate clarification to understand the prompt",
+      "Strict timed turns would feel artificial for a simple exchange",
+      "The protocol is used so rigidly that students stop listening for ideas and only wait for the timer"
+    ],
+    "steps": [
+      "Pose a prompt and give students individual reflection time.",
+      "In triads, the first student shares for a fixed short period while partners listen without interruption.",
+      "Pause briefly in silence so everyone can absorb what was said.",
+      "Repeat the share-and-silence cycle for the other two students.",
+      "Open the group discussion and ask students to connect, question, extend, or challenge ideas from the earlier rounds."
+    ],
+    "example": "After a lab with an unexpected result, each student gets one minute to explain what they think happened, followed by quiet processing. Only after all three turns do they compare explanations and decide what evidence would distinguish them.",
+    "teacherTip": "The silent pauses matter. Without them, Micro Lab can turn into ordinary turn-taking instead of a routine that forces attention to what was just said.",
+    "resources": [
+      {
+        "label": "Micro Lab Triad Sheet",
+        "file": "pdfs/discussion-questioning/micro-lab.pdf"
+      }
+    ],
+    "related": [
+      "learn-listen",
+      "save-last-word",
+      "accountable-talk"
+    ],
+    "sourceNote": "The Micro Lab Protocol appears in Making Thinking Visible as a structure for focused attention, reflection, and equitable participation."
+  },
+  {
+    "id": "accountable-talk",
+    "name": "Accountable Talk",
+    "aliases": [
+      "Accountable Academic Talk",
+      "Accountable Talk Moves"
+    ],
+    "category": "Discussion & Questioning",
+    "type": "Discussion Framework",
+    "time": "Ongoing / 10-45 min discussions",
+    "group": "Pairs, groups, or whole class",
+    "preview": "assets/previews/accountable-talk.svg",
+    "summary": "A framework for academically productive discussion that holds talk accountable to the learning community, to relevant knowledge/evidence, and to rigorous reasoning.",
+    "useWhen": [
+      "Students can talk but the discussion stays at unsupported opinions",
+      "You want students to build on one another instead of speaking in isolated turns",
+      "A subject requires evidence, explanation, and discipline-specific reasoning",
+      "You want discussion norms that can transfer across many routines and subjects"
+    ],
+    "avoidWhen": [
+      "Sentence stems are being treated as a compliance checklist rather than support for real thinking",
+      "Students have no knowledge or evidence to reason with",
+      "The teacher is using “accountable” to police tone while ignoring the quality of ideas",
+      "A simpler pair-share is sufficient and a full framework would add unnecessary load"
+    ],
+    "steps": [
+      "Establish that students are accountable to one another: listen, represent others accurately, clarify, build, and disagree respectfully.",
+      "Establish accountability to knowledge: use relevant facts, texts, data, examples, and disciplinary information.",
+      "Establish accountability to reasoning: connect claims and evidence, explain why, test assumptions, and consider alternatives.",
+      "Model a small set of talk moves, then gradually expect students to use those moves independently.",
+      "Reflect on whether the discussion became more connected, accurate, and rigorous - not merely more talkative."
+    ],
+    "example": "In a math discussion, students compare two solution methods. One student restates a peer’s reasoning, another asks which step preserves equivalence, and a third supplies a counterexample to test an overgeneralized rule.",
+    "teacherTip": "Do not confuse Accountable Talk with posting a wall of sentence stems. The stems are scaffolds; the goal is a community that actually listens, uses knowledge, and reasons together.",
+    "resources": [
+      {
+        "label": "Accountable Talk Student Moves",
+        "file": "pdfs/discussion-questioning/accountable-talk-moves.pdf"
+      },
+      {
+        "label": "Accountable Talk Discussion Tracker",
+        "file": "pdfs/discussion-questioning/accountable-talk-tracker.pdf"
+      }
+    ],
+    "related": [
+      "socratic-method",
+      "fishbowl",
+      "science-talk",
+      "peer-instruction"
+    ],
+    "sourceNote": "Research by Michaels, O’Connor, Resnick and colleagues describes accountability to community, knowledge, and reasoning. Accountable Talk is a registered trademark of the University of Pittsburgh."
+  },
+  {
+    "id": "question-generation",
+    "name": "Question-Generation Routines",
+    "aliases": [
+      "Question Starts",
+      "Creative Questions",
+      "Question Stems"
+    ],
+    "category": "Discussion & Questioning",
+    "type": "Questioning Routine Family",
+    "time": "8-20 min",
+    "group": "Individual, pairs, groups, or class",
+    "preview": "assets/previews/question-generation.svg",
+    "summary": "A family of routines that deliberately expands the kinds of questions students can generate - clarification, evidence, cause, perspective, possibility, consequence, and more.",
+    "useWhen": [
+      "Students wait for the teacher to supply every question",
+      "An inquiry needs better questions before research begins",
+      "Students ask only factual or yes/no questions",
+      "You want students to notice that different question types lead to different kinds of thinking"
+    ],
+    "avoidWhen": [
+      "The teacher needs one very precise diagnostic question",
+      "Students lack enough contact with the topic to generate meaningful questions",
+      "Question generation becomes an end in itself and none of the questions will be used",
+      "A formal QFT process is the better fit for a sustained question-formulation lesson"
+    ],
+    "steps": [
+      "Present a topic, image, text, phenomenon, claim, or problem worth questioning.",
+      "Give students several question purposes or stems rather than a list of content-specific answers.",
+      "Generate many questions without immediately judging which are best.",
+      "Sort or compare questions by the kind of thinking they invite.",
+      "Choose one or two questions to investigate, discuss, research, or use to improve the next task."
+    ],
+    "example": "After viewing a graph of local housing prices, students generate clarification, cause, evidence, perspective, possibility, and consequence questions. They then choose which questions would require additional data rather than opinion.",
+    "teacherTip": "A question stem is a launch point, not a script. Remove the scaffold as students learn to generate varied questions on their own.",
+    "resources": [
+      {
+        "label": "Question-Generation Organizer",
+        "file": "pdfs/discussion-questioning/question-generation.pdf"
+      }
+    ],
+    "related": [
+      "qft",
+      "socratic-method",
+      "think-puzzle-explore"
+    ],
+    "sourceNote": "Groups Question Starts and Creative Questions as closely related student-question routines while preserving both names in search."
+  },
+  {
+    "id": "qft",
+    "name": "Question Formulation Technique (QFT)",
+    "aliases": [
+      "QFT",
+      "Question Formulation Technique"
+    ],
+    "category": "Discussion & Questioning",
+    "type": "Questioning Strategy",
+    "time": "20-45 min",
+    "group": "Individual then groups / class",
+    "preview": "assets/previews/qft.svg",
+    "summary": "A structured Right Question Institute process in which students produce their own questions, work with and improve them, prioritize questions, decide next steps, and reflect on the process.",
+    "useWhen": [
+      "Students need to develop the skill of asking their own questions",
+      "A unit, investigation, seminar, or research task can be driven by student questions",
+      "You want both divergent question production and later prioritization",
+      "Students need to distinguish different question forms and consider how form affects usefulness"
+    ],
+    "avoidWhen": [
+      "The teacher has already decided the exact question students must answer",
+      "There is no opportunity to use or revisit student-generated questions",
+      "The Question Focus is so broad or vague that students cannot get traction",
+      "You only need two minutes of brainstorming rather than the full process"
+    ],
+    "steps": [
+      "Present a carefully designed Question Focus that gives students something concrete to ask about.",
+      "Students produce many questions before pausing to evaluate or answer them.",
+      "Students examine question forms and practice changing questions to see how the form changes what an answer would require.",
+      "Students prioritize questions according to the purpose of the learning.",
+      "Decide how selected questions will be used, then reflect on what students learned about asking questions."
+    ],
+    "example": "Before a unit on electricity, students see a photograph of a city during a blackout with the statement “One failure changed an entire system.” They generate, improve, and prioritize questions that later guide investigations of circuits, grids, and reliability.",
+    "teacherTip": "Do not secretly turn the QFT into “guess the teacher’s question.” The technique is valuable because students own the production and prioritization of questions.",
+    "resources": [
+      {
+        "label": "QFT Original Companion",
+        "file": "pdfs/discussion-questioning/qft-companion.pdf"
+      }
+    ],
+    "related": [
+      "question-generation",
+      "think-puzzle-explore",
+      "socratic-method"
+    ],
+    "sourceNote": "The Question Formulation Technique was developed by the Right Question Institute. This app’s explanation and printable are original companions, not official RQI materials."
+  },
+  {
+    "id": "learn-listen",
+    "name": "Learn to Listen, Listen to Learn",
+    "aliases": [
+      "Listen to Learn",
+      "Learn to Listen"
+    ],
+    "category": "Discussion & Questioning",
+    "type": "Discussion Strategy",
+    "time": "25-45 min",
+    "group": "Individual writing, small groups, whole class",
+    "preview": "assets/previews/learn-listen.svg",
+    "summary": "A structured discussion sequence that begins with private writing, moves through uninterrupted small-group sharing, then opens into discussion and reflection on what listening changed.",
+    "useWhen": [
+      "A topic is complex, controversial, or emotionally charged enough to benefit from preparation",
+      "Students need explicit practice listening before responding",
+      "You want every student to clarify a view privately before group talk",
+      "The learning goal includes noticing how other people’s ideas affect your own thinking"
+    ],
+    "avoidWhen": [
+      "Students are being asked to disclose sensitive personal experiences",
+      "The topic needs immediate factual instruction rather than open reflection",
+      "The time available is too short for writing, sharing, listening, and debriefing",
+      "The group lacks enough safety or norms for a controversial topic"
+    ],
+    "steps": [
+      "Give students time to write privately about the prompt and mark an idea they are willing to share.",
+      "In groups, students share one at a time without interruption or immediate rebuttal.",
+      "After everyone has spoken, open the group into a freer discussion where ideas can connect and respond.",
+      "Invite the group to identify what they learned from listening, not only from speaking.",
+      "Close with a short reflection on what strengthened, changed, complicated, or remains uncertain."
+    ],
+    "example": "Before a discussion about whether a novel character deserves forgiveness, students write privately, share one uninterrupted reflection each, then discuss how hearing peers changed the questions they think matter.",
+    "teacherTip": "Build in the distinction between listening and waiting to speak. A useful follow-up is to ask students to name an idea from someone else before returning to their own.",
+    "resources": [
+      {
+        "label": "Learn to Listen Reflection Sheet",
+        "file": "pdfs/discussion-questioning/learn-to-listen.pdf"
+      }
+    ],
+    "related": [
+      "micro-lab",
+      "save-last-word",
+      "fishbowl"
+    ],
+    "sourceNote": "Facing History describes this strategy as journaling plus group discussion designed specifically to strengthen listening skills."
+  },
+  {
+    "id": "back-face",
+    "name": "Back-to-Back and Face-to-Face",
+    "aliases": [
+      "Back to Back Face to Face",
+      "Back-To-Back and Face-to-Face"
+    ],
+    "category": "Discussion & Questioning",
+    "type": "Partner Discussion Protocol",
+    "time": "5-15 min",
+    "group": "Pairs, often rotating partners",
+    "preview": "assets/previews/back-face.svg",
+    "summary": "A partner protocol that separates private think time from face-to-face sharing, then repeats across prompts or partners so students rehearse and encounter multiple perspectives.",
+    "useWhen": [
+      "You want every student to prepare before speaking",
+      "Students benefit from repeated short oral rehearsal",
+      "A question can be explored through several partners or rounds",
+      "Movement can refresh attention without becoming the point of the activity"
+    ],
+    "avoidWhen": [
+      "Movement would create an accessibility barrier; adapt to seated or visual signals",
+      "Students need a sustained deep conversation rather than short rounds",
+      "The prompt is too personal for repeated partner sharing",
+      "The room cannot safely support movement and partner changes"
+    ],
+    "steps": [
+      "Pair students and have them face away from one another or use another signal that clearly marks private think time.",
+      "Pose one prompt and give silent time to prepare a response.",
+      "Signal face-to-face; partners turn, one shares, and the other listens before roles reverse.",
+      "Return to thinking position, change the prompt or partner as useful, and repeat.",
+      "Optionally close by asking students to share an idea they heard from someone else."
+    ],
+    "example": "After solving a ratio problem, students think privately about which representation was most useful. They turn, explain to a partner, rotate, and respond to a second prompt about where that representation might fail.",
+    "teacherTip": "The back-to-back position is just a management cue. Preserve the important design - protected think time followed by reciprocal partner sharing - when adapting for mobility, space, or sensory needs.",
+    "resources": [
+      {
+        "label": "Back-to-Back / Face-to-Face Round Tracker",
+        "file": "pdfs/discussion-questioning/back-to-back-face-to-face.pdf"
+      }
+    ],
+    "related": [
+      "say-switch",
+      "think-pair-family",
+      "question-generation"
+    ],
+    "sourceNote": "EL Education describes this protocol as a way to share information and gain multiple perspectives through partner interaction."
+  },
+  {
+    "id": "say-something",
+    "name": "Say Something",
+    "aliases": [
+      "Say Something Reading Strategy"
+    ],
+    "category": "Discussion & Questioning",
+    "type": "Reading Discussion Protocol",
+    "time": "15-35 min",
+    "group": "Pairs",
+    "preview": "assets/previews/say-something.svg",
+    "summary": "A paired reading protocol in which students pause at planned points to make a meaningful response - predict, question, clarify, connect, notice, or summarize - before continuing.",
+    "useWhen": [
+      "Students read through text without monitoring understanding",
+      "A text benefits from frequent low-stakes processing",
+      "Pairs need a concrete way to discuss while reading rather than only after",
+      "You want comprehension monitoring to become audible and shareable"
+    ],
+    "avoidWhen": [
+      "The text is so short that stopping repeatedly would break coherence",
+      "Students need a first uninterrupted read for fluency or overall meaning",
+      "The prompt categories become a checklist that distracts from the text",
+      "Partner oral reading would create unnecessary difficulty; adapt to silent reading with shared stops"
+    ],
+    "steps": [
+      "Divide the text into sensible stopping points.",
+      "At each stop, one partner says something meaningful about the text: a prediction, question, clarification, connection, important notice, or summary.",
+      "The partner responds to the idea rather than simply saying “okay.”",
+      "Continue reading to the next stop and switch who initiates.",
+      "At the end, identify which comments or questions most helped comprehension."
+    ],
+    "example": "Pairs read a science article in sections. At each stopping point they alternate initiating a comment; one student notices that the author changed from evidence to speculation, and the pair rereads the sentence to clarify the difference.",
+    "teacherTip": "Students do not need to use every response type. The requirement is meaningful monitoring of comprehension, not completing six boxes.",
+    "resources": [
+      {
+        "label": "Say Something Reader Card",
+        "file": "pdfs/discussion-questioning/say-something-reader-card.pdf"
+      }
+    ],
+    "related": [
+      "questioning-the-author",
+      "accountable-talk"
+    ],
+    "sourceNote": "EL Education and other literacy resources use Say Something as a paired reading-and-discussion protocol."
+  },
+  {
+    "id": "say-switch",
+    "name": "Say and Switch",
+    "aliases": [
+      "Say & Switch",
+      "Say Switch"
+    ],
+    "category": "Discussion & Questioning",
+    "type": "Partner Discussion Structure",
+    "time": "5-15 min",
+    "group": "Pairs",
+    "preview": "assets/previews/say-switch.svg",
+    "summary": "A paired structure that gives one student protected speaking time while the partner listens, then deliberately switches roles so both students explain and listen.",
+    "useWhen": [
+      "Students need equal oral rehearsal of an explanation",
+      "One partner often takes over collaborative work",
+      "The teacher wants students to practice listening as a distinct role",
+      "A task can be meaningfully divided into short explanation rounds"
+    ],
+    "avoidWhen": [
+      "The discussion needs natural rapid back-and-forth from the start",
+      "One student would be forced to continue speaking after the useful idea is complete",
+      "Role timing becomes more important than the quality of reasoning",
+      "A student needs an alternative communication mode and the structure has not been adapted"
+    ],
+    "steps": [
+      "Pose a question, problem, or explanation task and give brief think time.",
+      "Assign or choose the first speaker and listener.",
+      "The speaker explains while the listener focuses on understanding rather than interrupting or finishing the explanation.",
+      "Signal the switch; roles reverse and the new speaker responds, extends, or explains another part.",
+      "Close with a joint synthesis, unresolved question, or shared explanation."
+    ],
+    "example": "Partners compare two ways to find percent change. Student A explains the ratio approach while B listens and paraphrases; they switch, and B explains a multiplicative-factor approach before they identify when each representation feels clearest.",
+    "teacherTip": "Do not make listening passive. The listener should know they may need to paraphrase or use the idea after the switch.",
+    "resources": [
+      {
+        "label": "Say and Switch Role Cards",
+        "file": "pdfs/discussion-questioning/say-and-switch-cards.pdf"
+      }
+    ],
+    "related": [
+      "back-face",
+      "micro-lab",
+      "think-pair-family"
+    ],
+    "sourceNote": "Say and Switch appeared in the earlier strategy research pool; this app treats it as a simple protected-turn partner discussion structure."
+  },
+  {
+    "id": "science-talk",
+    "name": "Science Talks",
+    "aliases": [
+      "Science Talk",
+      "Science Discussion"
+    ],
+    "category": "Discussion & Questioning",
+    "type": "Disciplinary Discussion Protocol",
+    "time": "15-35 min",
+    "group": "Small group or whole class",
+    "preview": "assets/previews/science-talk.svg",
+    "summary": "A discussion around a big scientific question or phenomenon in which students collectively theorize, use evidence, build on ideas, reveal misconceptions, and identify what needs investigation next.",
+    "useWhen": [
+      "Students have observations or prior experiences but explanations are still developing",
+      "A phenomenon can support more than one initial model or hypothesis",
+      "You want student thinking to shape what gets tested or investigated next",
+      "Students need practice with scientific discourse rather than only reporting final answers"
+    ],
+    "avoidWhen": [
+      "The teacher already needs to deliver a specific safety or procedural instruction",
+      "Students have no phenomenon, observation, data, or prior knowledge to reason from",
+      "The talk becomes guessing without asking what evidence could distinguish explanations",
+      "Discussion is used instead of hands-on investigation when the question can actually be tested"
+    ],
+    "steps": [
+      "Pose or revisit one big question grounded in a phenomenon, observation, investigation, or data.",
+      "Give students time to form a tentative explanation before whole-group talk.",
+      "Invite students to share theories, build on ideas, ask questions, and cite observations or evidence.",
+      "Keep competing explanations visible rather than correcting every imperfect idea immediately.",
+      "Close by identifying what evidence, observation, model, or experiment would help the class move the explanations forward."
+    ],
+    "example": "After observing condensation on the outside of a cold cup, students debate where the water came from. Their competing explanations lead them to propose tests involving sealed cups, room humidity, and mass.",
+    "teacherTip": "A Science Talk is not a quiz disguised as discussion. The teacher listens for student models and misconceptions so the next investigation has a genuine need-to-know purpose.",
+    "resources": [
+      {
+        "label": "Science Talk Organizer",
+        "file": "pdfs/discussion-questioning/science-talk.pdf"
+      }
+    ],
+    "related": [
+      "accountable-talk",
+      "peer-instruction",
+      "inquiry-based-learning"
+    ],
+    "sourceNote": "EL Education describes Science Talks as discussions around provocative scientific questions where students collectively theorize and build on one another’s ideas."
+  },
+  {
+    "id": "riddle-discussion",
+    "name": "Riddle Discussion",
+    "aliases": [
+      "Riddle Discussion Protocol",
+      "Mystery Riddle"
+    ],
+    "category": "Discussion & Questioning",
+    "type": "Inference Discussion Protocol",
+    "time": "8-20 min",
+    "group": "Pairs / small groups then class",
+    "preview": "assets/previews/riddle-discussion.svg",
+    "summary": "A repeated-listening or repeated-reading protocol that asks students to notice clues, wonder about possibilities, and use evidence to infer the answer to a riddle or mystery text.",
+    "useWhen": [
+      "Students are learning to make inferences from clues rather than guess",
+      "A short text, description, data set, image sequence, or mystery can be revisited several times",
+      "You want noticing and wondering to precede the final answer",
+      "Younger learners need a playful structure for evidence-based reasoning"
+    ],
+    "avoidWhen": [
+      "The riddle depends mainly on a trick or obscure background knowledge",
+      "Students can answer immediately without using clues",
+      "The “mystery” overshadows the actual content you want students to learn",
+      "The text is too long for productive repeated listening or reading"
+    ],
+    "steps": [
+      "Read or present the riddle/mystery once without interruption.",
+      "Students share specific notices or clues.",
+      "Present it again; students generate wonders or possible interpretations.",
+      "Present it a final time and ask students to commit to an inference supported by clues.",
+      "Reveal or test the answer, then discuss which evidence was most useful and what misleading clues taught them."
+    ],
+    "example": "Primary students hear a short description of an animal three times. They first collect clues, then questions, then infer the animal and defend the answer using its described beak, feet, habitat, and behavior.",
+    "teacherTip": "The answer is not the most important part. Ask “Which clue changed your mind?” so the learning stays focused on inference and evidence.",
+    "resources": [
+      {
+        "label": "Riddle Discussion Organizer",
+        "file": "pdfs/discussion-questioning/riddle-discussion.pdf"
+      }
+    ],
+    "related": [
+      "see-think-wonder",
+      "evidence-reasoning",
+      "science-talk"
+    ],
+    "sourceNote": "EL Education’s Riddle Discussion protocol uses repeated readings, noticing, wondering, and evidence-based inference."
+  },
+  {
+    "id": "peer-instruction",
+    "name": "Peer Instruction",
+    "aliases": [
+      "Mazur Peer Instruction",
+      "ConcepTest",
+      "Concept Question Peer Instruction"
+    ],
+    "category": "Discussion & Questioning",
+    "type": "Peer Discussion Strategy",
+    "time": "5-15 min per question",
+    "group": "Individual vote then pairs / small groups",
+    "preview": "assets/previews/peer-instruction.svg",
+    "summary": "Eric Mazur’s interactive method uses a conceptual question, an individual commitment, peer explanation, and a second response so students must reason with one another rather than simply hear the answer.",
+    "useWhen": [
+      "A concept has common misconceptions that can be surfaced by a well-designed question",
+      "Students can choose an answer but need to explain why",
+      "You want every learner to think before hearing peers",
+      "A short peer argument can reveal conceptual understanding better than additional exposition"
+    ],
+    "avoidWhen": [
+      "The question mainly tests calculation speed or factual recall",
+      "Almost everyone already understands the concept or almost no one has enough knowledge to discuss it",
+      "Students see the correct answer before the peer conversation",
+      "The class is told simply to “compare answers” without explaining reasoning"
+    ],
+    "steps": [
+      "Pose one conceptual question designed around an important idea or misconception.",
+      "Students answer individually first and commit to a choice plus reasoning.",
+      "Without revealing the correct answer, students discuss with peers and try to explain or challenge the reasoning.",
+      "Students answer the same or a closely related question again.",
+      "Debrief the reasoning behind the answer and address misconceptions revealed by the response pattern."
+    ],
+    "example": "Students choose which of several graphs could represent an object moving away from a sensor at constant speed. They vote individually, convince a partner using the meaning of slope, then revote before the teacher explains.",
+    "teacherTip": "The discussion is the engine. If students only copy the more confident partner’s letter choice, use prompts that require them to explain the underlying concept before revoting.",
+    "resources": [
+      {
+        "label": "Peer Instruction Concept Question Sheet",
+        "file": "pdfs/discussion-questioning/peer-instruction.pdf"
+      }
+    ],
+    "related": [
+      "accountable-talk",
+      "science-talk"
+    ],
+    "sourceNote": "Peer Instruction was developed by Eric Mazur to use student interaction around conceptual questions; it is widely used in science, mathematics, and other fields."
+  },
+  {
+    "id": "whole-class-participation",
+    "name": "Whole-Class Participation & Accountability",
+    "aliases": [
+      "Cold Call",
+      "Equity Sticks",
+      "No Opt Out",
+      "Whole Class Participation"
+    ],
+    "category": "Discussion & Questioning",
+    "type": "Facilitation Move Family",
+    "time": "Embedded throughout instruction",
+    "group": "Whole class",
+    "preview": "assets/previews/whole-class-participation.svg",
+    "summary": "A family of teacher facilitation moves designed to make thinking a class-wide expectation rather than an activity reserved for students who volunteer first.",
+    "useWhen": [
+      "The same small group of volunteers answers most questions",
+      "You want all students to prepare a response before anyone is selected",
+      "Students need predictable routines that normalize participation",
+      "A discussion or check for understanding needs a broader sample of thinking"
+    ],
+    "avoidWhen": [
+      "Selection is used to embarrass, punish, or “catch” unprepared students",
+      "Students are given no think time before being called on",
+      "A student’s communication or accessibility needs are ignored",
+      "Random selection is mistaken for equity without attention to whose ideas are actually heard and developed"
+    ],
+    "steps": [
+      "Ask a question worth thinking about and provide adequate private think time or rehearsal.",
+      "Use a predictable selection method rather than relying only on raised hands.",
+      "If a student cannot yet answer, preserve dignity: allow support, partner rehearsal, a return later, or another route into the response.",
+      "Invite classmates to build on, clarify, compare, or challenge ideas so participation contributes to shared thinking.",
+      "Notice patterns over time and adjust so the routine broadens access rather than simply randomizing who feels exposed."
+    ],
+    "example": "A teacher posts a non-routine math question, gives everyone ninety seconds to sketch an approach, then uses a selection routine to invite several strategies. Students compare methods instead of treating each selected response as an isolated quiz answer.",
+    "teacherTip": "The intellectual design matters more than the stick cup or randomizer. Think time, psychological safety, and what happens after the response determine whether these moves support learning.",
+    "resources": [],
+    "related": [
+      "accountable-talk",
+      "back-face",
+      "think-pair-family"
+    ],
+    "sourceNote": "This family groups Cold Call, Equity Sticks, and No Opt Out as participation/facilitation moves rather than treating them as separate major strategy pages."
+  },
+  {
+    "id": "cooperative-learning-framework",
+    "name": "Cooperative Learning Framework",
+    "aliases": [],
+    "category": "Cooperative Learning",
+    "type": "Instructional Model / Framework",
+    "time": "10-60+ min",
+    "group": "Pairs to teams",
+    "preview": "assets/previews/cooperative-learning-framework.svg",
+    "summary": "A way of structuring group learning so students depend on one another for success while each learner remains individually responsible.",
+    "useWhen": [
+      "A task benefits from explanation, comparison, joint problem solving, or peer support",
+      "You want group work to produce learning rather than simple task division",
+      "Students need explicit practice with collaborative skills"
+    ],
+    "avoidWhen": [
+      "The task can be completed more effectively alone",
+      "Only one student can meaningfully perform the task",
+      "The group has no way to hold individuals accountable"
+    ],
+    "steps": [
+      "Design positive interdependence: students need one another to succeed.",
+      "Build in individual and group accountability.",
+      "Arrange interaction so students explain, help, question, and encourage one another.",
+      "Teach the social skills the task requires.",
+      "End with group processing: what helped learning and what should change next time?"
+    ],
+    "example": "In science, a team investigates a phenomenon with shared materials, but each student must explain the group model and answer an individual transfer question.",
+    "teacherTip": "Do not confuse seating students together with cooperative learning. Structure both dependence and accountability.",
+    "resources": [
+      {
+        "label": "Five Elements Checklist",
+        "file": "pdfs/cooperative-learning/five-elements-checklist.pdf"
+      },
+      {
+        "label": "Group Processing Reflection",
+        "file": "pdfs/cooperative-learning/group-processing.pdf"
+      }
+    ],
+    "related": [
+      "think-pair-family",
+      "jigsaw",
+      "group-investigation"
+    ],
+    "sourceNote": "Beyond Monet emphasizes cooperative learning as a complex strategy and highlights the Johnsons' five basic elements; the Cooperative Learning Institute likewise identifies five essential elements."
+  },
+  {
+    "id": "think-pair-family",
+    "name": "Think-Pair Family",
+    "aliases": [
+      "Think/Pair/Share",
+      "Think Pair Share",
+      "Think/Pair/Square",
+      "Think Pair Square"
+    ],
+    "category": "Cooperative Learning",
+    "type": "Cooperative Structure",
+    "time": "3-10 min",
+    "group": "Pairs, then optional fours",
+    "preview": "assets/previews/think-pair-family.svg",
+    "summary": "A family of quick structures that gives every learner private think time before peer explanation and wider sharing.",
+    "useWhen": [
+      "You want everyone to formulate an idea before public discussion",
+      "A question benefits from rehearsal and comparison",
+      "You need a low-risk entry into cooperative learning"
+    ],
+    "avoidWhen": [
+      "The prompt is simple recall with no benefit from explanation",
+      "Students need extended independent problem solving before discussion"
+    ],
+    "steps": [
+      "Pose one worthwhile question and protect silent think time.",
+      "Students explain to a partner rather than merely read an answer.",
+      "Partners compare, question, or improve their thinking.",
+      "For Think-Pair-Square, two pairs join and synthesize before whole-class sharing."
+    ],
+    "example": "Students solve a ratio problem independently, compare methods with a partner, then two pairs identify what all correct methods have in common.",
+    "teacherTip": "The quality of the prompt matters more than the catchy routine name. Give enough think time that the pair conversation has something to work with.",
+    "resources": [
+      {
+        "label": "Think-Pair-Share / Square Sheet",
+        "file": "pdfs/cooperative-learning/think-pair-family.pdf"
+      }
+    ],
+    "related": [
+      "round-robin",
+      "numbered-heads"
+    ],
+    "sourceNote": "Beyond Monet identifies Think Pair Share as a simple cooperative structure and references Think Pair Square in teacher repertoires."
+  },
+  {
+    "id": "numbered-heads",
+    "name": "Numbered Heads / Lettered Heads",
+    "aliases": [],
+    "category": "Cooperative Learning",
+    "type": "Cooperative Structure",
+    "time": "5-15 min",
+    "group": "Teams of 3-5",
+    "preview": "assets/previews/numbered-heads.svg",
+    "summary": "A group-accountability structure in which everyone prepares because the teacher chooses the reporting number or letter only after the team has worked.",
+    "useWhen": [
+      "You want group discussion without one permanent spokesperson",
+      "All students should be ready to explain the team's thinking",
+      "You need a quick check for understanding after collaboration"
+    ],
+    "avoidWhen": [
+      "The task depends on personal opinion that should not be represented as group consensus",
+      "Students have not been given enough time to understand the answer themselves"
+    ],
+    "steps": [
+      "Assign each student a number or letter within the team.",
+      "Pose a question or task and let the group reason together.",
+      "Require the team to check that every member can explain the answer.",
+      "Call a number or letter after preparation; those students respond.",
+      "Rotate or vary how responses are collected."
+    ],
+    "example": "After groups classify geometric figures, the teacher calls “Number 3.” Every Number 3 explains the group's classification rule and answers a follow-up.",
+    "teacherTip": "Call the number after the learning has happened. Naming the reporter too early destroys the accountability.",
+    "resources": [
+      {
+        "label": "Number / Letter Cards",
+        "file": "pdfs/cooperative-learning/numbered-heads-cards.pdf"
+      },
+      {
+        "label": "Team Readiness Check",
+        "file": "pdfs/cooperative-learning/numbered-heads-check.pdf"
+      }
+    ],
+    "related": [
+      "cooperative-learning-framework",
+      "round-robin"
+    ],
+    "sourceNote": "Beyond Monet repeatedly recommends Numbered Heads to increase individual accountability in cooperative work."
+  },
+  {
+    "id": "round-robin",
+    "name": "Round Robin",
+    "aliases": [],
+    "category": "Cooperative Learning",
+    "type": "Cooperative Structure",
+    "time": "4-12 min",
+    "group": "Teams of 3-5",
+    "preview": "assets/previews/round-robin.svg",
+    "summary": "A turn-taking structure in which each member contributes one idea in sequence, often for multiple rounds.",
+    "useWhen": [
+      "You want equal opportunities to contribute",
+      "A task benefits from generating many responses or hearing every viewpoint",
+      "Dominant speakers are crowding out others"
+    ],
+    "avoidWhen": [
+      "Ideas need spontaneous back-and-forth rather than equal turns",
+      "Students have too little knowledge to contribute meaningfully"
+    ],
+    "steps": [
+      "State the prompt and give private think time.",
+      "Choose a starting point and direction.",
+      "Each member contributes one idea without interruption.",
+      "Continue for a set number of rounds or until ideas are exhausted.",
+      "Move into open discussion, ranking, or synthesis if needed."
+    ],
+    "example": "Students name possible causes of an historical event one at a time. After two rounds, the team groups the causes and chooses which deserve further investigation.",
+    "teacherTip": "Round Robin is strongest as a launch, not necessarily the whole conversation. Follow it with synthesis or evaluation.",
+    "resources": [
+      {
+        "label": "Round Robin Team Mat",
+        "file": "pdfs/cooperative-learning/round-robin.pdf"
+      }
+    ],
+    "related": [
+      "talking-chips",
+      "three-step-interview"
+    ],
+    "sourceNote": "Beyond Monet classifies Round Robin as a simple cooperative tactic and shows it being stacked with more complex structures."
+  },
+  {
+    "id": "inside-outside-circles",
+    "name": "Inside / Outside Circles",
+    "aliases": [],
+    "category": "Cooperative Learning",
+    "type": "Cooperative Structure",
+    "time": "8-20 min",
+    "group": "Whole class in paired circles",
+    "preview": "assets/previews/inside-outside-circles.svg",
+    "summary": "A rotating partner structure that creates repeated short exchanges with several classmates.",
+    "useWhen": [
+      "Students need repeated retrieval or explanation practice",
+      "You want learners to encounter several perspectives or examples",
+      "A question can deepen over multiple partner rounds"
+    ],
+    "avoidWhen": [
+      "The room cannot safely support movement",
+      "The task requires long, sustained discussion with one partner"
+    ],
+    "steps": [
+      "Form two concentric circles with each student facing a partner.",
+      "Pose a prompt; both partners share, question, or rehearse.",
+      "Signal one circle to rotate a set number of places.",
+      "Repeat with the same or a new prompt.",
+      "End with a synthesis: what patterns or new ideas emerged across partners?"
+    ],
+    "example": "Before a unit test, students explain one concept to a partner, rotate, then respond to a different application question.",
+    "teacherTip": "Give students a listening job, not just a speaking job. For example, ask them to bring one strong idea from a partner into the final debrief.",
+    "resources": [
+      {
+        "label": "Inside / Outside Circle Prompt Tracker",
+        "file": "pdfs/cooperative-learning/inside-outside-circles.pdf"
+      }
+    ],
+    "related": [
+      "think-pair-family",
+      "walk-about"
+    ],
+    "sourceNote": "Beyond Monet includes Inside/Outside Circles among cooperative tactics and explicitly notes it can be combined with Numbered Heads."
+  },
+  {
+    "id": "four-corners",
+    "name": "Four Corners",
+    "aliases": [],
+    "category": "Cooperative Learning",
+    "type": "Cooperative Structure",
+    "time": "8-20 min",
+    "group": "Whole class, then pairs/small groups",
+    "preview": "assets/previews/four-corners.svg",
+    "summary": "Students commit to one of four positions or choices by moving to a labeled area, then explain and test their reasoning with others.",
+    "useWhen": [
+      "You want students to make a choice before hearing peers",
+      "An issue has four useful positions, categories, causes, or solutions",
+      "Movement will make thinking visible and energize discussion"
+    ],
+    "avoidWhen": [
+      "Choices are artificial or misleading",
+      "Students could feel exposed by a sensitive personal-position question",
+      "The task has a single factual answer with no reasoning value"
+    ],
+    "steps": [
+      "Label four areas with meaningful choices.",
+      "Give silent think time before anyone moves.",
+      "Students move independently to the position that best represents their thinking.",
+      "In each corner, students explain reasons in pairs or triads.",
+      "Invite cross-corner comparison and optionally allow students to move after hearing evidence."
+    ],
+    "example": "At the start and end of a history unit, students choose which of four causes they think most influenced an event and defend the choice.",
+    "teacherTip": "Protect independent choice before movement so students do not simply follow friends.",
+    "resources": [
+      {
+        "label": "Four Corners Signs",
+        "file": "pdfs/cooperative-learning/four-corners-signs.pdf"
+      },
+      {
+        "label": "Four Corners Reflection",
+        "file": "pdfs/cooperative-learning/four-corners-reflection.pdf"
+      }
+    ],
+    "related": [
+      "academic-controversy",
+      "think-pair-family"
+    ],
+    "sourceNote": "Beyond Monet provides several Four Corners classroom applications and stresses independent thinking before movement."
+  },
+  {
+    "id": "graffiti",
+    "name": "Graffiti",
+    "aliases": [],
+    "category": "Cooperative Learning",
+    "type": "Cooperative Structure",
+    "time": "10-25 min",
+    "group": "Small groups rotating among prompts",
+    "preview": "assets/previews/graffiti.svg",
+    "summary": "Groups add brief ideas to large posted prompts, then rotate so each chart accumulates thinking from many groups.",
+    "useWhen": [
+      "You want broad idea generation across several prompts",
+      "Students benefit from seeing and extending peers' thinking",
+      "You need active movement with a written record"
+    ],
+    "avoidWhen": [
+      "Prompts require long written responses",
+      "Students need to evaluate evidence before generating ideas",
+      "Noise or movement would interfere with the learning environment"
+    ],
+    "steps": [
+      "Post one prompt per chart or station.",
+      "Groups begin at different stations and add ideas without erasing previous thinking.",
+      "Rotate on a signal and read before adding.",
+      "Encourage groups to extend, question, categorize, or mark patterns rather than duplicate.",
+      "Return to the original chart and synthesize what accumulated."
+    ],
+    "example": "Groups rotate among four science questions about an ecosystem. On the second pass they add evidence or challenge an earlier claim.",
+    "teacherTip": "Use a second symbol or pen style for “build on” versus “new idea” if you want the charts to show how thinking developed.",
+    "resources": [
+      {
+        "label": "Graffiti Station Sheet",
+        "file": "pdfs/cooperative-learning/graffiti-station.pdf"
+      }
+    ],
+    "related": [
+      "group-carousel",
+      "gallery-tour"
+    ],
+    "sourceNote": "Beyond Monet lists Graffiti among cooperative-learning tactics used by experienced teachers."
+  },
+  {
+    "id": "three-step-interview",
+    "name": "Three-Step Interview",
+    "aliases": [],
+    "category": "Cooperative Learning",
+    "type": "Cooperative Structure",
+    "time": "10-25 min",
+    "group": "Groups of 3-4",
+    "preview": "assets/previews/three-step-interview.svg",
+    "summary": "Students interview a partner, switch roles, then report what they learned from their partner to the larger team.",
+    "useWhen": [
+      "Listening and paraphrasing are learning goals",
+      "Students have perspectives, solutions, or experiences worth exchanging",
+      "You want accountability for understanding someone else, not just speaking"
+    ],
+    "avoidWhen": [
+      "The content is too personal for public reporting",
+      "Students need teacher clarification before interviewing one another"
+    ],
+    "steps": [
+      "Pair students within teams.",
+      "Partner A interviews B while listening and taking brief notes.",
+      "Switch roles.",
+      "Pairs rejoin the team. Each student reports the partner's thinking, not their own.",
+      "The team identifies patterns, differences, or questions."
+    ],
+    "example": "Students explain how they solved a non-routine math problem. Each interviewer later reports the partner's strategy and reasoning to the group.",
+    "teacherTip": "Teach paraphrasing explicitly. The third step should reveal whether students actually listened.",
+    "resources": [
+      {
+        "label": "Three-Step Interview Notes",
+        "file": "pdfs/cooperative-learning/three-step-interview.pdf"
+      }
+    ],
+    "related": [
+      "learn-listen",
+      "round-robin"
+    ],
+    "sourceNote": "Beyond Monet describes Three-Step Interview as an average-complexity cooperative structure and suggests combining it with Round Robin."
+  },
+  {
+    "id": "pairs-check",
+    "name": "Pairs Check",
+    "aliases": [],
+    "category": "Cooperative Learning",
+    "type": "Cooperative Structure",
+    "time": "8-25 min",
+    "group": "Pairs within teams of four",
+    "preview": "assets/previews/pairs-check.svg",
+    "summary": "Partners alternate solving and coaching, then compare with another pair to check understanding and accuracy.",
+    "useWhen": [
+      "Students need guided practice with immediate peer explanation",
+      "A task has multiple examples or problems",
+      "You want students to verbalize procedures and catch errors"
+    ],
+    "avoidWhen": [
+      "Students have not yet learned the underlying method",
+      "The work should measure independent mastery",
+      "The answer is subjective and cannot be meaningfully checked"
+    ],
+    "steps": [
+      "Partner A solves while Partner B coaches and asks questions.",
+      "Partners switch roles on the next item.",
+      "After a set, the pair compares with another pair.",
+      "Resolve differences using reasoning, examples, notes, or teacher support.",
+      "Continue with roles alternating."
+    ],
+    "example": "In algebra practice, one student solves an equation while the partner checks each transformation and asks why it preserves equality.",
+    "teacherTip": "The coach should not grab the pencil. Require questions and explanations before corrections.",
+    "resources": [
+      {
+        "label": "Pairs Check Practice Sheet",
+        "file": "pdfs/cooperative-learning/pairs-check.pdf"
+      }
+    ],
+    "related": [
+      "think-pair-family",
+      "cooperative-learning-framework"
+    ],
+    "sourceNote": "Beyond Monet lists Pairs Check in experienced teachers' cooperative-learning repertoires."
+  },
+  {
+    "id": "talking-chips",
+    "name": "Talking Chips",
+    "aliases": [],
+    "category": "Cooperative Learning",
+    "type": "Cooperative Structure",
+    "time": "8-20 min",
+    "group": "Teams of 3-6",
+    "preview": "assets/previews/talking-chips.svg",
+    "summary": "A participation structure in which students spend a limited number of chips when they contribute, making airtime visible and encouraging balanced participation.",
+    "useWhen": [
+      "Some students dominate while others rarely enter the conversation",
+      "You want students to notice participation patterns",
+      "A discussion needs an explicit equity scaffold"
+    ],
+    "avoidWhen": [
+      "The conversation is already balanced and chips would feel artificial",
+      "Students need rapid free-flowing brainstorming",
+      "Speaking frequency is being confused with quality of thinking"
+    ],
+    "steps": [
+      "Give each student the same number of chips.",
+      "A student places one chip in the centre when contributing.",
+      "Students with chips remaining receive priority over students who have used theirs.",
+      "Reset chips for another round or move to open discussion.",
+      "Reflect on both participation and quality of listening."
+    ],
+    "example": "In a literature discussion, each student has two chips: one for introducing an idea and one for responding to another person.",
+    "teacherTip": "Treat chips as temporary scaffolding. The goal is balanced conversation habits, not permanent token accounting.",
+    "resources": [
+      {
+        "label": "Printable Talking Chips",
+        "file": "pdfs/cooperative-learning/talking-chips.pdf"
+      },
+      {
+        "label": "Participation Reflection",
+        "file": "pdfs/cooperative-learning/talking-chips-reflection.pdf"
+      }
+    ],
+    "related": [
+      "round-robin",
+      "accountable-talk"
+    ],
+    "sourceNote": "Beyond Monet lists Talking Chips among cooperative-learning structures in an experienced English teacher's repertoire."
+  },
+  {
+    "id": "group-carousel",
+    "name": "Group Carousel",
+    "aliases": [],
+    "category": "Cooperative Learning",
+    "type": "Cooperative Structure",
+    "time": "12-30 min",
+    "group": "Small groups rotating among stations",
+    "preview": "assets/previews/group-carousel.svg",
+    "summary": "Teams rotate through several tasks or prompts, adding, solving, checking, or extending work at each station.",
+    "useWhen": [
+      "You have several related prompts or problem types",
+      "Students can learn from partially completed work left by other groups",
+      "Movement and distributed practice would help engagement"
+    ],
+    "avoidWhen": [
+      "Tasks depend on strict sequence",
+      "Every group needs extensive teacher coaching at the same time",
+      "The transition time would outweigh the learning value"
+    ],
+    "steps": [
+      "Prepare stations with distinct but related tasks.",
+      "Groups work for a fixed interval and leave a visible record.",
+      "Rotate; first read what is already there.",
+      "Add, correct, extend, or question rather than simply starting over.",
+      "Debrief across stations and identify recurring ideas or errors."
+    ],
+    "example": "Math groups rotate through representations of proportional relationships: table, graph, equation, context, and error analysis.",
+    "teacherTip": "Build a “read first” rule into every rotation. Otherwise the activity becomes parallel worksheet completion.",
+    "resources": [
+      {
+        "label": "Group Carousel Station Record",
+        "file": "pdfs/cooperative-learning/group-carousel.pdf"
+      }
+    ],
+    "related": [
+      "graffiti",
+      "gallery-tour"
+    ],
+    "sourceNote": "Beyond Monet lists Group Carousel among the instructional repertoire of an experienced teacher."
+  },
+  {
+    "id": "gallery-tour",
+    "name": "Gallery Tour",
+    "aliases": [],
+    "category": "Cooperative Learning",
+    "type": "Cooperative Structure",
+    "time": "10-30 min",
+    "group": "Pairs or small groups",
+    "preview": "assets/previews/gallery-tour.svg",
+    "summary": "Students move through displayed work to inspect, compare, question, and respond to the thinking of other groups.",
+    "useWhen": [
+      "Multiple groups have produced work worth comparing",
+      "You want students to notice patterns or alternative approaches",
+      "Peer feedback can improve products or reasoning"
+    ],
+    "avoidWhen": [
+      "Displayed work contains sensitive information",
+      "Students are not yet prepared to give useful feedback",
+      "Movement would distract from a task requiring sustained focus"
+    ],
+    "steps": [
+      "Display work with enough space for groups to circulate.",
+      "Give a specific viewing lens or feedback prompt.",
+      "Groups move at their own pace or on timed rotations.",
+      "Students record observations, questions, or feedback.",
+      "Creators review the feedback and identify what they learned or will revise."
+    ],
+    "example": "After teams create models of cell processes, students tour the models using a checklist: one clear feature, one question, and one connection to their own model.",
+    "teacherTip": "A gallery tour needs a thinking job. “Walk around and look” is not enough.",
+    "resources": [
+      {
+        "label": "Gallery Tour Feedback Sheet",
+        "file": "pdfs/cooperative-learning/gallery-tour.pdf"
+      }
+    ],
+    "related": [
+      "group-carousel",
+      "graffiti"
+    ],
+    "sourceNote": "Beyond Monet lists Gallery Tour as a cooperative approach used by experienced teachers."
+  },
+  {
+    "id": "walk-about",
+    "name": "Walk About",
+    "aliases": [],
+    "category": "Cooperative Learning",
+    "type": "Cooperative Structure / Tactic",
+    "time": "8-20 min",
+    "group": "Whole class moving among peers or displays",
+    "preview": "assets/previews/walk-about.svg",
+    "summary": "A flexible movement routine in which students circulate to exchange ideas, find examples, compare work, or gather information from classmates.",
+    "useWhen": [
+      "Students need many brief encounters with ideas or examples",
+      "You want learning to become physically active without losing purpose",
+      "Students can collect evidence or responses from several peers"
+    ],
+    "avoidWhen": [
+      "The task needs sustained dialogue with one person",
+      "The class cannot move safely or productively",
+      "The prompt invites superficial collection rather than meaningful thinking"
+    ],
+    "steps": [
+      "Define exactly what students must find, share, or record.",
+      "Set movement and interaction expectations.",
+      "Students circulate and complete the learning task with several people or displays.",
+      "Signal a return point.",
+      "Use the collected information for synthesis, classification, or discussion."
+    ],
+    "example": "Students walk about to find classmates who used different strategies for the same problem, recording one method they had not considered.",
+    "teacherTip": "The recording task should require processing, not just signatures or copying.",
+    "resources": [
+      {
+        "label": "Walk About Recording Sheet",
+        "file": "pdfs/cooperative-learning/walk-about.pdf"
+      }
+    ],
+    "related": [
+      "inside-outside-circles",
+      "kagan-review-structures"
+    ],
+    "sourceNote": "Beyond Monet identifies Walk About as an instructional tactic and includes it among the eight tactics examined in Chapter 5."
+  },
+  {
+    "id": "jigsaw",
+    "name": "Jigsaw",
+    "aliases": [],
+    "category": "Cooperative Learning",
+    "type": "Cooperative Learning Strategy",
+    "time": "25-60+ min",
+    "group": "Home groups and expert groups",
+    "preview": "assets/previews/jigsaw.svg",
+    "summary": "Students become responsible for learning one portion of content well enough to teach it to teammates who studied different portions.",
+    "useWhen": [
+      "A topic divides into meaningful complementary parts",
+      "Students can learn by teaching and integrating information",
+      "You want strong positive interdependence"
+    ],
+    "avoidWhen": [
+      "Sections vary so much in difficulty that roles become inequitable",
+      "Students cannot independently access the expert material even with support",
+      "The final task does not require integration of all pieces"
+    ],
+    "steps": [
+      "Create home groups and assign each member a different subtopic.",
+      "Students move into expert groups to learn, clarify, and prepare their subtopic.",
+      "Experts return to home groups.",
+      "Each expert teaches while teammates listen, question, and record.",
+      "Use an individual synthesis or application task that requires all pieces."
+    ],
+    "example": "In social studies, experts study four perspectives on an event. Home groups reconstruct a fuller explanation and then each student writes an individual evidence-based account.",
+    "teacherTip": "The individual synthesis is crucial. Without it, students may only learn their own expert section.",
+    "resources": [
+      {
+        "label": "Jigsaw Expert Sheet",
+        "file": "pdfs/cooperative-learning/jigsaw-expert.pdf"
+      },
+      {
+        "label": "Jigsaw Home Group Synthesis",
+        "file": "pdfs/cooperative-learning/jigsaw-home-group.pdf"
+      }
+    ],
+    "related": [
+      "cooperative-learning-framework",
+      "three-step-interview"
+    ],
+    "sourceNote": "Beyond Monet identifies Jigsaw as a more complex cooperative structure/strategy and recommends using accountability structures within it."
+  },
+  {
+    "id": "stad",
+    "name": "STAD - Student Teams Achievement Divisions",
+    "aliases": [],
+    "category": "Cooperative Learning",
+    "type": "Cooperative Learning Strategy",
+    "time": "Several lessons / study cycles",
+    "group": "Teams of 4-5",
+    "preview": "assets/previews/stad.svg",
+    "summary": "A team-learning structure in which students learn together but are assessed individually, with team recognition tied to members' improvement or achievement.",
+    "useWhen": [
+      "Students need repeated practice toward common academic goals",
+      "You want peer support while preserving individual assessment",
+      "A unit has clear learning targets that can be checked individually"
+    ],
+    "avoidWhen": [
+      "The task cannot be meaningfully assessed individually",
+      "Competition or public scoring would undermine the classroom climate",
+      "Learning goals are too open-ended for a common performance measure"
+    ],
+    "steps": [
+      "Teach or introduce the content.",
+      "Teams practice, explain, quiz, and support one another.",
+      "Students complete an individual assessment without team help.",
+      "Use a transparent method for recognizing learning or improvement.",
+      "Teams reflect and begin the next cycle."
+    ],
+    "example": "During a fraction unit, teams practice mixed problems and explain errors. Students later complete individual checks, and teams celebrate collective improvement.",
+    "teacherTip": "Keep recognition focused on learning and improvement, not labeling fixed “strong” and “weak” students.",
+    "resources": [
+      {
+        "label": "STAD Team Learning Record",
+        "file": "pdfs/cooperative-learning/stad-team-record.pdf"
+      }
+    ],
+    "related": [
+      "tgt",
+      "cooperative-learning-framework"
+    ],
+    "sourceNote": "Beyond Monet names STAD as a cooperative-learning strategy associated with Robert Slavin."
+  },
+  {
+    "id": "tgt",
+    "name": "Teams Games Tournament (TGT)",
+    "aliases": [],
+    "category": "Cooperative Learning",
+    "type": "Cooperative Learning Strategy",
+    "time": "30-60 min",
+    "group": "Teams plus tournament groups",
+    "preview": "assets/previews/tgt.svg",
+    "summary": "A cooperative review structure that combines team preparation with academic games or tournaments in which students contribute results back to their teams.",
+    "useWhen": [
+      "Students need cumulative review and retrieval practice",
+      "You can keep the game focused on academic reasoning",
+      "A structured team component can make review motivating"
+    ],
+    "avoidWhen": [
+      "Winning would overshadow learning",
+      "Questions reward speed more than understanding",
+      "Students need first instruction rather than review"
+    ],
+    "steps": [
+      "Teams study and coach one another before the tournament.",
+      "Place students into fair game/tournament groupings.",
+      "Students answer academic questions using clear rules.",
+      "Record results using a system that gives each student a meaningful contribution.",
+      "Return to teams for recognition and reflection."
+    ],
+    "example": "Before a science test, teams prepare through explanation and retrieval. Tournament tables use mixed conceptual questions rather than trivia-only recall.",
+    "teacherTip": "Use explanation questions and error analysis so the tournament does not collapse into speeded fact recall.",
+    "resources": [
+      {
+        "label": "TGT Team Score Sheet",
+        "file": "pdfs/cooperative-learning/tgt-score-sheet.pdf"
+      },
+      {
+        "label": "TGT Question Card Template",
+        "file": "pdfs/cooperative-learning/tgt-question-cards.pdf"
+      }
+    ],
+    "related": [
+      "stad",
+      "kagan-review-structures"
+    ],
+    "sourceNote": "Beyond Monet identifies TGT as a more complex cooperative structure and includes it among six structures explained in its cooperative-learning chapter."
+  },
+  {
+    "id": "group-investigation",
+    "name": "Group Investigation",
+    "aliases": [],
+    "category": "Cooperative Learning",
+    "type": "Cooperative Learning Strategy",
+    "time": "Several lessons",
+    "group": "Small groups",
+    "preview": "assets/previews/group-investigation.svg",
+    "summary": "A complex inquiry-oriented cooperative model in which groups help shape questions, investigate, synthesize findings, and teach or present what they learned.",
+    "useWhen": [
+      "A broad topic can support multiple authentic lines of investigation",
+      "Students are ready for sustained cooperative inquiry",
+      "The class can benefit from sharing complementary investigations"
+    ],
+    "avoidWhen": [
+      "Students need tightly sequenced direct instruction first",
+      "Groups lack sufficient support for research and source evaluation",
+      "The project would become task division without shared meaning-making"
+    ],
+    "steps": [
+      "Frame a broad problem or topic and generate possible questions.",
+      "Form groups around questions or subtopics.",
+      "Groups plan roles, sources, methods, and timelines together.",
+      "Investigate and regularly check shared understanding.",
+      "Synthesize findings and communicate them to the class.",
+      "Reflect on both academic learning and group process."
+    ],
+    "example": "Groups investigate different factors affecting local water quality, then combine findings to explain how the system interacts.",
+    "teacherTip": "Make synthesis a group responsibility. Dividing sections of a slideshow is not the same as investigating together.",
+    "resources": [
+      {
+        "label": "Group Investigation Planner",
+        "file": "pdfs/cooperative-learning/group-investigation.pdf"
+      }
+    ],
+    "related": [
+      "jigsaw",
+      "team-analysis"
+    ],
+    "sourceNote": "Beyond Monet treats Group Investigation as one of the more complex cooperative structures and recommends Sharan & Sharan for deeper study."
+  },
+  {
+    "id": "kagan-review-structures",
+    "name": "Kagan Cooperative Review Structures",
+    "aliases": [
+      "Fan-N-Pick",
+      "Find Someone Who",
+      "Quiz-Quiz-Trade",
+      "Showdown"
+    ],
+    "category": "Cooperative Learning",
+    "type": "Cooperative Structure Family",
+    "time": "8-25 min",
+    "group": "Pairs or teams",
+    "preview": "assets/previews/kagan-review-structures.svg",
+    "summary": "A family entry for several named cooperative review structures: Fan-N-Pick, Find Someone Who, Quiz-Quiz-Trade, and Showdown.",
+    "useWhen": [
+      "Students need retrieval, rehearsal, or peer explanation practice",
+      "You want highly structured participation",
+      "The content can be expressed through short prompts, examples, or questions"
+    ],
+    "avoidWhen": [
+      "Students need extended inquiry or discussion",
+      "The structure would become a game detached from the learning target",
+      "Students have not yet learned the content well enough to review"
+    ],
+    "steps": [
+      "Choose the structure that matches the learning purpose.",
+      "Prepare prompts that require meaningful retrieval or explanation.",
+      "Teach roles and movement rules clearly.",
+      "Run a short round and monitor the quality of academic interaction.",
+      "Debrief misconceptions or patterns that surfaced."
+    ],
+    "example": "Students use Quiz-Quiz-Trade with cards that ask them to identify an error in a worked math solution and explain the correction.",
+    "teacherTip": "Treat the named structure as a container. The quality of the questions determines the quality of the learning.",
+    "resources": [
+      {
+        "label": "Cooperative Review Structure Planner",
+        "file": "pdfs/cooperative-learning/cooperative-review-planner.pdf"
+      }
+    ],
+    "related": [
+      "tgt",
+      "think-pair-family"
+    ],
+    "sourceNote": "Beyond Monet highlights Kagan's extensive collection of cooperative structures. This app groups several named review structures as one family entry rather than reproducing proprietary training materials."
+  },
+  {
+    "id": "team-analysis",
+    "name": "Team Analysis",
+    "aliases": [],
+    "category": "Cooperative Learning",
+    "type": "Cooperative Learning Strategy",
+    "time": "25-60 min",
+    "group": "Teams of 4-6",
+    "preview": "assets/previews/team-analysis.svg",
+    "summary": "A structured team process for examining an issue or body of information from multiple angles before reaching a reasoned conclusion.",
+    "useWhen": [
+      "A complex issue requires shared analysis",
+      "Students need to coordinate evidence and viewpoints",
+      "The class is ready for a more demanding cooperative strategy"
+    ],
+    "avoidWhen": [
+      "Students are new to basic cooperative structures",
+      "The issue can be resolved by a simple recall answer",
+      "Roles would encourage superficial division rather than shared analysis"
+    ],
+    "steps": [
+      "Clarify the issue, criteria, or evidence set.",
+      "Assign or negotiate analytical responsibilities while keeping shared accountability.",
+      "Members examine information and bring findings back to the team.",
+      "The team challenges, connects, and weighs the findings.",
+      "Produce a shared conclusion and ensure each member can explain it."
+    ],
+    "example": "A team analyzes a proposed environmental policy through scientific evidence, economic impacts, stakeholder perspectives, and feasibility, then produces one justified recommendation.",
+    "teacherTip": "Use individual accountability at the end so every member can explain the team's reasoning.",
+    "resources": [
+      {
+        "label": "Team Analysis Evidence Sheet",
+        "file": "pdfs/cooperative-learning/team-analysis.pdf"
+      }
+    ],
+    "related": [
+      "academic-controversy",
+      "cooperative-learning-framework"
+    ],
+    "sourceNote": "Beyond Monet presents Team Analysis as a complex cooperative-learning strategy alongside Academic Controversy."
+  },
+  {
+    "id": "academic-controversy",
+    "name": "Academic Controversy",
+    "aliases": [],
+    "category": "Cooperative Learning",
+    "type": "Cooperative Learning Strategy",
+    "time": "35-75 min",
+    "group": "Groups of 4 (or 6)",
+    "preview": "assets/previews/academic-controversy.svg",
+    "summary": "A structured cooperative argument in which students prepare a position, listen and rebut, switch sides, and then work toward an evidence-based synthesis or consensus.",
+    "useWhen": [
+      "An issue has defensible competing positions",
+      "Students need to understand opposing arguments rather than defeat them",
+      "You want evidence, listening, perspective shifting, and synthesis in one process"
+    ],
+    "avoidWhen": [
+      "Students lack foundational knowledge about the issue",
+      "The topic is too personally unsafe or polarizing for the group",
+      "Students are not yet skilled with simpler cooperative routines"
+    ],
+    "steps": [
+      "Assign paired positions within groups.",
+      "Pairs prepare evidence and opening arguments.",
+      "Each side presents while the other listens and takes notes.",
+      "Pairs plan and present respectful rebuttals.",
+      "Students switch positions and repeat, extending rather than caricaturing the other side.",
+      "Return to personal thinking, attempt synthesis/consensus, and share the group's reasoning."
+    ],
+    "example": "Students examine whether a city should ban cars from its downtown core, argue both sides using evidence, then design a compromise policy and explain which evidence changed their thinking.",
+    "teacherTip": "The side switch is the heart of the strategy. Students should become capable of arguing the opposing case fairly before forming a final position.",
+    "resources": [
+      {
+        "label": "Academic Controversy Evidence Planner",
+        "file": "pdfs/cooperative-learning/academic-controversy.pdf"
+      },
+      {
+        "label": "Academic Controversy Consensus Sheet",
+        "file": "pdfs/cooperative-learning/academic-controversy-consensus.pdf"
+      }
+    ],
+    "related": [
+      "six-thinking-hats",
+      "four-corners",
+      "team-analysis"
+    ],
+    "sourceNote": "Beyond Monet describes Academic Controversy as one of the most complex cooperative-learning approaches and recommends simpler structures first."
+  },
+  {
+    "id": "pre-reading-prediction",
+    "name": "Pre-Reading & Prediction Routines",
+    "aliases": [
+      "Anticipation Guide",
+      "First Lines",
+      "Infer the Topic",
+      "Tea Party",
+      "Mystery Quotes",
+      "Possible Sentences"
+    ],
+    "category": "Reading & Literacy",
+    "type": "Literacy Routine Family",
+    "time": "5-20 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/pre-reading-prediction.svg",
+    "summary": "A family of routines that activates relevant knowledge, creates a reason to read, and turns initial ideas into predictions that can later be confirmed, rejected, or revised.",
+    "useWhen": [
+      "Students need a purposeful entry into a text",
+      "The topic invites predictions or prior-knowledge connections",
+      "You want students to read in order to test ideas rather than simply receive information"
+    ],
+    "avoidWhen": [
+      "The activity would activate misconceptions with no plan to revisit them",
+      "The text is so short that the routine would take longer than the reading",
+      "Students lack the background needed to make meaningful predictions"
+    ],
+    "steps": [
+      "Choose a routine that matches the text: Anticipation Guide, First Lines, Infer the Topic, Tea Party, Mystery Quotes, or Possible Sentences.",
+      "Give students time to commit to an initial idea.",
+      "Have students explain the basis for predictions.",
+      "Read with a clear purpose: look for evidence that confirms, complicates, or overturns the prediction.",
+      "Return to the original response and revise it."
+    ],
+    "example": "Before reading about plate tectonics, students respond to several anticipation statements and justify their choices. After reading, they revisit each statement with evidence.",
+    "teacherTip": "Always build in the return trip. A prediction activity without revision can leave misconceptions untouched.",
+    "resources": [
+      {
+        "label": "Anticipation Guide",
+        "file": "pdfs/reading-literacy/anticipation-guide.pdf"
+      },
+      {
+        "label": "First Lines / Mystery Quotes",
+        "file": "pdfs/reading-literacy/first-lines-mystery-quotes.pdf"
+      },
+      {
+        "label": "Possible Sentences",
+        "file": "pdfs/reading-literacy/possible-sentences.pdf"
+      }
+    ],
+    "related": [
+      "drta",
+      "think-alouds"
+    ],
+    "sourceNote": "Beyond Monet includes a pre-reading strategy in experienced teachers' repertoires; this family also draws on established literacy routines such as anticipation guides and possible sentences."
+  },
+  {
+    "id": "reciprocal-teaching",
+    "name": "Reciprocal Teaching",
+    "aliases": [],
+    "category": "Reading & Literacy",
+    "type": "Reading Comprehension Strategy",
+    "time": "20-40 min",
+    "group": "Small groups",
+    "preview": "assets/previews/reciprocal-teaching.svg",
+    "summary": "A structured comprehension dialogue in which students predict, question, clarify, and summarize, gradually taking responsibility for leading the reading discussion.",
+    "useWhen": [
+      "Students need explicit comprehension monitoring",
+      "A text can be divided into meaningful stopping points",
+      "You want students to explain how they make sense of text"
+    ],
+    "avoidWhen": [
+      "Students have not been taught the four processes separately",
+      "The text is too easy to generate authentic questions or clarifications",
+      "Roles become mechanical labels instead of thinking tools"
+    ],
+    "steps": [
+      "Model predicting, questioning, clarifying, and summarizing.",
+      "Read a manageable section.",
+      "Students use the four processes to make meaning, with one learner leading the dialogue.",
+      "Rotate leadership and repeat with the next section.",
+      "Gradually reduce teacher prompting as students internalize the processes."
+    ],
+    "example": "Students read a science article in sections. At each stop they predict what comes next, pose a question, clarify one difficult idea, and summarize the key point.",
+    "teacherTip": "The roles are scaffolds, not permanent jobs. The goal is for every reader to use all four processes flexibly.",
+    "resources": [
+      {
+        "label": "Reciprocal Teaching Organizer",
+        "file": "pdfs/reading-literacy/reciprocal-teaching.pdf"
+      },
+      {
+        "label": "Reciprocal Teaching Role Cards",
+        "file": "pdfs/reading-literacy/reciprocal-teaching-cards.pdf"
+      }
+    ],
+    "related": [
+      "think-alouds",
+      "qar"
+    ],
+    "sourceNote": "Reading Rockets describes reciprocal teaching as a cooperative comprehension strategy built around predicting, clarifying, questioning, and summarizing."
+  },
+  {
+    "id": "qar",
+    "name": "QAR - Question-Answer Relationship",
+    "aliases": [],
+    "category": "Reading & Literacy",
+    "type": "Reading Comprehension Strategy",
+    "time": "10-25 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/qar.svg",
+    "summary": "A strategy for helping students recognize where an answer comes from: explicitly in the text, across parts of the text, from text plus prior knowledge, or mainly from the reader.",
+    "useWhen": [
+      "Students treat all comprehension questions the same way",
+      "You want students to justify where evidence comes from",
+      "Students need support distinguishing literal and inferential questions"
+    ],
+    "avoidWhen": [
+      "The categories would distract from a more important discussion",
+      "Students are using QAR labels without actually locating or reasoning from evidence"
+    ],
+    "steps": [
+      "Teach the four common QAR relationships with examples.",
+      "Present a question and ask students to identify the likely relationship.",
+      "Students locate text evidence or relevant background knowledge accordingly.",
+      "Require an answer and an explanation of where it came from.",
+      "Have students create their own questions in different categories."
+    ],
+    "example": "Students sort questions about a historical article into “Right There,” “Think and Search,” “Author and You,” and “On My Own,” then answer with evidence.",
+    "teacherTip": "Do not turn QAR into a labeling quiz. The real payoff is choosing an appropriate evidence-finding strategy.",
+    "resources": [
+      {
+        "label": "QAR Organizer",
+        "file": "pdfs/reading-literacy/qar.pdf"
+      }
+    ],
+    "related": [
+      "questioning-the-author",
+      "reading-guides"
+    ],
+    "sourceNote": "Reading Rockets presents QAR as a strategy for understanding the relationship between questions, text information, and reader knowledge."
+  },
+  {
+    "id": "drta",
+    "name": "DRTA - Directed Reading-Thinking Activity",
+    "aliases": [],
+    "category": "Reading & Literacy",
+    "type": "Reading Comprehension Strategy",
+    "time": "15-35 min",
+    "group": "Whole class, pairs, or individual",
+    "preview": "assets/previews/drta.svg",
+    "summary": "A predict-read-prove/revise cycle that asks students to make evidence-based predictions before reading the next section of a text.",
+    "useWhen": [
+      "A text contains natural stopping points",
+      "Prediction can strengthen attention and inference",
+      "You want students to cite evidence when revising thinking"
+    ],
+    "avoidWhen": [
+      "The text is expository with no meaningful predictive structure",
+      "Students are guessing without evidence",
+      "Frequent stopping would destroy the flow of a short text"
+    ],
+    "steps": [
+      "Preview enough information to support a prediction.",
+      "Students state what they think will happen or what the next section will explain and why.",
+      "Read to the next stopping point.",
+      "Use evidence to confirm, reject, or revise predictions.",
+      "Repeat, then reflect on which clues were most useful."
+    ],
+    "example": "While reading a short story, students predict a character's next choice using a detail from the previous section, then revise after reading further.",
+    "teacherTip": "Reward revision. The goal is not to be right early; it is to use evidence more intelligently over time.",
+    "resources": [
+      {
+        "label": "DRTA Prediction Cycle",
+        "file": "pdfs/reading-literacy/drta.pdf"
+      }
+    ],
+    "related": [
+      "pre-reading-prediction",
+      "visual-imagery"
+    ],
+    "sourceNote": "Reading Rockets describes DRTA as a comprehension strategy built around prediction, reading, and revising thinking based on text evidence."
+  },
+  {
+    "id": "think-alouds",
+    "name": "Think-Alouds",
+    "aliases": [],
+    "category": "Reading & Literacy",
+    "type": "Reading Comprehension Strategy",
+    "time": "5-20 min",
+    "group": "Teacher model, pairs, or individual",
+    "preview": "assets/previews/think-alouds.svg",
+    "summary": "A metacognitive strategy in which a reader makes normally invisible comprehension moves audible: predicting, questioning, connecting, clarifying, visualizing, and monitoring understanding.",
+    "useWhen": [
+      "Students need to see how skilled readers respond to confusion",
+      "You are teaching a specific comprehension process",
+      "Students can benefit from rehearsing their own inner reading dialogue"
+    ],
+    "avoidWhen": [
+      "The think-aloud becomes a lecture about content rather than a model of reading",
+      "Every sentence is interrupted, destroying comprehension",
+      "Students are asked to perform think-alouds before seeing a clear model"
+    ],
+    "steps": [
+      "Choose a short text and several useful stopping points.",
+      "Read and verbalize authentic thinking, including confusion and repair.",
+      "Name the reading move when useful.",
+      "Invite guided student think-alouds with prompts.",
+      "Gradually shift to partner, written, or silent self-monitoring."
+    ],
+    "example": "While reading a dense science paragraph, the teacher says, “That pronoun is unclear. I'm rereading the previous sentence to identify what ‘it’ refers to.”",
+    "teacherTip": "Model genuine repair, not perfect expert narration. Students need to see what good readers do when meaning breaks down.",
+    "resources": [
+      {
+        "label": "Think-Aloud Prompt Card",
+        "file": "pdfs/reading-literacy/think-alouds.pdf"
+      }
+    ],
+    "related": [
+      "reciprocal-teaching",
+      "visual-imagery"
+    ],
+    "sourceNote": "Reading Rockets describes think-alouds as modeling how skilled readers construct meaning and monitor comprehension."
+  },
+  {
+    "id": "questioning-the-author",
+    "name": "Questioning the Author (QtA)",
+    "aliases": [],
+    "category": "Reading & Literacy",
+    "type": "Reading Comprehension Strategy",
+    "time": "10-30 min",
+    "group": "Whole class or small groups",
+    "preview": "assets/previews/questioning-the-author.svg",
+    "summary": "A discussion-based comprehension strategy that treats text as an author's attempt to communicate, inviting students to question what the author is saying and how well the message is working.",
+    "useWhen": [
+      "Students passively accept difficult text without interrogating meaning",
+      "A text contains dense, unclear, or important ideas",
+      "You want comprehension talk focused on author meaning rather than quiz answers"
+    ],
+    "avoidWhen": [
+      "The lesson goal is primarily author biography or literary style rather than comprehension",
+      "Questions become attacks on the author instead of attempts to understand meaning"
+    ],
+    "steps": [
+      "Choose stopping points where meaning deserves attention.",
+      "Ask what the author is trying to say.",
+      "Probe what the author means, why it matters, and whether the explanation is clear.",
+      "Use student responses to revisit the text and repair misunderstandings.",
+      "Summarize the author's message in clearer language."
+    ],
+    "example": "In a textbook section, students stop after a dense paragraph and ask, “What is the author trying to explain here? What information did the author assume we already knew?”",
+    "teacherTip": "Keep the author visible but the comprehension central. QtA is not literary criticism for its own sake.",
+    "resources": [
+      {
+        "label": "Questioning the Author Discussion Sheet",
+        "file": "pdfs/reading-literacy/questioning-the-author.pdf"
+      }
+    ],
+    "related": [
+      "qar",
+      "think-alouds"
+    ],
+    "sourceNote": "Reading Rockets describes Questioning the Author as collaborative questioning that helps students grapple with an author's intended meaning."
+  },
+  {
+    "id": "text-connections",
+    "name": "Text-to-Text, Text-to-Self, Text-to-World",
+    "aliases": [],
+    "category": "Reading & Literacy",
+    "type": "Reading Connection Routine",
+    "time": "8-20 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/text-connections.svg",
+    "summary": "A connection routine that asks readers to link a text to another text, personal knowledge or experience, and wider events or ideas.",
+    "useWhen": [
+      "Connections will deepen interpretation or background knowledge",
+      "Students need help situating a text within a broader web of ideas",
+      "You want students to explain why a connection matters"
+    ],
+    "avoidWhen": [
+      "Personal connections would derail or trivialize the text",
+      "Students are listing superficial similarities",
+      "The task needs close evidence analysis rather than broad connection making"
+    ],
+    "steps": [
+      "Read or view the text first.",
+      "Generate a connection in one of the three categories.",
+      "Identify the specific text detail that triggered the connection.",
+      "Explain how the connection helps understand, question, or reinterpret the text.",
+      "Compare which connections were most useful."
+    ],
+    "example": "A student connects a novel's rationing scene to a history text about wartime scarcity, then explains how that context changes the character's decision.",
+    "teacherTip": "Require the “so what?” A connection is useful only if it helps the reader understand something better.",
+    "resources": [
+      {
+        "label": "Text Connections Organizer",
+        "file": "pdfs/reading-literacy/text-connections.pdf"
+      }
+    ],
+    "related": [
+      "annotating-text",
+      "visual-imagery"
+    ],
+    "sourceNote": "Facing History and other literacy sources use text-to-text, text-to-self, and text-to-world connections as a comprehension routine."
+  },
+  {
+    "id": "annotating-text",
+    "name": "Annotating Text",
+    "aliases": [],
+    "category": "Reading & Literacy",
+    "type": "Reading Routine / Tool",
+    "time": "10-30 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/annotating-text.svg",
+    "summary": "A purposeful system for marking and commenting on text so readers record questions, evidence, patterns, reactions, and meaning while reading.",
+    "useWhen": [
+      "Students need to leave a visible trail of thinking",
+      "A close-reading task requires evidence collection",
+      "Students will use annotations later for discussion or writing"
+    ],
+    "avoidWhen": [
+      "Students are highlighting almost everything",
+      "The marking system is more complicated than the thinking",
+      "The text format makes annotation inaccessible without an alternative"
+    ],
+    "steps": [
+      "Set a small number of annotation purposes tied to the learning goal.",
+      "Model how to mark a passage and add a meaningful note.",
+      "Students annotate while reading.",
+      "Pause to compare annotations and clarify differences.",
+      "Use annotations for discussion, synthesis, or writing."
+    ],
+    "example": "Students annotate an argument by marking claims, evidence, and places where they want to challenge the reasoning.",
+    "teacherTip": "A symbol without a note often says very little. Ask students to record the thinking behind important marks.",
+    "resources": [
+      {
+        "label": "Annotation Key & Reading Sheet",
+        "file": "pdfs/reading-literacy/annotating-text.pdf"
+      }
+    ],
+    "related": [
+      "reading-guides",
+      "questioning-the-author"
+    ],
+    "sourceNote": "EL Education and many literacy frameworks use annotation as a structured way to make reading thinking visible."
+  },
+  {
+    "id": "listen-read-discuss",
+    "name": "Listen-Read-Discuss",
+    "aliases": [],
+    "category": "Reading & Literacy",
+    "type": "Reading Comprehension Strategy",
+    "time": "20-35 min",
+    "group": "Whole class or small groups",
+    "preview": "assets/previews/listen-read-discuss.svg",
+    "summary": "A three-stage comprehension strategy: students first hear a short content overview, then read related text, then discuss how the reading confirms, extends, or corrects understanding.",
+    "useWhen": [
+      "Students need background knowledge before a demanding text",
+      "You want listening, reading, and discussion to reinforce one another",
+      "The text connects well to a brief teacher or media introduction"
+    ],
+    "avoidWhen": [
+      "The opening explanation would tell students everything the text is meant to reveal",
+      "Students become passive during the listening stage",
+      "The discussion does not require returning to the text"
+    ],
+    "steps": [
+      "Provide a concise oral overview of the topic.",
+      "Students record key ideas or predictions.",
+      "Students read a related text looking for new, confirming, or conflicting information.",
+      "Discuss how the reading changed understanding.",
+      "Summarize the strongest combined understanding."
+    ],
+    "example": "Before reading about the water cycle, students hear a two-minute overview, read an explanatory article, then discuss which ideas became more precise.",
+    "teacherTip": "Keep the listening phase short enough that reading still has a real purpose.",
+    "resources": [
+      {
+        "label": "Listen-Read-Discuss Organizer",
+        "file": "pdfs/reading-literacy/listen-read-discuss.pdf"
+      }
+    ],
+    "related": [
+      "pre-reading-prediction",
+      "reading-guides"
+    ],
+    "sourceNote": "Reading Rockets includes Listen-Read-Discuss as a comprehension strategy that builds background knowledge before reading and discussion."
+  },
+  {
+    "id": "reading-guides",
+    "name": "Reading Guides",
+    "aliases": [],
+    "category": "Reading & Literacy",
+    "type": "Reading Scaffold",
+    "time": "10-40 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/reading-guides.svg",
+    "summary": "A teacher-created set of prompts that directs attention to important ideas before, during, or after reading without replacing the act of making meaning from the text.",
+    "useWhen": [
+      "A complex text has identifiable conceptual bottlenecks",
+      "Students need a purpose for reading and places to stop and think",
+      "You want to scaffold evidence collection or comprehension monitoring"
+    ],
+    "avoidWhen": [
+      "The guide becomes a long worksheet of low-level questions",
+      "Students can already navigate the text independently",
+      "The prompts reveal every important idea before students read"
+    ],
+    "steps": [
+      "Identify the most important thinking students must do.",
+      "Create a small number of prompts at useful stopping points.",
+      "Have students read and respond using text evidence.",
+      "Pause for brief discussion where misconceptions are likely.",
+      "Reduce the scaffold over time."
+    ],
+    "example": "A reading guide for a science article asks students to sketch a process after section 1, explain a cause after section 2, and identify one unresolved question after section 3.",
+    "teacherTip": "A reading guide should direct attention, not outsource thinking. Fewer strong prompts beat many tiny questions.",
+    "resources": [
+      {
+        "label": "Reading Guide Template",
+        "file": "pdfs/reading-literacy/reading-guide.pdf"
+      }
+    ],
+    "related": [
+      "annotating-text",
+      "qar"
+    ],
+    "sourceNote": "Reading Rockets lists reading guides as a classroom strategy for supporting comprehension of assigned texts."
+  },
+  {
+    "id": "paragraph-shrinking",
+    "name": "Paragraph Shrinking",
+    "aliases": [],
+    "category": "Reading & Literacy",
+    "type": "Reading Comprehension Strategy",
+    "time": "15-30 min",
+    "group": "Pairs",
+    "preview": "assets/previews/paragraph-shrinking.svg",
+    "summary": "A partner summarizing routine in which students identify who or what a paragraph is mainly about, the most important information, and a concise main idea.",
+    "useWhen": [
+      "Students need explicit practice finding main ideas",
+      "Partners can give each other immediate feedback",
+      "A text can be processed paragraph by paragraph without losing coherence"
+    ],
+    "avoidWhen": [
+      "The text consists mainly of dialogue or very short fragments",
+      "Students need whole-text synthesis rather than paragraph-level summarizing",
+      "Partners are not yet able to give supportive correction"
+    ],
+    "steps": [
+      "Read a paragraph.",
+      "Identify the who or what.",
+      "State the most important information about that who or what.",
+      "Express the main idea briefly, often in about ten words or fewer.",
+      "Switch roles and continue, then summarize across paragraphs."
+    ],
+    "example": "Partners read an informational article and create one concise main-idea statement per paragraph before combining them into a section summary.",
+    "teacherTip": "Do not let “ten words” become the goal. Brevity is a scaffold for identifying what matters most.",
+    "resources": [
+      {
+        "label": "Paragraph Shrinking Coach Card",
+        "file": "pdfs/reading-literacy/paragraph-shrinking.pdf"
+      }
+    ],
+    "related": [
+      "oral-reading-fluency",
+      "reciprocal-teaching"
+    ],
+    "sourceNote": "Reading Rockets describes Paragraph Shrinking as a PALS strategy for making main-idea summarizing explicit."
+  },
+  {
+    "id": "story-maps",
+    "name": "Story Maps",
+    "aliases": [],
+    "category": "Reading & Literacy",
+    "type": "Graphic Organizer / Reading Strategy",
+    "time": "10-30 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/story-maps.svg",
+    "summary": "A narrative comprehension organizer that helps readers track key story elements and the relationships among characters, setting, goals, problems, events, and resolution.",
+    "useWhen": [
+      "Students need help organizing narrative structure",
+      "You want evidence for how events connect to character goals or problems",
+      "Students will later retell, compare, or write narratives"
+    ],
+    "avoidWhen": [
+      "The text deliberately resists a conventional narrative structure",
+      "Students are merely filling boxes without using the map to understand relationships"
+    ],
+    "steps": [
+      "Choose story elements that match the text and learning goal.",
+      "Read and record only significant information.",
+      "Connect events to goals, conflicts, or changes.",
+      "Use the map to retell, summarize, compare, or analyze."
+    ],
+    "example": "Students map how a character's goal changes after two major events and explain how the resolution responds to the original conflict.",
+    "teacherTip": "Avoid treating every story map as the same six boxes. Adapt the structure to the narrative thinking you want.",
+    "resources": [
+      {
+        "label": "Story Map",
+        "file": "pdfs/reading-literacy/story-map.pdf"
+      }
+    ],
+    "related": [
+      "story-sequence",
+      "visual-imagery"
+    ],
+    "sourceNote": "Reading Rockets includes story maps as a comprehension strategy for organizing narrative elements."
+  },
+  {
+    "id": "story-sequence",
+    "name": "Story Sequence",
+    "aliases": [],
+    "category": "Reading & Literacy",
+    "type": "Reading Comprehension Routine",
+    "time": "8-20 min",
+    "group": "Individual or pairs",
+    "preview": "assets/previews/story-sequence.svg",
+    "summary": "A sequencing routine that asks students to identify and justify the order of important events, steps, or ideas in a text.",
+    "useWhen": [
+      "Understanding depends on order or causality",
+      "Students need to distinguish major from minor events",
+      "You want to support retelling or process comprehension"
+    ],
+    "avoidWhen": [
+      "The text is organized conceptually rather than sequentially",
+      "Students are copying every event instead of selecting important ones"
+    ],
+    "steps": [
+      "Identify the sequence focus: events, process, argument moves, or stages.",
+      "Select the most important items.",
+      "Place them in order.",
+      "Add transition, time, or cause-and-effect language.",
+      "Use the sequence to retell or explain why the order matters."
+    ],
+    "example": "Students sequence the stages in a scientific process and annotate where one stage causes the next.",
+    "teacherTip": "Ask why the order matters; otherwise sequencing can become simple copying.",
+    "resources": [
+      {
+        "label": "Story / Process Sequence",
+        "file": "pdfs/reading-literacy/story-sequence.pdf"
+      }
+    ],
+    "related": [
+      "story-maps",
+      "flow-chart"
+    ],
+    "sourceNote": "Reading Rockets includes story sequence activities as a way to strengthen comprehension of order and narrative structure."
+  },
+  {
+    "id": "visual-imagery",
+    "name": "Visual Imagery",
+    "aliases": [],
+    "category": "Reading & Literacy",
+    "type": "Reading Comprehension Strategy",
+    "time": "5-20 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/visual-imagery.svg",
+    "summary": "A comprehension strategy in which readers deliberately create and revise mental images from textual details.",
+    "useWhen": [
+      "Descriptive or process text contains details students must integrate",
+      "Students read words accurately but do not build a coherent situation model",
+      "Visualization can support inference, memory, or explanation"
+    ],
+    "avoidWhen": [
+      "The text is abstract and forcing a picture would distort the concept",
+      "Students spend more time drawing artistically than reading closely"
+    ],
+    "steps": [
+      "Read a short section.",
+      "Pause and form a mental image using specific textual details.",
+      "Sketch or describe the image if useful.",
+      "Return to the text and label which details support each part.",
+      "Revise the image when new information changes it."
+    ],
+    "example": "Students visualize the arrangement of particles described in a science passage, sketch it, then revise after reading about temperature change.",
+    "teacherTip": "The sketch is evidence of comprehension, not an art assignment. Keep attention on details from the text.",
+    "resources": [
+      {
+        "label": "Visual Imagery Reading Sheet",
+        "file": "pdfs/reading-literacy/visual-imagery.pdf"
+      }
+    ],
+    "related": [
+      "think-alouds",
+      "annotating-text"
+    ],
+    "sourceNote": "Reading Rockets identifies visual imagery as a strategy that supports readers in constructing meaning from text."
+  },
+  {
+    "id": "oral-reading-fluency",
+    "name": "Oral Reading & Fluency Routines",
+    "aliases": [
+      "Audio-Assisted Reading",
+      "Choral Reading",
+      "Paired Reading",
+      "Partner Reading",
+      "Shared Reading",
+      "Shadow Reading",
+      "Timed Repeated Readings"
+    ],
+    "category": "Reading & Literacy",
+    "type": "Fluency Routine Family",
+    "time": "5-25 min",
+    "group": "Pairs, small groups, or whole class",
+    "preview": "assets/previews/oral-reading-fluency.svg",
+    "summary": "A family of supported oral-reading routines including audio-assisted, choral, paired/partner, shared, shadow, and timed repeated reading.",
+    "useWhen": [
+      "Students need practice with accuracy, pacing, phrasing, or expression",
+      "A text is appropriate for repeated supported reading",
+      "Students benefit from hearing a fluent model"
+    ],
+    "avoidWhen": [
+      "Public oral reading would embarrass or expose a struggling reader",
+      "The text is too difficult for productive fluency practice",
+      "Speed becomes the only measure of success"
+    ],
+    "steps": [
+      "Choose an accessible text with a clear fluency purpose.",
+      "Provide a fluent model through teacher, peer, group, or audio support.",
+      "Students reread with a specific focus such as phrasing or expression.",
+      "Give brief feedback and repeat.",
+      "Connect fluent reading back to comprehension."
+    ],
+    "example": "Pairs reread a short dialogue, first focusing on accuracy, then phrasing, then expression that matches character meaning.",
+    "teacherTip": "Fluency is not racing. Keep accuracy, phrasing, expression, and comprehension visible.",
+    "resources": [
+      {
+        "label": "Fluency Practice Tracker",
+        "file": "pdfs/reading-literacy/fluency-tracker.pdf"
+      },
+      {
+        "label": "Partner Fluency Feedback",
+        "file": "pdfs/reading-literacy/partner-fluency-feedback.pdf"
+      }
+    ],
+    "related": [
+      "readers-theater",
+      "paragraph-shrinking"
+    ],
+    "sourceNote": "Reading Rockets documents choral reading, paired reading, audio-assisted reading, and repeated reading as supported fluency approaches."
+  },
+  {
+    "id": "readers-theater",
+    "name": "Reader's Theater",
+    "aliases": [],
+    "category": "Reading & Literacy",
+    "type": "Fluency / Collaborative Reading Strategy",
+    "time": "25-60+ min",
+    "group": "Small groups",
+    "preview": "assets/previews/readers-theater.svg",
+    "summary": "Students rehearse and perform a script through expressive oral reading without needing to memorize lines or stage a full play.",
+    "useWhen": [
+      "Students need meaningful repeated reading",
+      "Dialogue and character voice can deepen comprehension",
+      "You want fluency practice with an authentic performance purpose"
+    ],
+    "avoidWhen": [
+      "Performance pressure would overwhelm the reading goal",
+      "Students spend most of the time on costumes, props, or memorization",
+      "The script is too difficult for repeated successful reading"
+    ],
+    "steps": [
+      "Select or adapt an appropriate script.",
+      "Assign or choose roles and clarify meaning.",
+      "Rehearse repeatedly, focusing on accuracy, phrasing, expression, and listening.",
+      "Give peer or teacher feedback.",
+      "Perform for an audience and reflect on how expression communicated meaning."
+    ],
+    "example": "Students rehearse a script based on a historical debate, using tone and phrasing to show each speaker's perspective.",
+    "teacherTip": "Keep it readers theater: voices and meaning first, production extras second.",
+    "resources": [
+      {
+        "label": "Reader's Theater Rehearsal Sheet",
+        "file": "pdfs/reading-literacy/readers-theater.pdf"
+      }
+    ],
+    "related": [
+      "oral-reading-fluency",
+      "story-maps"
+    ],
+    "sourceNote": "Reading Rockets describes Reader's Theater as collaborative repeated oral reading that develops fluency and expression."
+  },
+  {
+    "id": "circ",
+    "name": "CIRC - Cooperative Integrated Reading and Composition",
+    "aliases": [],
+    "category": "Reading & Literacy",
+    "type": "Cooperative Literacy Strategy",
+    "time": "Several lessons",
+    "group": "Teams / pairs",
+    "preview": "assets/previews/circ.svg",
+    "summary": "A cooperative literacy model that combines partner/team reading activities with comprehension, vocabulary, and writing work.",
+    "useWhen": [
+      "Reading and writing goals can reinforce one another",
+      "Students can support peers while maintaining individual responsibility",
+      "You want an integrated cooperative literacy cycle"
+    ],
+    "avoidWhen": [
+      "You only need one short reading routine",
+      "The team structure would overshadow individual reading and writing",
+      "The class needs a more targeted intervention rather than a broad cooperative model"
+    ],
+    "steps": [
+      "Establish teams and partner arrangements.",
+      "Use partner reading and comprehension activities around shared texts.",
+      "Include vocabulary or word work tied to the reading.",
+      "Move into writing, revising, or responding activities.",
+      "Use individual checks alongside team support."
+    ],
+    "example": "Teams read a common article, partners summarize sections and clarify vocabulary, then each student writes an individual explanation that receives peer revision support.",
+    "teacherTip": "Keep individual reading and writing visible. Cooperative support should not allow one strong reader or writer to carry the team.",
+    "resources": [
+      {
+        "label": "CIRC Reading-Writing Team Sheet",
+        "file": "pdfs/reading-literacy/circ.pdf"
+      }
+    ],
+    "related": [
+      "cooperative-learning-framework",
+      "reciprocal-teaching"
+    ],
+    "sourceNote": "Beyond Monet names CIRC as an example of an instructional strategy; the model is associated with cooperative reading and composition work."
+  },
+  {
+    "id": "reading-gist-vocab",
+    "name": "Reading for Gist & Unfamiliar Vocabulary",
+    "aliases": [],
+    "category": "Reading & Literacy",
+    "type": "Reading Routine",
+    "time": "10-25 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/reading-gist-vocab.svg",
+    "summary": "A first-pass reading routine that separates the work of getting the overall meaning from resolving only the unfamiliar words that actually block comprehension.",
+    "useWhen": [
+      "Students get stuck on every unknown word",
+      "A complex text needs an initial “what is this mostly about?” pass",
+      "You want vocabulary work tied to comprehension rather than isolated lookup"
+    ],
+    "avoidWhen": [
+      "Precision of every term is essential on the first read",
+      "The text is short enough to clarify vocabulary before reading without losing purpose"
+    ],
+    "steps": [
+      "Read once for gist without stopping at every unknown word.",
+      "State the overall meaning in a sentence or two.",
+      "Identify unfamiliar words that truly interfere with understanding.",
+      "Use context, morphology, references, or discussion to resolve them.",
+      "Reread and refine the gist."
+    ],
+    "example": "Students read a historical source once to identify the author's main concern, then select only three words that block understanding and resolve them before rereading.",
+    "teacherTip": "Teach students that “unfamiliar” and “important to solve now” are not the same category.",
+    "resources": [
+      {
+        "label": "Gist & Vocabulary Reading Sheet",
+        "file": "pdfs/reading-literacy/gist-vocabulary.pdf"
+      }
+    ],
+    "related": [
+      "annotating-text",
+      "reading-guides"
+    ],
+    "sourceNote": "EL Education uses Reading for Gist and Unfamiliar Vocabulary as a recurring classroom protocol."
+  },
+  {
+    "id": "collaborative-reading-protocol",
+    "name": "Collaborative Reading Protocol",
+    "aliases": [],
+    "category": "Reading & Literacy",
+    "type": "Collaborative Reading Routine",
+    "time": "20-40 min",
+    "group": "Small groups",
+    "preview": "assets/previews/collaborative-reading-protocol.svg",
+    "summary": "A flexible team-reading routine in which students read a shared section, surface meaning and confusion, cite evidence, and build a joint understanding.",
+    "useWhen": [
+      "A challenging text benefits from peer sense-making",
+      "Students can support one another with evidence and clarification",
+      "You want talk anchored closely to a common text"
+    ],
+    "avoidWhen": [
+      "Students divide the text so no one reads the whole section",
+      "One student becomes the permanent explainer",
+      "The group has no individual accountability for comprehension"
+    ],
+    "steps": [
+      "Read the same manageable section.",
+      "Each student identifies a key idea and one point of confusion or question.",
+      "Group members compare interpretations and return to the text for evidence.",
+      "Resolve what can be resolved and record remaining questions.",
+      "Each student produces an individual summary or response."
+    ],
+    "example": "A group reads one paragraph of a primary source, identifies the main claim, compares interpretations of a difficult sentence, then each student writes a one-sentence summary.",
+    "teacherTip": "Keep everyone in the same text. Collaborative reading is shared meaning-making, not simply splitting pages among group members.",
+    "resources": [
+      {
+        "label": "Collaborative Reading Protocol Sheet",
+        "file": "pdfs/reading-literacy/collaborative-reading.pdf"
+      }
+    ],
+    "related": [
+      "reciprocal-teaching",
+      "annotating-text"
+    ],
+    "sourceNote": "Collaborative reading protocols appear in literacy and multilingual-learner resources as structured ways to jointly make meaning from text."
+  },
+  {
+    "id": "double-entry-journal",
+    "name": "Double Entry Journal",
+    "aliases": [],
+    "category": "Writing & Vocabulary",
+    "type": "Writing / Reflection Tactic",
+    "time": "10-25 min",
+    "group": "Individual, then optional pairs",
+    "preview": "assets/previews/double-entry-journal.svg",
+    "summary": "A two-column response routine that places source material, observations, or key ideas beside the learner's thinking, interpretation, questions, or connections.",
+    "useWhen": [
+      "Students need to slow down and respond to specific evidence or ideas",
+      "You want visible connections between source material and student thinking",
+      "Reading, viewing, experiments, or discussion should feed reflective writing"
+    ],
+    "avoidWhen": [
+      "The task only requires copying notes",
+      "Students have not yet encountered enough material to react meaningfully"
+    ],
+    "steps": [
+      "Choose what belongs in the left column: quotation, evidence, observation, vocabulary, or key idea.",
+      "Define the thinking job for the right column: explain, question, connect, infer, evaluate, or respond.",
+      "Model one strong entry and one weak entry so students see the difference.",
+      "Students complete several entries while reading, viewing, investigating, or discussing.",
+      "Use selected entries for partner talk, discussion, or later writing."
+    ],
+    "example": "While reading a historical speech, students copy three short claims into the left column and explain in the right column what each claim reveals about the speaker's purpose and assumptions.",
+    "teacherTip": "Name the kind of thinking you want in the right column. “Your thoughts” is usually too vague.",
+    "resources": [
+      {
+        "label": "Double Entry Journal",
+        "file": "pdfs/writing-vocabulary/double-entry-journal.pdf"
+      }
+    ],
+    "related": [
+      "triple-entry-journal",
+      "annotating-text"
+    ],
+    "sourceNote": "Beyond Monet lists Double Entry Journal among instructional tactics; the companion design here uses the common evidence-and-response structure."
+  },
+  {
+    "id": "triple-entry-journal",
+    "name": "Triple Entry Journal",
+    "aliases": [],
+    "category": "Writing & Vocabulary",
+    "type": "Writing / Reflection Tactic",
+    "time": "15-30 min",
+    "group": "Individual or pairs",
+    "preview": "assets/previews/triple-entry-journal.svg",
+    "summary": "A three-column journal that adds a third layer of thinking - such as evidence, revision, application, or peer response - to a basic double-entry format.",
+    "useWhen": [
+      "Students need to move beyond first reactions toward evidence or revision",
+      "You want metacognition visible across stages of learning",
+      "Learners are comparing an initial idea with a later interpretation"
+    ],
+    "avoidWhen": [
+      "Three columns add complexity without a clear purpose",
+      "The task would be clearer as a simple two-column journal"
+    ],
+    "steps": [
+      "Choose three distinct thinking jobs before students begin.",
+      "Model how an entry should move from Column 1 to Column 2 to Column 3.",
+      "Have students record concise ideas rather than fill space.",
+      "Pause for comparison or peer discussion if the third column benefits from another perspective.",
+      "Return to the journal for synthesis or reflection."
+    ],
+    "example": "In science, students record an observation, their first explanation, and then a revised explanation after discussing evidence from the investigation.",
+    "teacherTip": "The third column should change the thinking, not simply repeat the first two.",
+    "resources": [
+      {
+        "label": "Triple Entry Journal",
+        "file": "pdfs/writing-vocabulary/triple-entry-journal.pdf"
+      }
+    ],
+    "related": [
+      "double-entry-journal",
+      "reflecting-changes"
+    ],
+    "sourceNote": "Beyond Monet includes Triple Entry Journal in its instructional repertoire examples."
+  },
+  {
+    "id": "raft-writing",
+    "name": "RAFT - Role, Audience, Format, Topic",
+    "aliases": [],
+    "category": "Writing & Vocabulary",
+    "type": "Writing Strategy",
+    "time": "20-60 min",
+    "group": "Individual or pairs",
+    "preview": "assets/previews/raft-writing.svg",
+    "summary": "A purposeful writing strategy that asks students to write from a defined role to a specific audience, in an intentional format, about a focused topic.",
+    "useWhen": [
+      "Students should apply content by writing for an authentic or imaginative purpose",
+      "Perspective and audience matter to the learning goal",
+      "You want students to transform information rather than reproduce notes"
+    ],
+    "avoidWhen": [
+      "Students need direct practice with one genre before managing multiple RAFT choices",
+      "The role or format would distract from the content goal"
+    ],
+    "steps": [
+      "Clarify the four elements: Role, Audience, Format, Topic.",
+      "Model how changing the role or audience changes language and emphasis.",
+      "Start with one shared RAFT before offering student choice.",
+      "Students plan what the audience needs to know and what voice fits the role.",
+      "Draft, revise, and compare how different RAFT combinations represent the same content."
+    ],
+    "example": "After a unit on ecosystems, a student writes as a wetland to a city council in the form of a short testimony explaining what would be lost if the wetland were removed.",
+    "teacherTip": "RAFT works best when the combinations create a real reason to think differently, not when the labels are decorative.",
+    "resources": [
+      {
+        "label": "RAFT Writing Planner",
+        "file": "pdfs/writing-vocabulary/raft-writing.pdf"
+      }
+    ],
+    "related": [
+      "perspective-taking",
+      "writing-conferences"
+    ],
+    "sourceNote": "ReadWriteThink and Reading Rockets describe RAFT as Role, Audience, Format, and Topic and emphasize perspective, purpose, and audience."
+  },
+  {
+    "id": "found-poems",
+    "name": "Found Poems",
+    "aliases": [],
+    "category": "Writing & Vocabulary",
+    "type": "Writing / Synthesis Routine",
+    "time": "20-45 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/found-poems.svg",
+    "summary": "Students select and rearrange words or phrases from a source text to create a poem that communicates an interpretation, theme, mood, or argument.",
+    "useWhen": [
+      "Students need close attention to language and key ideas",
+      "You want synthesis without a traditional paragraph response",
+      "A text contains rich wording, imagery, or competing ideas"
+    ],
+    "avoidWhen": [
+      "Students need to demonstrate extended original composition rather than selection and arrangement",
+      "The source text is too short or too literal to support meaningful choices"
+    ],
+    "steps": [
+      "Define the interpretive focus: theme, character, issue, mood, or concept.",
+      "Students collect striking or important words and phrases from the source.",
+      "They reduce the collection to the language that best supports their interpretation.",
+      "Arrange the selected language intentionally, adding only minimal connecting words if your rules allow.",
+      "Share the poem with a brief explanation of the choices and evidence behind it."
+    ],
+    "example": "After reading several firsthand accounts of migration, students create found poems that capture uncertainty and hope, then explain which source phrases shaped that interpretation.",
+    "teacherTip": "Require an explanation or annotation afterward so the poem remains an act of interpretation rather than decoration.",
+    "resources": [
+      {
+        "label": "Found Poem Builder",
+        "file": "pdfs/writing-vocabulary/found-poem.pdf"
+      }
+    ],
+    "related": [
+      "annotating-text",
+      "headlines"
+    ],
+    "sourceNote": "Facing History uses found poetry as a way for students to synthesize and interpret source language; this is an original companion template."
+  },
+  {
+    "id": "writing-conferences",
+    "name": "Writing Conferences",
+    "aliases": [],
+    "category": "Writing & Vocabulary",
+    "type": "Writing Strategy",
+    "time": "5-15 min per conference",
+    "group": "One-to-one or small group",
+    "preview": "assets/previews/writing-conferences.svg",
+    "summary": "A focused conversation in which a writer receives questions and feedback that help them clarify intentions, make decisions, and revise a draft.",
+    "useWhen": [
+      "Students have a draft or partial draft worth discussing",
+      "Feedback should lead to a concrete revision decision",
+      "You want students to articulate what they are trying to do as writers"
+    ],
+    "avoidWhen": [
+      "The “conference” would become line-by-line correction by the teacher",
+      "Students have no clear draft, idea, or purpose to discuss yet"
+    ],
+    "steps": [
+      "Establish a predictable structure and model constructive conference language.",
+      "Begin with the writer: What are you trying to do? Where do you want help?",
+      "Read or examine a manageable portion of the work.",
+      "Focus feedback on one or two high-leverage decisions rather than every issue.",
+      "End with the writer naming the revision they will try next."
+    ],
+    "example": "A student brings a persuasive paragraph to a peer conference and asks whether the evidence actually supports the claim. The partner asks clarifying questions and the writer leaves with one revision goal.",
+    "teacherTip": "The writer should leave owning the next decision. A conference is coaching, not editing someone else's paper.",
+    "resources": [
+      {
+        "label": "Writing Conference Form",
+        "file": "pdfs/writing-vocabulary/writing-conference.pdf"
+      },
+      {
+        "label": "Peer Conference Stems",
+        "file": "pdfs/writing-vocabulary/peer-conference-stems.pdf"
+      }
+    ],
+    "related": [
+      "raft-writing"
+    ],
+    "sourceNote": "Reading Rockets describes writing conferences as structured opportunities for students to share drafts, receive feedback, reflect, and revise."
+  },
+  {
+    "id": "rapid-writing",
+    "name": "Rapid Writing",
+    "aliases": [],
+    "category": "Writing & Vocabulary",
+    "type": "Writing Routine",
+    "time": "3-10 min",
+    "group": "Individual",
+    "preview": "assets/previews/rapid-writing.svg",
+    "summary": "A short, uninterrupted burst of writing used to surface prior knowledge, generate ideas, rehearse thinking, or reflect before discussion.",
+    "useWhen": [
+      "Students need to get ideas moving before polishing language",
+      "You want every learner to arrive at discussion with something to say",
+      "A prompt benefits from personal thinking before peer influence"
+    ],
+    "avoidWhen": [
+      "Accuracy and careful editing are the immediate goal",
+      "Students require substantial source evidence before they can respond responsibly"
+    ],
+    "steps": [
+      "Give one focused prompt and a short fixed time.",
+      "Ask students to keep writing; spelling and polish are not the priority.",
+      "If stuck, students can restate the prompt, list, sketch, or write a question until ideas resume.",
+      "Stop at the agreed time and allow a quick reread.",
+      "Use the writing for pair sharing, discussion, planning, or later revision."
+    ],
+    "example": "Before discussing whether a character acted courageously, students write continuously for four minutes using at least two moments from the text that might matter to their judgment.",
+    "teacherTip": "Rapid writing is a thinking launch, not a grading event.",
+    "resources": [
+      {
+        "label": "Rapid Writing Page",
+        "file": "pdfs/writing-vocabulary/rapid-writing.pdf"
+      }
+    ],
+    "related": [
+      "think-pair-family"
+    ],
+    "sourceNote": "Facing History and other literacy protocols use brief rapid/free writing to prepare thinking for discussion and reflection."
+  },
+  {
+    "id": "frayer-model",
+    "name": "Frayer Model",
+    "aliases": [],
+    "category": "Writing & Vocabulary",
+    "type": "Vocabulary Strategy / Graphic Organizer",
+    "time": "10-20 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/frayer-model.svg",
+    "summary": "A four-part concept organizer that deepens vocabulary by combining a definition with characteristics, examples, and non-examples.",
+    "useWhen": [
+      "A word represents a concept students need to understand deeply",
+      "Examples and non-examples will clarify boundaries of meaning",
+      "Students need more than a copied dictionary definition"
+    ],
+    "avoidWhen": [
+      "The word is a simple label with little conceptual depth",
+      "Students do not yet have enough experiences or examples to populate the organizer meaningfully"
+    ],
+    "steps": [
+      "Name the target word or concept.",
+      "Develop a student-friendly definition in context.",
+      "Identify essential characteristics or attributes.",
+      "Generate and justify examples.",
+      "Generate and justify non-examples, then revise the definition if needed."
+    ],
+    "example": "For “proportional relationship,” students define the term, list attributes such as constant ratio, create examples, and add non-examples that look similar but do not have a constant ratio.",
+    "teacherTip": "The non-examples are often the most powerful part. Ask why each one fails to qualify.",
+    "resources": [
+      {
+        "label": "Frayer Model",
+        "file": "pdfs/writing-vocabulary/frayer-model.pdf"
+      }
+    ],
+    "related": [
+      "semantic-feature-analysis"
+    ],
+    "sourceNote": "The Frayer Model is widely used for concept and vocabulary development; Reading Rockets and many literacy resources recommend example/non-example work for deep word knowledge."
+  },
+  {
+    "id": "semantic-feature-analysis",
+    "name": "Semantic Feature Analysis",
+    "aliases": [],
+    "category": "Writing & Vocabulary",
+    "type": "Vocabulary / Comprehension Strategy",
+    "time": "15-30 min",
+    "group": "Individual, pairs, small groups",
+    "preview": "assets/previews/semantic-feature-analysis.svg",
+    "summary": "A matrix that compares related words or concepts against meaningful features so students can analyze similarities, differences, and relationships.",
+    "useWhen": [
+      "Students are learning a set of related concepts or vocabulary",
+      "Fine distinctions matter",
+      "You want students to justify relationships using features or evidence"
+    ],
+    "avoidWhen": [
+      "The features are arbitrary or merely factual trivia",
+      "A simple Venn diagram would communicate the needed comparison more clearly"
+    ],
+    "steps": [
+      "Choose a meaningful category and several related items.",
+      "Generate a small set of features that can reveal important differences.",
+      "Model how to mark whether each feature applies, does not apply, or is uncertain.",
+      "Students complete and revise the matrix using evidence.",
+      "Discuss patterns: Which items are most alike? Which feature is most discriminating? What new prediction can we make?"
+    ],
+    "example": "In biology, students compare vertebrate groups against features such as body covering, reproduction, temperature regulation, and habitat, then explain the patterns they notice.",
+    "teacherTip": "Do not let the grid become a filling exercise. The discussion of patterns is the strategy's payoff.",
+    "resources": [
+      {
+        "label": "Semantic Feature Analysis Grid",
+        "file": "pdfs/writing-vocabulary/semantic-feature-analysis.pdf"
+      }
+    ],
+    "related": [
+      "matrix",
+      "frayer-model"
+    ],
+    "sourceNote": "Reading Rockets describes Semantic Feature Analysis as a grid for comparing concepts and features to build vocabulary, comprehension, connections, and predictions."
+  },
+  {
+    "id": "semantic-gradients",
+    "name": "Semantic Gradients",
+    "aliases": [],
+    "category": "Writing & Vocabulary",
+    "type": "Vocabulary Strategy",
+    "time": "10-25 min",
+    "group": "Pairs, groups, or whole class",
+    "preview": "assets/previews/semantic-gradients.svg",
+    "summary": "Students place related words along a continuum to reason about degree, intensity, precision, and subtle differences in meaning.",
+    "useWhen": [
+      "Students know several related words but use them interchangeably",
+      "You want more precise descriptive or academic vocabulary",
+      "Discussion about shades of meaning will strengthen writing"
+    ],
+    "avoidWhen": [
+      "The words do not belong on a meaningful continuum",
+      "There is only one defensible order and no useful reasoning to discuss"
+    ],
+    "steps": [
+      "Choose opposite anchors or a target word with related terms on both sides.",
+      "Make sure students understand the anchor meanings.",
+      "Place a few words while thinking aloud about degree and nuance.",
+      "Students position remaining words and justify their choices.",
+      "Invite disagreement, movement, and revision when reasoning changes."
+    ],
+    "example": "Students arrange words such as whisper, murmur, speak, call, shout, and roar along a volume continuum, then revise dialogue in a narrative using more precise verbs.",
+    "teacherTip": "Treat placements as claims to defend, not answers to copy.",
+    "resources": [
+      {
+        "label": "Semantic Gradient",
+        "file": "pdfs/writing-vocabulary/semantic-gradient.pdf"
+      }
+    ],
+    "related": [
+      "word-hunts",
+      "contextual-redefinition"
+    ],
+    "sourceNote": "Reading Rockets describes semantic gradients as continuums that deepen understanding of related words and shades of meaning."
+  },
+  {
+    "id": "contextual-redefinition",
+    "name": "Contextual Redefinition",
+    "aliases": [],
+    "category": "Writing & Vocabulary",
+    "type": "Vocabulary Strategy",
+    "time": "10-20 min",
+    "group": "Individual, pairs, or whole class",
+    "preview": "assets/previews/contextual-redefinition.svg",
+    "summary": "Students make an initial prediction about an unfamiliar word, examine it in meaningful context, and then revise the definition using evidence.",
+    "useWhen": [
+      "Students can infer meaning from useful context clues",
+      "You want students to practice flexible word-solving rather than receive definitions first",
+      "The same word may carry different meanings in different contexts"
+    ],
+    "avoidWhen": [
+      "The surrounding text provides almost no useful clues",
+      "A technical term requires precise direct instruction before students can reason productively"
+    ],
+    "steps": [
+      "Present the target word with little or no context and invite a tentative definition.",
+      "Show the word in a sentence or short passage.",
+      "Students identify clues that confirm, reject, or refine the first meaning.",
+      "Write a revised student-friendly definition.",
+      "Test the meaning in a new sentence or context."
+    ],
+    "example": "Students first predict the meaning of “conservation,” then compare how it appears in an environmental article and in a physics text before revising their definitions.",
+    "teacherTip": "Celebrate revision. The goal is not guessing correctly on the first try; it is using context intelligently.",
+    "resources": [
+      {
+        "label": "Contextual Redefinition Chart",
+        "file": "pdfs/writing-vocabulary/contextual-redefinition.pdf"
+      }
+    ],
+    "related": [
+      "semantic-gradients",
+      "word-hunts"
+    ],
+    "sourceNote": "Contextual redefinition is a vocabulary approach in which students test tentative meanings against contextual evidence."
+  },
+  {
+    "id": "sves",
+    "name": "SVES - Stephens Vocabulary Elaboration Strategy",
+    "aliases": [],
+    "category": "Writing & Vocabulary",
+    "type": "Vocabulary Strategy",
+    "time": "15-25 min",
+    "group": "Individual or pairs",
+    "preview": "assets/previews/sves.svg",
+    "summary": "A vocabulary elaboration routine that connects a new word to prior knowledge, defining attributes, examples, associations, and meaningful use.",
+    "useWhen": [
+      "Students need rich conceptual knowledge of high-value vocabulary",
+      "A word is central enough to justify deeper elaboration",
+      "Connections and examples will make the term easier to retrieve and apply"
+    ],
+    "avoidWhen": [
+      "The term is low-priority or easily understood from ordinary context",
+      "The class would spend more time completing the organizer than using the word"
+    ],
+    "steps": [
+      "Introduce the target term in meaningful context.",
+      "Elicit what students already associate with it.",
+      "Clarify a student-friendly meaning and important attributes.",
+      "Generate examples, non-examples, related ideas, or images.",
+      "Use the word in a new explanation or application."
+    ],
+    "example": "For “equilibrium,” students connect prior associations, identify the idea of balanced opposing effects, generate science and everyday examples, and use the term to explain a new situation.",
+    "teacherTip": "Choose fewer, more useful words and elaborate them well.",
+    "resources": [
+      {
+        "label": "SVES Vocabulary Elaboration",
+        "file": "pdfs/writing-vocabulary/sves.pdf"
+      }
+    ],
+    "related": [
+      "frayer-model",
+      "semantic-feature-analysis"
+    ],
+    "sourceNote": "SVES is the Stephens Vocabulary Elaboration Strategy; this companion emphasizes elaboration, connections, examples, and application."
+  },
+  {
+    "id": "word-hunts",
+    "name": "Word Hunts",
+    "aliases": [],
+    "category": "Writing & Vocabulary",
+    "type": "Vocabulary / Word Study Strategy",
+    "time": "10-20 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/word-hunts.svg",
+    "summary": "Students search authentic texts for words that match a target pattern, feature, root, or vocabulary idea, then sort and discuss what they find.",
+    "useWhen": [
+      "Students should notice spelling, morphology, roots, or vocabulary in real text",
+      "You want learners to connect word study with actual reading",
+      "A pattern has enough examples to discover and compare"
+    ],
+    "avoidWhen": [
+      "The target feature is so rare that students will mostly search unsuccessfully",
+      "The task becomes scavenging with no analysis afterward"
+    ],
+    "steps": [
+      "Name the target word feature, pattern, root, or concept.",
+      "Model how to locate and record one example in context.",
+      "Students hunt through appropriate texts.",
+      "Sort or classify the findings and notice exceptions.",
+      "Discuss what the examples reveal and apply the pattern to new words."
+    ],
+    "example": "Students studying the prefix “inter-” hunt through science and social studies texts, record the surrounding sentence, and infer how the prefix contributes to each word's meaning.",
+    "teacherTip": "Always add a “What did the hunt teach us?” step.",
+    "resources": [
+      {
+        "label": "Word Hunt Record",
+        "file": "pdfs/writing-vocabulary/word-hunt.pdf"
+      }
+    ],
+    "related": [
+      "semantic-gradients",
+      "interactive-word-wall"
+    ],
+    "sourceNote": "Reading Rockets describes word hunts as word-study activities that apply spelling patterns, roots, sight words, or vocabulary knowledge in authentic texts."
+  },
+  {
+    "id": "interactive-word-wall",
+    "name": "Interactive Word Wall",
+    "aliases": [],
+    "category": "Writing & Vocabulary",
+    "type": "Vocabulary / Instructional Tool",
+    "time": "5-20 min recurring",
+    "group": "Whole class, pairs, or groups",
+    "preview": "assets/previews/interactive-word-wall.svg",
+    "summary": "A living vocabulary display that students actively sort, connect, move, reference, and use rather than simply look at.",
+    "useWhen": [
+      "A unit has recurring vocabulary students must use precisely",
+      "Words can be meaningfully grouped or connected",
+      "Students benefit from a shared visible reference during talk and writing"
+    ],
+    "avoidWhen": [
+      "The wall will be static decoration",
+      "Too many words are added for students to revisit or use"
+    ],
+    "steps": [
+      "Select a manageable set of high-value words.",
+      "Create readable cards with meaning, image, example, or other useful support.",
+      "Involve students in adding, sorting, linking, or relocating words.",
+      "Use the wall during explanations, comparisons, retrieval, and writing.",
+      "Regularly remove, regroup, or revisit words as understanding changes."
+    ],
+    "example": "During a forces unit, students move word cards under “contact” and “non-contact,” draw connections between related terms, and point to the wall when explaining a new phenomenon.",
+    "teacherTip": "If students never touch, discuss, or use it, it is a bulletin board - not an interactive word wall.",
+    "resources": [
+      {
+        "label": "Interactive Word Wall Cards",
+        "file": "pdfs/writing-vocabulary/interactive-word-wall-cards.pdf"
+      }
+    ],
+    "related": [
+      "word-hunts",
+      "semantic-feature-analysis"
+    ],
+    "sourceNote": "Reading Rockets includes word walls as a vocabulary, phonics, spelling, and writing support; this entry emphasizes active student use."
+  },
+  {
+    "id": "volley-for-vocabulary",
+    "name": "Volley for Vocabulary",
+    "aliases": [],
+    "category": "Writing & Vocabulary",
+    "type": "Vocabulary / Partner Routine",
+    "time": "5-15 min",
+    "group": "Pairs",
+    "preview": "assets/previews/volley-for-vocabulary.svg",
+    "summary": "A quick partner exchange in which students take turns producing definitions, examples, associations, categories, or uses for a target word.",
+    "useWhen": [
+      "Students need repeated oral retrieval of vocabulary",
+      "You want fast, accountable partner rehearsal",
+      "A word has multiple examples, connections, or applications"
+    ],
+    "avoidWhen": [
+      "The vocabulary is brand new and students have not yet built enough knowledge to respond",
+      "Speed would encourage guessing instead of accurate use"
+    ],
+    "steps": [
+      "Give partners one word or small set of words.",
+      "Define the kind of response each turn requires: example, synonym, connection, sentence, attribute, etc.",
+      "Partner A responds, then Partner B adds a different valid response.",
+      "Continue until time ends or ideas are exhausted.",
+      "Partners check uncertain responses and record the strongest examples."
+    ],
+    "example": "Partners volley examples of renewable and non-renewable resources, explaining why each example belongs before the next turn.",
+    "teacherTip": "Require different, meaningful responses - not repetitions with tiny wording changes.",
+    "resources": [
+      {
+        "label": "Volley for Vocabulary",
+        "file": "pdfs/writing-vocabulary/volley-vocabulary.pdf"
+      }
+    ],
+    "related": [
+      "round-robin",
+      "word-hunts"
+    ],
+    "sourceNote": "EL Education classroom protocol collections include Volley for Vocabulary as an oral vocabulary practice structure."
+  },
+  {
+    "id": "sentence-level-language-routines",
+    "name": "Sentence-Level Language Routines",
+    "aliases": [],
+    "category": "Writing & Vocabulary",
+    "type": "Writing / Language Strategy Family",
+    "time": "10-25 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/sentence-level-language-routines.svg",
+    "summary": "A family of routines for combining, deconstructing, and expanding sentences so students notice how ideas and language structures work together.",
+    "useWhen": [
+      "Students need more control over complex sentences",
+      "Academic language is limiting how clearly students can express thinking",
+      "A content sentence offers useful structure worth examining"
+    ],
+    "avoidWhen": [
+      "Grammar is being practiced as isolated labeling with no connection to meaning",
+      "The sentence is so difficult that students cannot reason about its ideas"
+    ],
+    "steps": [
+      "Choose a meaningful sentence from current learning.",
+      "For deconstruction, unpack who or what is involved, what is happening, and how ideas are connected.",
+      "For expansion, add precise details such as when, where, why, or how.",
+      "For combining, merge short related ideas while preserving meaning.",
+      "Compare versions and discuss how language choices change emphasis or clarity."
+    ],
+    "example": "Students turn “The population fell. Food was scarce. Winter was severe.” into several combined sentences, then discuss which version best communicates cause and effect.",
+    "teacherTip": "Make meaning the reason for changing the sentence. Grammar terminology is secondary to what the wording does.",
+    "resources": [
+      {
+        "label": "Sentence Routines - Combine, Deconstruct, Expand",
+        "file": "pdfs/writing-vocabulary/sentence-level-routines.pdf"
+      }
+    ],
+    "related": [
+      "academic-language-scaffolds",
+      "writing-conferences"
+    ],
+    "sourceNote": "Sentence combining, deconstruction, and expansion are widely used language-development routines; this family keeps them connected to meaning and content."
+  },
+  {
+    "id": "paragraph-hamburger",
+    "name": "Paragraph Hamburger",
+    "aliases": [],
+    "category": "Writing & Vocabulary",
+    "type": "Writing Organizer",
+    "time": "10-25 min",
+    "group": "Individual",
+    "preview": "assets/previews/paragraph-hamburger.svg",
+    "summary": "A simple visual scaffold that organizes a paragraph around a main idea, supporting details or evidence, and a closing statement.",
+    "useWhen": [
+      "Students are learning basic paragraph structure",
+      "A short response needs clear focus and supporting details",
+      "You want a temporary scaffold before students internalize organization"
+    ],
+    "avoidWhen": [
+      "Students already write coherent paragraphs and the template would make writing formulaic",
+      "The genre requires a structure that does not fit main-idea/support/conclusion organization"
+    ],
+    "steps": [
+      "State the main idea or claim.",
+      "Select details, evidence, or explanations that actually support it.",
+      "Order the supporting ideas logically.",
+      "Draft a closing sentence that completes the thought rather than merely repeats the first sentence.",
+      "Write the paragraph and gradually remove the scaffold as independence grows."
+    ],
+    "example": "After a science investigation, students use the organizer to write one paragraph explaining why their evidence supports a claim about insulation.",
+    "teacherTip": "Treat the hamburger as training wheels, not the definition of all good writing.",
+    "resources": [
+      {
+        "label": "Paragraph Hamburger",
+        "file": "pdfs/writing-vocabulary/paragraph-hamburger.pdf"
+      }
+    ],
+    "related": [
+      "raft-writing",
+      "writing-conferences"
+    ],
+    "sourceNote": "Reading Rockets uses the Paragraph Hamburger as a visual organizer for paragraph structure and supporting details."
+  },
+  {
+    "id": "sketchnotes",
+    "name": "Sketchnotes",
+    "aliases": [],
+    "category": "Writing & Vocabulary",
+    "type": "Visual Note-Making Strategy",
+    "time": "10-45 min",
+    "group": "Individual, then optional pairs",
+    "preview": "assets/previews/sketchnotes.svg",
+    "summary": "A note-making approach that combines concise words, symbols, spatial organization, arrows, and simple drawings to represent meaning.",
+    "useWhen": [
+      "Students need to synthesize rather than transcribe",
+      "Relationships and big ideas matter more than complete sentences",
+      "Visual representation will help students make connections and revisit ideas"
+    ],
+    "avoidWhen": [
+      "The task requires a verbatim record",
+      "Students become so focused on illustration quality that thinking slows down"
+    ],
+    "steps": [
+      "Set the purpose: capture ideas, relationships, questions, or processes - not every word.",
+      "Model a small visual vocabulary of arrows, frames, icons, and containers.",
+      "Students listen, read, or view and select what matters.",
+      "Arrange ideas spatially and connect them with labels, arrows, or symbols.",
+      "Revisit the page to add a summary, question, or connection."
+    ],
+    "example": "During a mini-lesson on plate tectonics, students use keywords, arrows, small diagrams, and labels to show how mantle movement connects to plate boundaries and surface features.",
+    "teacherTip": "Make it clear that stick figures and rough symbols are enough. The thinking should look polished; the drawing does not need to.",
+    "resources": [
+      {
+        "label": "Sketchnotes Starter",
+        "file": "pdfs/writing-vocabulary/sketchnotes.pdf"
+      }
+    ],
+    "related": [
+      "annotating-text"
+    ],
+    "sourceNote": "Sketchnoting is a visual note-making approach that combines words and simple visuals to organize and synthesize ideas."
+  },
+  {
+    "id": "academic-language-scaffolds",
+    "name": "Academic Language Scaffolds",
+    "aliases": [],
+    "category": "Writing & Vocabulary",
+    "type": "Writing / Language Support Family",
+    "time": "5-30 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/academic-language-scaffolds.svg",
+    "summary": "Temporary language supports - such as sentence frames, paragraph frames, and structured templates - that help students express increasingly complex academic thinking.",
+    "useWhen": [
+      "Students understand an idea but need language support to explain it",
+      "A discussion or writing task requires a recurring academic language pattern",
+      "You want access to rigorous thinking without lowering the intellectual demand"
+    ],
+    "avoidWhen": [
+      "The frame supplies so much language that students no longer make meaningful choices",
+      "Students are ready to communicate independently and the scaffold is becoming a ceiling"
+    ],
+    "steps": [
+      "Identify the thinking move students need to express: compare, justify, infer, sequence, disagree, synthesize, etc.",
+      "Provide the smallest useful frame or language bank.",
+      "Model how the same frame can hold different ideas.",
+      "Students rehearse orally, then use the scaffold in writing or discussion.",
+      "Fade, vary, or remove the scaffold as students gain control."
+    ],
+    "example": "Students comparing two historical accounts use “Both sources suggest ___; however, Source A emphasizes ___ while Source B ___.” Later they write the comparison without the frame.",
+    "teacherTip": "A good scaffold disappears. Plan from the beginning how students will gain independence.",
+    "resources": [
+      {
+        "label": "Academic Language Frames",
+        "file": "pdfs/writing-vocabulary/academic-language-frames.pdf"
+      },
+      {
+        "label": "Paragraph Frame Builder",
+        "file": "pdfs/writing-vocabulary/paragraph-frame-builder.pdf"
+      }
+    ],
+    "related": [
+      "sentence-level-language-routines",
+      "accountable-talk"
+    ],
+    "sourceNote": "Sentence frames, paragraph frames, and related language supports are commonly used to help learners express academic reasoning while maintaining the content demand."
+  },
+  {
+    "id": "inquiry-based-learning",
+    "name": "Inquiry-Based Learning",
+    "aliases": [
+      "Inquiry"
+    ],
+    "category": "Inquiry & Problem Solving",
+    "type": "Inquiry Strategy",
+    "time": "30 min to multi-day",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/inquiry-based-learning.svg",
+    "summary": "Students investigate a meaningful question by gathering evidence, testing ideas, explaining what they find, and generating new questions rather than simply receiving an answer.",
+    "useWhen": [
+      "Curiosity, evidence, and explanation are central to the learning goal",
+      "Students can make genuine decisions about how to investigate",
+      "The question has enough complexity to support more than one path"
+    ],
+    "avoidWhen": [
+      "Students lack essential background knowledge or safety procedures needed to investigate responsibly",
+      "The activity is “hands-on” but the answer and method are completely predetermined"
+    ],
+    "steps": [
+      "Launch a phenomenon, problem, object, text, or question that creates a real need to know.",
+      "Surface what students notice, wonder, predict, or already think.",
+      "Develop or refine an investigable question.",
+      "Gather information or evidence through observation, research, testing, or analysis.",
+      "Construct and critique explanations, then identify what new questions remain."
+    ],
+    "example": "Students notice that some schoolyard surfaces stay wet longer after rain. They generate possible explanations, decide what observations or measurements could help, gather evidence, and defend an explanation.",
+    "teacherTip": "Inquiry still needs teaching. Guide the process without quietly doing the intellectual work for students.",
+    "resources": [
+      {
+        "label": "Inquiry Cycle Planner",
+        "file": "pdfs/inquiry-problem-solving/inquiry-cycle.pdf"
+      },
+      {
+        "label": "Inquiry Evidence Log",
+        "file": "pdfs/inquiry-problem-solving/inquiry-evidence-log.pdf"
+      }
+    ],
+    "related": [
+      "scientific-inquiry",
+      "inquiry-charts"
+    ],
+    "sourceNote": "Carnegie Mellon describes inquiry-based learning as an investigative process in which students observe, hypothesize, and draw conclusions; Smithsonian emphasizes that inquiry is more than merely hands-on activity."
+  },
+  {
+    "id": "scientific-inquiry",
+    "name": "Scientific Inquiry",
+    "aliases": [],
+    "category": "Inquiry & Problem Solving",
+    "type": "Science Inquiry Strategy",
+    "time": "30 min to multi-day",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/scientific-inquiry.svg",
+    "summary": "A science-specific inquiry process in which students ask testable questions, use evidence, examine alternative explanations, and communicate claims about the natural world.",
+    "useWhen": [
+      "Students can investigate a scientific question through evidence",
+      "The goal includes scientific reasoning, not merely completing a lab procedure",
+      "Students should make decisions about variables, observations, measurements, or interpretation"
+    ],
+    "avoidWhen": [
+      "The activity is a demonstration with no student investigation",
+      "A safety-critical procedure requires tightly controlled steps and leaves little room for inquiry"
+    ],
+    "steps": [
+      "Begin with a phenomenon or scientifically oriented question.",
+      "Clarify what evidence would help answer the question.",
+      "Plan observations, measurements, comparisons, models, or tests.",
+      "Collect and organize evidence while documenting uncertainty and anomalies.",
+      "Construct an explanation, compare alternatives, and communicate how the evidence supports the claim."
+    ],
+    "example": "Students investigate which factors affect the cooling rate of water, decide what to vary and measure, compare data, and explain which evidence supports their conclusions.",
+    "teacherTip": "A lab is not automatically inquiry. Ask what decisions and reasoning students actually own.",
+    "resources": [
+      {
+        "label": "Scientific Inquiry Record",
+        "file": "pdfs/inquiry-problem-solving/scientific-inquiry.pdf"
+      }
+    ],
+    "related": [
+      "inquiry-based-learning",
+      "science-talk"
+    ],
+    "sourceNote": "Beyond Monet lists Scientific Inquiry among lesson types and thinking strategies; Smithsonian describes inquiry-based science as evidence-centered investigation rather than hands-on activity alone."
+  },
+  {
+    "id": "open-ended-problem-solving",
+    "name": "Open-Ended Problem Solving",
+    "aliases": [],
+    "category": "Inquiry & Problem Solving",
+    "type": "Problem-Solving Strategy",
+    "time": "15-60 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/open-ended-problem-solving.svg",
+    "summary": "Students solve a problem that allows multiple approaches, representations, strategies, or defensible solutions, then compare and justify their reasoning.",
+    "useWhen": [
+      "The goal is flexible reasoning rather than one memorized procedure",
+      "Different solution paths can reveal important concepts",
+      "Students should explain, compare, revise, or generalize strategies"
+    ],
+    "avoidWhen": [
+      "The task is vague rather than genuinely open",
+      "Students lack enough foundational knowledge to enter the problem productively"
+    ],
+    "steps": [
+      "Pose a problem with more than one reasonable route, representation, or solution.",
+      "Give individual think time before strategy sharing.",
+      "Students choose and carry out an approach while recording reasoning.",
+      "Compare methods, assumptions, efficiency, and limitations.",
+      "Extend the problem: change a condition, generalize a pattern, or create a related problem."
+    ],
+    "example": "Instead of asking for the area of one rectangle, students design as many rectangles as possible with area 48 square units, compare dimensions, and describe patterns in the factor pairs.",
+    "teacherTip": "Open-ended does not mean unstructured. The mathematical or conceptual target should be very clear even when the paths are not.",
+    "resources": [
+      {
+        "label": "Open-Ended Problem Solver",
+        "file": "pdfs/inquiry-problem-solving/open-ended-problem-solving.pdf"
+      }
+    ],
+    "related": [
+      "problem-based-learning"
+    ],
+    "sourceNote": "Beyond Monet identifies open-ended problem-solving as a possible strategy for sequencing thinking; NCTM resources emphasize teaching mathematics through problem solving and multiple approaches."
+  },
+  {
+    "id": "problem-based-learning",
+    "name": "Problem-Based Learning (PBL)",
+    "aliases": [],
+    "category": "Inquiry & Problem Solving",
+    "type": "Problem-Based Learning Model",
+    "time": "1 lesson to multi-day",
+    "group": "Teams",
+    "preview": "assets/previews/problem-based-learning.svg",
+    "summary": "Students begin with a complex, authentic problem, determine what they know and need to learn, gather new information, and develop a reasoned response or solution.",
+    "useWhen": [
+      "The problem is authentic, complex, and worth sustained investigation",
+      "Students need to integrate knowledge rather than practice isolated facts",
+      "The learning goal includes self-directed inquiry, collaboration, and application"
+    ],
+    "avoidWhen": [
+      "The “problem” is really a disguised worksheet with one obvious procedure",
+      "The time available cannot support investigation and synthesis"
+    ],
+    "steps": [
+      "Launch the problem before teaching every piece of content.",
+      "Teams define the problem and record what they know, assume, and need to find out.",
+      "Identify learning questions and divide investigation responsibly.",
+      "Gather and evaluate information, then return to the problem repeatedly.",
+      "Develop, test, and communicate a solution or response, including limitations and remaining questions."
+    ],
+    "example": "Students are asked how the school could reduce cafeteria food waste without creating new safety or staffing problems. Teams identify what data they need, investigate causes, and propose evidence-based solutions.",
+    "teacherTip": "Protect the problem from premature teacher explanation. Give just enough instruction to keep productive inquiry moving.",
+    "resources": [
+      {
+        "label": "PBL Know / Need / Plan",
+        "file": "pdfs/inquiry-problem-solving/pbl-know-need-plan.pdf"
+      },
+      {
+        "label": "PBL Solution & Evidence",
+        "file": "pdfs/inquiry-problem-solving/pbl-solution-evidence.pdf"
+      }
+    ],
+    "related": [
+      "case-based-learning",
+      "inquiry-based-learning"
+    ],
+    "sourceNote": "Yale describes PBL as open inquiry around complex real-world problems that students must first define and understand before developing solutions; Carnegie Mellon likewise emphasizes teamwork and multiple valid strategies."
+  },
+  {
+    "id": "case-based-learning",
+    "name": "Case-Based Learning (CBL)",
+    "aliases": [],
+    "category": "Inquiry & Problem Solving",
+    "type": "Case-Based Learning Model",
+    "time": "20-75 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/case-based-learning.svg",
+    "summary": "Students apply knowledge to a realistic scenario, examine evidence and stakeholder perspectives, make decisions, and justify a recommended response.",
+    "useWhen": [
+      "Students should apply concepts to a realistic situation",
+      "A scenario can expose trade-offs, incomplete information, or competing perspectives",
+      "You want students to practice disciplinary decision-making"
+    ],
+    "avoidWhen": [
+      "The case is only an entertaining story with no meaningful decisions",
+      "Students need foundational knowledge before they can interpret the situation"
+    ],
+    "steps": [
+      "Present a concise case with enough detail to create a genuine disciplinary decision.",
+      "Students identify the central issue, relevant facts, missing information, and stakeholders.",
+      "Apply course concepts or criteria to analyze options.",
+      "Make a recommendation and justify it with evidence.",
+      "Reveal additional information or compare other teams' recommendations to test the reasoning."
+    ],
+    "example": "Students analyze a fictional community deciding where to locate a new water-treatment facility. They weigh cost, geography, environmental impact, and stakeholder concerns before recommending a site.",
+    "teacherTip": "A good case forces students to use what they know. Avoid cases where the “right” answer is obvious from the wording.",
+    "resources": [
+      {
+        "label": "Case Analysis Sheet",
+        "file": "pdfs/inquiry-problem-solving/case-analysis.pdf"
+      }
+    ],
+    "related": [
+      "problem-based-learning",
+      "academic-controversy"
+    ],
+    "sourceNote": "Yale describes case-based learning as an active approach in which students apply knowledge to real-world scenarios and devise strategies or solutions under instructor guidance."
+  },
+  {
+    "id": "inquiry-charts",
+    "name": "Inquiry Charts (I-Charts)",
+    "aliases": [],
+    "category": "Inquiry & Problem Solving",
+    "type": "Inquiry / Research Organizer",
+    "time": "30 min to multi-day",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/inquiry-charts.svg",
+    "summary": "A question-by-source chart that helps students combine prior knowledge with information from several sources, compare answers, synthesize patterns, and generate new questions.",
+    "useWhen": [
+      "Students are researching a topic through multiple sources",
+      "Questions should organize information gathering",
+      "Students need help comparing, reconciling, and synthesizing sources"
+    ],
+    "avoidWhen": [
+      "Students are simply collecting isolated facts with no guiding questions",
+      "Only one source is being used and comparison adds no value"
+    ],
+    "steps": [
+      "Select a topic and generate meaningful questions across the top of the chart.",
+      "Record prior knowledge or tentative thinking.",
+      "Read, view, or listen to several sources and record relevant information by question.",
+      "Compare what sources agree on, disagree on, or leave unanswered.",
+      "Write a synthesis and generate the next questions worth investigating."
+    ],
+    "example": "Groups investigating simple machines use three sources to answer questions about force, distance, and everyday examples, then summarize where the sources agree and what they still need to investigate.",
+    "teacherTip": "The final synthesis row matters more than filling every box. Leave blanks when a source does not answer a question.",
+    "resources": [
+      {
+        "label": "Inquiry Chart (I-Chart)",
+        "file": "pdfs/inquiry-problem-solving/inquiry-chart.pdf"
+      }
+    ],
+    "related": [
+      "inquiry-based-learning",
+      "reading-guides"
+    ],
+    "sourceNote": "Reading Rockets describes I-Charts as tools for generating meaningful questions, organizing information from multiple sources, integrating prior knowledge, and synthesizing findings."
+  },
+  {
+    "id": "exit-tickets",
+    "name": "Exit Tickets",
+    "aliases": [
+      "Exit Slip",
+      "Exit Task"
+    ],
+    "category": "Assessment-for-Learning Routines",
+    "type": "Formative Learning Routine",
+    "time": "2-5 min",
+    "group": "Individual",
+    "preview": "assets/previews/exit-tickets.svg",
+    "summary": "A brief end-of-learning response that asks every student to retrieve, explain, apply, or question something important so the next instructional move is based on evidence.",
+    "useWhen": [
+      "You need a quick whole-class snapshot before the next lesson",
+      "Students should retrieve or synthesize rather than simply say whether they understand",
+      "You want each learner - not just volunteers - to leave evidence of thinking"
+    ],
+    "avoidWhen": [
+      "The prompt is so broad that answers will not inform any decision",
+      "You collect responses but never use or respond to them",
+      "The task needs extended explanation or performance"
+    ],
+    "steps": [
+      "Choose one small piece of evidence you genuinely want before students leave.",
+      "Use a prompt that requires thinking: explain, apply, compare, draw, solve, or identify a remaining question.",
+      "Students respond independently in a few minutes.",
+      "Scan responses for patterns rather than grading every detail.",
+      "Respond next time: reteach, group, extend, or explicitly address common questions."
+    ],
+    "example": "After a lesson on proportional relationships, students solve one unfamiliar ratio situation and add one sentence explaining how they knew the relationship was proportional. The teacher sorts the slips into secure, partial, and misconception piles for the next day.",
+    "teacherTip": "An exit ticket is only formative if somebody does something with the evidence. Design the prompt around a decision you may actually make.",
+    "resources": [
+      {
+        "label": "Exit Tickets - 3 Per Page",
+        "file": "pdfs/assessment-for-learning/exit-tickets-3up.pdf"
+      }
+    ],
+    "related": [
+      "hinge-questions",
+      "retrieval-practice"
+    ],
+    "sourceNote": "Cornell Center for Teaching Innovation recommends exit slips/minute papers as brief checks that can reveal what students retained or still find unclear."
+  },
+  {
+    "id": "peer-feedback-protocols",
+    "name": "Peer Feedback Protocols",
+    "aliases": [
+      "Ladder of Feedback",
+      "Peer Critique",
+      "Praise Question Suggestion"
+    ],
+    "category": "Assessment-for-Learning Routines",
+    "type": "Feedback Routine Family",
+    "time": "8-20 min",
+    "group": "Pairs or small groups",
+    "preview": "assets/previews/peer-feedback-protocols.svg",
+    "summary": "Structured peer-response routines that help students understand another person’s work, identify strengths, ask useful questions, and offer specific next steps instead of giving vague praise or grades.",
+    "useWhen": [
+      "Students have a draft, solution, performance, design, or explanation worth improving",
+      "You want feedback to become part of learning rather than an after-the-fact judgment",
+      "Students need help making comments specific and respectful"
+    ],
+    "avoidWhen": [
+      "Students have not been shown what quality looks like",
+      "The work is personally sensitive or public feedback would be unsafe",
+      "Peers are being asked to assign grades rather than help improve the work"
+    ],
+    "steps": [
+      "Clarify the goal and success criteria before feedback begins.",
+      "Model the difference between a vague comment and evidence-based feedback.",
+      "Use a protocol such as Clarify -> Value -> Question -> Suggest, or Praise -> Question -> Suggest.",
+      "The receiver listens, asks clarifying questions, and chooses a next step.",
+      "Build in actual revision time so feedback has a purpose."
+    ],
+    "example": "Pairs exchange explanations of a science phenomenon. Each partner first identifies the claim they think the writer is making, then names one strong evidence link, asks one question about an unclear causal step, and suggests one specific revision.",
+    "teacherTip": "Feedback quality improves when students must point to something in the work. Require comments to name the evidence, criterion, sentence, step, or feature they are responding to.",
+    "resources": [
+      {
+        "label": "Peer Feedback Ladder",
+        "file": "pdfs/assessment-for-learning/peer-feedback-ladder.pdf"
+      },
+      {
+        "label": "Praise - Question - Suggest",
+        "file": "pdfs/assessment-for-learning/praise-question-suggest.pdf"
+      }
+    ],
+    "related": [
+      "rubric-analysis",
+      "writing-conferences"
+    ],
+    "sourceNote": "Project Zero’s Ladder of Feedback and common peer-critique protocols structure feedback so learners first understand and value work before questioning and suggesting changes."
+  },
+  {
+    "id": "quick-response-polling",
+    "name": "Quick Response / Polling Strategies",
+    "aliases": [
+      "Polling",
+      "Concept Polling",
+      "Thumb-O-Meter",
+      "Sit Kneel Stand",
+      "Red Light Yellow Light"
+    ],
+    "category": "Assessment-for-Learning Routines",
+    "type": "Formative Response Family",
+    "time": "1-5 min",
+    "group": "Whole class",
+    "preview": "assets/previews/quick-response-polling.svg",
+    "summary": "A family of simultaneous-response routines that makes the thinking of the whole class visible quickly through cards, fingers, movement, mini-whiteboards, or digital polls.",
+    "useWhen": [
+      "You need information from everyone at once",
+      "A prediction, misconception, opinion, or concept choice can be expressed briefly",
+      "You want to trigger peer reasoning before revealing an answer"
+    ],
+    "avoidWhen": [
+      "Only speed matters and students need time for deeper reasoning",
+      "The response could expose sensitive personal information",
+      "You plan to treat the majority answer as proof that every learner understands"
+    ],
+    "steps": [
+      "Pose a clear question and give silent think time.",
+      "Have all students commit to a response before seeing others.",
+      "Scan or display the distribution.",
+      "If useful, have students explain reasoning to a partner and respond again.",
+      "Use the pattern to decide whether to clarify, extend, regroup, or move on."
+    ],
+    "example": "Before simplifying an algebraic expression, every student holds up A-D. The responses split between two options, so students explain their reasoning to a neighbor and vote again before the teacher debriefs the misconception.",
+    "teacherTip": "Simultaneous response is the important feature. Hands-up questioning samples volunteers; polling gives you evidence about the whole room.",
+    "resources": [
+      {
+        "label": "A / B / C / D Response Cards",
+        "file": "pdfs/assessment-for-learning/abcd-response-cards.pdf"
+      }
+    ],
+    "related": [
+      "hinge-questions",
+      "peer-instruction"
+    ],
+    "sourceNote": "Cornell describes classroom polling as an active-learning practice for predictions, misconceptions, problem solving, discussion, and checking whether students are ready to move on."
+  },
+  {
+    "id": "hinge-questions",
+    "name": "Hinge Questions",
+    "aliases": [
+      "Hinge-Point Questions"
+    ],
+    "category": "Assessment-for-Learning Routines",
+    "type": "Diagnostic Formative Routine",
+    "time": "2-5 min",
+    "group": "Whole class",
+    "preview": "assets/previews/hinge-questions.svg",
+    "summary": "A carefully designed diagnostic question asked at a critical transition point. Every student responds quickly, and the response pattern determines whether the class moves forward, revisits the idea, or receives targeted support.",
+    "useWhen": [
+      "The next part of learning depends on one essential idea",
+      "You know common misconceptions that can become meaningful distractors",
+      "You can collect a response from every student quickly"
+    ],
+    "avoidWhen": [
+      "A simple recall question would not reveal the reasoning you need",
+      "You cannot act differently based on the results",
+      "Only a few volunteers will answer"
+    ],
+    "steps": [
+      "Identify the concept students must understand before moving on.",
+      "Design a question whose options reveal distinct lines of reasoning or misconceptions.",
+      "Give enough think time but keep the check brief.",
+      "Collect every response simultaneously.",
+      "Interpret the pattern and execute the planned branch: move on, reteach/reframe, or use targeted grouping/discussion."
+    ],
+    "example": "Before moving from equivalent fractions to fraction addition, students choose which visual model represents 3/4 and explain their choice on a mini-whiteboard. Different distractors reveal denominator confusion, part-whole confusion, or secure understanding.",
+    "teacherTip": "The best wrong answers are diagnostic. Build distractors from mistakes students actually make, not random alternatives.",
+    "resources": [
+      {
+        "label": "Hinge Question Planner",
+        "file": "pdfs/assessment-for-learning/hinge-question-planner.pdf"
+      },
+      {
+        "label": "A / B / C / D Response Cards",
+        "file": "pdfs/assessment-for-learning/abcd-response-cards.pdf"
+      }
+    ],
+    "related": [
+      "quick-response-polling",
+      "peer-instruction"
+    ],
+    "sourceNote": "Dylan Wiliam describes hinge questions as rapid, whole-class diagnostic questions used at a point where the teacher must decide whether to move forward or go back."
+  },
+  {
+    "id": "rubric-analysis",
+    "name": "Rubric Analysis",
+    "aliases": [
+      "Rubric Deconstruction",
+      "Unpacking a Rubric"
+    ],
+    "category": "Assessment-for-Learning Routines",
+    "type": "Success-Criteria Routine",
+    "time": "10-20 min",
+    "group": "Pairs, groups, or whole class",
+    "preview": "assets/previews/rubric-analysis.svg",
+    "summary": "Students unpack a rubric or set of criteria into understandable language, identify what evidence would demonstrate quality, and use examples to make the criteria actionable.",
+    "useWhen": [
+      "Students will use a rubric for a substantial task",
+      "Rubric language is abstract or teacher-centered",
+      "You want students to self-monitor quality before submission"
+    ],
+    "avoidWhen": [
+      "The rubric is being introduced only after the work is complete",
+      "Students are asked merely to copy criteria into simpler words without examining examples",
+      "The task is too small to justify a formal rubric"
+    ],
+    "steps": [
+      "Select one or two criteria at a time.",
+      "Have students paraphrase what each criterion requires.",
+      "Examine contrasting work samples or imagined examples and identify evidence of the criterion.",
+      "Generate questions students can ask themselves while working.",
+      "Use the unpacked criteria during drafting, peer feedback, and self-checking."
+    ],
+    "example": "Before a historical argument, groups unpack “uses evidence effectively.” They decide that quality means selecting relevant evidence, explaining how it supports the claim, and addressing conflicting evidence, then annotate sample paragraphs to test their interpretation.",
+    "teacherTip": "Rubric analysis is not about making students memorize scoring language. It is about turning criteria into decisions they can make while working.",
+    "resources": [
+      {
+        "label": "Rubric Analysis Sheet",
+        "file": "pdfs/assessment-for-learning/rubric-analysis.pdf"
+      }
+    ],
+    "related": [
+      "peer-feedback-protocols",
+      "writing-conferences"
+    ],
+    "sourceNote": "Rubrics can support formative learning when students understand criteria and use them to interpret evidence in their own and peers’ work."
+  },
+  {
+    "id": "application-cards",
+    "name": "Application Cards",
+    "aliases": [],
+    "category": "Assessment-for-Learning Routines",
+    "type": "Transfer Check",
+    "time": "3-8 min",
+    "group": "Individual or pairs",
+    "preview": "assets/previews/application-cards.svg",
+    "summary": "A brief transfer task in which students generate or analyze a new use of a concept, principle, rule, or procedure rather than repeating the example used in instruction.",
+    "useWhen": [
+      "You want evidence that students can transfer an idea",
+      "The concept has meaningful real-world or cross-context applications",
+      "A quick written application can expose superficial understanding"
+    ],
+    "avoidWhen": [
+      "Students are still trying to understand the basic definition",
+      "The “new” situation is essentially identical to the taught example",
+      "The concept cannot reasonably be applied without more background knowledge"
+    ],
+    "steps": [
+      "Name the concept or principle students are applying.",
+      "Give a genuinely new situation, or ask students to generate one.",
+      "Require a brief explanation of why the concept fits.",
+      "Compare applications and discuss borderline or incorrect cases.",
+      "Use the responses to decide whether students are ready for more independent transfer."
+    ],
+    "example": "After learning about density, students identify two situations outside the lab where density matters and explain one: why oil separates from water, why some objects float, or how hot-air balloons rise.",
+    "teacherTip": "Require the “because.” A named example is weak evidence of transfer unless the student can explain the connection.",
+    "resources": [
+      {
+        "label": "Application Cards",
+        "file": "pdfs/assessment-for-learning/application-cards.pdf"
+      }
+    ],
+    "related": [
+      "concrete-examples",
+      "exit-tickets"
+    ],
+    "sourceNote": "Carnegie Mellon’s Classroom Assessment Techniques include Application Cards as a way to ask students to apply a studied principle to new situations or generate relevant examples."
+  },
+  {
+    "id": "directed-paraphrasing",
+    "name": "Directed Paraphrasing",
+    "aliases": [],
+    "category": "Assessment-for-Learning Routines",
+    "type": "Comprehension / Transfer Routine",
+    "time": "5-10 min",
+    "group": "Individual or pairs",
+    "preview": "assets/previews/directed-paraphrasing.svg",
+    "summary": "Students explain an important idea in their own words for a particular real-world audience, forcing them to preserve meaning while changing vocabulary, detail, and emphasis.",
+    "useWhen": [
+      "You want to check conceptual understanding rather than memorized wording",
+      "Students need practice communicating disciplinary ideas to different audiences",
+      "The audience change makes purpose and precision matter"
+    ],
+    "avoidWhen": [
+      "Technical wording must remain exact, such as a formal definition being learned verbatim",
+      "Students do not yet understand the concept well enough to paraphrase it accurately",
+      "The audience is so vague that it does not change the communication task"
+    ],
+    "steps": [
+      "Choose an important concept students have studied.",
+      "Name a realistic audience and purpose.",
+      "Students identify what the audience needs to know and what language may require explanation.",
+      "Students paraphrase without consulting source wording at first.",
+      "Compare versions for accuracy, clarity, and appropriate detail."
+    ],
+    "example": "Students explain natural selection to a younger sibling who thinks individual animals “try” to evolve. Their paraphrase must preserve variation, survival/reproduction, and population change while avoiding unnecessary jargon.",
+    "teacherTip": "Changing the audience is what makes this more than summarizing. A city councillor, younger student, patient, customer, or teammate needs a different explanation.",
+    "resources": [
+      {
+        "label": "Directed Paraphrasing",
+        "file": "pdfs/assessment-for-learning/directed-paraphrasing.pdf"
+      }
+    ],
+    "related": [
+      "one-minute-elevator-pitch",
+      "elaboration"
+    ],
+    "sourceNote": "Carnegie Mellon identifies Directed Paraphrasing as a Classroom Assessment Technique in which students explain a studied idea in their own words to a specified audience."
+  },
+  {
+    "id": "empty-outline",
+    "name": "Empty Outline",
+    "aliases": [],
+    "category": "Assessment-for-Learning Routines",
+    "type": "Retrieval / Organization Routine",
+    "time": "5-10 min",
+    "group": "Individual, then pairs",
+    "preview": "assets/previews/empty-outline.svg",
+    "summary": "Students reconstruct the structure of a lesson, reading, process, or argument from a mostly blank outline, revealing what relationships and organization they can retrieve.",
+    "useWhen": [
+      "The organization of ideas matters as much as individual facts",
+      "You want a low-stakes retrieval check",
+      "Students can compare and correct after attempting the structure independently"
+    ],
+    "avoidWhen": [
+      "The source has no meaningful hierarchy or sequence",
+      "Students are seeing the outline while learning and merely copying it",
+      "The task becomes a memory test for arbitrary headings rather than understanding"
+    ],
+    "steps": [
+      "Provide only the main skeleton or headings - or no headings at all for advanced learners.",
+      "Students reconstruct key points from memory.",
+      "Pairs compare structures and explain differences.",
+      "Students check against notes or source material and correct in a different color.",
+      "Discuss which relationships were hardest to retrieve and why."
+    ],
+    "example": "After a lesson on cell division, students reconstruct the major stages and the important event in each stage, then compare with a partner before checking the source diagram.",
+    "teacherTip": "The correction phase matters. Retrieval plus feedback is more useful than leaving students with an unverified reconstruction.",
+    "resources": [
+      {
+        "label": "Empty Outline",
+        "file": "pdfs/assessment-for-learning/empty-outline.pdf"
+      }
+    ],
+    "related": [
+      "retrieval-practice",
+      "take-note"
+    ],
+    "sourceNote": "Empty Outline is used in active-learning and classroom-assessment practice as a brief way to reveal whether students can reconstruct the organization of important content."
+  },
+  {
+    "id": "one-minute-elevator-pitch",
+    "name": "One-Minute Elevator Pitch",
+    "aliases": [
+      "Elevator Pitch"
+    ],
+    "category": "Assessment-for-Learning Routines",
+    "type": "Synthesis Routine",
+    "time": "2-5 min",
+    "group": "Individual, pairs, or small groups",
+    "preview": "assets/previews/one-minute-elevator-pitch.svg",
+    "summary": "A short oral synthesis in which students explain the essential idea, evidence, and significance of a topic clearly enough for a listener to understand in roughly a minute.",
+    "useWhen": [
+      "Students need to distinguish the essential from the merely interesting",
+      "You want oral rehearsal before longer writing or presentation",
+      "A concise explanation can reveal whether ideas are connected"
+    ],
+    "avoidWhen": [
+      "The topic cannot be responsibly compressed without major distortion",
+      "Students need exploratory talk rather than a polished synthesis",
+      "Speed or performance anxiety would overshadow the learning goal"
+    ],
+    "steps": [
+      "Identify the audience and the one thing they should understand.",
+      "Select the key idea and one strong example or piece of evidence.",
+      "Explain why the idea matters or what it changes.",
+      "Rehearse with a partner and listen for missing connections.",
+      "Deliver again more clearly, not simply faster."
+    ],
+    "example": "Students have one minute to explain to a school trustee why proportional reasoning matters outside math class, using one concrete example and one sentence about transfer to later mathematics.",
+    "teacherTip": "Do not reward speed. A calm 45-second explanation with a coherent through-line is better than a rushed minute of disconnected facts.",
+    "resources": [
+      {
+        "label": "One-Minute Elevator Pitch",
+        "file": "pdfs/assessment-for-learning/one-minute-elevator-pitch.pdf"
+      }
+    ],
+    "related": [
+      "directed-paraphrasing",
+      "headlines"
+    ],
+    "sourceNote": "Short synthesis activities such as minute papers and elevator pitches are widely used in active-learning practice to make students select and communicate central ideas."
+  },
+  {
+    "id": "catch-and-release",
+    "name": "Catch and Release",
+    "aliases": [],
+    "category": "Assessment-for-Learning Routines",
+    "type": "Facilitation / Formative Move",
+    "time": "2-10 min",
+    "group": "Whole class during active work",
+    "preview": "assets/previews/catch-and-release.svg",
+    "summary": "A brief whole-class regroup during independent or collaborative work: the teacher “catches” everyone to surface a useful pattern, clarify a misconception, or model a next step, then quickly releases students back to the task.",
+    "useWhen": [
+      "Several students are hitting the same productive question or misconception",
+      "A short model or clarification will help without ending the active task",
+      "You want to share strong student thinking while it is still useful"
+    ],
+    "avoidWhen": [
+      "Only one student needs help",
+      "The interruption will break valuable concentration without a clear payoff",
+      "The catch turns into a long lecture that replaces the work students were doing"
+    ],
+    "steps": [
+      "Monitor students while they work and identify a pattern worth addressing.",
+      "Signal a brief stop and make the reason explicit.",
+      "Share one clarification, example, question, or student approach.",
+      "Check that students know what to do next.",
+      "Release them immediately back to the task and continue monitoring."
+    ],
+    "example": "During a geometry investigation, the teacher notices several groups measuring the same angle twice. She pauses the class for ninety seconds, displays one group’s efficient labeling system, asks what information it preserves, then sends everyone back to work.",
+    "teacherTip": "Use it sparingly. The power comes from being brief, timely, and directly connected to work students are already doing.",
+    "resources": [],
+    "related": [
+      "hinge-questions",
+      "inquiry-based-learning"
+    ],
+    "sourceNote": "EL Education includes Catch and Release among classroom protocols for briefly regrouping learners during active work before returning them to the task."
+  },
+  {
+    "id": "retrieval-practice",
+    "name": "Retrieval Practice",
+    "aliases": [
+      "Practice Testing",
+      "Brain Dump"
+    ],
+    "category": "Learning & Memory",
+    "type": "Learning Strategy",
+    "time": "3-15 min",
+    "group": "Individual, pairs, or whole class",
+    "preview": "assets/previews/retrieval-practice.svg",
+    "summary": "Students deliberately bring information to mind without looking at the source, then check and correct. The act of retrieval both reveals what is available and strengthens later access to it.",
+    "useWhen": [
+      "Important knowledge should remain accessible later",
+      "Students have already encountered and understood the material",
+      "You can provide feedback after retrieval"
+    ],
+    "avoidWhen": [
+      "The material has never been taught or understood",
+      "Students are simply rereading answers while “retrieving”",
+      "Errors will go unchecked"
+    ],
+    "steps": [
+      "Close or cover the source.",
+      "Use a prompt: write, sketch, solve, explain, list, label, or answer from memory.",
+      "Commit to an answer before checking.",
+      "Compare with a trustworthy source or receive feedback.",
+      "Correct errors and schedule another retrieval after a delay."
+    ],
+    "example": "At the start of class, students draw and label the water cycle from memory. They then compare with a reference diagram, add missing processes in another color, and repeat the retrieval two days later.",
+    "teacherTip": "Make retrieval low stakes often enough that students are willing to expose gaps. The goal is learning, not catching them out.",
+    "resources": [
+      {
+        "label": "Retrieval Practice - Brain Dump & Check",
+        "file": "pdfs/learning-memory/retrieval-practice.pdf"
+      }
+    ],
+    "related": [
+      "spaced-practice",
+      "empty-outline"
+    ],
+    "sourceNote": "The Learning Scientists describe retrieval practice as bringing information to mind and identify it, along with spacing, as one of the most strongly supported learning strategies."
+  },
+  {
+    "id": "spaced-practice",
+    "name": "Spaced Practice",
+    "aliases": [
+      "Spacing",
+      "Distributed Practice"
+    ],
+    "category": "Learning & Memory",
+    "type": "Learning Strategy",
+    "time": "Across days or weeks",
+    "group": "Individual or class-wide",
+    "preview": "assets/previews/spaced-practice.svg",
+    "summary": "Learning is revisited across separated sessions instead of being concentrated into one long block. Each revisit should involve meaningful processing such as retrieval, explanation, or application.",
+    "useWhen": [
+      "Knowledge or skills must be retained beyond tomorrow",
+      "A unit allows cumulative review over time",
+      "Students tend to cram or forget earlier material"
+    ],
+    "avoidWhen": [
+      "The content is a one-time logistical instruction",
+      "Spacing means merely delaying practice without revisiting",
+      "Students need immediate concentrated practice to establish a brand-new physical or procedural skill before later spacing"
+    ],
+    "steps": [
+      "Identify learning that should still be available weeks or months later.",
+      "Plan short revisits at increasing or varied intervals.",
+      "Include retrieval rather than only rereading.",
+      "Mix old material with current learning where appropriate.",
+      "Use later performance to adjust how frequently concepts return."
+    ],
+    "example": "A math class spends five minutes twice a week retrieving fraction, percent, and proportional-reasoning ideas from earlier units while current algebra learning continues.",
+    "teacherTip": "Spacing is about when learning returns, not what students do during the revisit. Pair it with retrieval, mixed practice, explanation, or application.",
+    "resources": [
+      {
+        "label": "Spaced Practice Planner",
+        "file": "pdfs/learning-memory/spaced-practice.pdf"
+      }
+    ],
+    "related": [
+      "retrieval-practice",
+      "interleaving"
+    ],
+    "sourceNote": "The Learning Scientists summarize spacing as distributing study over time; the What Works Clearinghouse also recommends spacing learning over time."
+  },
+  {
+    "id": "interleaving",
+    "name": "Interleaving",
+    "aliases": [
+      "Mixed Practice"
+    ],
+    "category": "Learning & Memory",
+    "type": "Learning Strategy",
+    "time": "10-30 min or recurring",
+    "group": "Individual or pairs",
+    "preview": "assets/previews/interleaving.svg",
+    "summary": "Related problem types, examples, or concepts are mixed so students must decide what kind of situation they are facing and select an appropriate response rather than repeat one method mechanically.",
+    "useWhen": [
+      "Students need to discriminate among similar concepts or problem types",
+      "Practice has become predictable because every item uses the same method",
+      "Flexible transfer matters"
+    ],
+    "avoidWhen": [
+      "Students are encountering a difficult procedure for the first time and need a small amount of initial focused practice",
+      "The mixed items are unrelated, creating random switching rather than useful discrimination",
+      "Students are not asked to identify why a method fits"
+    ],
+    "steps": [
+      "Choose related types students need to distinguish.",
+      "Mix them intentionally rather than blocking all of one type together.",
+      "Ask students to identify cues that signal which strategy or concept applies.",
+      "Have students explain or compare methods, not just answer.",
+      "Return to the mix over time."
+    ],
+    "example": "Instead of completing twenty equations of one form, students receive a mixed set requiring distribution, combining like terms, solving, or recognizing an identity. Before solving, they name the clue that tells them what move is appropriate.",
+    "teacherTip": "Interleaving often feels harder because the student cannot coast on the previous method. That desirable difficulty is part of the point.",
+    "resources": [
+      {
+        "label": "Interleaving Planner",
+        "file": "pdfs/learning-memory/interleaving.pdf"
+      }
+    ],
+    "related": [
+      "spaced-practice",
+      "worked-examples"
+    ],
+    "sourceNote": "The Learning Scientists describe interleaving as switching among related ideas or problem types so learners practice distinguishing which approach applies."
+  },
+  {
+    "id": "elaboration",
+    "name": "Elaboration",
+    "aliases": [
+      "Elaborative Interrogation"
+    ],
+    "category": "Learning & Memory",
+    "type": "Learning Strategy",
+    "time": "5-20 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/elaboration.svg",
+    "summary": "Students enrich an idea by explaining how and why it works, connecting it to prior knowledge, comparing it with related ideas, and generating meaningful details rather than merely repeating a definition.",
+    "useWhen": [
+      "Students know basic facts but need deeper connections",
+      "A concept has mechanisms, causes, relationships, or applications worth explaining",
+      "You want students to connect new knowledge with what they already know"
+    ],
+    "avoidWhen": [
+      "Students lack enough accurate background knowledge to elaborate safely",
+      "The added details are decorative rather than connected to meaning",
+      "Students mistake saying more words for explaining more deeply"
+    ],
+    "steps": [
+      "Start with one important idea.",
+      "Ask how and why questions that require explanation.",
+      "Connect the idea to prior knowledge, examples, experiences, or related concepts.",
+      "Compare similarities and differences with another idea.",
+      "Check elaborations for accuracy and revise weak connections."
+    ],
+    "example": "While learning plate tectonics, students explain why plates move, connect mantle convection to prior learning about heat transfer, and compare convergent and divergent boundaries using examples.",
+    "teacherTip": "Elaboration must stay accurate. Encourage students to verify explanations rather than confidently building on a misconception.",
+    "resources": [
+      {
+        "label": "Elaboration Prompts",
+        "file": "pdfs/learning-memory/elaboration.pdf"
+      }
+    ],
+    "related": [
+      "concrete-examples",
+      "dual-coding"
+    ],
+    "sourceNote": "The Learning Scientists describe elaboration, especially elaborative interrogation, as asking how and why and connecting new ideas to existing knowledge."
+  },
+  {
+    "id": "dual-coding",
+    "name": "Dual Coding",
+    "aliases": [],
+    "category": "Learning & Memory",
+    "type": "Learning Strategy",
+    "time": "5-20 min",
+    "group": "Individual, pairs, or whole class",
+    "preview": "assets/previews/dual-coding.svg",
+    "summary": "Students represent meaningful information with both words and visuals, then explicitly connect the two representations so each helps explain the other.",
+    "useWhen": [
+      "Relationships, structures, processes, or spatial ideas benefit from visualization",
+      "Students can create or interpret a meaningful diagram rather than a decorative picture",
+      "You want another route for retrieval and explanation"
+    ],
+    "avoidWhen": [
+      "The visual is unrelated decoration",
+      "The diagram adds so much detail that it increases confusion",
+      "Students assume every concept must be turned into an elaborate drawing"
+    ],
+    "steps": [
+      "Identify the important verbal information.",
+      "Choose or create a visual representation that carries meaning: diagram, timeline, sketch, graph, model, or organizer.",
+      "Compare what each representation communicates.",
+      "Add labels or explanation only where they strengthen the connection.",
+      "Retrieve in both directions: explain the visual in words and recreate the visual from words."
+    ],
+    "example": "Students learning electric circuits write a short explanation of series and parallel circuits beside their own circuit diagrams, then cover the words and use the diagrams to reconstruct the explanation.",
+    "teacherTip": "“More pictures” is not dual coding. The visual should represent the content, not compete with it.",
+    "resources": [
+      {
+        "label": "Dual Coding - Words + Visual",
+        "file": "pdfs/learning-memory/dual-coding.pdf"
+      }
+    ],
+    "related": [
+      "mind-map",
+      "annotated-diagrams"
+    ],
+    "sourceNote": "The Learning Scientists define dual coding as combining verbal and visual representations; the What Works Clearinghouse also recommends combining graphics with verbal descriptions."
+  },
+  {
+    "id": "concrete-examples",
+    "name": "Concrete Examples",
+    "aliases": [],
+    "category": "Learning & Memory",
+    "type": "Learning Strategy",
+    "time": "5-15 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/concrete-examples.svg",
+    "summary": "Students use several specific instances to understand an abstract idea, then compare them to identify the underlying feature that makes each example fit.",
+    "useWhen": [
+      "An abstract concept is hard to grasp from a definition alone",
+      "Students need to distinguish surface details from the deeper structure",
+      "You can provide varied examples and, ideally, non-examples"
+    ],
+    "avoidWhen": [
+      "One memorable example may accidentally become the definition in students’ minds",
+      "Examples are inaccurate or share irrelevant surface features",
+      "Students never articulate the abstract principle that connects the examples"
+    ],
+    "steps": [
+      "State or encounter the abstract idea.",
+      "Generate several varied examples.",
+      "For each example, explain exactly how it illustrates the concept.",
+      "Compare the examples and separate surface differences from shared underlying features.",
+      "Test with a new example or non-example."
+    ],
+    "example": "To understand scarcity, students compare limited concert tickets, water during drought, available time before a deadline, and a rare material. They identify what all examples share rather than remembering scarcity as “something about tickets.”",
+    "teacherTip": "Use more than one example. Variety helps students see the underlying concept instead of overfitting to surface details.",
+    "resources": [
+      {
+        "label": "Concrete Examples Organizer",
+        "file": "pdfs/learning-memory/concrete-examples.pdf"
+      }
+    ],
+    "related": [
+      "concept-attainment",
+      "elaboration"
+    ],
+    "sourceNote": "The Learning Scientists recommend concrete examples for making abstract ideas easier to understand, while cautioning that learners must connect multiple examples to the underlying concept."
+  },
+  {
+    "id": "mnemonics",
+    "name": "Mnemonics",
+    "aliases": [
+      "Mnemonic Devices",
+      "Acronyms",
+      "Acrostics"
+    ],
+    "category": "Learning & Memory",
+    "type": "Memory Strategy",
+    "time": "3-15 min",
+    "group": "Individual or pairs",
+    "preview": "assets/previews/mnemonics.svg",
+    "summary": "A deliberately memorable cue - such as an acronym, acrostic, rhyme, image, association, or location - used to support retrieval of information that students already understand.",
+    "useWhen": [
+      "A set, sequence, vocabulary list, or convention needs efficient recall",
+      "The mnemonic can be linked unambiguously to meaningful content",
+      "Students will later practise retrieving the actual information"
+    ],
+    "avoidWhen": [
+      "The mnemonic replaces conceptual understanding",
+      "The cue is harder to remember than the information",
+      "Students need flexible application rather than recall of an arbitrary list"
+    ],
+    "steps": [
+      "Clarify what must be remembered and why.",
+      "Choose a cue type that fits the information.",
+      "Build a vivid but accurate association.",
+      "Explain how every part of the cue maps to the target information.",
+      "Practise retrieving without looking at the cue, then apply the information in context."
+    ],
+    "example": "Students create an acrostic for the order of metric prefixes, then practise converting measurements so the memory cue supports actual use rather than remaining an isolated chant.",
+    "teacherTip": "Mnemonics are retrieval supports, not substitutes for understanding. Always follow the cue with use, explanation, or application.",
+    "resources": [
+      {
+        "label": "Mnemonic Builder",
+        "file": "pdfs/learning-memory/mnemonic-builder.pdf"
+      }
+    ],
+    "related": [
+      "retrieval-practice",
+      "strategic-learning"
+    ],
+    "sourceNote": "Beyond Monet includes Mnemonics in teachers’ instructional repertoires; mnemonic strategies are widely used as intentional cues for later recall."
+  },
+  {
+    "id": "worked-examples",
+    "name": "Worked Examples",
+    "aliases": [
+      "Faded Worked Examples"
+    ],
+    "category": "Learning & Memory",
+    "type": "Instructional Learning Strategy",
+    "time": "10-30 min",
+    "group": "Individual, pairs, or whole class",
+    "preview": "assets/previews/worked-examples.svg",
+    "summary": "Students study a complete, correctly solved model with attention to why each step works, then support is gradually faded until they can solve and explain a similar task independently.",
+    "useWhen": [
+      "Students are novices learning a complex procedure or problem type",
+      "The expert thinking or intermediate steps are otherwise hidden",
+      "You can pair examples with explanation and progressively independent practice"
+    ],
+    "avoidWhen": [
+      "Students already have high proficiency and examples are becoming redundant",
+      "Students copy steps without explaining why they work",
+      "The example contains unnecessary detail that obscures the core method"
+    ],
+    "steps": [
+      "Present a clear worked example with all essential steps visible.",
+      "Direct attention to why each step is taken and how it connects to the goal.",
+      "Ask students to explain or annotate key decisions.",
+      "Use a faded example with selected steps removed.",
+      "Move to independent problems and compare strategies or errors."
+    ],
+    "example": "When introducing solving two-step equations, students first annotate a fully worked solution, then complete a second example with the middle steps missing, then solve a new equation without the model.",
+    "teacherTip": "Fade support as expertise grows. A worked example that helps a novice can become unnecessary once the student can reliably generate the process.",
+    "resources": [
+      {
+        "label": "Worked Examples - Model, Fade, Solve",
+        "file": "pdfs/learning-memory/worked-examples.pdf"
+      }
+    ],
+    "related": [
+      "direct-instruction",
+      "interleaving"
+    ],
+    "sourceNote": "NSW Education’s cognitive-load guidance recommends worked examples for novices and gradual increases in independent problem solving as proficiency develops."
+  },
+  {
+    "id": "strategic-learning",
+    "name": "Strategic Learning",
+    "aliases": [
+      "Metacognitive Strategy Use"
+    ],
+    "category": "Learning & Memory",
+    "type": "Metacognitive Learning Strategy",
+    "time": "10-20 min plus reflection",
+    "group": "Individual or pairs",
+    "preview": "assets/previews/strategic-learning.svg",
+    "summary": "Students deliberately plan how to approach a learning task, monitor whether the chosen strategy is working, adjust when needed, and evaluate what to reuse or change next time.",
+    "useWhen": [
+      "Students face tasks where more than one learning strategy is possible",
+      "You want learners to become more independent in choosing how to learn",
+      "Reflection can be tied to a real task rather than generic study advice"
+    ],
+    "avoidWhen": [
+      "The task is so new that students have no useful strategies to choose among",
+      "Reflection becomes a compliance form disconnected from actual decisions",
+      "Students are expected to self-regulate without first seeing strategies modeled"
+    ],
+    "steps": [
+      "Clarify the task and goal.",
+      "Activate prior knowledge and select an approach.",
+      "While working, monitor understanding and progress.",
+      "If progress stalls, identify the problem and adjust strategy or seek appropriate help.",
+      "Afterward, evaluate which choices helped and name one strategy to carry forward."
+    ],
+    "example": "Before studying for a science quiz, students choose retrieval practice rather than rereading, monitor which topics they cannot explain, switch to worked examples for one difficult calculation, and reflect on which approach produced the strongest recall.",
+    "teacherTip": "Metacognition becomes useful when reflection changes a decision. Ask “What will you do differently next?” rather than stopping at “How did it go?”",
+    "resources": [
+      {
+        "label": "Strategic Learning - Plan, Monitor, Adjust, Evaluate",
+        "file": "pdfs/learning-memory/strategic-learning.pdf"
+      }
+    ],
+    "related": [
+      "retrieval-practice",
+      "worked-examples"
+    ],
+    "sourceNote": "Metacognitive strategy instruction commonly frames strategic learning around planning, monitoring, adjusting/problem solving, and evaluating one’s approach."
+  },
+  {
+    "id": "pwim",
+    "name": "Picture Word Inductive Model (PWIM)",
+    "aliases": [
+      "PWIM",
+      "Picture-Word Inductive Model"
+    ],
+    "category": "Multilingual & Language Support",
+    "type": "Language Development Strategy",
+    "time": "20-45 min",
+    "group": "Whole class or small group",
+    "preview": "assets/previews/pwim.svg",
+    "summary": "A rich image becomes a shared language field: students identify and label what they see, connect nouns with actions and details, rehearse sentences orally, and use the annotated picture to support writing.",
+    "useWhen": [
+      "Emerging language learners need visual support tied to content",
+      "A detailed image can carry important vocabulary and relationships",
+      "You want oral rehearsal to lead into sentence or paragraph writing"
+    ],
+    "avoidWhen": [
+      "The image is decorative or too simple to generate useful language",
+      "Too many labels would overload the visual",
+      "Students are ready for less scaffolded language production"
+    ],
+    "steps": [
+      "Choose a detailed image strongly connected to the content.",
+      "Invite students to identify important nouns and label them directly on the image.",
+      "Add useful verbs and details, using consistent visual coding if helpful.",
+      "Rehearse sentences orally with partners using the annotated image.",
+      "Students write from the visual, then gradually take more responsibility for choosing words and sentences."
+    ],
+    "example": "Before a Grade 7 ecosystems lesson, students label a pond image with organisms and features, add verbs such as “feeds,” “shelters,” and “decomposes,” orally describe relationships, then write a short explanation using the annotated image.",
+    "teacherTip": "Limit the labels to language students will actually use. A crowded picture becomes a word wall, not a scaffold for meaning.",
+    "resources": [
+      {
+        "label": "PWIM Companion Sheet",
+        "file": "pdfs/multilingual-language-support/pwim-companion.pdf"
+      }
+    ],
+    "related": [
+      "annotated-diagrams",
+      "academic-language-scaffolds"
+    ],
+    "sourceNote": "Colorín Colorado describes PWIM as a systematic image-based strategy for developing vocabulary, grammatical structures, oral language, and writing across content areas."
+  },
+  {
+    "id": "cognate-awareness",
+    "name": "Cognate Instruction / Cognate Awareness",
+    "aliases": [
+      "Cognates",
+      "Cognate Awareness"
+    ],
+    "category": "Multilingual & Language Support",
+    "type": "Cross-Language Vocabulary Strategy",
+    "time": "5-15 min",
+    "group": "Individual, pairs, or whole class",
+    "preview": "assets/previews/cognate-awareness.svg",
+    "summary": "Students learn to notice and verify words that share related forms and meanings across languages, using existing linguistic knowledge as a bridge to new academic vocabulary.",
+    "useWhen": [
+      "Students know languages that share useful cognates with the target language",
+      "Academic vocabulary contains recognizable cross-language roots or forms",
+      "You want students to independently notice language connections"
+    ],
+    "avoidWhen": [
+      "A language pair has few cognates and another support would be more equitable",
+      "Look-alike words are assumed to share meaning without verification",
+      "Only one classroom language is treated as valuable"
+    ],
+    "steps": [
+      "Introduce several clear cognates and notice shared and changed letters/sounds.",
+      "Discuss meaning in both languages and include false cognates as cautionary examples.",
+      "Students collect cognates from texts or content lessons.",
+      "Verify meanings using people or trustworthy references.",
+      "Encourage students to use cognate awareness independently while reading and learning vocabulary."
+    ],
+    "example": "In math, students connect English “fraction” with Spanish “fracción” and French “fraction,” then look for other related academic terms while also discussing examples where similar-looking words do not mean the same thing.",
+    "teacherTip": "Invite connections from every language represented. Cognate awareness should expand students’ linguistic resources, not turn one bilingual group into the default.",
+    "resources": [
+      {
+        "label": "Cognate Collector",
+        "file": "pdfs/multilingual-language-support/cognate-collector.pdf"
+      }
+    ],
+    "related": [
+      "multilingual-glossaries",
+      "word-hunts"
+    ],
+    "sourceNote": "Colorín Colorado describes cognates as bridges between languages and emphasizes explicitly teaching students to recognize, verify, and use them for comprehension and vocabulary."
+  },
+  {
+    "id": "multilingual-glossaries",
+    "name": "Multilingual Glossaries",
+    "aliases": [],
+    "category": "Multilingual & Language Support",
+    "type": "Language Support Tool",
+    "time": "10-20 min to build; ongoing use",
+    "group": "Individual or collaborative",
+    "preview": "assets/previews/multilingual-glossaries.svg",
+    "summary": "A student-usable glossary connects key academic terms with home-language equivalents, student-friendly meanings, visuals, examples, and sentences so vocabulary can be accessed through more than one route.",
+    "useWhen": [
+      "A small set of high-value terms is essential to the content",
+      "Students benefit from connections to languages they already know",
+      "The glossary will be actively used during reading, discussion, or writing"
+    ],
+    "avoidWhen": [
+      "It becomes a huge pre-taught vocabulary list",
+      "Translations are unverified or decontextualized",
+      "The glossary is handed out but never used in meaningful language tasks"
+    ],
+    "steps": [
+      "Select a manageable number of important words.",
+      "Add accurate home-language equivalents when appropriate and available.",
+      "Pair words with student-friendly meanings and useful visuals.",
+      "Include an example sentence or discussion prompt.",
+      "Have students add, revise, and use entries during content learning rather than treating the glossary as a static dictionary."
+    ],
+    "example": "During a geometry unit, students build a glossary for vertex, parallel, perpendicular, transformation, and congruent with home-language connections, sketches, and sentences they later use during partner explanations.",
+    "teacherTip": "Glossaries work best as living tools. Ask students to use the words in speaking and writing, not merely copy translations.",
+    "resources": [
+      {
+        "label": "Multilingual Glossary Template",
+        "file": "pdfs/multilingual-language-support/multilingual-glossary.pdf"
+      }
+    ],
+    "related": [
+      "cognate-awareness",
+      "interactive-word-wall"
+    ],
+    "sourceNote": "Colorín Colorado recommends multilingual glossaries that combine terms with students’ languages and can also include visuals, definitions, sample sentences, and discussion prompts."
+  },
+  {
+    "id": "picture-retell",
+    "name": "Picture Retell",
+    "aliases": [],
+    "category": "Multilingual & Language Support",
+    "type": "Oral Language / Comprehension Strategy",
+    "time": "15-30 min",
+    "group": "Pairs or small groups",
+    "preview": "assets/previews/picture-retell.svg",
+    "summary": "Students use a sequence of pictures as cues to retell the important events or ideas from a narrative or informational text, building oral language before moving into writing.",
+    "useWhen": [
+      "Students need support with sequence, key vocabulary, main ideas, or oral retelling",
+      "Visual cues can reduce language load without reducing the thinking goal",
+      "You want oral rehearsal to support later writing"
+    ],
+    "avoidWhen": [
+      "Pictures reveal every answer and remove the need to comprehend the text",
+      "Students are asked only to name objects rather than retell relationships or events",
+      "The visual sequence is so detailed that students simply read labels"
+    ],
+    "steps": [
+      "Choose or create 3-8 visuals for essential events or ideas.",
+      "Read or study the source and connect each visual to key language.",
+      "Students sequence the visuals if needed.",
+      "Provide a small word bank or transition phrases appropriate to learners.",
+      "Partners retell using the pictures, then use the oral rehearsal to support writing or a more independent retell."
+    ],
+    "example": "After reading about the water cycle, pairs sequence six images, orally retell the process using transition words and key vocabulary, then write the explanation without looking at the original text.",
+    "teacherTip": "Have the more supported retell come before the less supported one. The pictures are a bridge toward independent language, not the final destination.",
+    "resources": [
+      {
+        "label": "Picture Retell - 6 Frames",
+        "file": "pdfs/multilingual-language-support/picture-retell.pdf"
+      }
+    ],
+    "related": [
+      "story-sequence",
+      "pwim"
+    ],
+    "sourceNote": "Colorín Colorado describes Picture Retell as using visuals to support oral retelling, sequencing, vocabulary, main ideas, and later writing for multilingual learners and other students."
+  },
+  {
+    "id": "total-physical-response",
+    "name": "Total Physical Response (TPR)",
+    "aliases": [
+      "TPR"
+    ],
+    "category": "Multilingual & Language Support",
+    "type": "Language Learning Strategy",
+    "time": "5-20 min",
+    "group": "Whole class or small group",
+    "preview": "assets/previews/total-physical-response.svg",
+    "summary": "Students show comprehension of spoken language through meaningful physical actions or gestures before being expected to produce all of the language themselves.",
+    "useWhen": [
+      "Teaching concrete action language, directions, prepositions, body vocabulary, or routines",
+      "Beginning learners need a low-language-risk way to demonstrate comprehension",
+      "Movement can make a new word or phrase more meaningful"
+    ],
+    "avoidWhen": [
+      "The language is highly abstract and cannot be represented meaningfully through action",
+      "Students are forced into public movement that is uncomfortable or inaccessible",
+      "TPR becomes endless command-following with no progression toward broader language use"
+    ],
+    "steps": [
+      "Choose a small set of language that can be represented clearly through action.",
+      "Model the phrase and action together.",
+      "Say the phrase while students respond physically.",
+      "Vary order, objects, people, and combinations so students respond to meaning rather than memorized sequence.",
+      "Gradually invite students to give commands, describe actions, read, or write the language as appropriate."
+    ],
+    "example": "In a beginning language class, students respond to “stand beside,” “move behind,” “point above,” and “place between” using classroom objects, then take turns giving directions to partners.",
+    "teacherTip": "Offer equivalent gestures or object-based responses for students who cannot or do not want to perform a large physical action.",
+    "resources": [
+      {
+        "label": "TPR Action Cards",
+        "file": "pdfs/multilingual-language-support/tpr-action-cards.pdf"
+      }
+    ],
+    "related": [
+      "realia-manipulatives",
+      "academic-language-scaffolds"
+    ],
+    "sourceNote": "British Council describes TPR as connecting language with physical responses; current education guidance also recommends it for concrete language and beginning multilingual learners."
+  },
+  {
+    "id": "realia-manipulatives",
+    "name": "Realia & Manipulatives",
+    "aliases": [
+      "Realia",
+      "Manipulatives"
+    ],
+    "category": "Multilingual & Language Support",
+    "type": "Concrete Language Support",
+    "time": "5-30 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/realia-manipulatives.svg",
+    "summary": "Students use real objects or physical models to make vocabulary, attributes, relationships, directions, and content concepts directly observable and discussable.",
+    "useWhen": [
+      "Concrete objects can carry meaning that would otherwise require heavy verbal explanation",
+      "Students need to sort, compare, describe, sequence, measure, or manipulate",
+      "New language can be attached to a shared physical referent"
+    ],
+    "avoidWhen": [
+      "The object is entertaining but does not clarify the learning",
+      "Handling materials creates unnecessary complexity or safety concerns",
+      "Students never transition from the object to the language or abstract representation"
+    ],
+    "steps": [
+      "Choose objects that clearly embody the content or language.",
+      "Give students time to handle, notice, compare, or manipulate before requiring extensive explanation.",
+      "Attach precise vocabulary and sentence structures to what they can see and do.",
+      "Use the objects in a reasoning task: classify, measure, explain, sequence, or solve.",
+      "Gradually remove the physical support and ask students to explain or apply the idea independently."
+    ],
+    "example": "Students learning geometric solids handle prisms and pyramids, describe faces and vertices with sentence frames, sort the objects by attributes, and finally classify drawn solids without the models.",
+    "teacherTip": "Concrete does not mean intellectually easy. Use the object to reduce language ambiguity while keeping the reasoning demanding.",
+    "resources": [
+      {
+        "label": "Realia & Manipulatives Language Lab",
+        "file": "pdfs/multilingual-language-support/realia-language-lab.pdf"
+      }
+    ],
+    "related": [
+      "cognate-awareness",
+      "annotated-diagrams"
+    ],
+    "sourceNote": "Colorín Colorado includes Realia and Manipulatives among strategies that provide comprehensible, hands-on support for multilingual learners and content vocabulary."
+  },
+  {
+    "id": "dictation-reconstruction",
+    "name": "Dictation & Reconstruction Routines",
+    "aliases": [
+      "Dictation",
+      "Running Dictation",
+      "Dictogloss",
+      "Text Reconstruction"
+    ],
+    "category": "Multilingual & Language Support",
+    "type": "Language Reconstruction Routine Family",
+    "time": "15-30 min",
+    "group": "Pairs or small groups",
+    "preview": "assets/previews/dictation-reconstruction.svg",
+    "summary": "Students listen to or access a short text, capture limited notes, and collaboratively reconstruct the message, comparing language choices and structure afterward rather than simply copying a dictated passage.",
+    "useWhen": [
+      "Students need close listening plus purposeful language production",
+      "A short text contains useful vocabulary or grammatical patterns",
+      "Collaboration can make noticing and reconstruction productive"
+    ],
+    "avoidWhen": [
+      "The activity becomes a spelling-speed contest",
+      "The text is too long for meaningful reconstruction",
+      "The goal is exact transcription rather than attention to meaning and language choices"
+    ],
+    "steps": [
+      "Select a short, rich text and make the purpose clear.",
+      "First encounter: focus on overall meaning.",
+      "Second encounter: students record key words or short notes, not every word.",
+      "Pairs or groups reconstruct the text as accurately and coherently as they can.",
+      "Compare with the source, discuss differences, and revise while noticing useful language patterns."
+    ],
+    "example": "Students hear a short scientific explanation of evaporation twice, jot key terms, reconstruct the explanation with a partner, then compare their version to the original and highlight language used to express cause and change.",
+    "teacherTip": "Reconstruction should create discussion about meaning and language. If students can simply copy the text, the productive part disappears.",
+    "resources": [
+      {
+        "label": "Dictation & Reconstruction Organizer",
+        "file": "pdfs/multilingual-language-support/dictation-reconstruction.pdf"
+      }
+    ],
+    "related": [
+      "collaborative-reading-protocol",
+      "academic-language-scaffolds"
+    ],
+    "sourceNote": "Dictogloss and related reconstruction routines combine listening, note taking, collaborative language production, and comparison with a source; Colorín Colorado also includes Running Dictation in its ELL strategy library."
+  },
+  {
+    "id": "annotated-diagrams",
+    "name": "Annotated Diagrams",
+    "aliases": [],
+    "category": "Multilingual & Language Support",
+    "type": "Visual Language Support",
+    "time": "10-25 min",
+    "group": "Individual, pairs, or groups",
+    "preview": "assets/previews/annotated-diagrams.svg",
+    "summary": "Students place precise labels, functions, relationships, evidence, and short explanations directly beside the relevant parts of a diagram so disciplinary language stays anchored to what it describes.",
+    "useWhen": [
+      "A process, system, structure, or relationship has important spatial features",
+      "Students know more than they can yet express in a long paragraph",
+      "Technical vocabulary is easier to understand when attached to a visible referent"
+    ],
+    "avoidWhen": [
+      "The diagram is decorative and not part of the reasoning",
+      "Students merely copy labels from a textbook",
+      "The learning goal requires an extended argument that annotations cannot replace"
+    ],
+    "steps": [
+      "Choose or create a diagram that represents the important structure.",
+      "Identify the parts or relationships that deserve annotation.",
+      "Add precise labels and brief explanations directly beside the relevant feature.",
+      "Use arrows or callouts to make relationships explicit.",
+      "Have students orally explain the completed diagram or use it as a scaffold for writing."
+    ],
+    "example": "Students annotate a plant diagram with structures, functions, and evidence about how water moves through the system, then use the diagram to give a partner explanation before writing.",
+    "teacherTip": "Ask for more than names. “Xylem” is a label; “moves water upward from roots” turns the annotation into disciplinary meaning.",
+    "resources": [
+      {
+        "label": "Annotated Diagram Template",
+        "file": "pdfs/multilingual-language-support/annotated-diagram.pdf"
+      }
+    ],
+    "related": [
+      "dual-coding",
+      "pwim"
+    ],
+    "sourceNote": "Colorín Colorado includes Annotated Diagrams in its ELL Strategy Library as a way to connect visuals with academic language and content meaning."
+  },
+  {
+    "id": "anchor-charts",
+    "name": "Anchor Charts: Making Thinking Visible",
+    "aliases": [
+      "Anchor Charts"
+    ],
+    "category": "Multilingual & Language Support",
+    "type": "Shared Visual Language Support",
+    "time": "10-25 min to build; ongoing use",
+    "group": "Whole class; later individual use",
+    "preview": "assets/previews/anchor-charts.svg",
+    "summary": "A co-created or instruction-built classroom reference that captures important ideas, steps, examples, visuals, and language so students can independently return to shared thinking during later work.",
+    "useWhen": [
+      "Students will reuse a process, language structure, or set of criteria",
+      "The chart can be built from actual classroom thinking rather than appearing as decoration",
+      "Learners benefit from a stable visual reference while working independently"
+    ],
+    "avoidWhen": [
+      "The wall is already crowded with references students never use",
+      "The chart contains too much text to scan quickly",
+      "It is pre-made so completely that students have no connection to what it means"
+    ],
+    "steps": [
+      "Name one high-value idea, process, or language need.",
+      "Build the chart during instruction or synthesize student contributions immediately afterward.",
+      "Use concise language, examples, and purposeful visuals.",
+      "Model how students should consult it during work.",
+      "Revise, retire, or replace the chart as learning progresses."
+    ],
+    "example": "During argument writing, the class builds an anchor chart showing claim, evidence, reasoning, counterargument, and linking phrases from examples they analyze. Students refer to it during drafting and peer feedback.",
+    "teacherTip": "An anchor chart earns wall space by being used. If students never look at it, simplify it, relocate it, or retire it.",
+    "resources": [
+      {
+        "label": "Anchor Chart Builder",
+        "file": "pdfs/multilingual-language-support/anchor-chart-builder.pdf"
+      }
+    ],
+    "related": [
+      "academic-language-scaffolds",
+      "annotated-diagrams"
+    ],
+    "sourceNote": "Colorín Colorado includes Anchor Charts in its multilingual learner strategy library; effective anchor charts make shared academic thinking and language visible for later use."
+  },
+  {
+    "id": "direct-instruction",
+    "name": "Direct Instruction",
+    "aliases": [],
+    "category": "Instructional Models",
+    "type": "Instructional Model",
+    "time": "10-30 min",
+    "group": "Whole class with individual response",
+    "preview": "assets/previews/direct-instruction.svg",
+    "summary": "A clear, highly structured model that teaches a skill or concept through explicit explanation, modeling, guided practice, and checking before releasing responsibility.",
+    "useWhen": [
+      "Students are genuinely new to the skill or concept",
+      "Accuracy matters and misconceptions need to be prevented early",
+      "You need a concise teaching sequence before independent practice"
+    ],
+    "avoidWhen": [
+      "The goal is open exploration with multiple valid paths",
+      "Students already understand the basic process and need richer transfer"
+    ],
+    "steps": [
+      "Name the learning target and connect it to prior learning.",
+      "Model the skill step by step, saying what you notice and why it matters.",
+      "Move to guided practice with short checks so many students respond.",
+      "Release students to increasingly independent practice while you monitor and adjust.",
+      "Close by revisiting the target and clarifying remaining misconceptions."
+    ],
+    "example": "A teacher demonstrates how to write a proportion from a ratio table, then coaches students through two examples before students solve a short independent set.",
+    "teacherTip": "Explicit does not have to mean long. Keep the model tight and move quickly to student thinking and response.",
+    "resources": [
+      {
+        "label": "Direct Instruction Companion",
+        "file": "pdfs/instructional-models/direct-instruction.pdf"
+      }
+    ],
+    "related": [
+      "mastery-learning",
+      "demonstration-modeling",
+      "gradual-release"
+    ],
+    "sourceNote": "Synthesized from explicit-instruction literature and the larger instructional-model tradition."
+  },
+  {
+    "id": "mastery-learning",
+    "name": "Mastery Learning",
+    "aliases": [],
+    "category": "Instructional Models",
+    "type": "Instructional Model",
+    "time": "20-60 min or across several lessons",
+    "group": "Whole class with flexible regrouping",
+    "preview": "assets/previews/mastery-learning.svg",
+    "summary": "A model that teaches toward a clear target, checks understanding, reteaches as needed, and gives another chance so students move on with stronger foundations.",
+    "useWhen": [
+      "A topic is foundational for later learning",
+      "You want assessment to inform reteaching rather than end the story",
+      "Students need another route, not just another score"
+    ],
+    "avoidWhen": [
+      "Time is too limited to follow up on the evidence you gather",
+      "The task is purely exploratory and not tied to a clearly defined target"
+    ],
+    "steps": [
+      "Clarify the target and what success looks like.",
+      "Teach and provide focused practice.",
+      "Use a short check to see who is secure and who still needs support.",
+      "Reteach or provide an alternative route for students who are not yet successful.",
+      "Give another chance to demonstrate the learning."
+    ],
+    "example": "After a fractions lesson, students complete a short check. The teacher reteaches equivalent fractions with a visual model for one group and extension work for another, then both groups complete a new check.",
+    "teacherTip": "Mastery learning works best when the reassessment truly reflects the same target, not a completely different task.",
+    "resources": [
+      {
+        "label": "Mastery Learning Planner",
+        "file": "pdfs/instructional-models/mastery-learning.pdf"
+      }
+    ],
+    "related": [
+      "direct-instruction",
+      "gradual-release",
+      "hinge-questions"
+    ],
+    "sourceNote": "Synthesized from Bloom-inspired mastery-learning work and responsive classroom assessment practices."
+  },
+  {
+    "id": "concept-attainment",
+    "name": "Concept Attainment",
+    "aliases": [],
+    "category": "Instructional Models",
+    "type": "Instructional Model",
+    "time": "15-35 min",
+    "group": "Whole class, pairs, or small groups",
+    "preview": "assets/previews/concept-attainment.svg",
+    "summary": "Students infer the defining attributes of a concept by comparing yes-examples and no-examples instead of receiving the rule first.",
+    "useWhen": [
+      "You want students to notice defining attributes rather than memorize a definition",
+      "A concept can be illustrated with clear examples and non-examples",
+      "You want inference, comparison, and justification"
+    ],
+    "avoidWhen": [
+      "The concept is too vague to show with examples and non-examples",
+      "Students have too little background to discuss the examples productively"
+    ],
+    "steps": [
+      "Present yes-examples and no-examples with a clear focus statement.",
+      "Ask students to compare the sets and propose hypotheses about the rule.",
+      "Invite students to test and revise their hypotheses with more examples.",
+      "Name the concept once the key attributes are clearer.",
+      "Apply the concept in new examples or situations."
+    ],
+    "example": "In social studies, students compare examples and non-examples of apartheid before naming the concept and applying it to new cases.",
+    "teacherTip": "Good non-examples are as important as good examples. They sharpen the attributes students actually need.",
+    "resources": [
+      {
+        "label": "Concept Attainment Companion",
+        "file": "pdfs/instructional-models/concept-attainment.pdf"
+      }
+    ],
+    "related": [
+      "concept-formation",
+      "inductive-thinking",
+      "venn"
+    ],
+    "sourceNote": "Based on Bruner-style concept attainment and the treatment in Beyond Monet."
+  },
+  {
+    "id": "concept-formation",
+    "name": "Concept Formation",
+    "aliases": [],
+    "category": "Instructional Models",
+    "type": "Instructional Model",
+    "time": "20-40 min",
+    "group": "Whole class or groups",
+    "preview": "assets/previews/concept-formation.svg",
+    "summary": "Students gather, sort, label, and generalize from examples or data so a broader category or principle emerges.",
+    "useWhen": [
+      "Students need to build categories or patterns from multiple examples",
+      "You want them to create labels and generalizations, not just select from teacher-made ones"
+    ],
+    "avoidWhen": [
+      "You already need a tightly defined rule from the start",
+      "Students are only recalling a known classification"
+    ],
+    "steps": [
+      "Collect examples, observations, or pieces of information.",
+      "Sort them into meaningful groups.",
+      "Name the groups and explain why the items belong together.",
+      "Discuss patterns across groups and form larger generalizations.",
+      "Apply or test the generalization in a new case."
+    ],
+    "example": "Students sort energy sources into groups they invent, justify the labels, and then generalize about efficiency, sustainability, or cost.",
+    "teacherTip": "If every group creates a different sort, use that diversity as the lesson. Ask what each sort makes visible.",
+    "resources": [
+      {
+        "label": "Concept Formation Organizer",
+        "file": "pdfs/instructional-models/concept-formation.pdf"
+      }
+    ],
+    "related": [
+      "concept-attainment",
+      "inductive-thinking",
+      "matrix"
+    ],
+    "sourceNote": "Synthesized from concept-formation literature and the concept-building tradition described in Beyond Monet."
+  },
+  {
+    "id": "simulation",
+    "name": "Simulation",
+    "aliases": [],
+    "category": "Instructional Models",
+    "type": "Instructional Model",
+    "time": "20-60 min",
+    "group": "Pairs, groups, or whole class",
+    "preview": "assets/previews/simulation.svg",
+    "summary": "A structured imitation of a real process, system, or situation that lets students make decisions, experience constraints, and then debrief what happened.",
+    "useWhen": [
+      "Students need to see how interacting decisions affect outcomes",
+      "A process becomes clearer when students enact it rather than only read about it"
+    ],
+    "avoidWhen": [
+      "The issue is too emotionally loaded to simulate casually",
+      "There is no time to debrief and make sense of the experience"
+    ],
+    "steps": [
+      "Frame the scenario, purpose, and roles clearly.",
+      "Explain the rules, constraints, and available information.",
+      "Run the simulation and pause if students need to notice important developments.",
+      "Debrief what happened, what patterns emerged, and what surprised them.",
+      "Connect the experience back to the content or concept."
+    ],
+    "example": "Students simulate a town budget in which different groups argue for competing priorities and experience trade-offs directly.",
+    "teacherTip": "The debrief is the learning hinge. Without it, the activity can stay entertaining but conceptually shallow.",
+    "resources": [
+      {
+        "label": "Simulation Planning Sheet",
+        "file": "pdfs/instructional-models/simulation.pdf"
+      }
+    ],
+    "related": [
+      "role-play-drama",
+      "case-based-learning",
+      "problem-based-learning"
+    ],
+    "sourceNote": "Synthesized from simulation-based learning guidance and classroom discussion structures."
+  },
+  {
+    "id": "role-play-drama",
+    "name": "Role-Play / Drama",
+    "aliases": [],
+    "category": "Instructional Models",
+    "type": "Instructional Model",
+    "time": "10-40 min",
+    "group": "Pairs, small groups, or whole class",
+    "preview": "assets/previews/role-play-drama.svg",
+    "summary": "Students step into a role or scenario so they can rehearse perspective, language, decisions, and consequences in a more embodied way.",
+    "useWhen": [
+      "A perspective or conflict is central to the learning",
+      "Students need a reason to speak in role or explain an issue from the inside"
+    ],
+    "avoidWhen": [
+      "Students would be put at risk of mockery or embarrassment",
+      "The topic requires deep expertise that students do not yet have"
+    ],
+    "steps": [
+      "Set a clear purpose and give the role or scenario enough context.",
+      "Clarify what students should pay attention to while performing or observing.",
+      "Run the role-play briefly and keep the focus tight.",
+      "Pause to debrief the perspective, language, or decision making involved.",
+      "Have students reflect on how the dramatization changed their understanding."
+    ],
+    "example": "Students role-play a community meeting about a proposed pipeline and must speak from assigned stakeholder viewpoints.",
+    "teacherTip": "Role-play works better when students do not have to invent every detail on the spot. Short role cards help.",
+    "resources": [
+      {
+        "label": "Role-Play Planning Sheet",
+        "file": "pdfs/instructional-models/role-play-drama.pdf"
+      }
+    ],
+    "related": [
+      "simulation",
+      "town-hall-circle",
+      "perspective-taking"
+    ],
+    "sourceNote": "Built from classroom drama, discussion, and perspective-taking practice."
+  },
+  {
+    "id": "team-based-learning",
+    "name": "Team-Based Learning",
+    "aliases": [],
+    "category": "Instructional Models",
+    "type": "Instructional Model",
+    "time": "30-75 min",
+    "group": "Permanent teams",
+    "preview": "assets/previews/team-based-learning.svg",
+    "summary": "A model that combines preparation, individual and team readiness checks, and challenging team application tasks.",
+    "useWhen": [
+      "You want students to prepare before class or before the task",
+      "You need teams to apply ideas to a common problem and defend their decision"
+    ],
+    "avoidWhen": [
+      "Students cannot prepare in advance and no in-class support is available",
+      "The task is too simple for meaningful team decision making"
+    ],
+    "steps": [
+      "Assign preparatory work and clarify its purpose.",
+      "Use a short individual readiness check, then a team version.",
+      "Provide immediate feedback so misconceptions do not linger.",
+      "Move teams into an application task that requires a decision or recommendation.",
+      "Debrief how and why teams chose their answers."
+    ],
+    "example": "Before a biology case, students complete a brief reading. They then complete an individual readiness quiz, discuss it as a team, and apply the learning to a treatment decision.",
+    "teacherTip": "The application task should be worth discussing. If teams can finish without argument or justification, it is usually too easy.",
+    "resources": [
+      {
+        "label": "TBL Planning Sheet",
+        "file": "pdfs/instructional-models/team-based-learning.pdf"
+      }
+    ],
+    "related": [
+      "peer-instruction",
+      "cooperative-learning-framework",
+      "case-based-learning"
+    ],
+    "sourceNote": "Synthesized from team-based-learning practice and collaborative application routines."
+  },
+  {
+    "id": "nondirective-teaching",
+    "name": "Nondirective Teaching",
+    "aliases": [],
+    "category": "Instructional Models",
+    "type": "Instructional Model",
+    "time": "10-30 min",
+    "group": "Individual or small group",
+    "preview": "assets/previews/nondirective-teaching.svg",
+    "summary": "A teaching stance that uses listening, reflection, and carefully chosen prompts so students clarify their own thoughts rather than being told what to think.",
+    "useWhen": [
+      "Students need room to reflect, process, and make meaning",
+      "You want ownership and self-direction to stay with the learner"
+    ],
+    "avoidWhen": [
+      "A misconception needs immediate correction for safety or accuracy",
+      "Students have no footing at all and need more direct support first"
+    ],
+    "steps": [
+      "Invite the learner to describe the issue, text, or experience in their own words.",
+      "Respond with reflective prompts rather than immediate advice.",
+      "Encourage the learner to elaborate, notice tensions, or name possibilities.",
+      "Summarize what seems clearer and ask the learner what next step makes sense.",
+      "Close by naming the insight or direction the learner reached."
+    ],
+    "example": "During a conference, a student explains why their argument feels weak. Instead of fixing it, the teacher prompts the student to identify what evidence is missing and what revision would help.",
+    "teacherTip": "Nondirective does not mean absent. The teacher still shapes the conversation through attentive prompts and summaries.",
+    "resources": [
+      {
+        "label": "Nondirective Conference Sheet",
+        "file": "pdfs/instructional-models/nondirective-teaching.pdf"
+      }
+    ],
+    "related": [
+      "writing-conferences",
+      "socratic-method",
+      "peer-feedback-protocols"
+    ],
+    "sourceNote": "Synthesized from counseling-influenced teaching models and reflective conference practices."
+  },
+  {
+    "id": "advance-organizers",
+    "name": "Advance Organizers",
+    "aliases": [],
+    "category": "Instructional Models",
+    "type": "Instructional Model",
+    "time": "5-20 min",
+    "group": "Whole class or individual",
+    "preview": "assets/previews/advance-organizers.svg",
+    "summary": "A preview structure that gives students a way to hold onto upcoming information before they encounter the full lesson, reading, or unit.",
+    "useWhen": [
+      "Students need a conceptual frame before new information arrives",
+      "A topic is dense or easily fragmented without an organizer"
+    ],
+    "avoidWhen": [
+      "The task is short and simple enough that a preview would be unnecessary overhead",
+      "Students already have a strong organizing structure for the material"
+    ],
+    "steps": [
+      "State the big idea or guiding question.",
+      "Provide a concise organizer, map, or preview framework.",
+      "Activate what students already know and where it connects.",
+      "Refer back to the organizer during the learning sequence.",
+      "Revisit and revise it after the lesson or text."
+    ],
+    "example": "Before a unit on government, students receive a simple organizer showing branches, roles, and decision flow so later details have a place to land.",
+    "teacherTip": "Advance organizers should simplify the load, not create another worksheet students ignore.",
+    "resources": [
+      {
+        "label": "Advance Organizer Template",
+        "file": "pdfs/instructional-models/advance-organizers.pdf"
+      }
+    ],
+    "related": [
+      "concept-map",
+      "mind-map",
+      "pre-reading-prediction"
+    ],
+    "sourceNote": "Synthesized from organizer research and introductory framing practices."
+  },
+  {
+    "id": "lecture-drill",
+    "name": "Lecture / Drill",
+    "aliases": [],
+    "category": "Instructional Models",
+    "type": "Instructional Model",
+    "time": "10-25 min",
+    "group": "Whole class with individual response",
+    "preview": "assets/previews/lecture-drill.svg",
+    "summary": "A concise model in which the teacher presents key information directly and follows it with focused practice to build accuracy or fluency.",
+    "useWhen": [
+      "Information is straightforward and can be taught efficiently",
+      "Students need repeated practice to build automaticity or accuracy"
+    ],
+    "avoidWhen": [
+      "The learning goal depends on open inquiry, debate, or multiple interpretations",
+      "Long stretches of passive listening are likely"
+    ],
+    "steps": [
+      "Present the key information or procedure briefly and clearly.",
+      "Check that students understand the basics before drilling the routine.",
+      "Use short, targeted practice with quick feedback.",
+      "Monitor for accuracy and stop to reteach if the drill is reinforcing errors.",
+      "Close by connecting the practice to its purpose."
+    ],
+    "example": "A teacher gives a short mini-lesson on French verb endings and follows with oral and written practice for rapid recognition and production.",
+    "teacherTip": "Drill should serve understanding, not replace it. Students need to know what they are practising and why.",
+    "resources": [
+      {
+        "label": "Lecture / Drill Planner",
+        "file": "pdfs/instructional-models/lecture-drill.pdf"
+      }
+    ],
+    "related": [
+      "direct-instruction",
+      "mnemonics",
+      "retrieval-practice"
+    ],
+    "sourceNote": "Synthesized from direct-teaching and deliberate-practice traditions."
+  },
+  {
+    "id": "demonstration-modeling",
+    "name": "Demonstration / Modeling",
+    "aliases": [],
+    "category": "Instructional Models",
+    "type": "Instructional Model",
+    "time": "5-20 min",
+    "group": "Whole class, small group, or workshop",
+    "preview": "assets/previews/demonstration-modeling.svg",
+    "summary": "A model in which the teacher or another expert makes the process visible by showing not only what to do, but how the decisions are made.",
+    "useWhen": [
+      "Students need to see an invisible process made visible",
+      "A complex performance is easier to copy after a clear model"
+    ],
+    "avoidWhen": [
+      "Students already have the process and need productive struggle more than another model"
+    ],
+    "steps": [
+      "Show the complete task or a chunk of it.",
+      "Narrate the decisions, cues, or self-talk behind the moves.",
+      "Invite students to name what they noticed.",
+      "Move quickly to guided try-outs so the model does not stay performative only.",
+      "Return to the model if students need another look."
+    ],
+    "example": "A teacher models how to annotate a source by speaking aloud about what counts as key evidence and what makes a note useful.",
+    "teacherTip": "If the model is silent, students often copy the surface features and miss the reasoning underneath.",
+    "resources": [
+      {
+        "label": "Modeling Reflection Sheet",
+        "file": "pdfs/instructional-models/demonstration-modeling.pdf"
+      }
+    ],
+    "related": [
+      "think-alouds",
+      "direct-instruction",
+      "gradual-release"
+    ],
+    "sourceNote": "Synthesized from explicit modeling, apprenticeship, and think-aloud practice."
+  },
+  {
+    "id": "peer-tutoring",
+    "name": "Peer Tutoring",
+    "aliases": [],
+    "category": "Instructional Models",
+    "type": "Instructional Model",
+    "time": "10-30 min",
+    "group": "Pairs",
+    "preview": "assets/previews/peer-tutoring.svg",
+    "summary": "A structured partner routine in which one student coaches, questions, or supports another, then roles shift so both explain and practise.",
+    "useWhen": [
+      "Students can benefit from immediate peer explanation and feedback",
+      "A task is well suited to paired support with role clarity"
+    ],
+    "avoidWhen": [
+      "Partners do not yet have enough understanding to support one another productively",
+      "The routine would expose students publicly in a way that feels unsafe"
+    ],
+    "steps": [
+      "Teach the partner roles and the kinds of prompts partners can use.",
+      "Give a clear task and explain what a helpful partner sounds like.",
+      "Run the first round with one tutor and one learner.",
+      "Switch roles so both students explain and respond.",
+      "Debrief what kind of support actually helped."
+    ],
+    "example": "Students solve decimal operations problems in pairs; the tutor prompts rather than tells, then roles reverse after two items.",
+    "teacherTip": "Peer tutoring becomes more equitable when both partners are expected to tutor and to be tutored.",
+    "resources": [
+      {
+        "label": "Peer Tutoring Companion",
+        "file": "pdfs/instructional-models/peer-tutoring.pdf"
+      }
+    ],
+    "related": [
+      "pairs-check",
+      "peer-instruction",
+      "cooperative-learning-framework"
+    ],
+    "sourceNote": "Synthesized from peer-mediated instruction and structured partner-learning practice."
+  },
+  {
+    "id": "gradual-release",
+    "name": "Gradual Release of Responsibility",
+    "aliases": [],
+    "category": "Instructional Models",
+    "type": "Instructional Model",
+    "time": "15-40 min",
+    "group": "Whole class to independent",
+    "preview": "assets/previews/gradual-release.svg",
+    "summary": "A progression from teacher modeling, to shared practice, to collaborative work, to independent performance.",
+    "useWhen": [
+      "Students need support to move into a new process and then independence to consolidate it",
+      "You want to avoid both over-scaffolding and premature independence"
+    ],
+    "avoidWhen": [
+      "The task is purely exploratory and does not require a model first",
+      "There is no time to move beyond the teacher-led stage"
+    ],
+    "steps": [
+      "Model the skill or thinking clearly.",
+      "Invite the class into guided, shared practice.",
+      "Move students into collaborative practice with decreasing support.",
+      "Release students to independent work once enough evidence suggests readiness.",
+      "Use the evidence from each phase to decide when to move on."
+    ],
+    "example": "In a writing lesson, the teacher models a lead, co-constructs one with the class, asks partners to draft one together, and then has students write their own.",
+    "teacherTip": "The power of gradual release is not the labels; it is the decisions about when students are ready for the next phase.",
+    "resources": [
+      {
+        "label": "Gradual Release Planner",
+        "file": "pdfs/instructional-models/gradual-release.pdf"
+      }
+    ],
+    "related": [
+      "direct-instruction",
+      "demonstration-modeling",
+      "workshop-model"
+    ],
+    "sourceNote": "Synthesized from gradual-release and scaffolded-instruction practice."
+  },
+  {
+    "id": "workshop-model",
+    "name": "Workshop Model",
+    "aliases": [],
+    "category": "Instructional Models",
+    "type": "Instructional Model",
+    "time": "30-75 min",
+    "group": "Whole class plus independent work",
+    "preview": "assets/previews/workshop-model.svg",
+    "summary": "A model that combines a short mini-lesson, sustained student work time, conferring, and a share or reflection.",
+    "useWhen": [
+      "Students need time to apply learning in authentic work",
+      "You want coaching during the work rather than only before it"
+    ],
+    "avoidWhen": [
+      "The schedule is too short to provide meaningful work time",
+      "Students still need a much tighter, more controlled sequence first"
+    ],
+    "steps": [
+      "Teach a focused mini-lesson tied to current work.",
+      "Move students quickly into sustained work time.",
+      "Confer with individuals or small groups while they work.",
+      "Stop for quick interruptions only when many students need the same thing.",
+      "End with a share, reflection, or connection back to the teaching point."
+    ],
+    "example": "During reading workshop, the teacher gives a short lesson on tracking theme, then students read independently while the teacher confers and closes with a brief share.",
+    "teacherTip": "Workshop succeeds when the mini-lesson is truly mini. Protect the work time.",
+    "resources": [
+      {
+        "label": "Workshop Planning Sheet",
+        "file": "pdfs/instructional-models/workshop-model.pdf"
+      }
+    ],
+    "related": [
+      "writing-conferences",
+      "demonstration-modeling",
+      "gradual-release"
+    ],
+    "sourceNote": "Synthesized from reading and writing workshop practice."
+  },
+  {
+    "id": "number-talks",
+    "name": "Number Talks",
+    "aliases": [],
+    "category": "Mathematics & Science Routines",
+    "type": "Mathematics Discourse Routine",
+    "time": "5-15 min",
+    "group": "Whole class",
+    "preview": "assets/previews/number-talks.svg",
+    "summary": "A short mental-math discussion in which students solve, compare strategies, and justify why the methods work.",
+    "useWhen": [
+      "You want flexible mental computation and strategy comparison",
+      "A brief routine can surface mathematical structure or misconceptions"
+    ],
+    "avoidWhen": [
+      "Students need a long written problem-solving task instead of a short oral routine",
+      "The class has no shared norms yet for listening to partial ideas"
+    ],
+    "steps": [
+      "Pose a computable prompt and give quiet think time.",
+      "Invite multiple answers and strategies without rushing to one method.",
+      "Record strategies so they become visible and comparable.",
+      "Ask students to justify how and why the strategies work.",
+      "Close by naming a useful connection or pattern."
+    ],
+    "example": "Students mentally solve 18 × 25 and compare doubling-halving, quartering 100, and distributive strategies.",
+    "teacherTip": "Resist evaluating strategies too early. Let students compare them first.",
+    "resources": [
+      {
+        "label": "Number Talks Record Sheet",
+        "file": "pdfs/mathematics-science-routines/number-talks.pdf"
+      }
+    ],
+    "related": [
+      "mlr7-compare-connect",
+      "peer-instruction",
+      "notice-and-wonder"
+    ],
+    "sourceNote": "Synthesized from number-talks practice and math discourse guidance."
+  },
+  {
+    "id": "mlr1-stronger-clearer",
+    "name": "MLR1 - Stronger and Clearer Each Time",
+    "aliases": [],
+    "category": "Mathematics & Science Routines",
+    "type": "Mathematics Language Routine",
+    "time": "8-20 min",
+    "group": "Pairs or small groups",
+    "preview": "assets/previews/mlr1-stronger-clearer.svg",
+    "summary": "Students explain an idea, receive feedback, and then explain it again more clearly and precisely.",
+    "useWhen": [
+      "Students have an idea worth refining but need language support to express it",
+      "You want revision to improve both reasoning and communication"
+    ],
+    "avoidWhen": [
+      "Students do not yet have enough content understanding to explain anything meaningful",
+      "The pace of the lesson cannot accommodate another round of explanation"
+    ],
+    "steps": [
+      "Ask students to explain their reasoning to a partner.",
+      "Have the listener note what was strong and what could be clearer.",
+      "Invite the speaker to explain again, making the response stronger.",
+      "Optionally repeat with a new partner or in writing.",
+      "Debrief what improved between the first and second versions."
+    ],
+    "example": "After solving a geometry task, students explain why a triangle is isosceles, then revise the explanation after peer feedback.",
+    "teacherTip": "Give listeners a job. Without a clear listening focus, the second explanation often changes very little.",
+    "resources": [
+      {
+        "label": "MLR1 Companion",
+        "file": "pdfs/mathematics-science-routines/mlr1-stronger-clearer.pdf"
+      }
+    ],
+    "related": [
+      "mlr8-discussion-supports",
+      "number-talks",
+      "peer-feedback-protocols"
+    ],
+    "sourceNote": "Based on Illustrative Mathematics MLR guidance."
+  },
+  {
+    "id": "mlr2-collect-display",
+    "name": "MLR2 - Collect and Display",
+    "aliases": [],
+    "category": "Mathematics & Science Routines",
+    "type": "Mathematics Language Routine",
+    "time": "5-20 min",
+    "group": "Whole class",
+    "preview": "assets/previews/mlr2-collect-display.svg",
+    "summary": "The teacher gathers useful student language, strategies, or representations and displays them so the whole class can reuse and refine them.",
+    "useWhen": [
+      "Students need shared language for an unfamiliar idea",
+      "You want to make student language and representations public resources"
+    ],
+    "avoidWhen": [
+      "The collected examples are likely to confuse more than clarify",
+      "You are collecting without ever revisiting or using the display"
+    ],
+    "steps": [
+      "Listen for useful words, phrases, or representations while students work.",
+      "Select and record examples where everyone can see them.",
+      "Use the display to compare, revise, and reuse language.",
+      "Encourage students to borrow from the display in discussion or writing.",
+      "Return to the display later if the learning resurfaces."
+    ],
+    "example": "During a science graphing task, the teacher collects phrases students use to describe trend, rate, and comparison, then displays them for later use.",
+    "teacherTip": "A display becomes powerful only when students actually use it again.",
+    "resources": [
+      {
+        "label": "MLR2 Companion",
+        "file": "pdfs/mathematics-science-routines/mlr2-collect-display.pdf"
+      }
+    ],
+    "related": [
+      "mlr8-discussion-supports",
+      "anchor-charts",
+      "multilingual-glossaries"
+    ],
+    "sourceNote": "Based on Illustrative Mathematics MLR guidance."
+  },
+  {
+    "id": "mlr3-critique-correct-clarify",
+    "name": "MLR3 - Critique, Correct, Clarify",
+    "aliases": [],
+    "category": "Mathematics & Science Routines",
+    "type": "Mathematics Language Routine",
+    "time": "10-25 min",
+    "group": "Pairs, groups, or whole class",
+    "preview": "assets/previews/mlr3-critique-correct-clarify.svg",
+    "summary": "Students work with an imperfect explanation or representation and improve it through critique, correction, and clarification.",
+    "useWhen": [
+      "You want students to refine the precision of a mathematical or scientific explanation",
+      "A flawed explanation can become a productive learning object"
+    ],
+    "avoidWhen": [
+      "Students will interpret critique as personal attack because discussion norms are too weak",
+      "The original explanation is so inaccurate that it offers no footing"
+    ],
+    "steps": [
+      "Present a statement, explanation, or representation to analyze.",
+      "Ask students to critique what is unclear or inaccurate.",
+      "Have them suggest corrections and clearer wording.",
+      "Create or share a revised version.",
+      "Discuss what made the final version stronger."
+    ],
+    "example": "Students examine a class-generated explanation of slope and improve the precision of the vocabulary and reasoning.",
+    "teacherTip": "Keep the object of critique external to the student whenever possible. That lowers the social risk.",
+    "resources": [
+      {
+        "label": "MLR3 Companion",
+        "file": "pdfs/mathematics-science-routines/mlr3-critique-correct-clarify.pdf"
+      }
+    ],
+    "related": [
+      "error-analysis",
+      "evidence-reasoning",
+      "mlr1-stronger-clearer"
+    ],
+    "sourceNote": "Based on Illustrative Mathematics MLR guidance and revision-focused classroom talk."
+  },
+  {
+    "id": "mlr4-information-gap",
+    "name": "MLR4 - Information Gap",
+    "aliases": [],
+    "category": "Mathematics & Science Routines",
+    "type": "Mathematics Language Routine",
+    "time": "10-25 min",
+    "group": "Pairs",
+    "preview": "assets/previews/mlr4-information-gap.svg",
+    "summary": "Pairs solve a problem by communicating complementary pieces of information that neither partner has in full.",
+    "useWhen": [
+      "Students need a reason to ask questions and describe quantities or features precisely",
+      "You want purposeful oral language in service of solving"
+    ],
+    "avoidWhen": [
+      "The task can be solved without any meaningful communication",
+      "Partners are likely to simply show one another the complete sheet"
+    ],
+    "steps": [
+      "Prepare paired materials with complementary information.",
+      "Explain that partners must solve by questioning and explaining, not by grabbing papers.",
+      "Give think time so each partner understands their own information first.",
+      "Let pairs communicate to solve the problem.",
+      "Debrief the language and questioning that helped."
+    ],
+    "example": "In a graph-reading task, one partner has the graph and the other has the questions, so they must describe and query to complete the task.",
+    "teacherTip": "The success of the routine depends on task design. Each partner must truly need the other.",
+    "resources": [
+      {
+        "label": "MLR4 Companion",
+        "file": "pdfs/mathematics-science-routines/mlr4-information-gap.pdf"
+      }
+    ],
+    "related": [
+      "inside-outside-circles",
+      "mlr8-discussion-supports",
+      "peer-instruction"
+    ],
+    "sourceNote": "Based on Illustrative Mathematics MLR guidance."
+  },
+  {
+    "id": "mlr6-three-reads",
+    "name": "MLR6 - Three Reads",
+    "aliases": [],
+    "category": "Mathematics & Science Routines",
+    "type": "Mathematics Language Routine",
+    "time": "5-15 min",
+    "group": "Whole class or pairs",
+    "preview": "assets/previews/mlr6-three-reads.svg",
+    "summary": "Students read a problem more than once for different purposes so they notice the situation, the quantities, and the relationships separately.",
+    "useWhen": [
+      "Students rush into solving before understanding the problem structure",
+      "Word problems are creating unnecessary language load"
+    ],
+    "avoidWhen": [
+      "The problem is trivial and does not merit a slow read",
+      "The class treats the routine as a script rather than as purposeful sense making"
+    ],
+    "steps": [
+      "Read the problem once for context and the situation.",
+      "Read it again focusing on quantities, units, and what can be counted or measured.",
+      "Read it a third time focusing on relationships and what is being asked.",
+      "Invite students to restate the problem in their own words.",
+      "Then move into solving."
+    ],
+    "example": "Before solving a rate problem, students identify the context first, then the quantities, then the relationship between distance, time, and speed.",
+    "teacherTip": "If students cannot yet solve the problem, that is okay. The routine is about understanding the structure first.",
+    "resources": [
+      {
+        "label": "MLR6 Companion",
+        "file": "pdfs/mathematics-science-routines/mlr6-three-reads.pdf"
+      }
+    ],
+    "related": [
+      "open-ended-problem-solving",
+      "notice-and-wonder",
+      "reading-gist-vocab"
+    ],
+    "sourceNote": "Based on Illustrative Mathematics MLR guidance."
+  },
+  {
+    "id": "mlr7-compare-connect",
+    "name": "MLR7 - Compare and Connect",
+    "aliases": [],
+    "category": "Mathematics & Science Routines",
+    "type": "Mathematics Language Routine",
+    "time": "10-25 min",
+    "group": "Pairs, groups, or whole class",
+    "preview": "assets/previews/mlr7-compare-connect.svg",
+    "summary": "Students compare methods, representations, or examples and then name what connects them mathematically or scientifically.",
+    "useWhen": [
+      "You want students to see structure across representations or methods",
+      "Several different solutions or models are available to discuss"
+    ],
+    "avoidWhen": [
+      "There is only one representation and no real comparison to make",
+      "Students still need a first-draft understanding before comparing approaches"
+    ],
+    "steps": [
+      "Select two or more methods, representations, or examples.",
+      "Ask students what is the same, what is different, and what each makes visible.",
+      "Push for connections, not just superficial differences.",
+      "Record the comparisons publicly.",
+      "Use the comparison to consolidate a larger idea."
+    ],
+    "example": "Students compare a ratio table, double number line, and equation for the same proportional relationship.",
+    "teacherTip": "Curate the comparison. Too many examples at once can blur the point.",
+    "resources": [
+      {
+        "label": "MLR7 Companion",
+        "file": "pdfs/mathematics-science-routines/mlr7-compare-connect.pdf"
+      }
+    ],
+    "related": [
+      "number-talks",
+      "concept-map",
+      "venn"
+    ],
+    "sourceNote": "Based on Illustrative Mathematics MLR guidance."
+  },
+  {
+    "id": "mlr8-discussion-supports",
+    "name": "MLR8 - Discussion Supports",
+    "aliases": [],
+    "category": "Mathematics & Science Routines",
+    "type": "Mathematics Language Routine",
+    "time": "5-20 min",
+    "group": "Whole class or groups",
+    "preview": "assets/previews/mlr8-discussion-supports.svg",
+    "summary": "A collection of talk supports—such as sentence frames, revoicing, and participation structures—that helps more students join mathematical discussion.",
+    "useWhen": [
+      "Students have mathematical ideas but need support expressing or entering the discussion",
+      "You want to widen participation and precision at the same time"
+    ],
+    "avoidWhen": [
+      "The supports are so heavy they replace genuine reasoning",
+      "The discussion norms are undefined and students do not know how to listen or respond"
+    ],
+    "steps": [
+      "Choose one or two discussion supports that match the lesson need.",
+      "Make the support visible and model how it sounds.",
+      "Use the support during partner, group, or whole-class talk.",
+      "Prompt students to reuse or adapt the support independently.",
+      "Reflect on whether the support improved participation or clarity."
+    ],
+    "example": "A teacher posts stems such as “I agree because…” and “Can you say more about…?” during a comparison of scientific models.",
+    "teacherTip": "Too many stems at once can overwhelm students. Select only what the discussion actually needs.",
+    "resources": [
+      {
+        "label": "MLR8 Companion",
+        "file": "pdfs/mathematics-science-routines/mlr8-discussion-supports.pdf"
+      }
+    ],
+    "related": [
+      "accountable-talk",
+      "mlr1-stronger-clearer",
+      "number-talks"
+    ],
+    "sourceNote": "Based on Illustrative Mathematics MLR guidance."
+  },
+  {
+    "id": "notice-and-wonder",
+    "name": "Notice and Wonder",
+    "aliases": [],
+    "category": "Mathematics & Science Routines",
+    "type": "Mathematics / Science Routine",
+    "time": "5-15 min",
+    "group": "Whole class, pairs, or individual",
+    "preview": "assets/previews/notice-and-wonder.svg",
+    "summary": "Students first name what they notice and then what they wonder, slowing down interpretation and opening multiple entry points into the task.",
+    "useWhen": [
+      "You want a low-floor way into a rich image, graph, phenomenon, or problem",
+      "Students need time to observe before explaining"
+    ],
+    "avoidWhen": [
+      "The task requires immediate action rather than observation",
+      "The discussion repeatedly stays at a trivial surface level without moving onward"
+    ],
+    "steps": [
+      "Present an image, graph, setup, phenomenon, or problem.",
+      "Ask students what they notice first. Record several responses.",
+      "Then ask what they wonder or what questions they have.",
+      "Use the noticings and wonderings to launch the main learning task.",
+      "Return to them later to see what was answered."
+    ],
+    "example": "A graph of water use launches a lesson as students notice the shape and wonder about sudden changes.",
+    "teacherTip": "Treat all reasonable noticings and wonderings as useful at first. Sort later if needed.",
+    "resources": [
+      {
+        "label": "Notice and Wonder Sheet",
+        "file": "pdfs/mathematics-science-routines/notice-and-wonder.pdf"
+      }
+    ],
+    "related": [
+      "see-think-wonder",
+      "mlr6-three-reads",
+      "data-talk"
+    ],
+    "sourceNote": "Synthesized from common math/science launching routines."
+  },
+  {
+    "id": "which-one-doesnt-belong",
+    "name": "Which One Doesn't Belong?",
+    "aliases": [],
+    "category": "Mathematics & Science Routines",
+    "type": "Mathematics / Science Routine",
+    "time": "5-15 min",
+    "group": "Pairs or whole class",
+    "preview": "assets/previews/which-one-doesnt-belong.svg",
+    "summary": "Students decide which item does not belong and justify the rule, often discovering that more than one answer can be defended.",
+    "useWhen": [
+      "You want classification and justification to matter more than finding one right answer",
+      "You want several possible lines of reasoning in the same prompt"
+    ],
+    "avoidWhen": [
+      "Students are not yet ready to justify and will only guess",
+      "The examples are so poorly chosen that there is no interesting reasoning to discuss"
+    ],
+    "steps": [
+      "Present four items or cases.",
+      "Give think time before discussion.",
+      "Ask students which one does not belong and why.",
+      "Invite multiple answers if the justification is sound.",
+      "Discuss what attributes, structures, or rules different students noticed."
+    ],
+    "example": "Students examine four quadrilaterals and defend different choices for which one does not belong.",
+    "teacherTip": "The task is only as good as the choices. Curate examples that support multiple defensible reasons.",
+    "resources": [
+      {
+        "label": "WODB Companion",
+        "file": "pdfs/mathematics-science-routines/which-one-doesnt-belong.pdf"
+      }
+    ],
+    "related": [
+      "concept-attainment",
+      "number-talks",
+      "card-sort"
+    ],
+    "sourceNote": "Synthesized from math-classification routines."
+  },
+  {
+    "id": "error-analysis",
+    "name": "Error Analysis",
+    "aliases": [],
+    "category": "Mathematics & Science Routines",
+    "type": "Mathematics / Science Routine",
+    "time": "10-20 min",
+    "group": "Pairs, groups, or whole class",
+    "preview": "assets/previews/error-analysis.svg",
+    "summary": "Students inspect a flawed solution or explanation, identify the error, and correct the reasoning.",
+    "useWhen": [
+      "A misconception is common enough to be worth studying explicitly",
+      "You want students to reason about correctness, not only produce answers"
+    ],
+    "avoidWhen": [
+      "The error is so opaque that students cannot meaningfully discuss it",
+      "Students are likely to mock a classmate because the source of the error is too personal"
+    ],
+    "steps": [
+      "Present a flawed solution, claim, or procedure.",
+      "Ask students what seems correct and what seems problematic.",
+      "Have them pinpoint the exact error, not just say “it is wrong.”",
+      "Ask for a corrected version and an explanation.",
+      "Debrief what habit of thinking would prevent the error next time."
+    ],
+    "example": "Students analyze a worked algebra solution that distributes incorrectly and explain precisely where the breakdown occurs.",
+    "teacherTip": "Use errors that are plausible. Random nonsense does not build diagnostic reasoning.",
+    "resources": [
+      {
+        "label": "Error Analysis Sheet",
+        "file": "pdfs/mathematics-science-routines/error-analysis.pdf"
+      }
+    ],
+    "related": [
+      "mlr3-critique-correct-clarify",
+      "worked-examples",
+      "peer-feedback-protocols"
+    ],
+    "sourceNote": "Synthesized from math diagnostic routines and error-study practice."
+  },
+  {
+    "id": "estimation-routine",
+    "name": "Estimation Routine",
+    "aliases": [],
+    "category": "Mathematics & Science Routines",
+    "type": "Mathematics / Science Routine",
+    "time": "5-15 min",
+    "group": "Whole class or pairs",
+    "preview": "assets/previews/estimation-routine.svg",
+    "summary": "A quick routine that asks students to make an estimate, defend it, and revise it as new information sharpens the range.",
+    "useWhen": [
+      "You want students to think before calculating exactly",
+      "A context can support plausible ranges or benchmark reasoning"
+    ],
+    "avoidWhen": [
+      "The task depends on exact computation immediately",
+      "Students treat the estimate as random guessing with no reason attached"
+    ],
+    "steps": [
+      "Present the prompt and ask for a first estimate or range.",
+      "Invite students to defend whether it might be too high or too low.",
+      "Reveal or discuss information that helps refine the estimate.",
+      "Ask for a revised estimate with a stronger justification.",
+      "Debrief what benchmarks or assumptions were useful."
+    ],
+    "example": "Students estimate how many cups of water a large cooler holds before refining the estimate using dimensions and unit benchmarks.",
+    "teacherTip": "Require reasons. Estimation grows more powerful when students compare the assumptions behind the estimates.",
+    "resources": [
+      {
+        "label": "Estimation Routine Sheet",
+        "file": "pdfs/mathematics-science-routines/estimation-routine.pdf"
+      }
+    ],
+    "related": [
+      "number-talks",
+      "notice-and-wonder",
+      "open-ended-problem-solving"
+    ],
+    "sourceNote": "Synthesized from estimation routines used in math and science classrooms."
+  },
+  {
+    "id": "card-sort",
+    "name": "Card Sort",
+    "aliases": [],
+    "category": "Mathematics & Science Routines",
+    "type": "Mathematics / Science Routine",
+    "time": "10-25 min",
+    "group": "Pairs or small groups",
+    "preview": "assets/previews/card-sort.svg",
+    "summary": "Students sort examples, representations, or data cards and justify the rule or category they used.",
+    "useWhen": [
+      "You want students to classify, compare, and justify connections",
+      "A set of examples can reveal patterns when grouped"
+    ],
+    "avoidWhen": [
+      "The cards are too obvious and no explanation is needed",
+      "Students are simply matching without discussing the rule"
+    ],
+    "steps": [
+      "Prepare cards that can be sorted in one or more meaningful ways.",
+      "Give students a sorting prompt or let them invent the rule.",
+      "Have groups place the cards and justify their groupings.",
+      "Invite a comparison between different groups’ sorts.",
+      "Discuss what the sorting rule reveals about the content."
+    ],
+    "example": "Students sort graphs, equations, and verbal descriptions into matching relationships and explain the sort.",
+    "teacherTip": "Ask for the rule before revealing your own categories. The justification is the real learning.",
+    "resources": [
+      {
+        "label": "Card Sort Mat",
+        "file": "pdfs/mathematics-science-routines/card-sort.pdf"
+      }
+    ],
+    "related": [
+      "concept-formation",
+      "which-one-doesnt-belong",
+      "matrix"
+    ],
+    "sourceNote": "Synthesized from card-sort routines in STEM classrooms."
+  },
+  {
+    "id": "data-talk",
+    "name": "Data Talk",
+    "aliases": [],
+    "category": "Mathematics & Science Routines",
+    "type": "Mathematics / Science Routine",
+    "time": "10-20 min",
+    "group": "Whole class or pairs",
+    "preview": "assets/previews/data-talk.svg",
+    "summary": "Students interpret a graph, table, or data display by noticing patterns, making claims, and discussing what might explain them.",
+    "useWhen": [
+      "You want students to reason from data rather than jump straight to a formula or conclusion",
+      "A graph or table can support discussion, interpretation, and evidence"
+    ],
+    "avoidWhen": [
+      "The display is too cluttered or unfamiliar for students to access at all",
+      "The discussion will remain at “read off the answer” rather than interpretation"
+    ],
+    "steps": [
+      "Display the graph, table, or data set clearly.",
+      "Ask students what they notice first.",
+      "Push them to describe trends, anomalies, or comparisons with evidence.",
+      "Discuss possible explanations, not only observations.",
+      "Connect the discussion to the disciplinary idea or next investigation."
+    ],
+    "example": "Students examine a line graph of temperature change and discuss not only the steep sections but what might explain them scientifically.",
+    "teacherTip": "Give enough think time. Data talk is often quieter and more careful than teachers expect at first.",
+    "resources": [
+      {
+        "label": "Data Talk Sheet",
+        "file": "pdfs/mathematics-science-routines/data-talk.pdf"
+      }
+    ],
+    "related": [
+      "notice-and-wonder",
+      "scientific-inquiry",
+      "mlr2-collect-display"
+    ],
+    "sourceNote": "Synthesized from graph talks, data interpretation routines, and science discussion practice."
+  }
+];
