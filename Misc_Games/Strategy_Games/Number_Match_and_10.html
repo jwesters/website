@@ -1,0 +1,1874 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#f7f9fc" />
+<title>Number Match &amp; 10</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f5f7fb;
+    --panel: #ffffff;
+    --panel-2: #f8faff;
+    --panel-3: #f2f6fd;
+    --text: #1d2736;
+    --muted: #8c97a8;
+    --faint: #c5ccd7;
+    --cleared-number: #d9dee6;
+    --grid: #e5e9ef;
+    --grid-strong: #b8c5d7;
+    --accent: #2688e8;
+    --accent-strong: #1473cc;
+    --accent-soft: #eaf4ff;
+    --danger: #db5265;
+    --success: #2b9f6b;
+    --shadow: 0 20px 55px rgba(40, 55, 80, .13);
+    --cell: min(48px, calc((100vw - 52px) / 9), calc((100dvh - 292px) / 18));
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #11151c;
+    --panel: #171c25;
+    --panel-2: #1d2430;
+    --panel-3: #202938;
+    --text: #edf2f9;
+    --muted: #9aa6b8;
+    --faint: #5b6778;
+    --cleared-number: #46505f;
+    --grid: #2a3342;
+    --grid-strong: #4a5b72;
+    --accent: #58aaf5;
+    --accent-strong: #80c0fb;
+    --accent-soft: #1c3550;
+    --danger: #ff7183;
+    --success: #52c78b;
+    --shadow: 0 24px 68px rgba(0, 0, 0, .34);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    min-height: 100%;
+    background:
+      radial-gradient(circle at 50% -20%, rgba(38, 136, 232, .08), transparent 42%),
+      var(--bg);
+    color: var(--text);
+    font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow-x: hidden;
+  }
+  button, select { font: inherit; }
+
+  .app-shell {
+    min-height: 100dvh;
+    display: grid;
+    place-items: center;
+    padding: 14px 14px max(14px, env(safe-area-inset-bottom));
+  }
+
+  .game-card {
+    width: min(100%, 580px);
+    background: var(--panel);
+    border: 1px solid color-mix(in srgb, var(--grid) 84%, transparent);
+    border-radius: 26px;
+    box-shadow: var(--shadow);
+    padding: 16px 18px 14px;
+    position: relative;
+  }
+
+  .topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 18px;
+    min-height: 42px;
+  }
+
+  .brand h1 {
+    margin: 0;
+    font-size: clamp(18px, 2.2vw, 24px);
+    line-height: 1.05;
+    letter-spacing: -.035em;
+    font-weight: 760;
+    white-space: nowrap;
+  }
+
+  .daily-date {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+
+  .score-stack {
+    text-align: center;
+    min-width: 92px;
+    justify-self: center;
+  }
+
+  .score-value {
+    font-size: 28px;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: -.04em;
+  }
+
+  .score-label {
+    display: block;
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 720;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  .top-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 7px;
+  }
+
+  .icon-btn {
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--panel-2);
+    color: var(--muted);
+    cursor: pointer;
+    transition: transform .16s ease, background .16s ease, color .16s ease;
+    font-size: 17px;
+  }
+  .icon-btn:hover { transform: translateY(-1px); color: var(--accent); }
+  .icon-btn:active { transform: scale(.95); }
+
+  .meta-row {
+    margin-top: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .score-meta-row {
+    margin-top: 9px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 12px;
+  }
+  .score-meta-row .best-label { justify-self: end; }
+  .best-label { display: inline-flex; gap: 5px; align-items: center; }
+  .best-label strong { color: var(--text); font-weight: 760; }
+
+  .board-wrap {
+    margin-top: 7px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .board {
+    width: calc(var(--cell) * 9);
+    height: calc(var(--cell) * 18);
+    display: grid;
+    grid-template-columns: repeat(9, var(--cell));
+    grid-template-rows: repeat(18, var(--cell));
+    border: 2px solid var(--grid-strong);
+    background: var(--panel);
+    overflow: hidden;
+    touch-action: manipulation;
+    user-select: none;
+  }
+
+  .cell {
+    width: var(--cell);
+    height: var(--cell);
+    display: grid;
+    place-items: center;
+    border-right: 1px solid var(--grid);
+    border-bottom: 1px solid var(--grid);
+    background: transparent;
+    color: var(--text);
+    font-size: clamp(17px, calc(var(--cell) * .58), 30px);
+    font-weight: 480;
+    line-height: 1;
+    cursor: default;
+    position: relative;
+    transition: background .14s ease, color .14s ease, transform .14s ease;
+  }
+  .cell:nth-child(9n) { border-right: 0; }
+  .cell:nth-last-child(-n+9) { border-bottom: 0; }
+  .cell.filled { cursor: pointer; font-weight: 760; }
+  .cell.cleared-number {
+    color: var(--cleared-number);
+    font-weight: 400;
+    cursor: default;
+  }
+  .cell.filled:hover { background: color-mix(in srgb, var(--accent-soft) 55%, transparent); }
+  .cell.selected {
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+    font-weight: 760;
+  }
+  .cell.selected::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border: 2px solid color-mix(in srgb, var(--accent) 72%, transparent);
+    border-radius: 9px;
+    pointer-events: none;
+  }
+  .cell.hint {
+    animation: hintPulse .82s ease-in-out 3;
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+    font-weight: 760;
+  }
+  .cell.invalid { animation: invalidShake .25s ease; }
+  .cell.clearing { animation: clearPop .22s ease forwards; }
+  .cell.new-number { animation: slideIn .24s ease both; }
+
+  @keyframes hintPulse {
+    0%, 100% { box-shadow: inset 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent); }
+    50% { box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--accent) 58%, transparent); }
+  }
+  @keyframes invalidShake {
+    0%,100% { transform: translateX(0); }
+    35% { transform: translateX(-3px); }
+    70% { transform: translateX(3px); }
+  }
+  @keyframes clearPop {
+    0% { opacity: 1; transform: scale(1); color: var(--accent-strong); }
+    60% { opacity: .5; transform: scale(1.25); }
+    100% { opacity: 0; transform: scale(.55); }
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(7px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .status {
+    min-height: 23px;
+    display: grid;
+    place-items: center;
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 650;
+    text-align: center;
+  }
+  .status.good { color: var(--success); }
+  .status.warn { color: var(--danger); }
+
+  .run-mode {
+    margin: 10px auto 2px;
+    width: min(100%, 310px);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: var(--panel-2);
+    border: 1px solid var(--grid);
+    border-radius: 15px;
+    padding: 4px;
+    gap: 4px;
+  }
+  .mode-btn {
+    min-height: 34px;
+    border: 0;
+    border-radius: 11px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-weight: 760;
+    font-size: 12px;
+    transition: background .16s ease, color .16s ease, transform .16s ease;
+  }
+  .mode-btn:hover { color: var(--accent); }
+  .mode-btn.active {
+    background: var(--panel);
+    color: var(--accent-strong);
+    box-shadow: 0 3px 10px rgba(25, 45, 75, .09);
+  }
+  .mode-btn:active { transform: scale(.985); }
+
+  .cat-popup {
+    position: fixed;
+    right: max(18px, env(safe-area-inset-right));
+    bottom: max(18px, env(safe-area-inset-bottom));
+    width: min(360px, calc(100vw - 36px));
+    display: grid;
+    grid-template-columns: 104px 1fr;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 12px 10px 10px;
+    border-radius: 20px;
+    background: color-mix(in srgb, var(--panel) 96%, transparent);
+    border: 1px solid var(--grid);
+    box-shadow: 0 20px 60px rgba(0,0,0,.20);
+    backdrop-filter: blur(12px);
+    z-index: 30;
+    cursor: pointer;
+    animation: catPopupIn .28s ease both;
+  }
+  .cat-popup[hidden] { display: none; }
+  .cat-popup.leaving { animation: catPopupOut .22s ease both; }
+  .cat-popup img {
+    width: 104px;
+    height: 92px;
+    border-radius: 15px;
+    object-fit: cover;
+    background: var(--panel-3);
+  }
+  .cat-popup-kicker {
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .cat-popup-text {
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.38;
+    font-weight: 700;
+  }
+  @keyframes catPopupIn {
+    from { opacity: 0; transform: translateY(14px) scale(.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes catPopupOut {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to { opacity: 0; transform: translateY(10px) scale(.98); }
+  }
+
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    max-width: 310px;
+    margin: 10px auto 0;
+    transition: max-width .18s ease;
+  }
+  .controls.give-up-visible {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-width: 470px;
+  }
+  .action-btn[hidden] { display: none !important; }
+  .give-up-btn {
+    color: var(--danger);
+  }
+
+  .action-btn {
+    min-height: 49px;
+    border: 0;
+    border-radius: 16px;
+    background: var(--panel-2);
+    color: var(--accent);
+    cursor: pointer;
+    display: grid;
+    grid-template-columns: 28px auto 28px;
+    align-items: center;
+    justify-content: center;
+    column-gap: 5px;
+    font-weight: 760;
+    transition: transform .15s ease, background .15s ease, opacity .15s ease;
+    position: relative;
+    padding: 0 12px;
+  }
+  .action-btn:hover:not(:disabled) { transform: translateY(-1px); background: var(--accent-soft); }
+  .action-btn:active:not(:disabled) { transform: scale(.98); }
+  .action-btn:disabled { opacity: .38; cursor: default; }
+  .action-icon {
+    font-size: 18px;
+    line-height: 1;
+    width: 28px;
+    display: grid;
+    place-items: center;
+    justify-self: end;
+  }
+  .action-btn > span:nth-child(2) {
+    justify-self: center;
+    line-height: 1;
+  }
+
+  .action-btn.give-up-btn {
+    grid-template-columns: 1fr;
+    place-items: center;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .action-btn.give-up-btn > span {
+    grid-column: 1 / -1;
+    justify-self: center;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .count-badge {
+    min-width: 23px;
+    height: 23px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    background: var(--accent);
+    color: white;
+    padding: 0 7px;
+    font-size: 11px;
+    line-height: 1;
+    font-weight: 800;
+    justify-self: start;
+    align-self: center;
+  }
+
+  .audio-summary {
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+  .audio-pill {
+    padding: 7px 11px;
+    border-radius: 999px;
+    background: var(--panel-2);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 760;
+    letter-spacing: .02em;
+  }
+  .audio-pill strong { color: var(--text); }
+
+  .footer-note {
+    margin-top: 10px;
+    text-align: center;
+    color: var(--faint);
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: rgba(8, 13, 22, .42);
+    backdrop-filter: blur(8px);
+    z-index: 20;
+    padding: 18px;
+  }
+  .overlay[hidden] { display: none; }
+
+  .modal {
+    width: min(92vw, 400px);
+    background: var(--panel);
+    border: 1px solid var(--grid);
+    box-shadow: 0 28px 90px rgba(0,0,0,.25);
+    border-radius: 24px;
+    padding: 24px;
+    text-align: center;
+    animation: modalIn .22s ease both;
+  }
+  .modal h2 { margin: 0; font-size: 28px; letter-spacing: -.04em; }
+  .modal p { margin: 10px 0 0; color: var(--muted); line-height: 1.5; font-size: 14px; }
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(10px) scale(.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .modal-score {
+    margin: 14px 0 4px;
+    font-size: 48px;
+    line-height: 1;
+    font-weight: 820;
+    color: var(--accent);
+    letter-spacing: -.05em;
+  }
+  .modal-caption { color: var(--muted); font-size: 12px; font-weight: 720; text-transform: uppercase; letter-spacing: .08em; }
+  .modal-actions { display: grid; gap: 9px; margin-top: 20px; }
+  .modal-actions-two { grid-template-columns: 1fr 1fr; }
+  .primary-btn, .secondary-btn, .toggle-chip {
+    min-height: 46px;
+    border-radius: 14px;
+    border: 0;
+    cursor: pointer;
+    font-weight: 780;
+  }
+  .primary-btn { background: var(--accent); color: white; }
+  .secondary-btn { background: var(--panel-2); color: var(--text); }
+  .toggle-chip { background: var(--panel-2); color: var(--text); padding: 0 14px; }
+  .toggle-chip.on { background: var(--accent-soft); color: var(--accent-strong); }
+
+  .rules {
+    text-align: left;
+    margin: 17px 0 0;
+    padding-left: 20px;
+    color: var(--muted);
+    line-height: 1.55;
+    font-size: 13px;
+  }
+  .rules li + li { margin-top: 6px; }
+
+
+.modal-cat {
+  width: 132px;
+  height: 132px;
+  margin: 0 auto 12px;
+  border-radius: 22px;
+  display: block;
+  object-fit: cover;
+  box-shadow: 0 14px 32px rgba(0,0,0,.16);
+  background: var(--panel-2);
+}
+
+  .gameover-cat {
+    width: 150px;
+    height: 126px;
+    margin: 0 auto 12px;
+    border-radius: 22px;
+    display: block;
+    object-fit: cover;
+    box-shadow: 0 14px 32px rgba(0,0,0,.16);
+    background: var(--panel-2);
+  }
+  .gameover-quote {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: var(--panel-2);
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  .field-label {
+    display: block;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 780;
+    color: var(--muted);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    margin: 14px 0 7px;
+  }
+  .audio-select {
+    width: 100%;
+    min-height: 46px;
+    border-radius: 14px;
+    border: 1px solid var(--grid);
+    background: var(--panel-2);
+    color: var(--text);
+    padding: 0 14px;
+  }
+  .audio-inline {
+    margin-top: 12px;
+    display: grid;
+    gap: 9px;
+  }
+  .audio-note {
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  @media (max-width: 520px) {
+    :root { --cell: min(calc((100vw - 36px) / 9), calc((100dvh - 318px) / 18), 44px); }
+    .app-shell { padding: 8px; align-items: start; }
+    .game-card {
+      width: 100%;
+      border-radius: 20px;
+      padding: 12px 10px 10px;
+      box-shadow: none;
+      border-color: transparent;
+    }
+    .topbar { grid-template-columns: minmax(0, 1fr) auto; column-gap: 8px; }
+    .brand h1 { font-size: 17px; }
+    .daily-date { font-size: 9px; }
+    .score-stack { min-width: 76px; }
+    .score-meta-row { margin-top: 7px; gap: 8px; }
+    .score-value { font-size: 24px; }
+    .icon-btn { width: 32px; height: 32px; }
+    .meta-row { margin-top: 8px; padding: 0 2px; }
+    .controls { max-width: 280px; gap: 9px; }
+    .controls.give-up-visible { max-width: 100%; gap: 7px; }
+    .controls.give-up-visible .action-btn { padding-inline: 7px; font-size: 12px; }
+    .action-btn { min-height: 46px; border-radius: 15px; }
+    .footer-note { margin-top: 7px; }
+    .cat-popup {
+      left: 12px;
+      right: 12px;
+      bottom: max(12px, env(safe-area-inset-bottom));
+      width: auto;
+      grid-template-columns: 88px 1fr;
+    }
+    .cat-popup img { width: 88px; height: 78px; }
+  }
+
+  @media (max-height: 760px) {
+    :root { --cell: min(38px, calc((100vw - 52px) / 9), calc((100dvh - 250px) / 18)); }
+    .game-card { padding-top: 10px; padding-bottom: 8px; }
+    .topbar { min-height: 34px; }
+    .daily-date { display: none; }
+    .meta-row { margin-top: 5px; }
+    .status { min-height: 18px; margin-top: 2px; }
+    .controls { margin-top: 8px; }
+    .action-btn { min-height: 42px; }
+    .footer-note { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <main class="game-card">
+    <header class="topbar">
+      <div class="brand">
+        <h1>Number Match &amp; 10</h1>
+        <div class="daily-date" id="dailyDate"></div>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" id="audioBtn" type="button" aria-label="Audio settings" title="Audio">♫</button>
+        <button class="icon-btn" id="themeBtn" type="button" aria-label="Switch theme" title="Theme">☾</button>
+        <button class="icon-btn" id="infoBtn" type="button" aria-label="How to play" title="How to play">?</button>
+        <button class="icon-btn" id="restartIconBtn" type="button" aria-label="Restart current run" title="Restart current run">↻</button>
+      </div>
+    </header>
+
+    <div class="score-meta-row">
+      <span></span>
+      <div class="score-stack">
+        <div class="score-value" id="score">0</div>
+        <span class="score-label">Pairs cleared</span>
+      </div>
+      <span class="best-label">★ Best today <strong id="bestScore">0</strong></span>
+    </div>
+
+    <div class="run-mode" role="group" aria-label="Run mode">
+      <button class="mode-btn active" id="dailyModeBtn" type="button">Daily Run</button>
+      <button class="mode-btn" id="randomModeBtn" type="button">Random Run</button>
+    </div>
+
+    <div class="board-wrap">
+      <div class="board" id="board" role="grid" aria-label="Number grid"></div>
+    </div>
+
+    <div class="status" id="status" aria-live="polite">Match equal numbers or numbers that total 10.</div>
+
+    <div class="controls">
+      <button class="action-btn" id="addBtn" type="button">
+        <span class="action-icon">＋</span>
+        <span>Add Line</span>
+        <span class="count-badge" id="addCount">10</span>
+      </button>
+      <button class="action-btn" id="hintBtn" type="button">
+        <span class="action-icon">♧</span>
+        <span>Hint</span>
+        <span class="count-badge" id="hintCount">5</span>
+      </button>
+      <button class="action-btn give-up-btn" id="giveUpBtn" type="button" hidden>
+        <span>Give Up</span>
+      </button>
+    </div>
+
+    <div class="audio-summary" id="audioSummary">
+      <span class="audio-pill" id="musicSummary"><strong>Music:</strong> Sunny Paws</span>
+      <span class="audio-pill" id="sfxSummary"><strong>SFX:</strong> On</span>
+    </div>
+
+    <div class="footer-note">Daily mode uses the same UTC puzzle for everyone • Random mode creates a fresh run</div>
+  </main>
+</div>
+
+<div class="cat-popup" id="catPopup" hidden role="status" aria-live="polite">
+  <img id="catPopupImg" src="assets/stepcat/stepcat06.jpg" alt="StepCat" />
+  <div>
+    <div class="cat-popup-kicker">StepCat says</div>
+    <div class="cat-popup-text" id="catPopupText"></div>
+  </div>
+</div>
+
+
+<div class="overlay" id="autoAddOverlay" hidden>
+  <section class="modal" role="dialog" aria-modal="true" aria-labelledby="autoAddTitle">
+    <img class="modal-cat" id="autoAddCat" src="assets/stepcat/stepcat17.jpg" alt="StepCat suggesting an add" />
+    <h2 id="autoAddTitle">No matches available</h2>
+    <p id="autoAddText">No matches available — add a new line.</p>
+    <div class="modal-actions">
+      <button class="primary-btn" id="autoAddOkBtn" type="button">Okay</button>
+    </div>
+  </section>
+</div>
+
+<div class="overlay" id="gameOverOverlay" hidden>
+  <section class="modal" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
+    <img class="gameover-cat" id="gameOverCat" src="assets/stepcat/stepcat22.jpg" alt="StepCat reacting to game over" />
+    <h2 id="gameOverTitle">Run Complete</h2>
+    <div class="modal-score" id="finalScore">0</div>
+    <div class="modal-caption">Pairs cleared</div>
+    <p id="gameOverText">No matches remain and all 10 adds have been used.</p>
+    <div class="gameover-quote" id="gameOverQuote">No moves left. Time to paws and try again.</div>
+    <div class="modal-actions">
+      <button class="primary-btn" id="replayBtn" type="button">Play again</button>
+      <button class="secondary-btn" id="closeGameOverBtn" type="button">Close</button>
+    </div>
+  </section>
+</div>
+
+<div class="overlay" id="audioOverlay" hidden>
+  <section class="modal" role="dialog" aria-modal="true" aria-labelledby="audioTitle">
+    <h2 id="audioTitle">Audio &amp; Chill</h2>
+    <p>Pick one of three longer, cheery chill tracks, mute the music, and toggle sound effects separately.</p>
+    <label class="field-label" for="musicSelect">Background music</label>
+    <select class="audio-select" id="musicSelect">
+      <option value="mute">Mute music</option>
+      <option value="moon-paws">Sunny Paws</option>
+      <option value="cloud-biscuit">Biscuit Bounce</option>
+      <option value="ten-at-dusk">Ten O’Clock Glow</option>
+    </select>
+    <div class="audio-inline">
+      <button class="toggle-chip" id="sfxToggle" type="button">Sound effects: On</button>
+    </div>
+    <div class="audio-note">Tip: most browsers only begin music after your first tap or click. Once you interact, StepCat takes over the aux cord.</div>
+    <div class="modal-actions">
+      <button class="secondary-btn" id="closeAudioBtn" type="button">Done</button>
+    </div>
+  </section>
+</div>
+
+<div class="overlay" id="infoOverlay" hidden>
+  <section class="modal" role="dialog" aria-modal="true" aria-labelledby="infoTitle">
+    <h2 id="infoTitle">How to play</h2>
+    <p>Match pairs and keep the board alive as long as you can.</p>
+    <ul class="rules">
+      <li>Match equal numbers or two numbers that total <strong>10</strong>.</li>
+      <li>Pairs must connect horizontally, vertically, on a true diagonal, or from the last cell of one row to the first cell of the next. Cleared cells may sit between a pair on the same straight path.</li>
+      <li>Whenever a row is fully cleared, it collapses upward and <strong>two</strong> fresh rows are added immediately at the bottom. Automatic rows do <strong>not</strong> use an Add.</li>
+      <li><strong>Add Line</strong> always adds exactly one new row of 9 numbers. You get 10 Adds for the entire run.</li>
+      <li><strong>Hint</strong> shows one legal pair. You get 5 hints for the entire run. When both Adds and Hints reach 0, a <strong>Give Up</strong> button appears.</li>
+      <li><strong>Daily Run</strong> uses the same UTC seed for everyone. <strong>Random Run</strong> creates a fresh run.</li>
+    </ul>
+    <div class="modal-actions">
+      <button class="secondary-btn" id="closeInfoBtn" type="button">Close</button>
+    </div>
+  </section>
+</div>
+
+<div class="overlay" id="restartOverlay" hidden>
+  <section class="modal" role="dialog" aria-modal="true" aria-labelledby="restartTitle">
+    <h2 id="restartTitle">Restart current run?</h2>
+    <p>Your current score and board progress will be reset.</p>
+    <div class="modal-actions modal-actions-two">
+      <button class="primary-btn" id="confirmRestartBtn" type="button">Yes</button>
+      <button class="secondary-btn" id="cancelRestartBtn" type="button">No</button>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const COLS = 9;
+  const ROWS = 18;
+  const SIZE = COLS * ROWS;
+  const START_COUNT = 27;
+  const MAX_ADDS = 10;
+  const MAX_HINTS = 5;
+  const CLEAR_DELAY = 210;
+
+  const TRACKS = {
+    'moon-paws': { name: 'Sunny Paws', src: 'assets/music/moon-paws.mp3' },
+    'cloud-biscuit': { name: 'Biscuit Bounce', src: 'assets/music/cloud-biscuit.mp3' },
+    'ten-at-dusk': { name: 'Ten O’Clock Glow', src: 'assets/music/ten-at-dusk.mp3' }
+  };
+
+  const CAT_ASSETS = {
+    "idle": [
+        "assets/stepcat/stepcat06.jpg",
+        "assets/stepcat/stepcat11.jpg",
+        "assets/stepcat/stepcat14.jpg",
+        "assets/stepcat/stepcat18.jpg",
+        "assets/stepcat/stepcat26.jpg",
+        "assets/stepcat/stepcat28.jpg"
+    ],
+    "chill": [
+        "assets/stepcat/stepcat07.jpg",
+        "assets/stepcat/stepcat08.jpg",
+        "assets/stepcat/stepcat10.jpg",
+        "assets/stepcat/stepcat27.jpg",
+        "assets/stepcat/stepcat28.jpg"
+    ],
+    "match": [
+        "assets/stepcat/stepcat23.jpg",
+        "assets/stepcat/stepcat24.jpg",
+        "assets/stepcat/stepcat26.jpg"
+    ],
+    "rowclear": [
+        "assets/stepcat/stepcat02.jpg",
+        "assets/stepcat/stepcat15.jpg",
+        "assets/stepcat/stepcat21.jpg",
+        "assets/stepcat/stepcat25.jpg"
+    ],
+    "bad": [
+        "assets/stepcat/stepcat01.jpg",
+        "assets/stepcat/stepcat17.jpg",
+        "assets/stepcat/stepcat18.jpg",
+        "assets/stepcat/stepcat20.jpg"
+    ],
+    "hint": [
+        "assets/stepcat/stepcat03.jpg",
+        "assets/stepcat/stepcat04.jpg",
+        "assets/stepcat/stepcat09.jpg",
+        "assets/stepcat/stepcat19.jpg",
+        "assets/stepcat/stepcat23.jpg"
+    ],
+    "add": [
+        "assets/stepcat/stepcat05.jpg",
+        "assets/stepcat/stepcat13.jpg",
+        "assets/stepcat/stepcat17.jpg",
+        "assets/stepcat/stepcat21.jpg",
+        "assets/stepcat/stepcat22.jpg"
+    ],
+    "stuck": [
+        "assets/stepcat/stepcat01.jpg",
+        "assets/stepcat/stepcat17.jpg",
+        "assets/stepcat/stepcat18.jpg",
+        "assets/stepcat/stepcat20.jpg"
+    ],
+    "theme": [
+        "assets/stepcat/stepcat06.jpg",
+        "assets/stepcat/stepcat12.jpg",
+        "assets/stepcat/stepcat16.jpg",
+        "assets/stepcat/stepcat25.jpg"
+    ],
+    "music": [
+        "assets/stepcat/stepcat07.jpg",
+        "assets/stepcat/stepcat10.jpg",
+        "assets/stepcat/stepcat13.jpg",
+        "assets/stepcat/stepcat27.jpg",
+        "assets/stepcat/stepcat28.jpg"
+    ],
+    "gameover": [
+        "assets/stepcat/stepcat01.jpg",
+        "assets/stepcat/stepcat17.jpg",
+        "assets/stepcat/stepcat18.jpg",
+        "assets/stepcat/stepcat20.jpg",
+        "assets/stepcat/stepcat22.jpg"
+    ]
+};
+
+  const CAT_LINES = {
+    idle: [
+      'Let’s make this purr-sonal. Match equal numbers or numbers that add to 10.',
+      'I’m feline good about this grid already.',
+      'Business face on. Time for some cat-culation.',
+      'A calm mind, a steady paw, and a lot of matching.'
+    ],
+    chill: [
+      'Tiny soundtrack, massive vibes.',
+      'This beat is paw-sitively mellow.',
+      'Excellent. We now proceed with ambient purring.',
+      'I approve of this musical situation.'
+    ],
+    match: [
+      'Purr-fect pair.',
+      'That match was meowgnificent.',
+      'Nicely done. Very claw-culated.',
+      'You really landed on your feet there.'
+    ],
+    rowclear: [
+      'Whole row gone. That was purr-cision work.',
+      'A full line clear? Meow we’re talking.',
+      'That row has officially left the cat-alogue.',
+      'Nine cells lighter. Very efficient paw-gress.'
+    ],
+    bad: [
+      'Nope. That one is not paw-sible.',
+      'I object on purr-inciple.',
+      'That combo is a mild cat-astrophe.',
+      'Close, but that pair is hiss-torically inaccurate.'
+    ],
+    hint: [
+      'A little hiss-t: try the highlighted pair.',
+      'I’ll paws the mystery. The answer is glowing.',
+      'StepCat clue delivery service: now arriving.',
+      'Those two numbers are secretly besties.'
+    ],
+    add: [
+      'More numbers? Bold move, fur real.',
+      'We have expanded the purr-imeter.',
+      'Adding rows keeps the drama alive.',
+      'Fresh numbers served. Bon appé-treat.'
+    ],
+    stuck: [
+      'No clean moves right now. Maybe add the remaining numbers.',
+      'We appear to be temporarily meow-mentarily stuck.',
+      'This board needs a strategic paw-zition reset.',
+      'I sense a dramatic Add button in our future.'
+    ],
+    theme: [
+      'Stealth mode engaged. Very mysterious, very elegant.',
+      'New lighting. Same elite whisker energy.',
+      'Mood adjusted. StepCat remains iconic.',
+      'A stylish theme swap? I support it.'
+    ],
+    music: [
+      'StepCat has claimed the aux cord.',
+      'A new track? Excellent taste.',
+      'Now spinning: premium loaf music.',
+      'This selection is deeply nap-compatible.'
+    ],
+    gameover: [
+      'No moves left. Time to paws and try again.',
+      'The grid wins this round. I demand a re-meow-tch.',
+      'A noble run. We shall pounce again.',
+      'Game over, but the cattitude remains undefeated.'
+    ]
+  };
+
+  const boardEl = document.getElementById('board');
+  const scoreEl = document.getElementById('score');
+  const bestScoreEl = document.getElementById('bestScore');
+  const dailyDateEl = document.getElementById('dailyDate');
+  const statusEl = document.getElementById('status');
+  const controlsEl = document.querySelector('.controls');
+  const addBtn = document.getElementById('addBtn');
+  const hintBtn = document.getElementById('hintBtn');
+  const giveUpBtn = document.getElementById('giveUpBtn');
+  const addCountEl = document.getElementById('addCount');
+  const hintCountEl = document.getElementById('hintCount');
+  const audioBtn = document.getElementById('audioBtn');
+  const themeBtn = document.getElementById('themeBtn');
+  const infoBtn = document.getElementById('infoBtn');
+  const restartIconBtn = document.getElementById('restartIconBtn');
+  const audioOverlay = document.getElementById('audioOverlay');
+  const musicSelect = document.getElementById('musicSelect');
+  const sfxToggle = document.getElementById('sfxToggle');
+  const closeAudioBtn = document.getElementById('closeAudioBtn');
+  const autoAddOverlay = document.getElementById('autoAddOverlay');
+  const autoAddCatEl = document.getElementById('autoAddCat');
+  const autoAddTextEl = document.getElementById('autoAddText');
+  const autoAddOkBtn = document.getElementById('autoAddOkBtn');
+  const gameOverOverlay = document.getElementById('gameOverOverlay');
+  const infoOverlay = document.getElementById('infoOverlay');
+  const restartOverlay = document.getElementById('restartOverlay');
+  const confirmRestartBtn = document.getElementById('confirmRestartBtn');
+  const cancelRestartBtn = document.getElementById('cancelRestartBtn');
+  const finalScoreEl = document.getElementById('finalScore');
+  const gameOverTextEl = document.getElementById('gameOverText');
+  const gameOverCatEl = document.getElementById('gameOverCat');
+  const gameOverQuoteEl = document.getElementById('gameOverQuote');
+  const replayBtn = document.getElementById('replayBtn');
+  const closeGameOverBtn = document.getElementById('closeGameOverBtn');
+  const closeInfoBtn = document.getElementById('closeInfoBtn');
+  const dailyModeBtn = document.getElementById('dailyModeBtn');
+  const randomModeBtn = document.getElementById('randomModeBtn');
+  const catPopupEl = document.getElementById('catPopup');
+  const catPopupImgEl = document.getElementById('catPopupImg');
+  const catPopupTextEl = document.getElementById('catPopupText');
+  const musicSummaryEl = document.getElementById('musicSummary');
+  const sfxSummaryEl = document.getElementById('sfxSummary');
+
+  let board = new Array(SIZE).fill(null);
+  let clearedNumbers = new Array(SIZE).fill(null);
+  let cells = [];
+  let selectedIndex = null;
+  let score = 0;
+  let addsLeft = MAX_ADDS;
+  let hintsLeft = MAX_HINTS;
+  let locked = false;
+  let gameOver = false;
+  let currentDateKey = utcDateKey();
+  let runMode = localStorage.getItem('nm10_mode') === 'random' ? 'random' : 'daily';
+  let randomRunSeed = '';
+  let sfxEnabled = localStorage.getItem('nm10_sfx') !== 'off';
+  let musicEnabled = localStorage.getItem('nm10_music') !== 'off';
+  let selectedTrackId = localStorage.getItem('nm10_music_track') || 'moon-paws';
+  let audioCtx = null;
+  let catPopupTimer = null;
+  let addedLineSequence = 0;
+
+  const musicAudio = new Audio(TRACKS[selectedTrackId].src);
+  musicAudio.loop = true;
+  musicAudio.preload = 'auto';
+  musicAudio.volume = 0.36;
+
+  function choice(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+
+
+function pickFromPool(poolName) {
+  const pool = CAT_ASSETS[poolName] || CAT_ASSETS.idle;
+  return choice(pool && pool.length ? pool : CAT_ASSETS.idle);
+}
+
+function hideCatPopup() {
+    if (catPopupEl.hidden) return;
+    catPopupEl.classList.add('leaving');
+    setTimeout(() => {
+      catPopupEl.hidden = true;
+      catPopupEl.classList.remove('leaving');
+    }, 210);
+  }
+
+  function showCatPopup(mood, customLine = '', duration = 2600) {
+    const safeMood = CAT_LINES[mood] ? mood : 'idle';
+    catPopupImgEl.src = pickFromPool(safeMood);
+    catPopupTextEl.textContent = customLine || choice(CAT_LINES[safeMood]);
+    catPopupEl.classList.remove('leaving');
+    catPopupEl.hidden = false;
+    if (catPopupTimer) clearTimeout(catPopupTimer);
+    catPopupTimer = setTimeout(hideCatPopup, duration);
+  }
+
+
+function allAddsUsedMessage() {
+  return `No matches remain and all ${MAX_ADDS} adds have been used.`;
+}
+
+function promptAutoAdd(message = 'No matches available — add a new line.') {
+  if (gameOver || autoAddOverlay.hidden === false) return;
+  autoAddCatEl.src = pickFromPool('add');
+  autoAddTextEl.textContent = message;
+  autoAddOverlay.hidden = false;
+  locked = true;
+}
+
+function confirmAutoAdd() {
+  autoAddOverlay.hidden = true;
+  locked = false;
+  addOneLine({ consumeAdd: true, fromPrompt: true });
+}
+
+function utcDateKey(date = new Date()) {
+    return `${date.getUTCFullYear()}-${String(date.getUTCMonth()+1).padStart(2,'0')}-${String(date.getUTCDate()).padStart(2,'0')}`;
+  }
+
+  function friendlyUtcDate(key) {
+    const [y,m,d] = key.split('-').map(Number);
+    return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
+      .format(new Date(Date.UTC(y, m-1, d))) + ' • UTC Daily';
+  }
+
+  function xmur3(str) {
+    let h = 1779033703 ^ str.length;
+    for (let i = 0; i < str.length; i++) {
+      h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+      h = h << 13 | h >>> 19;
+    }
+    return function() {
+      h = Math.imul(h ^ (h >>> 16), 2246822507);
+      h = Math.imul(h ^ (h >>> 13), 3266489909);
+      return (h ^= h >>> 16) >>> 0;
+    };
+  }
+
+  function mulberry32(a) {
+    return function() {
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  function initialRng(attempt = 0) {
+    const baseSeed = runMode === 'daily' ? currentDateKey : randomRunSeed;
+    const seedFactory = xmur3(`Number Match & 10|${runMode}|${baseSeed}|initial|attempt:${attempt}`);
+    return mulberry32(seedFactory());
+  }
+
+  function generateInitialBoard() {
+    let generated;
+    clearedNumbers = new Array(SIZE).fill(null);
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const rng = initialRng(attempt);
+      generated = new Array(SIZE).fill(null);
+      for (let i = 0; i < START_COUNT; i++) generated[i] = 1 + Math.floor(rng() * 9);
+      board = generated;
+      if (findValidPairs().length) return generated;
+    }
+    return generated;
+  }
+
+  function initCells() {
+    boardEl.innerHTML = '';
+    cells = [];
+    for (let i = 0; i < SIZE; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.index = i;
+      cell.setAttribute('role', 'gridcell');
+      cell.addEventListener('click', () => handleCellClick(i));
+      boardEl.appendChild(cell);
+      cells.push(cell);
+    }
+  }
+
+  function updateBoard(animateNewFrom = null) {
+    for (let i = 0; i < SIZE; i++) {
+      const cell = cells[i];
+      const value = board[i];
+      const clearedValue = clearedNumbers[i];
+      cell.textContent = value ?? clearedValue ?? '';
+      cell.classList.toggle('filled', value !== null);
+      cell.classList.toggle('cleared-number', value === null && clearedValue !== null);
+      cell.classList.toggle('selected', i === selectedIndex && value !== null);
+      cell.setAttribute('aria-label', value !== null
+        ? `Number ${value}`
+        : clearedValue !== null
+          ? `Cleared number ${clearedValue}`
+          : `Empty cell ${i+1}`);
+      if (animateNewFrom !== null && i >= animateNewFrom && value !== null) {
+        cell.classList.remove('new-number');
+        void cell.offsetWidth;
+        cell.classList.add('new-number');
+        setTimeout(() => cell.classList.remove('new-number'), 320);
+      }
+    }
+  }
+
+  function collapseClearedRows() {
+    const keptBoardRows = [];
+    const keptClearedRows = [];
+    let collapsedRows = 0;
+
+    for (let r = 0; r < ROWS; r++) {
+      const start = r * COLS;
+      const boardRow = board.slice(start, start + COLS);
+      const clearedRow = clearedNumbers.slice(start, start + COLS);
+      const hasLiveNumber = boardRow.some(v => v !== null);
+      const hadAnyNumber = hasLiveNumber || clearedRow.some(v => v !== null);
+
+      if (!hasLiveNumber && hadAnyNumber) {
+        collapsedRows += 1;
+        continue;
+      }
+
+      if (hasLiveNumber) {
+        keptBoardRows.push(boardRow);
+        keptClearedRows.push(clearedRow);
+      }
+    }
+
+    if (!collapsedRows) return 0;
+
+    board = keptBoardRows.flat();
+    clearedNumbers = keptClearedRows.flat();
+    while (board.length < SIZE) board.push(null);
+    while (clearedNumbers.length < SIZE) clearedNumbers.push(null);
+    board.length = SIZE;
+    clearedNumbers.length = SIZE;
+    return collapsedRows;
+  }
+
+  function updateAudioUI() {
+    musicSelect.value = musicEnabled ? selectedTrackId : 'mute';
+    sfxToggle.textContent = `Sound effects: ${sfxEnabled ? 'On' : 'Off'}`;
+    sfxToggle.classList.toggle('on', sfxEnabled);
+    musicSummaryEl.innerHTML = `<strong>Music:</strong> ${musicEnabled ? TRACKS[selectedTrackId].name : 'Muted'}`;
+    sfxSummaryEl.innerHTML = `<strong>SFX:</strong> ${sfxEnabled ? 'On' : 'Off'}`;
+  }
+
+  function updateUI() {
+    scoreEl.textContent = score;
+    addCountEl.textContent = addsLeft;
+    hintCountEl.textContent = hintsLeft;
+    dailyDateEl.textContent = runMode === 'daily' ? friendlyUtcDate(currentDateKey) : 'Fresh random run';
+    bestScoreEl.textContent = getBestScore();
+    document.querySelector('.best-label').firstChild.textContent = runMode === 'daily' ? '★ Best today ' : '★ Best random ';
+    dailyModeBtn.classList.toggle('active', runMode === 'daily');
+    randomModeBtn.classList.toggle('active', runMode === 'random');
+    addBtn.disabled = locked || gameOver || addsLeft <= 0 || !canAddLine();
+    hintBtn.disabled = locked || gameOver || hintsLeft <= 0 || findValidPairs().length === 0;
+    const showGiveUp = !gameOver && addsLeft <= 0 && hintsLeft <= 0;
+    giveUpBtn.hidden = !showGiveUp;
+    controlsEl.classList.toggle('give-up-visible', showGiveUp);
+    replayBtn.textContent = runMode === 'daily' ? 'Play today again' : 'New random run';
+    updateAudioUI();
+  }
+
+  function setStatus(message, type = '') {
+    statusEl.textContent = message;
+    statusEl.className = `status${type ? ' ' + type : ''}`;
+  }
+
+  function coords(index) {
+    return { r: Math.floor(index / COLS), c: index % COLS };
+  }
+
+  function valuesMatch(a, b) {
+    return a === b || a + b === 10;
+  }
+
+  function cellsBetweenClear(i, j) {
+    const a = coords(i), b = coords(j);
+    const drRaw = b.r - a.r;
+    const dcRaw = b.c - a.c;
+
+    let dr = 0, dc = 0, steps = 0;
+    if (a.r === b.r) {
+      dc = Math.sign(dcRaw); steps = Math.abs(dcRaw);
+    } else if (a.c === b.c) {
+      dr = Math.sign(drRaw); steps = Math.abs(drRaw);
+    } else if (Math.abs(drRaw) === Math.abs(dcRaw)) {
+      dr = Math.sign(drRaw); dc = Math.sign(dcRaw); steps = Math.abs(drRaw);
+    } else {
+      return false;
+    }
+
+    for (let s = 1; s < steps; s++) {
+      const idx = (a.r + dr * s) * COLS + (a.c + dc * s);
+      if (board[idx] !== null) return false;
+    }
+    return true;
+  }
+
+  function rowWrapClear(i, j) {
+    // A row transition is legal only at the literal edge of the grid:
+    // last cell of one row -> first cell of the immediately following row.
+    // Cleared cells elsewhere in the two rows do NOT create a wraparound path.
+    if (i > j) [i, j] = [j, i];
+    const a = coords(i), b = coords(j);
+    return b.r === a.r + 1 && a.c === COLS - 1 && b.c === 0;
+  }
+
+  function canPair(i, j) {
+    if (i === j || board[i] === null || board[j] === null) return false;
+    if (!valuesMatch(board[i], board[j])) return false;
+    return cellsBetweenClear(i, j) || rowWrapClear(i, j);
+  }
+
+  function findValidPairs() {
+    const live = [];
+    for (let i = 0; i < SIZE; i++) if (board[i] !== null) live.push(i);
+    const pairs = [];
+    for (let a = 0; a < live.length; a++) {
+      for (let b = a + 1; b < live.length; b++) {
+        if (canPair(live[a], live[b])) pairs.push([live[a], live[b]]);
+      }
+    }
+    return pairs;
+  }
+
+  function remainingValues() {
+    return board.filter(v => v !== null);
+  }
+
+  function rowHasLive(row) {
+    if (row < 0 || row >= ROWS) return false;
+    const start = row * COLS;
+    for (let c = 0; c < COLS; c++) if (board[start + c] !== null) return true;
+    return false;
+  }
+
+  function bottomOccupiedRow() {
+    for (let r = ROWS - 1; r >= 0; r--) {
+      if (rowHasLive(r)) return r;
+    }
+    return -1;
+  }
+
+  function availableLineSlots() {
+    const bottom = bottomOccupiedRow();
+    return ROWS - (bottom + 1);
+  }
+
+  function canAddLine() {
+    // A full 9-cell row must fit. If the live board already reaches the
+    // final row, manual Add is unavailable and cannot overflow the board.
+    return availableLineSlots() >= 1;
+  }
+
+  function newLineRng(sequence, reason = 'manual') {
+    const baseSeed = runMode === 'daily' ? currentDateKey : randomRunSeed;
+    const boardSignature = board.map(v => v === null ? '.' : String(v)).join('');
+    const seedFactory = xmur3(`Number Match & 10|line-v1|${runMode}|${baseSeed}|line:${sequence}|reason:${reason}|board:${boardSignature}`);
+    return mulberry32(seedFactory());
+  }
+
+  function matchingValueFor(value, rng) {
+    const complement = 10 - value;
+    if (complement >= 1 && complement <= 9 && complement !== value && rng() < 0.55) return complement;
+    return value;
+  }
+
+  function buildNewLine(reason = 'manual') {
+    const bottom = bottomOccupiedRow();
+    const targetRow = bottom + 1;
+    if (targetRow < 0 || targetRow >= ROWS) return null;
+
+    const sequence = addedLineSequence + 1;
+    const rng = newLineRng(sequence, reason);
+    const values = Array.from({ length: COLS }, () => 1 + Math.floor(rng() * 9));
+
+    if (bottom >= 0) {
+      // Guarantee one real, immediate vertical match with the row above.
+      // Because the cells are in consecutive rows and the same column,
+      // this always passes the exact same canPair() geometry used by clicks/hints.
+      const liveCols = [];
+      for (let c = 0; c < COLS; c++) {
+        if (board[bottom * COLS + c] !== null) liveCols.push(c);
+      }
+      if (!liveCols.length) return null;
+
+      const anchorCol = liveCols[Math.floor(rng() * liveCols.length)];
+      const anchorValue = board[bottom * COLS + anchorCol];
+      values[anchorCol] = matchingValueFor(anchorValue, rng);
+    } else {
+      // If the entire board was cleared, make the new row self-playable.
+      const c = Math.floor(rng() * (COLS - 1));
+      values[c + 1] = matchingValueFor(values[c], rng);
+    }
+
+    const start = targetRow * COLS;
+    return {
+      sequence,
+      targetRow,
+      placements: values.map((value, c) => ({ index: start + c, value }))
+    };
+  }
+
+  function commitNewLine(plan) {
+    if (!plan || plan.placements.length !== COLS) return false;
+    const expectedStart = plan.targetRow * COLS;
+
+    // A line must always occupy exactly nine consecutive cells in one row.
+    for (let c = 0; c < COLS; c++) {
+      const p = plan.placements[c];
+      if (!p || p.index !== expectedStart + c || p.value < 1 || p.value > 9) return false;
+      if (board[p.index] !== null) return false;
+    }
+
+    for (const placement of plan.placements) {
+      board[placement.index] = placement.value;
+      clearedNumbers[placement.index] = null;
+    }
+    addedLineSequence = plan.sequence;
+    return true;
+  }
+
+  function verifyNewLinePlayable(targetRow) {
+    if (targetRow < 0 || targetRow >= ROWS) return false;
+    const start = targetRow * COLS;
+    const newIndices = Array.from({length: COLS}, (_, c) => start + c);
+
+    if (targetRow === 0) {
+      for (let a = 0; a < COLS; a++) {
+        for (let b = a + 1; b < COLS; b++) {
+          if (canPair(newIndices[a], newIndices[b])) return true;
+        }
+      }
+      return false;
+    }
+
+    const aboveStart = (targetRow - 1) * COLS;
+    for (const i of newIndices) {
+      for (let c = 0; c < COLS; c++) {
+        const j = aboveStart + c;
+        if (board[j] !== null && canPair(i, j)) return true;
+      }
+    }
+    return false;
+  }
+
+  function forceRepairNewLine(targetRow) {
+    // This is a safety net only. It never removes a number; it changes one
+    // newly generated value so it vertically matches a live value above.
+    if (targetRow <= 0 || targetRow >= ROWS) return verifyNewLinePlayable(targetRow);
+    const aboveRow = targetRow - 1;
+    const liveCols = [];
+    for (let c = 0; c < COLS; c++) {
+      if (board[aboveRow * COLS + c] !== null) liveCols.push(c);
+    }
+    if (!liveCols.length) return false;
+
+    const c = liveCols[0];
+    const aboveValue = board[aboveRow * COLS + c];
+    board[targetRow * COLS + c] = aboveValue;
+    clearedNumbers[targetRow * COLS + c] = null;
+    return canPair(aboveRow * COLS + c, targetRow * COLS + c);
+  }
+
+  function primeAudio() {
+    try {
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    } catch (_) {}
+    if (musicEnabled && document.visibilityState === 'visible') {
+      musicAudio.play().catch(() => {});
+    }
+  }
+
+  function setMusicTrack(trackId) {
+    selectedTrackId = trackId;
+    localStorage.setItem('nm10_music_track', selectedTrackId);
+    const track = TRACKS[selectedTrackId];
+    if (track && !musicAudio.src.endsWith(track.src)) {
+      musicAudio.src = track.src;
+      musicAudio.load();
+    }
+  }
+
+  function applyMusicSelection(value, saySomething = true) {
+    if (value === 'mute') {
+      musicEnabled = false;
+      localStorage.setItem('nm10_music', 'off');
+      musicAudio.pause();
+    } else {
+      musicEnabled = true;
+      localStorage.setItem('nm10_music', 'on');
+      setMusicTrack(value);
+      primeAudio();
+    }
+    updateAudioUI();
+  }
+
+  function handleCellClick(index) {
+    if (locked || gameOver || board[index] === null) return;
+    ensureCurrentDate();
+    primeAudio();
+
+    if (selectedIndex === null) {
+      selectedIndex = index;
+      updateBoard();
+      playTone('select');
+      return;
+    }
+
+    if (selectedIndex === index) {
+      selectedIndex = null;
+      updateBoard();
+      playTone('deselect');
+      return;
+    }
+
+    const first = selectedIndex;
+    if (canPair(first, index)) {
+      clearPair(first, index);
+    } else {
+      cells[first].classList.add('invalid');
+      cells[index].classList.add('invalid');
+      setTimeout(() => {
+        cells[first]?.classList.remove('invalid');
+        cells[index]?.classList.remove('invalid');
+      }, 280);
+      selectedIndex = index;
+      updateBoard();
+      setStatus('Those numbers cannot connect.', 'warn');
+      playTone('bad');
+    }
+  }
+
+  function resolveNoMatches() {
+    if (findValidPairs().length) return false;
+    if (addsLeft > 0 && canAddLine()) {
+      promptAutoAdd('No matches available — add a new line.');
+    } else if (!canAddLine()) {
+      endGame('No matches remain and there is no room for another line.');
+    } else {
+      endGame(allAddsUsedMessage());
+    }
+    return true;
+  }
+
+  function clearPair(a, b) {
+    locked = true;
+    selectedIndex = null;
+
+    cells[a].classList.add('clearing');
+    cells[b].classList.add('clearing');
+    playTone('match');
+
+    setTimeout(() => {
+      clearedNumbers[a] = board[a];
+      clearedNumbers[b] = board[b];
+      board[a] = null;
+      board[b] = null;
+      cells[a].classList.remove('clearing');
+      cells[b].classList.remove('clearing');
+
+      const rowsCleared = collapseClearedRows();
+      score += 1;
+      saveBestScore(score);
+
+      // Every fully cleared row immediately creates TWO fresh rows at the
+      // bottom, before any no-match check can run. These automatic rows never
+      // consume one of the 10 manual Adds. The fixed board may never overflow.
+      let replacementRowsAdded = 0;
+      const replacementRowsNeeded = rowsCleared * 2;
+      if (rowsCleared > 0) {
+        // Treat the automatic two-line refill as one atomic capacity check.
+        // Never partially add a refill or write beyond the fixed 18-row board.
+        if (availableLineSlots() < replacementRowsNeeded) {
+          locked = false;
+          updateBoard();
+          updateUI();
+          endGame('The board is full — there is not enough room to add both new lines after the row clear.');
+          return;
+        }
+        for (let n = 0; n < replacementRowsNeeded; n++) {
+          const added = addOneLine({
+            consumeAdd: false,
+            reason: 'row-clear',
+            silent: true,
+            bypassLock: true
+          });
+          if (!added) {
+            locked = false;
+            updateBoard();
+            updateUI();
+            endGame('The board is full — there was not enough room to add both new lines after a row clear.');
+            return;
+          }
+          replacementRowsAdded += 1;
+        }
+      }
+
+      locked = false;
+      updateBoard();
+      updateUI();
+
+      if (rowsCleared > 0) {
+        showCatPopup('rowclear', rowsCleared > 1
+          ? `${rowsCleared} rows cleared at once. That was a purr-fect sweep.`
+          : '', 3000);
+
+        if (rowsCleared === 1) {
+          setStatus('Row cleared — two fresh lines were added immediately.', 'good');
+        } else {
+          setStatus(`${rowsCleared} rows cleared — ${replacementRowsAdded} fresh lines were added immediately.`, 'good');
+        }
+        return;
+      }
+
+      if (!resolveNoMatches()) {
+        setStatus('Nice match.', 'good');
+      }
+    }, CLEAR_DELAY);
+  }
+
+  function addOneLine(options = {}) {
+    const consumeAdd = options.consumeAdd !== false;
+    const fromPrompt = options.fromPrompt === true;
+    const silent = options.silent === true;
+    const bypassLock = options.bypassLock === true;
+    const reason = options.reason || (fromPrompt ? 'forced' : 'manual');
+
+    if ((locked && !fromPrompt && !silent && !bypassLock) || gameOver) return false;
+    if (consumeAdd && addsLeft <= 0) return false;
+    ensureCurrentDate();
+    primeAudio();
+
+    if (!canAddLine()) {
+      if (!silent) {
+        if (findValidPairs().length) {
+          setStatus('No room for another line — clear a full row first.', 'warn');
+          updateUI();
+        } else {
+          endGame('No matches remain and there is no room for another line.');
+        }
+      }
+      return false;
+    }
+
+    const plan = buildNewLine(reason);
+    if (!plan || !commitNewLine(plan)) {
+      if (!silent) endGame('Unable to add a complete new line.');
+      return false;
+    }
+
+    // The constructor guarantees a legal match. Verify anyway; if something
+    // external ever breaks that invariant, repair one generated cell in-place.
+    if (!verifyNewLinePlayable(plan.targetRow) && !forceRepairNewLine(plan.targetRow)) {
+      // Roll back the just-added row rather than leave a broken partial state.
+      const start = plan.targetRow * COLS;
+      for (let c = 0; c < COLS; c++) {
+        board[start + c] = null;
+        clearedNumbers[start + c] = null;
+      }
+      addedLineSequence = Math.max(0, addedLineSequence - 1);
+      if (!silent) endGame('Unable to create a playable new line.');
+      return false;
+    }
+
+    selectedIndex = null;
+    if (consumeAdd) addsLeft -= 1;
+    if (!silent) playTone('add');
+
+    const firstAddedIndex = plan.targetRow * COLS;
+    updateBoard(firstAddedIndex);
+    updateUI();
+
+    if (!silent) setStatus(`${addsLeft} Add${addsLeft === 1 ? '' : 's'} remaining.`);
+    return true;
+  }
+
+  function addLineFromButton() {
+    if (locked || gameOver || addsLeft <= 0 || !canAddLine()) return;
+    locked = true;
+    const added = addOneLine({ consumeAdd: true, reason: 'manual', silent: true });
+    locked = false;
+    updateUI();
+    if (added) {
+      playTone('add');
+      setStatus(`${addsLeft} Add${addsLeft === 1 ? '' : 's'} remaining.`);
+    }
+  }
+
+  function showHint() {
+    if (locked || gameOver || hintsLeft <= 0) return;
+    ensureCurrentDate();
+    primeAudio();
+    const pairs = findValidPairs();
+    if (!pairs.length) {
+      resolveNoMatches();
+      updateUI();
+      return;
+    }
+    const [a,b] = pairs[0];
+    hintsLeft -= 1;
+    selectedIndex = null;
+    updateBoard();
+    cells[a].classList.add('hint');
+    cells[b].classList.add('hint');
+    setTimeout(() => {
+      cells[a]?.classList.remove('hint');
+      cells[b]?.classList.remove('hint');
+    }, 2500);
+    setStatus('Try the highlighted pair.');
+    showCatPopup('hint', '', 3000);
+    playTone('hint');
+    updateUI();
+  }
+
+  function giveUpRun() {
+    if (gameOver || addsLeft > 0 || hintsLeft > 0) return;
+    endGame('You chose to give up after using all Adds and Hints.');
+  }
+
+  function endGame(reason) {
+    if (gameOver) return;
+    gameOver = true;
+    locked = false;
+    selectedIndex = null;
+    saveBestScore(score);
+    updateBoard();
+    updateUI();
+    setStatus(runMode === 'daily' ? 'Daily run complete.' : 'Random run complete.', 'warn');
+    finalScoreEl.textContent = score;
+    gameOverTextEl.textContent = reason;
+    gameOverCatEl.src = pickFromPool('gameover');
+    gameOverQuoteEl.textContent = choice(CAT_LINES.gameover);
+    hideCatPopup();
+    autoAddOverlay.hidden = true;
+    gameOverOverlay.hidden = false;
+    playTone('gameover');
+  }
+
+  function freshRandomSeed() {
+    if (window.crypto?.getRandomValues) {
+      const values = new Uint32Array(4);
+      crypto.getRandomValues(values);
+      return Array.from(values, v => v.toString(16).padStart(8, '0')).join('');
+    }
+    return `${Date.now()}-${Math.random()}-${Math.random()}`;
+  }
+
+  function startRun(options = {}) {
+    currentDateKey = utcDateKey();
+    if (runMode === 'random' && (options.newRandom !== false || !randomRunSeed)) {
+      randomRunSeed = freshRandomSeed();
+    }
+    score = 0;
+    addsLeft = MAX_ADDS;
+    hintsLeft = MAX_HINTS;
+    selectedIndex = null;
+    locked = false;
+    gameOver = false;
+    addedLineSequence = 0;
+    generateInitialBoard();
+    autoAddOverlay.hidden = true;
+    gameOverOverlay.hidden = true;
+    infoOverlay.hidden = true;
+    audioOverlay.hidden = true;
+    restartOverlay.hidden = true;
+    hideCatPopup();
+    updateBoard(0);
+    updateUI();
+    setStatus('Match equal numbers or numbers that total 10.');
+  }
+
+  function setRunMode(mode) {
+    if (mode !== 'daily' && mode !== 'random') return;
+    if (runMode === mode && !gameOver) return;
+    runMode = mode;
+    localStorage.setItem('nm10_mode', runMode);
+    startRun({ newRandom: mode === 'random' });
+    playTone('open');
+  }
+
+  function ensureCurrentDate() {
+    const nowKey = utcDateKey();
+    if (runMode === 'daily' && nowKey !== currentDateKey) startRun();
+    else currentDateKey = nowKey;
+  }
+
+  function bestKey() {
+    return runMode === 'daily' ? `nm10_best_${currentDateKey}` : 'nm10_best_random';
+  }
+
+  function getBestScore() {
+    return Number(localStorage.getItem(bestKey()) || 0);
+  }
+
+  function saveBestScore(value) {
+    const best = getBestScore();
+    if (value > best) localStorage.setItem(bestKey(), String(value));
+  }
+
+  function initTheme() {
+    const saved = localStorage.getItem('nm10_theme');
+    const darkPreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const theme = saved || (darkPreferred ? 'dark' : 'light');
+    document.documentElement.dataset.theme = theme;
+    themeBtn.textContent = theme === 'dark' ? '☀' : '☾';
+  }
+
+  function toggleTheme() {
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem('nm10_theme', next);
+    themeBtn.textContent = next === 'dark' ? '☀' : '☾';
+    playTone('open');
+  }
+
+  function playTone(kind) {
+    if (!sfxEnabled) return;
+    try {
+      audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
+      const now = audioCtx.currentTime;
+      const patterns = {
+        select: [
+          { freq: 430, offset: .01, dur: .035, type: 'triangle', gain: .024 },
+          { freq: 620, offset: .045, dur: .04, type: 'sine', gain: .018 }
+        ],
+        deselect: [
+          { freq: 320, offset: .01, dur: .04, type: 'sine', gain: .02 }
+        ],
+        match: [
+          { freq: 560, offset: .02, dur: .05, type: 'triangle', gain: .032 },
+          { freq: 760, offset: .085, dur: .07, type: 'sine', gain: .03 },
+          { freq: 920, offset: .155, dur: .06, type: 'sine', gain: .018 }
+        ],
+        bad: [
+          { freq: 190, offset: .02, dur: .08, type: 'sawtooth', gain: .02 },
+          { freq: 160, offset: .08, dur: .08, type: 'triangle', gain: .015 }
+        ],
+        hint: [
+          { freq: 510, offset: .025, dur: .05, type: 'triangle', gain: .028 },
+          { freq: 620, offset: .09, dur: .05, type: 'sine', gain: .025 },
+          { freq: 760, offset: .15, dur: .055, type: 'sine', gain: .02 }
+        ],
+        add: [
+          { freq: 330, offset: .02, dur: .05, type: 'triangle', gain: .025 },
+          { freq: 420, offset: .08, dur: .06, type: 'triangle', gain: .022 },
+          { freq: 520, offset: .14, dur: .06, type: 'sine', gain: .018 }
+        ],
+        gameover: [
+          { freq: 350, offset: .02, dur: .08, type: 'triangle', gain: .03 },
+          { freq: 280, offset: .13, dur: .11, type: 'sine', gain: .026 },
+          { freq: 220, offset: .28, dur: .12, type: 'sine', gain: .02 }
+        ],
+        open: [
+          { freq: 450, offset: .01, dur: .035, type: 'triangle', gain: .022 },
+          { freq: 680, offset: .055, dur: .05, type: 'sine', gain: .016 }
+        ]
+      };
+      for (const tone of (patterns[kind] || patterns.select)) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = tone.type;
+        osc.frequency.value = tone.freq;
+        gain.gain.setValueAtTime(0.0001, now + tone.offset);
+        gain.gain.exponentialRampToValueAtTime(tone.gain, now + tone.offset + .01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + tone.offset + tone.dur);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(now + tone.offset);
+        osc.stop(now + tone.offset + tone.dur + .03);
+      }
+    } catch (_) {}
+  }
+
+  addBtn.addEventListener('click', addLineFromButton);
+  autoAddOkBtn.addEventListener('click', confirmAutoAdd);
+  hintBtn.addEventListener('click', showHint);
+  giveUpBtn.addEventListener('click', giveUpRun);
+  audioBtn.addEventListener('click', () => { audioOverlay.hidden = false; primeAudio(); playTone('open'); });
+  closeAudioBtn.addEventListener('click', () => { audioOverlay.hidden = true; });
+  musicSelect.addEventListener('change', (e) => applyMusicSelection(e.target.value));
+  sfxToggle.addEventListener('click', () => {
+    sfxEnabled = !sfxEnabled;
+    localStorage.setItem('nm10_sfx', sfxEnabled ? 'on' : 'off');
+    updateAudioUI();
+    if (sfxEnabled) playTone('select');
+  });
+  themeBtn.addEventListener('click', toggleTheme);
+  infoBtn.addEventListener('click', () => { infoOverlay.hidden = false; playTone('open'); });
+  restartIconBtn.addEventListener('click', () => { restartOverlay.hidden = false; playTone('open'); });
+  cancelRestartBtn.addEventListener('click', () => { restartOverlay.hidden = true; });
+  confirmRestartBtn.addEventListener('click', () => { restartOverlay.hidden = true; startRun({ newRandom: false }); });
+  closeInfoBtn.addEventListener('click', () => { infoOverlay.hidden = true; });
+  replayBtn.addEventListener('click', () => startRun({ newRandom: runMode === 'random' }));
+  closeGameOverBtn.addEventListener('click', () => { gameOverOverlay.hidden = true; });
+  dailyModeBtn.addEventListener('click', () => setRunMode('daily'));
+  randomModeBtn.addEventListener('click', () => setRunMode('random'));
+  catPopupEl.addEventListener('click', hideCatPopup);
+
+  infoOverlay.addEventListener('click', (e) => {
+    if (e.target === infoOverlay) infoOverlay.hidden = true;
+  });
+  gameOverOverlay.addEventListener('click', (e) => {
+    if (e.target === gameOverOverlay) gameOverOverlay.hidden = true;
+  });
+  audioOverlay.addEventListener('click', (e) => {
+    if (e.target === audioOverlay) audioOverlay.hidden = true;
+  });
+  restartOverlay.addEventListener('click', (e) => {
+    if (e.target === restartOverlay) restartOverlay.hidden = true;
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      infoOverlay.hidden = true;
+      gameOverOverlay.hidden = true;
+      audioOverlay.hidden = true;
+      restartOverlay.hidden = true;
+    }
+  });
+
+  document.addEventListener('pointerdown', primeAudio, { passive: true });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) musicAudio.pause();
+    else if (musicEnabled) musicAudio.play().catch(() => {});
+  });
+
+  initTheme();
+  initCells();
+  setMusicTrack(selectedTrackId);
+  updateAudioUI();
+  startRun({ newRandom: runMode === 'random' });
+
+  // Refresh the daily seed automatically if the page stays open across UTC midnight.
+  setInterval(ensureCurrentDate, 60_000);
+})();
+</script>
+</body>
+</html>
