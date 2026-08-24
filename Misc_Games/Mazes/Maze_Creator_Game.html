@@ -543,6 +543,23 @@
 
   let state=null;
 
+  function syncEndpointOptions(changedEl = startPosEl){
+    // Start and end must always be different corners.
+    if(startPosEl.value === endPosEl.value){
+      const otherEl = changedEl === endPosEl ? startPosEl : endPosEl;
+      const blockedValue = changedEl.value;
+      const fallback = [...otherEl.options].find(opt => opt.value !== blockedValue);
+      if(fallback) otherEl.value = fallback.value;
+    }
+
+    [...startPosEl.options].forEach(opt => {
+      opt.disabled = opt.value === endPosEl.value;
+    });
+    [...endPosEl.options].forEach(opt => {
+      opt.disabled = opt.value === startPosEl.value;
+    });
+  }
+
   function redraw(){
     if(!state) return;
     if(!geom) resizeCanvasForCurrentState();
@@ -555,6 +572,7 @@
 
   function regenerate(){
     try{
+      syncEndpointOptions();
       errBox.style.display="none";
       setStatus("Ready");
 
@@ -833,7 +851,16 @@
   // ---------- Wiring ----------
   newMazeBtn.addEventListener("click", regenerate);
   clearPathBtn.addEventListener("click", clearPath);
-  [difficultyEl,startPosEl,endPosEl,braidLoopsEl].forEach(el => el.addEventListener("change", regenerate));
+  difficultyEl.addEventListener("change", regenerate);
+  braidLoopsEl.addEventListener("change", regenerate);
+  startPosEl.addEventListener("change", () => {
+    syncEndpointOptions(startPosEl);
+    regenerate();
+  });
+  endPosEl.addEventListener("change", () => {
+    syncEndpointOptions(endPosEl);
+    regenerate();
+  });
   showSolutionEl.addEventListener("change", redraw);
   showMyPathEl.addEventListener("change", redraw);
 
@@ -843,6 +870,7 @@
     redraw();
   });
 
+  syncEndpointOptions();
   regenerate();
 })();
 </script>

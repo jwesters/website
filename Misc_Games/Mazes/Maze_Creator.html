@@ -334,8 +334,26 @@
 
   let state=null;
 
+  function syncEndpointOptions(changedEl = startPosEl){
+    // Start and end must always be different corners.
+    if(startPosEl.value === endPosEl.value){
+      const otherEl = changedEl === endPosEl ? startPosEl : endPosEl;
+      const blockedValue = changedEl.value;
+      const fallback = [...otherEl.options].find(opt => opt.value !== blockedValue);
+      if(fallback) otherEl.value = fallback.value;
+    }
+
+    [...startPosEl.options].forEach(opt => {
+      opt.disabled = opt.value === endPosEl.value;
+    });
+    [...endPosEl.options].forEach(opt => {
+      opt.disabled = opt.value === startPosEl.value;
+    });
+  }
+
   function regenerate(){
     try{
+      syncEndpointOptions();
       errBox.style.display="none";
       const diff = DIFFICULTIES[Number(difficultyEl.value)] || DIFFICULTIES[2];
       const seed = makeSeed();
@@ -364,7 +382,16 @@
     if(!state) return;
     draw(state, {margin: state.diff.margin, wallPx: state.diff.wall, showSolution: showSolutionEl.checked});
   });
-  [difficultyEl,startPosEl,endPosEl,braidLoopsEl].forEach(el => el.addEventListener("change", regenerate));
+  difficultyEl.addEventListener("change", regenerate);
+  braidLoopsEl.addEventListener("change", regenerate);
+  startPosEl.addEventListener("change", () => {
+    syncEndpointOptions(startPosEl);
+    regenerate();
+  });
+  endPosEl.addEventListener("change", () => {
+    syncEndpointOptions(endPosEl);
+    regenerate();
+  });
   newMazeBtn.addEventListener("click", regenerate);
 
   // Load jsPDF only when exporting
@@ -434,6 +461,7 @@
     draw(state, {margin: state.diff.margin, wallPx: state.diff.wall, showSolution: showSolutionEl.checked});
   });
 
+  syncEndpointOptions();
   regenerate();
 })();
 </script>
