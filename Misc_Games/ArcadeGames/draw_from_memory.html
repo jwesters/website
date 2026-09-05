@@ -310,74 +310,58 @@
 
     function bbox(strokes){
       let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity,any=false;
-      for(const st of strokes){ for(const p of st){ any=true; minX=Math.min(minX,p.x); minY=Math.min(minY,p.y); maxX=Math.max(maxX,p.x); maxY=Math.max(maxY,p.y);} }
+      for(const st of (strokes || [])){
+        for(const p of (st || [])){
+          if(!p || !Number.isFinite(p.x) || !Number.isFinite(p.y)) continue;
+          any=true;
+          minX=Math.min(minX,p.x); minY=Math.min(minY,p.y);
+          maxX=Math.max(maxX,p.x); maxY=Math.max(maxY,p.y);
+        }
+      }
       return any?{minX,minY,maxX,maxY}:null;
+    }
+
+    // Convert source prompt coordinates into the exact normalized canvas coordinates
+    // the player sees. The display renderer and the scorer BOTH use this function,
+    // so there is only one scaling/centering calculation to keep in sync.
+    function fitStrokesToCanvasNorm(strokes, w, h){
+      const b=bbox(strokes);
+      if(!b || !Number.isFinite(w) || !Number.isFinite(h) || w<=0 || h<=0) return [];
+
+      const pad=0.10*Math.min(w,h);
+      const bw=b.maxX-b.minX, bh=b.maxY-b.minY;
+      const safeBW=Math.max(Math.abs(bw),1e-6);
+      const safeBH=Math.max(Math.abs(bh),1e-6);
+      const s=Math.min((w-2*pad)/safeBW,(h-2*pad)/safeBH);
+      if(!Number.isFinite(s) || s<=0) return [];
+
+      const offX=(w-bw*s)/2 - b.minX*s;
+      const offY=(h-bh*s)/2 - b.minY*s;
+      if(!Number.isFinite(offX) || !Number.isFinite(offY)) return [];
+
+      const fitted=[];
+      for(const st of (strokes || [])){
+        const out=[];
+        for(const p of (st || [])){
+          if(!p || !Number.isFinite(p.x) || !Number.isFinite(p.y)) continue;
+          const x=(offX+p.x*s)/w;
+          const y=(offY+p.y*s)/h;
+          if(Number.isFinite(x) && Number.isFinite(y)) out.push({x,y});
+        }
+        if(out.length) fitted.push(out);
+      }
+      return fitted;
     }
 
     function renderNormalized(ctx, strokes, alpha=1, color="#000", lineW=6, drawBgGrid=true){
       if(drawBgGrid) drawGrid(ctx); else clearCtx(ctx);
-      const b=bbox(strokes); if(!b) return;
-      const w=ctx.canvas.width, h=ctx.canvas.height;
-      const pad=0.10*Math.min(w,h);
-      const bw=b.maxX-b.minX, bh=b.maxY-b.minY;
-      const s=Math.min((w-2*pad)/(bw||1e-6),(h-2*pad)/(bh||1e-6));
-      const offX=(w-bw*s)/2 - b.minX*s;
-      const offY=(h-bh*s)/2 - b.minY*s;
-
-      ctx.save();
-      ctx.globalAlpha=alpha;
-      ctx.strokeStyle=color;
-      ctx.lineWidth=lineW;
-      ctx.lineCap="round"; ctx.lineJoin="round";
-      for(const st of strokes){
-        if(st.length<2) continue;
-        ctx.beginPath();
-        ctx.moveTo(offX+st[0].x*s, offY+st[0].y*s);
-        for(let i=1;i<st.length;i++) ctx.lineTo(offX+st[i].x*s, offY+st[i].y*s);
-        ctx.stroke();
-      }
-      ctx.restore();
+      const fitted=fitStrokesToCanvasNorm(strokes, ctx.canvas.width, ctx.canvas.height);
+      drawAbsoluteNormalizedOn(ctx, fitted, alpha, color, lineW);
     }
 
     function drawNormalizedOn(ctx, strokes, alpha=1, color="#000", lineW=6){
-      const b=bbox(strokes); if(!b) return;
-      const w=ctx.canvas.width, h=ctx.canvas.height;
-      const pad=0.10*Math.min(w,h);
-      const bw=b.maxX-b.minX, bh=b.maxY-b.minY;
-      const s=Math.min((w-2*pad)/(bw||1e-6),(h-2*pad)/(bh||1e-6));
-      const offX=(w-bw*s)/2 - b.minX*s;
-      const offY=(h-bh*s)/2 - b.minY*s;
-
-      ctx.save();
-      ctx.globalAlpha=alpha;
-      ctx.strokeStyle=color;
-      ctx.lineWidth=lineW;
-      ctx.lineCap="round"; ctx.lineJoin="round";
-      for(const st of strokes){
-        if(st.length<2) continue;
-        ctx.beginPath();
-        ctx.moveTo(offX+st[0].x*s, offY+st[0].y*s);
-        for(let i=1;i<st.length;i++) ctx.lineTo(offX+st[i].x*s, offY+st[i].y*s);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-
-    // Convert a prompt into the exact normalized canvas coordinates the player actually sees.
-    // This keeps scoring and overlays aligned with renderNormalized(), which scales + centers
-    // each prompt before it is shown for memorization.
-    function displayedPromptNorm(strokes, canvas=orig){
-      const b=bbox(strokes); if(!b) return [];
-      const w=canvas.width, h=canvas.height;
-      const pad=0.10*Math.min(w,h);
-      const bw=b.maxX-b.minX, bh=b.maxY-b.minY;
-      const s=Math.min((w-2*pad)/(bw||1e-6),(h-2*pad)/(bh||1e-6));
-      const offX=(w-bw*s)/2 - b.minX*s;
-      const offY=(h-bh*s)/2 - b.minY*s;
-
-      return strokes.map(st=>st.map(p=>({
-        x:(offX+p.x*s)/w,
-      })));
+      const fitted=fitStrokesToCanvasNorm(strokes, ctx.canvas.width, ctx.canvas.height);
+      drawAbsoluteNormalizedOn(ctx, fitted, alpha, color, lineW);
     }
 
     function renderAbsoluteNormalized(ctx, strokes, alpha=1, color="#000", lineW=6, drawBgGrid=true){
@@ -394,10 +378,17 @@
       ctx.lineWidth=lineW;
       ctx.lineCap="round"; ctx.lineJoin="round";
       for(const st of strokes){
-        if(st.length<2) continue;
+        if(!st || st.length<2) continue;
+        const first=st.find(p=>p && Number.isFinite(p.x) && Number.isFinite(p.y));
+        if(!first) continue;
         ctx.beginPath();
-        ctx.moveTo(st[0].x*w, st[0].y*h);
-        for(let i=1;i<st.length;i++) ctx.lineTo(st[i].x*w, st[i].y*h);
+        ctx.moveTo(first.x*w, first.y*h);
+        let started=false;
+        for(const p of st){
+          if(!p || !Number.isFinite(p.x) || !Number.isFinite(p.y)) continue;
+          if(!started){ started=true; continue; }
+          ctx.lineTo(p.x*w, p.y*h);
+        }
         ctx.stroke();
       }
       ctx.restore();
@@ -526,7 +517,11 @@
     }
 
     // --- scoring (balanced) ---
-    function flatten(strokes){ return strokes.filter(st=>st.length>=2).map(st=>st.map(p=>({x:p.x,y:p.y}))); }
+    function flatten(strokes){
+      return (strokes || [])
+        .map(st=>(st || []).filter(p=>p && Number.isFinite(p.x) && Number.isFinite(p.y)).map(p=>({x:p.x,y:p.y})))
+        .filter(st=>st.length>=2);
+    }
     function polyLen(poly){ let L=0; for(let i=1;i<poly.length;i++) L+=Math.hypot(poly[i].x-poly[i-1].x, poly[i].y-poly[i-1].y); return L; }
     function resample(poly,n){
       if(poly.length<2) return [];
@@ -572,15 +567,27 @@
       return out.slice(0,N);
     }
     function normPts(pts){
-      let cx=0,cy=0; for(const p of pts){cx+=p.x;cy+=p.y;} cx/=pts.length; cy/=pts.length;
+      if(!pts || !pts.length) return [];
+      let cx=0,cy=0;
+      for(const p of pts){ cx+=p.x; cy+=p.y; }
+      cx/=pts.length; cy/=pts.length;
+      if(!Number.isFinite(cx) || !Number.isFinite(cy)) return [];
       const c=pts.map(p=>({x:p.x-cx,y:p.y-cy}));
-      let rms=0; for(const p of c) rms += p.x*p.x + p.y*p.y;
-      rms = Math.sqrt(rms/c.length) || 1e-9;
+      let rms=0;
+      for(const p of c) rms += p.x*p.x + p.y*p.y;
+      rms = Math.sqrt(rms/c.length);
+      if(!Number.isFinite(rms) || rms<1e-9) return [];
       return c.map(p=>({x:p.x/rms,y:p.y/rms}));
     }
     function meanDist(a,b){
-      const n=Math.min(a.length,b.length); let s=0;
-      for(let i=0;i<n;i++) s += Math.hypot(a[i].x-b[i].x, a[i].y-b[i].y);
+      const n=Math.min(a ? a.length : 0,b ? b.length : 0);
+      if(n<1) return Infinity;
+      let s=0;
+      for(let i=0;i<n;i++){
+        const d=Math.hypot(a[i].x-b[i].x, a[i].y-b[i].y);
+        if(!Number.isFinite(d)) return Infinity;
+        s+=d;
+      }
       return s/n;
     }
     function sizeScore(o,u,tol=0.62){
@@ -588,16 +595,21 @@
       if(!bo||!bu) return 0;
       const ow=bo.maxX-bo.minX, oh=bo.maxY-bo.minY;
       const uw=bu.maxX-bu.minX, uh=bu.maxY-bu.minY;
+      if(![ow,oh,uw,uh].every(Number.isFinite)) return 0;
       if(ow<1e-6||oh<1e-6||uw<1e-6||uh<1e-6) return 0;
       const sw=1-clamp(Math.abs(uw/ow-1)/tol,0,1);
       const sh=1-clamp(Math.abs(uh/oh-1)/tol,0,1);
-      return Math.sqrt(sw*sh);
+      const score=Math.sqrt(Math.max(0,sw*sh));
+      return Number.isFinite(score) ? clamp(score,0,1) : 0;
     }
     function shapeScore(o,u){
       const A=normPts(resampleAll(o,84));
       const B=normPts(resampleAll(u,84));
+      if(!A.length || !B.length) return 0;
       const d=Math.min(meanDist(A,B), meanDist(A,[...B].reverse()));
-      return clamp(Math.exp(-1.25*d),0,1);
+      if(!Number.isFinite(d)) return 0;
+      const score=Math.exp(-1.25*d);
+      return Number.isFinite(score) ? clamp(score,0,1) : 0;
     }
     function combined(o,u){
       const ss=sizeScore(o,u,0.62);
@@ -606,8 +618,10 @@
       const bu=bbox(u);
       if(bu){
         const area=(bu.maxX-bu.minX)*(bu.maxY-bu.minY);
-        if(area>0.01) total=clamp(total+0.06,0,1);
+        if(Number.isFinite(area) && area>0.01) total+=0.06;
       }
+      if(!Number.isFinite(total)) total=0;
+      total=clamp(total,0,1);
       return {total,ss,sh};
     }
     function stars(pct){
@@ -708,23 +722,27 @@
         statusEl.textContent="That mark is too small to score — draw a real answer first 🙂";
         return;
       }
-      // Score against the scaled/centred version that was actually shown to the player,
-      // not against the prompt's smaller source coordinates.
-      const shownPrompt = displayedPromptNorm(prompt, orig);
-      const {total,ss,sh} = combined(shownPrompt, userNorm);
+      // Compare against the exact fitted/centred drawing that was shown on the original canvas.
+      // Original and user canvases share the same intrinsic 900 x 520 coordinate system.
+      const visiblePrompt = fitStrokesToCanvasNorm(prompt, orig.width, orig.height);
+      if(!visiblePrompt.length || !bbox(visiblePrompt)){
+        statusEl.textContent="Couldn't score this drawing. Please try Next drawing.";
+        return;
+      }
+
+      const {total,ss,sh} = combined(visiblePrompt, userNorm);
       const pct = Math.round(total*100);
 
       scoreEl.textContent = pct + "%";
       starsEl.textContent = stars(pct);
       breakdownEl.textContent = "Breakdown: Size " + Math.round(ss*100) + "% • Shape " + Math.round(sh*100) + "% • Final = 30% size + 70% shape (+ bonus).";
 
-      // Use the same absolute normalized coordinate system for Original, Yours and Overlay.
-      // That way the results screen reflects what the player actually saw and drew.
-      renderAbsoluteNormalized(ro, shownPrompt, 1, "#000", 6, true);
+      // Results and overlay use the SAME normalized visible coordinates for both drawings.
+      renderAbsoluteNormalized(ro, visiblePrompt, 1, "#000", 6, true);
       renderAbsoluteNormalized(ru, userNorm, 1, "#000", 6, true);
 
       drawGrid(rv);
-      drawAbsoluteNormalizedOn(rv, shownPrompt, 0.25, "#008aa8", 6);
+      drawAbsoluteNormalizedOn(rv, visiblePrompt, 0.25, "#008aa8", 6);
       drawAbsoluteNormalizedOn(rv, userNorm, 1.0, "#000", 6);
 
       rScoreEl.textContent = pct + "%";
