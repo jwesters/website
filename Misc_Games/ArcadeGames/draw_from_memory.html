@@ -363,6 +363,23 @@
       ctx.restore();
     }
 
+    // Convert a prompt into the exact normalized canvas coordinates the player actually sees.
+    // This keeps scoring and overlays aligned with renderNormalized(), which scales + centers
+    // each prompt before it is shown for memorization.
+    function displayedPromptNorm(strokes, canvas=orig){
+      const b=bbox(strokes); if(!b) return [];
+      const w=canvas.width, h=canvas.height;
+      const pad=0.10*Math.min(w,h);
+      const bw=b.maxX-b.minX, bh=b.maxY-b.minY;
+      const s=Math.min((w-2*pad)/(bw||1e-6),(h-2*pad)/(bh||1e-6));
+      const offX=(w-bw*s)/2 - b.minX*s;
+      const offY=(h-bh*s)/2 - b.minY*s;
+
+      return strokes.map(st=>st.map(p=>({
+        x:(offX+p.x*s)/w,
+      })));
+    }
+
     function renderAbsoluteNormalized(ctx, strokes, alpha=1, color="#000", lineW=6, drawBgGrid=true){
       if(drawBgGrid) drawGrid(ctx); else clearCtx(ctx);
       drawAbsoluteNormalizedOn(ctx, strokes, alpha, color, lineW);
@@ -691,18 +708,23 @@
         statusEl.textContent="That mark is too small to score — draw a real answer first 🙂";
         return;
       }
-      const {total,ss,sh} = combined(prompt, userNorm);
+      // Score against the scaled/centred version that was actually shown to the player,
+      // not against the prompt's smaller source coordinates.
+      const shownPrompt = displayedPromptNorm(prompt, orig);
+      const {total,ss,sh} = combined(shownPrompt, userNorm);
       const pct = Math.round(total*100);
 
       scoreEl.textContent = pct + "%";
       starsEl.textContent = stars(pct);
       breakdownEl.textContent = "Breakdown: Size " + Math.round(ss*100) + "% • Shape " + Math.round(sh*100) + "% • Final = 30% size + 70% shape (+ bonus).";
 
-      renderNormalized(ro, prompt, 1, "#000", 6, true);
+      // Use the same absolute normalized coordinate system for Original, Yours and Overlay.
+      // That way the results screen reflects what the player actually saw and drew.
+      renderAbsoluteNormalized(ro, shownPrompt, 1, "#000", 6, true);
       renderAbsoluteNormalized(ru, userNorm, 1, "#000", 6, true);
 
       drawGrid(rv);
-      drawAbsoluteNormalizedOn(rv, prompt, 0.25, "#008aa8", 6);
+      drawAbsoluteNormalizedOn(rv, shownPrompt, 0.25, "#008aa8", 6);
       drawAbsoluteNormalizedOn(rv, userNorm, 1.0, "#000", 6);
 
       rScoreEl.textContent = pct + "%";
