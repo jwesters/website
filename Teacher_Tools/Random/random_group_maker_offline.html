@@ -251,6 +251,108 @@
       color: var(--muted);
       word-break: break-all;
     }
+
+
+    body.light{
+      --bg:#f3f5fb;
+      --panel:#ffffff;
+      --panel2:#f7f8fc;
+      --text:#1f2540;
+      --muted:#626b88;
+      --accent:#3f67d7;
+      --good:#168a56;
+      --warn:#a76411;
+      --bad:#c63f3f;
+      --border:rgba(31,37,64,.14);
+      --shadow: 0 14px 34px rgba(44,52,82,.14);
+      background: radial-gradient(1200px 900px at 20% -10%, rgba(63,103,215,.14), transparent 55%),
+                  radial-gradient(900px 700px at 95% 20%, rgba(22,138,86,.09), transparent 55%),
+                  radial-gradient(900px 700px at 30% 110%, rgba(198,63,63,.07), transparent 60%),
+                  var(--bg);
+    }
+
+    body.light textarea,
+    body.light select,
+    body.light input[type="text"],
+    body.light .groupCard{
+      background: rgba(255,255,255,.82);
+    }
+
+    .headerActions{
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    @media print{
+      @page{ margin: 0.55in; }
+      body,
+      body.light{
+        background:#fff !important;
+        color:#000 !important;
+      }
+      .wrap{
+        max-width:none;
+        margin:0;
+        padding:0;
+      }
+      header{
+        margin-bottom:14px;
+      }
+      header .subtitle,
+      .headerActions,
+      .grid > .section:first-child,
+      .footerNote,
+      .msg,
+      #shareHint{
+        display:none !important;
+      }
+      .card{
+        border:0;
+        box-shadow:none;
+        background:#fff;
+        overflow:visible;
+      }
+      .grid{
+        display:block;
+      }
+      .grid > .section:last-child{
+        padding:0;
+        background:#fff;
+        border:0;
+      }
+      .groups{
+        display:grid;
+        grid-template-columns:repeat(2, minmax(0,1fr));
+        gap:12px;
+      }
+      .groupCard{
+        background:#fff !important;
+        color:#000 !important;
+        border:1px solid #999;
+        box-shadow:none;
+        break-inside:avoid;
+        page-break-inside:avoid;
+      }
+      .groupTitle span,
+      .mono,
+      label{
+        color:#444 !important;
+      }
+      h1,
+      .groupTitle b,
+      li{
+        color:#000 !important;
+      }
+      #countPill{
+        border:1px solid #999;
+        background:#fff;
+        color:#000;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -263,7 +365,11 @@
           Share links include the names (compressed) so everyone gets the same list.
         </div>
       </div>
-      <div class="pill" id="countPill">0 names</div>
+      <div class="headerActions">
+        <button class="btn" id="themeBtn" type="button" aria-label="Switch to light mode">Light mode</button>
+        <button class="btn" id="printBtn" type="button">Print</button>
+        <div class="pill" id="countPill">0 names</div>
+      </div>
     </header>
 
     <div class="card">
@@ -919,6 +1025,23 @@ function applyLock(){
   $("names").readOnly = locked;
 }
 
+function applyTheme(theme){
+  const useLight = theme === "light";
+  document.body.classList.toggle("light", useLight);
+  const btn = $("themeBtn");
+  btn.textContent = useLight ? "Dark mode" : "Light mode";
+  btn.setAttribute("aria-label", useLight ? "Switch to dark mode" : "Switch to light mode");
+  try{ localStorage.setItem("randomGroupMakerTheme", useLight ? "light" : "dark"); }catch(_){ }
+}
+
+function toggleTheme(){
+  applyTheme(document.body.classList.contains("light") ? "dark" : "light");
+}
+
+function doPrint(){
+  window.print();
+}
+
 function normalizeTextareaInPlace(){
   // Optional: if user wants, we can rewrite textarea as cleaned unique list.
   // We'll do it on generate/shuffle/copy link to avoid interrupting typing.
@@ -986,6 +1109,10 @@ function doClear(){
   $("names").value = "";
   $("lockNames").checked = false;
   applyLock();
+  let savedTheme = "dark";
+  try{ savedTheme = localStorage.getItem("randomGroupMakerTheme") || "dark"; }catch(_){ }
+  applyTheme(savedTheme === "light" ? "light" : "dark");
+
   rebuildGroupSizeOptions();
   renderGroups([]);
   $("seedLabel").textContent = "";
@@ -1075,6 +1202,8 @@ function init(){
   });
 
   $("lockNames").addEventListener("change", applyLock);
+  $("themeBtn").addEventListener("click", toggleTheme);
+  $("printBtn").addEventListener("click", doPrint);
   $("shuffleBtn").addEventListener("click", doShuffle);
   $("genBtn").addEventListener("click", ()=>doGenerate(true));
   $("copyLinkBtn").addEventListener("click", copyShareLink);
