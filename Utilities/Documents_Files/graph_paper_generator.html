@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Graph Paper Generator</title>
+<style>
+  :root{
+    --bg:#f4f6f8;--panel:#ffffff;--text:#17202a;--muted:#677483;--border:#d9e0e7;
+    --accent:#2f6fed;--accent2:#1e56c8;--input:#ffffff;--shadow:0 10px 30px rgba(0,0,0,.08);
+  }
+  [data-theme="dark"]{
+    --bg:#11151a;--panel:#1a2027;--text:#eef3f8;--muted:#9eabb8;--border:#33404d;
+    --accent:#76a6ff;--accent2:#98bbff;--input:#141a20;--shadow:0 12px 34px rgba(0,0,0,.34);
+  }
+  *{box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;overscroll-behavior:none}
+  body{margin:0;position:fixed;inset:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+  button,input,select{font:inherit}
+  .app{position:fixed;inset:0;width:100%;height:100dvh;min-height:0;display:grid;grid-template-columns:minmax(310px,390px) 1fr;gap:18px;padding:18px;overflow:hidden}
+  .panel,.previewWrap{background:var(--panel);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow)}
+  .panel{padding:18px;min-height:0;height:100%;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+  h1{font-size:1.5rem;margin:0 0 4px}
+  .subtitle{color:var(--muted);margin:0 0 18px;font-size:.93rem}
+  .section{padding:15px 0;border-top:1px solid var(--border)}
+  .section:first-of-type{border-top:0;padding-top:0}
+  .section h2{font-size:.93rem;margin:0 0 10px;letter-spacing:.02em}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+  .row.one{grid-template-columns:1fr}
+  label{display:flex;flex-direction:column;gap:6px;font-size:.82rem;color:var(--muted)}
+  input[type="number"],select,input[type="color"]{width:100%;border:1px solid var(--border);background:var(--input);color:var(--text);border-radius:10px;padding:9px 10px;outline:none}
+  input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(47,111,237,.12)}
+  input[type="color"]{padding:3px;height:39px}
+  .checks{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+  .check{display:flex;align-items:center;gap:8px;color:var(--text);font-size:.86rem}
+  .check input{accent-color:var(--accent)}
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:16px}
+  .actions .wide{grid-column:1/-1}
+  button{border:0;border-radius:11px;padding:10px 12px;cursor:pointer;font-weight:650}
+  .primary{background:var(--accent);color:white}.primary:hover{background:var(--accent2)}
+  .secondary{background:transparent;color:var(--text);border:1px solid var(--border)}
+  .secondary:hover{background:rgba(127,127,127,.08)}
+  .topActions{display:flex;gap:8px;justify-content:flex-end;margin-bottom:10px}
+  .previewWrap{padding:14px;display:flex;flex-direction:column;min-width:0;min-height:0;height:100%;overflow:hidden;overscroll-behavior:none}
+  .previewHeader{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+  .previewHeader strong{font-size:.95rem}.previewMeta{color:var(--muted);font-size:.8rem}
+  .canvasStage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(45deg,rgba(127,127,127,.04) 25%,transparent 25%),linear-gradient(-45deg,rgba(127,127,127,.04) 25%,transparent 25%),linear-gradient(45deg,transparent 75%,rgba(127,127,127,.04) 75%),linear-gradient(-45deg,transparent 75%,rgba(127,127,127,.04) 75%);background-size:24px 24px;background-position:0 0,0 12px,12px -12px,-12px 0;border-radius:12px;border:1px solid var(--border);padding:12px;overflow:hidden}
+  canvas{display:block;background:white;box-shadow:0 7px 24px rgba(0,0,0,.18);max-width:none;max-height:none;width:auto;height:auto}
+  .hint{margin-top:9px;color:var(--muted);font-size:.76rem;text-align:center}
+  .hidden{display:none!important}
+  .seg{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--input)}
+  .seg button{flex:1;border-radius:0;background:transparent;color:var(--text);padding:8px 7px;font-weight:600;font-size:.82rem}
+  .seg button.active{background:var(--accent);color:white}
+  .unitInline{display:grid;grid-template-columns:1fr 88px;gap:8px}
+  .note{padding:9px 10px;border:1px dashed var(--border);border-radius:10px;color:var(--muted);font-size:.76rem;line-height:1.35}
+  @media(max-width:900px){
+    html,body{width:auto;height:auto;overflow:auto;overscroll-behavior:auto}
+    body{position:static}
+    .app{position:static;width:auto;height:auto;min-height:100vh;grid-template-columns:1fr;overflow:visible}
+    .panel{height:auto;max-height:none;overflow:visible;scrollbar-gutter:auto}
+    .previewWrap{height:auto;min-height:650px;overflow:visible}
+    .canvasStage{min-height:560px;overflow:auto}
+    canvas{max-width:100%;max-height:none;height:auto}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="panel">
+    <div class="topActions"><button id="themeBtn" class="secondary" aria-label="Toggle light and dark mode">🌙 Dark</button></div>
+    <h1>Graph Paper Generator</h1>
+    <p class="subtitle">Create printable graph paper and export it as a one-page PDF.</p>
+
+    <div class="section">
+      <h2>Page</h2>
+      <div class="row">
+        <label>Paper size
+          <select id="paperSize"><option value="letter">Letter — 8.5 × 11 in</option><option value="legal">Legal — 8.5 × 14 in</option></select>
+        </label>
+        <label>Orientation
+          <select id="orientation"><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select>
+        </label>
+      </div>
+      <div class="row one">
+        <label>Units</label>
+        <div class="seg" id="unitsSeg"><button data-unit="in" class="active">Inches</button><button data-unit="mm">Millimetres</button></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Grid</h2>
+      <div class="row one">
+        <label>Graph paper type
+          <select id="gridType">
+            <option value="square">Square Grid</option>
+            <option value="coordinate">Coordinate Plane</option>
+            <option value="dot">Dot Grid</option>
+          </select>
+        </label>
+      </div>
+      <div class="row">
+        <label>Grid spacing
+          <select id="spacingPreset">
+            <option value="0.25in">1/4 in</option>
+            <option value="0.2in">1/5 in</option>
+            <option value="0.125in">1/8 in</option>
+            <option value="5mm">5 mm</option>
+            <option value="10mm">10 mm</option>
+            <option value="custom">Custom</option>
+          </select>
+        </label>
+        <label id="customSpacingLabel" class="hidden">Custom spacing
+          <input id="customSpacing" type="number" min="0.05" step="0.05" value="0.25" />
+        </label>
+      </div>
+      <div class="row">
+        <label>Line colour<input id="lineColor" type="color" value="#9aa7b5" /></label>
+        <label>Line thickness (max 3)<input id="lineWidth" type="number" min="0.1" max="3" step="0.1" value="0.5" /></label>
+      </div>
+      <div id="majorSection">
+        <div class="checks" style="margin-bottom:10px"><label class="check"><input id="majorEnabled" type="checkbox" checked /> Major grid lines</label></div>
+        <div class="row">
+          <label>Every N lines<input id="majorEvery" type="number" min="2" max="20" step="1" value="5" /></label>
+          <label>Major thickness (max 5)<input id="majorWidth" type="number" min="0.2" max="5" step="0.1" value="1.0" /></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Margins</h2>
+      <div class="row one"><label>Margin preset
+        <select id="marginPreset"><option value="none">None</option><option value="narrow">Narrow</option><option value="normal" selected>Normal</option><option value="custom">Custom</option></select>
+      </label></div>
+      <div id="customMargins" class="hidden">
+        <div class="row"><label>Top<input id="marginTop" type="number" min="0" step="0.05" value="0.5" /></label><label>Right<input id="marginRight" type="number" min="0" step="0.05" value="0.5" /></label></div>
+        <div class="row"><label>Bottom<input id="marginBottom" type="number" min="0" step="0.05" value="0.5" /></label><label>Left<input id="marginLeft" type="number" min="0" step="0.05" value="0.5" /></label></div>
+      </div>
+      <div class="note">The PDF page itself is exactly Letter or Legal size. “None” takes the grid to the PDF edge; most physical printers still have their own non-printable border.</div>
+    </div>
+
+    <div class="section hidden" id="coordinateControls">
+      <h2>Coordinate Plane</h2>
+      <div class="checks">
+        <label class="check"><input id="showXAxis" type="checkbox" checked /> X-axis</label>
+        <label class="check"><input id="showYAxis" type="checkbox" checked /> Y-axis</label>
+        <label class="check"><input id="showNumbers" type="checkbox" checked /> Numbers</label>
+        <label class="check"><input id="showTicks" type="checkbox" checked /> Tick marks</label>
+        <label class="check"><input id="showArrows" type="checkbox" checked /> Arrowheads</label>
+        <label class="check"><input id="showLabels" type="checkbox" checked /> X / Y labels</label>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <label>Axis thickness (max 5)<input id="axisWidth" type="number" min="0.5" max="5" step="0.1" value="1.5" /></label>
+        <label>Value per tick<input id="tickValue" type="number" min="0.1" max="100" step="0.1" value="1" /></label>
+      </div>
+      <div class="row one" style="margin-top:10px">
+        <label>Number every N ticks<input id="numberEvery" type="number" min="1" max="10" step="1" value="1" /></label>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="resetBtn" class="secondary">Reset</button>
+      <button id="printBtn" class="secondary">Print</button>
+      <button id="pdfBtn" class="primary wide">Generate PDF</button>
+    </div>
+  </aside>
+
+  <main class="previewWrap">
+    <div class="previewHeader"><strong>Live Preview</strong><span id="previewMeta" class="previewMeta"></span></div>
+    <div class="canvasStage"><canvas id="preview" width="765" height="990"></canvas></div>
+    <div class="hint">Preview is scaled to fit. PDF export uses the exact selected paper size.</div>
+  </main>
+</div>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const els = ['paperSize','orientation','gridType','spacingPreset','customSpacing','lineColor','lineWidth','majorEnabled','majorEvery','majorWidth','marginPreset','marginTop','marginRight','marginBottom','marginLeft','showXAxis','showYAxis','showNumbers','showTicks','showArrows','showLabels','axisWidth','tickValue','numberEvery'].reduce((o,id)=>(o[id]=$(id),o),{});
+  let unit = 'in';
+  const defaults = {
+    paperSize:'letter',orientation:'portrait',gridType:'square',spacingPreset:'0.25in',customSpacing:0.25,lineColor:'#9aa7b5',lineWidth:0.5,
+    majorEnabled:true,majorEvery:5,majorWidth:1,marginPreset:'normal',marginTop:0.5,marginRight:0.5,marginBottom:0.5,marginLeft:0.5,
+    showXAxis:true,showYAxis:true,showNumbers:true,showTicks:true,showArrows:true,showLabels:true,axisWidth:1.5,tickValue:1,numberEvery:1
+  };
+
+  function unitFactorToPt(u){ return u==='in' ? 72 : 72/25.4; }
+  function toPt(v,u=unit){ return Number(v) * unitFactorToPt(u); }
+  function fromInches(v){ return unit==='in' ? v : v*25.4; }
+  function fmt(v){ return Number(v.toFixed(3)); }
+  function paperPts(){
+    let w=8.5,h=els.paperSize.value==='legal'?14:11;
+    if(els.orientation.value==='landscape') [w,h]=[h,w];
+    return {w:w*72,h:h*72,wIn:w,hIn:h};
+  }
+  function spacingPt(){
+    const p=els.spacingPreset.value;
+    if(p==='custom') return Math.max(2,toPt(parseFloat(els.customSpacing.value)||0.25));
+    if(p.endsWith('in')) return parseFloat(p)*72;
+    return parseFloat(p)*72/25.4;
+  }
+  function marginsPt(){
+    const p=els.marginPreset.value;
+    let vals;
+    if(p==='none') vals=[0,0,0,0];
+    else if(p==='narrow') vals=[0.25,0.25,0.25,0.25].map(fromInches);
+    else if(p==='normal') vals=[0.5,0.5,0.5,0.5].map(fromInches);
+    else vals=[els.marginTop.value,els.marginRight.value,els.marginBottom.value,els.marginLeft.value].map(Number);
+    return {t:toPt(vals[0]),r:toPt(vals[1]),b:toPt(vals[2]),l:toPt(vals[3])};
+  }
+  function rgb(hex){ const n=parseInt(hex.slice(1),16); return [(n>>16)&255,(n>>8)&255,n&255]; }
+  function pdfRgb(hex){ return rgb(hex).map(v=>(v/255).toFixed(3)).join(' '); }
+  function darken(hex,amount=.35){ return rgb(hex).map(v=>Math.max(0,Math.round(v*(1-amount)))); }
+
+  function updateVisibility(){
+    $('customSpacingLabel').classList.toggle('hidden', els.spacingPreset.value!=='custom');
+    $('customMargins').classList.toggle('hidden', els.marginPreset.value!=='custom');
+    $('coordinateControls').classList.toggle('hidden', els.gridType.value!=='coordinate');
+    $('majorSection').classList.toggle('hidden', els.gridType.value==='dot');
+  }
+
+  function setUnit(newUnit){
+    if(newUnit===unit) return;
+    const ratio = newUnit==='mm' ? 25.4 : 1/25.4;
+    ['customSpacing','marginTop','marginRight','marginBottom','marginLeft'].forEach(id=>{
+      const el=els[id]; el.value=(parseFloat(el.value||0)*ratio).toFixed(newUnit==='mm'?1:3).replace(/\.0+$/,'');
+      el.step=newUnit==='mm'?'0.5':'0.05';
+    });
+    unit=newUnit;
+    document.querySelectorAll('#unitsSeg button').forEach(b=>b.classList.toggle('active',b.dataset.unit===unit));
+    render();
+  }
+
+  function reset(){
+    Object.entries(defaults).forEach(([k,v])=>{ if(els[k]){ if(typeof v==='boolean') els[k].checked=v; else els[k].value=v; }});
+    unit='in';
+    document.querySelectorAll('#unitsSeg button').forEach(b=>b.classList.toggle('active',b.dataset.unit==='in'));
+    updateVisibility(); render();
+  }
+
+  function clampNum(value,min,max,fallback){
+    const n=parseFloat(value);
+    return Number.isFinite(n)?Math.min(max,Math.max(min,n)):fallback;
+  }
+  function formatCoord(value){
+    const n=Math.round(value*1000000)/1000000;
+    return String(Object.is(n,-0)?0:n);
+  }
+
+  function getCfg(){
+    const p=paperPts(), m=marginsPt(), s=spacingPt();
+    const x0=m.l,y0=m.t,x1=Math.max(m.l,p.w-m.r),y1=Math.max(m.t,p.h-m.b);
+    return {p,m,s,x0,y0,x1,y1,width:x1-x0,height:y1-y0,type:els.gridType.value,color:els.lineColor.value,lineWidth:clampNum(els.lineWidth.value,0.1,3,0.5),
+      majorEnabled:els.majorEnabled.checked,majorEvery:Math.max(2,parseInt(els.majorEvery.value)||5),majorWidth:clampNum(els.majorWidth.value,0.2,5,1),
+      axisWidth:clampNum(els.axisWidth.value,0.5,5,1.5),showXAxis:els.showXAxis.checked,showYAxis:els.showYAxis.checked,showNumbers:els.showNumbers.checked,
+      showTicks:els.showTicks.checked,showArrows:els.showArrows.checked,showLabels:els.showLabels.checked,tickValue:clampNum(els.tickValue.value,0.1,100,1),numberEvery:Math.max(1,Math.min(10,parseInt(els.numberEvery.value)||1))};
+  }
+
+  function lineCanvas(ctx,x1,y1,x2,y2,w,color){ ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.lineWidth=w;ctx.strokeStyle=color;ctx.stroke(); }
+  function drawSquareCanvas(ctx,c,scale,coord=false){
+    const {x0,y0,x1,y1,s}=c, col=c.color, [r,g,b]=darken(col,.38), major=`rgb(${r},${g},${b})`;
+
+    if(coord){
+      // Coordinate-paper grid lines are anchored to the origin, not to the
+      // left/top page margin. This keeps major lines at ... -10, -5, 0, 5,
+      // 10 ... no matter the paper size, margins, spacing, or axis thickness.
+      const cx=(x0+x1)/2, cy=(y0+y1)/2;
+      const minIX=Math.ceil((x0-cx)/s-1e-9), maxIX=Math.floor((x1-cx)/s+1e-9);
+      const minIY=Math.ceil((y0-cy)/s-1e-9), maxIY=Math.floor((y1-cy)/s+1e-9);
+      for(let i=minIX;i<=maxIX;i++){
+        const x=cx+i*s, maj=c.majorEnabled && i%c.majorEvery===0;
+        lineCanvas(ctx,x*scale,y0*scale,x*scale,y1*scale,(maj?c.majorWidth:c.lineWidth)*scale,maj?major:col);
+      }
+      for(let i=minIY;i<=maxIY;i++){
+        const y=cy+i*s, maj=c.majorEnabled && i%c.majorEvery===0;
+        lineCanvas(ctx,x0*scale,y*scale,x1*scale,y*scale,(maj?c.majorWidth:c.lineWidth)*scale,maj?major:col);
+      }
+    }else{
+      let idx=0;
+      for(let x=x0;x<=x1+.01;x+=s,idx++){
+        const maj=c.majorEnabled && idx%c.majorEvery===0;
+        lineCanvas(ctx,x*scale,y0*scale,x*scale,y1*scale,(maj?c.majorWidth:c.lineWidth)*scale,maj?major:col);
+      }
+      idx=0;
+      for(let y=y0;y<=y1+.01;y+=s,idx++){
+        const maj=c.majorEnabled && idx%c.majorEvery===0;
+        lineCanvas(ctx,x0*scale,y*scale,x1*scale,y*scale,(maj?c.majorWidth:c.lineWidth)*scale,maj?major:col);
+      }
+    }
+    if(coord) drawCoordinateCanvas(ctx,c,scale);
+  }
+  function drawDotsCanvas(ctx,c,scale){
+    const radius=Math.max(.7,c.lineWidth*1.15)*scale, color=c.color;
+    ctx.fillStyle=color;
+    for(let x=c.x0;x<=c.x1+.01;x+=c.s) for(let y=c.y0;y<=c.y1+.01;y+=c.s){ctx.beginPath();ctx.arc(x*scale,y*scale,radius,0,Math.PI*2);ctx.fill();}
+  }
+  function drawCoordinateCanvas(ctx,c,scale){
+    const cx=(c.x0+c.x1)/2, cy=(c.y0+c.y1)/2, axis='#111827', aw=c.axisWidth*scale;
+    ctx.save();ctx.strokeStyle=axis;ctx.fillStyle=axis;ctx.lineWidth=aw;ctx.font=`${Math.max(9,9*scale)}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='top';
+    if(c.showXAxis) lineCanvas(ctx,c.x0*scale,cy*scale,c.x1*scale,cy*scale,aw,axis);
+    if(c.showYAxis) lineCanvas(ctx,cx*scale,c.y0*scale,cx*scale,c.y1*scale,aw,axis);
+    const nX=Math.floor(c.width/(2*c.s)), nY=Math.floor(c.height/(2*c.s));
+    if(c.showTicks){
+      if(c.showXAxis) for(let i=-nX;i<=nX;i++){const x=cx+i*c.s;lineCanvas(ctx,x*scale,(cy-3)*scale,x*scale,(cy+3)*scale,Math.max(1,aw*.7),axis)}
+      if(c.showYAxis) for(let i=-nY;i<=nY;i++){const y=cy-i*c.s;lineCanvas(ctx,(cx-3)*scale,y*scale,(cx+3)*scale,y*scale,Math.max(1,aw*.7),axis)}
+    }
+    if(c.showNumbers){
+      ctx.font=`${Math.max(8,8.5*scale)}px sans-serif`;
+      if(c.showXAxis) for(let i=-nX;i<=nX;i++){if(i===0||i%c.numberEvery)continue;ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText(formatCoord(i*c.tickValue),(cx+i*c.s)*scale,(cy+5)*scale)}
+      if(c.showYAxis) for(let i=-nY;i<=nY;i++){if(i===0||i%c.numberEvery)continue;ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(formatCoord(i*c.tickValue),(cx-6)*scale,(cy-i*c.s)*scale)}
+      ctx.textAlign='right';ctx.textBaseline='top';ctx.fillText('0',(cx-4)*scale,(cy+4)*scale);
+    }
+    if(c.showArrows){
+      if(c.showXAxis){arrowCanvas(ctx,c.x1*scale,cy*scale,0,scale);arrowCanvas(ctx,c.x0*scale,cy*scale,Math.PI,scale)}
+      if(c.showYAxis){arrowCanvas(ctx,cx*scale,c.y0*scale,-Math.PI/2,scale);arrowCanvas(ctx,cx*scale,c.y1*scale,Math.PI/2,scale)}
+    }
+    if(c.showLabels){ctx.font=`bold ${Math.max(10,10*scale)}px sans-serif`; if(c.showXAxis){ctx.textAlign='right';ctx.textBaseline='bottom';ctx.fillText('x',(c.x1-7)*scale,(cy-7)*scale)} if(c.showYAxis){ctx.textAlign='left';ctx.textBaseline='top';ctx.fillText('y',(cx+7)*scale,(c.y0+7)*scale)}}
+    ctx.restore();
+  }
+  function arrowCanvas(ctx,x,y,a,scale){const len=8*scale;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-len*Math.cos(a-Math.PI/6),y-len*Math.sin(a-Math.PI/6));ctx.moveTo(x,y);ctx.lineTo(x-len*Math.cos(a+Math.PI/6),y-len*Math.sin(a+Math.PI/6));ctx.stroke();}
+
+  function render(){
+    updateVisibility();
+    const c=getCfg(), canvas=$('preview');
+    const desktop=window.matchMedia('(min-width: 901px)').matches;
+    let drawScale;
+
+    if(desktop){
+      // Fit the paper to the ACTUAL live-preview viewport, not to a fixed
+      // canvas size. This lets portrait and landscape pages grow as large
+      // as possible while remaining completely visible.
+      const stage=document.querySelector('.canvasStage');
+      const styles=getComputedStyle(stage);
+      const padX=(parseFloat(styles.paddingLeft)||0)+(parseFloat(styles.paddingRight)||0);
+      const padY=(parseFloat(styles.paddingTop)||0)+(parseFloat(styles.paddingBottom)||0);
+      const availableW=Math.max(1,stage.clientWidth-padX);
+      const availableH=Math.max(1,stage.clientHeight-padY);
+      const displayScale=Math.max(0.05,Math.min(availableW/c.p.w,availableH/c.p.h));
+      const dpr=Math.min(window.devicePixelRatio||1,2);
+      drawScale=displayScale*dpr;
+
+      canvas.width=Math.max(1,Math.round(c.p.w*drawScale));
+      canvas.height=Math.max(1,Math.round(c.p.h*drawScale));
+      canvas.style.width=`${Math.floor(c.p.w*displayScale)}px`;
+      canvas.style.height=`${Math.floor(c.p.h*displayScale)}px`;
+    }else{
+      // Keep the compact/mobile behaviour simple and width-responsive.
+      const maxDim=1100;
+      drawScale=Math.min(maxDim/c.p.w,maxDim/c.p.h);
+      canvas.width=Math.max(300,Math.round(c.p.w*drawScale));
+      canvas.height=Math.max(300,Math.round(c.p.h*drawScale));
+      canvas.style.width='';
+      canvas.style.height='';
+    }
+
+    const ctx=canvas.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,canvas.width,canvas.height);
+    if(c.width>0&&c.height>0){
+      if(c.type==='square') drawSquareCanvas(ctx,c,drawScale,false);
+      else if(c.type==='coordinate') drawSquareCanvas(ctx,c,drawScale,true);
+      else drawDotsCanvas(ctx,c,drawScale);
+    }
+    const spacing = unit==='in' ? `${(c.s/72).toFixed(3).replace(/0+$/,'').replace(/\.$/,'')} in` : `${(c.s*25.4/72).toFixed(1).replace(/\.0$/,'')} mm`;
+    $('previewMeta').textContent=`${els.paperSize.options[els.paperSize.selectedIndex].text.split(' — ')[0]} · ${els.orientation.value} · ${spacing}`;
+  }
+
+  // PDF primitives (points, PDF coordinate system bottom-left)
+  function escPdfText(s){ return String(s).replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)'); }
+  function pdfLine(cmds,c,x1,y1,x2,y2,w,col){cmds.push(`${pdfRgb(col)} RG`,`${fmt(w)} w`,`${fmt(x1)} ${fmt(c.p.h-y1)} m ${fmt(x2)} ${fmt(c.p.h-y2)} l S`)}
+  function pdfText(cmds,c,text,x,y,size,align='center'){
+    const approx=String(text).length*size*.5; let tx=x; if(align==='center')tx=x-approx/2; else if(align==='right')tx=x-approx;
+    cmds.push('0 0 0 rg',`BT /F1 ${fmt(size)} Tf ${fmt(tx)} ${fmt(c.p.h-y-size*.3)} Td (${escPdfText(text)}) Tj ET`);
+  }
+  function pdfCircle(cmds,c,x,y,r,col){
+    const k=.5522847498, py=c.p.h-y;
+    cmds.push(`${pdfRgb(col)} rg`,`${fmt(x+r)} ${fmt(py)} m`,`${fmt(x+r)} ${fmt(py+k*r)} ${fmt(x+k*r)} ${fmt(py+r)} ${fmt(x)} ${fmt(py+r)} c`,`${fmt(x-k*r)} ${fmt(py+r)} ${fmt(x-r)} ${fmt(py+k*r)} ${fmt(x-r)} ${fmt(py)} c`,`${fmt(x-r)} ${fmt(py-k*r)} ${fmt(x-k*r)} ${fmt(py-r)} ${fmt(x)} ${fmt(py-r)} c`,`${fmt(x+k*r)} ${fmt(py-r)} ${fmt(x+r)} ${fmt(py-k*r)} ${fmt(x+r)} ${fmt(py)} c f`);
+  }
+  function clipBegin(cmds,c){cmds.push('q',`${fmt(c.x0)} ${fmt(c.p.h-c.y1)} ${fmt(c.width)} ${fmt(c.height)} re W n`)} function clipEnd(cmds){cmds.push('Q')}
+  function drawSquarePdf(cmds,c,coord=false){
+    const col=c.color, d=darken(col,.38), major='#'+d.map(v=>v.toString(16).padStart(2,'0')).join('');
+    if(coord){
+      // Match the live preview: coordinate-grid major lines are measured
+      // outward from the origin rather than from the page edge.
+      const cx=(c.x0+c.x1)/2, cy=(c.y0+c.y1)/2;
+      const minIX=Math.ceil((c.x0-cx)/c.s-1e-9), maxIX=Math.floor((c.x1-cx)/c.s+1e-9);
+      const minIY=Math.ceil((c.y0-cy)/c.s-1e-9), maxIY=Math.floor((c.y1-cy)/c.s+1e-9);
+      for(let i=minIX;i<=maxIX;i++){
+        const x=cx+i*c.s, maj=c.majorEnabled&&i%c.majorEvery===0;
+        pdfLine(cmds,c,x,c.y0,x,c.y1,maj?c.majorWidth:c.lineWidth,maj?major:col);
+      }
+      for(let i=minIY;i<=maxIY;i++){
+        const y=cy+i*c.s, maj=c.majorEnabled&&i%c.majorEvery===0;
+        pdfLine(cmds,c,c.x0,y,c.x1,y,maj?c.majorWidth:c.lineWidth,maj?major:col);
+      }
+    }else{
+      let idx=0;
+      for(let x=c.x0;x<=c.x1+.01;x+=c.s,idx++){
+        const maj=c.majorEnabled&&idx%c.majorEvery===0;
+        pdfLine(cmds,c,x,c.y0,x,c.y1,maj?c.majorWidth:c.lineWidth,maj?major:col);
+      }
+      idx=0;
+      for(let y=c.y0;y<=c.y1+.01;y+=c.s,idx++){
+        const maj=c.majorEnabled&&idx%c.majorEvery===0;
+        pdfLine(cmds,c,c.x0,y,c.x1,y,maj?c.majorWidth:c.lineWidth,maj?major:col);
+      }
+    }
+    if(coord)drawCoordinatePdf(cmds,c);
+  }
+  function drawDotsPdf(cmds,c){const r=Math.max(.55,c.lineWidth*1.05);for(let x=c.x0;x<=c.x1+.01;x+=c.s)for(let y=c.y0;y<=c.y1+.01;y+=c.s)pdfCircle(cmds,c,x,y,r,c.color)}
+  function drawCoordinatePdf(cmds,c){
+    const cx=(c.x0+c.x1)/2,cy=(c.y0+c.y1)/2,axis='#111827';if(c.showXAxis)pdfLine(cmds,c,c.x0,cy,c.x1,cy,c.axisWidth,axis);if(c.showYAxis)pdfLine(cmds,c,cx,c.y0,cx,c.y1,c.axisWidth,axis);
+    const nX=Math.floor(c.width/(2*c.s)),nY=Math.floor(c.height/(2*c.s));
+    if(c.showTicks){if(c.showXAxis)for(let i=-nX;i<=nX;i++){const x=cx+i*c.s;pdfLine(cmds,c,x,cy-3,x,cy+3,Math.max(.5,c.axisWidth*.7),axis)}if(c.showYAxis)for(let i=-nY;i<=nY;i++){const y=cy-i*c.s;pdfLine(cmds,c,cx-3,y,cx+3,y,Math.max(.5,c.axisWidth*.7),axis)}}
+    if(c.showNumbers){if(c.showXAxis)for(let i=-nX;i<=nX;i++){if(i===0||i%c.numberEvery)continue;pdfText(cmds,c,formatCoord(i*c.tickValue),cx+i*c.s,cy+12,7.5,'center')}if(c.showYAxis)for(let i=-nY;i<=nY;i++){if(i===0||i%c.numberEvery)continue;pdfText(cmds,c,formatCoord(i*c.tickValue),cx-7,cy-i*c.s+2.5,7.5,'right')}pdfText(cmds,c,'0',cx-5,cy+12,7.5,'right')}
+    if(c.showArrows){if(c.showXAxis){arrowPdf(cmds,c,c.x1,cy,0,axis,c.axisWidth);arrowPdf(cmds,c,c.x0,cy,Math.PI,axis,c.axisWidth)}if(c.showYAxis){arrowPdf(cmds,c,cx,c.y0,-Math.PI/2,axis,c.axisWidth);arrowPdf(cmds,c,cx,c.y1,Math.PI/2,axis,c.axisWidth)}}
+    if(c.showLabels){if(c.showXAxis)pdfText(cmds,c,'x',c.x1-8,cy-9,10,'center');if(c.showYAxis)pdfText(cmds,c,'y',cx+8,c.y0+11,10,'center')}
+  }
+  function arrowPdf(cmds,c,x,y,a,col,w){const len=8;pdfLine(cmds,c,x,y,x-len*Math.cos(a-Math.PI/6),y-len*Math.sin(a-Math.PI/6),w,col);pdfLine(cmds,c,x,y,x-len*Math.cos(a+Math.PI/6),y-len*Math.sin(a+Math.PI/6),w,col)}
+
+  function buildPdfBlob(){
+    const c=getCfg(),cmds=[];
+    if(c.width>0&&c.height>0){
+      if(c.type==='square') drawSquarePdf(cmds,c,false);
+      else if(c.type==='coordinate') drawSquarePdf(cmds,c,true);
+      else drawDotsPdf(cmds,c);
+    }
+    const stream=cmds.join('\n')+'\n';
+    const objects=[];
+    objects[1]='<< /Type /Catalog /Pages 2 0 R >>';
+    objects[2]='<< /Type /Pages /Kids [3 0 R] /Count 1 >>';
+    objects[3]=`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${fmt(c.p.w)} ${fmt(c.p.h)}] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>`;
+    objects[4]=`<< /Length ${new TextEncoder().encode(stream).length} >>\nstream\n${stream}endstream`;
+    objects[5]='<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>';
+    let pdf='%PDF-1.4\n%âãÏÓ\n', offsets=[0];
+    for(let i=1;i<objects.length;i++){offsets[i]=new TextEncoder().encode(pdf).length;pdf+=`${i} 0 obj\n${objects[i]}\nendobj\n`;}
+    const xref=new TextEncoder().encode(pdf).length;pdf+=`xref\n0 ${objects.length}\n0000000000 65535 f \n`;
+    for(let i=1;i<objects.length;i++)pdf+=String(offsets[i]).padStart(10,'0')+' 00000 n \n';
+    pdf+=`trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+    return new Blob([new TextEncoder().encode(pdf)],{type:'application/pdf'});
+  }
+
+  function filename(){return `graph-paper-${els.gridType.value}-${els.paperSize.value}-${els.orientation.value}.pdf`}
+  function downloadPdf(){const blob=buildPdfBlob(),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename();document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000)}
+  function printPdf(){const blob=buildPdfBlob(),url=URL.createObjectURL(blob),w=window.open(url,'_blank');if(!w){alert('Please allow pop-ups to print the generated PDF.');URL.revokeObjectURL(url);return;}setTimeout(()=>{try{w.focus();w.print()}catch(e){}},7000);setTimeout(()=>URL.revokeObjectURL(url),30000)}
+
+  const limitedInputs=[
+    [els.lineWidth,0.1,3,0.5],
+    [els.majorWidth,0.2,5,1],
+    [els.axisWidth,0.5,5,1.5],
+    [els.tickValue,0.1,100,1]
+  ];
+  limitedInputs.forEach(([el,min,max,fallback])=>{
+    el.addEventListener('change',()=>{el.value=clampNum(el.value,min,max,fallback);render();});
+    el.addEventListener('blur',()=>{el.value=clampNum(el.value,min,max,fallback);render();});
+  });
+
+  Object.values(els).forEach(el=>{if(el)el.addEventListener('input',render)});
+  ['change'].forEach(evt=>Object.values(els).forEach(el=>{if(el)el.addEventListener(evt,render)}));
+  document.querySelectorAll('#unitsSeg button').forEach(b=>b.addEventListener('click',()=>setUnit(b.dataset.unit)));
+  $('resetBtn').addEventListener('click',reset);$('pdfBtn').addEventListener('click',downloadPdf);$('printBtn').addEventListener('click',printPdf);
+  $('themeBtn').addEventListener('click',()=>{const dark=document.documentElement.getAttribute('data-theme')==='dark';document.documentElement.setAttribute('data-theme',dark?'light':'dark');$('themeBtn').textContent=dark?'🌙 Dark':'☀️ Light';});
+
+  // Re-fit the sheet whenever the preview viewport changes size. This keeps
+  // the right side fixed while still using all available space.
+  let resizeFrame=0;
+  const requestPreviewFit=()=>{cancelAnimationFrame(resizeFrame);resizeFrame=requestAnimationFrame(render);};
+  if('ResizeObserver' in window){new ResizeObserver(requestPreviewFit).observe(document.querySelector('.canvasStage'));}
+  window.addEventListener('resize',requestPreviewFit);
+  render();
+})();
+</script>
+</body>
+</html>
