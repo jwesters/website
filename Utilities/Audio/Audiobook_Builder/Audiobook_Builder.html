@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#f5f7fb" />
+  <title>Audiobook Builder</title>
+  <link rel="stylesheet" href="styles.css?v=20261005-web1" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <h1>Audiobook Builder</h1>
+        <p>Combine audio files into a chaptered M4B audiobook — locally in your browser.</p>
+      </div>
+      <div class="top-actions">
+        <button id="themeToggle" class="icon-btn" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">◐</button>
+        <button id="helpBtn" class="secondary-btn" type="button">Help</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="card upload-card">
+        <div id="dropZone" class="drop-zone" tabindex="0" role="button" aria-label="Add audio files">
+          <div class="drop-icon">＋</div>
+          <h2>Add audio files</h2>
+          <p>Drag files here, or choose files from your device.</p>
+          <button id="chooseFilesBtn" class="primary-btn" type="button">Choose audio files</button>
+          <input id="fileInput" type="file" multiple accept="audio/*,.mp3,.wav,.m4a,.aac,.flac,.ogg,.opus" hidden />
+          <small>MP3, WAV, M4A, AAC, FLAC, OGG and Opus are accepted. MP3 has a second low-level decoder path for files that Web Audio rejects.</small>
+          <small><strong>Website:</strong> upload this HTML file plus <code>styles.css</code>, <code>app.js</code>, <code>m4b-muxer.js</code>, and <code>ima4-encoder.js</code> together. <strong>Local:</strong> use the included launcher for maximum codec compatibility. Direct double-click still works for files your browser can decode normally.</small>
+        </div>
+        <div id="compatBanner" class="banner hidden" role="status"></div>
+      </section>
+
+      <section class="card">
+        <div class="section-heading">
+          <div>
+            <h2>Chapters</h2>
+            <p id="chapterSummary">No chapters added yet.</p>
+          </div>
+          <div class="section-actions">
+            <button id="sortBtn" class="secondary-btn" type="button" disabled>Natural sort</button>
+            <button id="clearBtn" class="danger-ghost-btn" type="button" disabled>Clear</button>
+          </div>
+        </div>
+        <div id="chapterList" class="chapter-list empty-state">
+          <div class="empty-message">Each uploaded file becomes one chapter. You can rename and rearrange them here.</div>
+        </div>
+      </section>
+
+      <section class="two-col">
+        <div class="card">
+          <div class="section-heading compact">
+            <div>
+              <h2>Book details</h2>
+              <p>Embedded in the finished audiobook.</p>
+            </div>
+          </div>
+          <div class="form-grid">
+            <label>Title<input id="metaTitle" type="text" placeholder="Book title" /></label>
+            <label>Author<input id="metaAuthor" type="text" placeholder="Author" /></label>
+            <label>Narrator<input id="metaNarrator" type="text" placeholder="Narrator" /></label>
+            <label>Year<input id="metaYear" type="text" inputmode="numeric" placeholder="2026" /></label>
+            <label>Genre<input id="metaGenre" type="text" value="Audiobook" placeholder="Audiobook" /></label>
+            <label class="full-span">Description<textarea id="metaDescription" rows="4" placeholder="Book description"></textarea></label>
+          </div>
+
+          <div class="cover-row">
+            <div id="coverPreview" class="cover-preview">No cover</div>
+            <div class="cover-controls">
+              <strong>Cover art</strong>
+              <span>JPG or PNG</span>
+              <div class="button-row">
+                <button id="coverBtn" class="secondary-btn" type="button">Choose cover</button>
+                <button id="removeCoverBtn" class="danger-ghost-btn" type="button" disabled>Remove</button>
+              </div>
+              <input id="coverInput" type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png" hidden />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-heading compact">
+            <div>
+              <h2>Audio settings</h2>
+              <p>Defaults are tuned for spoken-word audio.</p>
+            </div>
+          </div>
+          <div class="form-grid settings-grid">
+            <label>Build mode
+              <select id="buildMode">
+                <option value="fast" selected>Fast — recommended</option>
+                <option value="balanced">Balanced</option>
+                <option value="safe">Maximum compatibility</option>
+              </select>
+            </label>
+            <label>Quality preset
+              <select id="qualityPreset">
+                <option value="compact">Compact</option>
+                <option value="standard" selected>Standard</option>
+                <option value="high">High</option>
+                <option value="veryhigh">Very high</option>
+              </select>
+            </label>
+            <label>Bitrate
+              <select id="bitrate">
+                <option value="64000">64 kbps</option>
+                <option value="96000" selected>96 kbps</option>
+                <option value="128000">128 kbps</option>
+                <option value="160000">160 kbps</option>
+                <option value="192000">192 kbps</option>
+              </select>
+            </label>
+            <label>Channels
+              <select id="channels">
+                <option value="1" selected>Mono</option>
+                <option value="2">Stereo</option>
+              </select>
+            </label>
+            <label>Sample rate
+              <select id="sampleRate">
+                <option value="22050">22.05 kHz</option>
+                <option value="32000" selected>32 kHz</option>
+                <option value="44100">44.1 kHz</option>
+                <option value="48000">48 kHz</option>
+              </select>
+            </label>
+            <label class="toggle-row full-span"><input id="normalize" type="checkbox" checked /><span><strong>Normalize chapter volume</strong><small>Balances quieter/louder source files. Fast mode uses a quick sampled scan rather than a full scan.</small></span></label>
+            <label class="full-span">Silence between chapters
+              <div class="range-row">
+                <input id="silence" type="range" min="0" max="5" step="0.1" value="0.5" />
+                <output id="silenceValue">0.5 s</output>
+              </div>
+            </label>
+          </div>
+          <div class="tip-box">
+            <strong>Encoding engine</strong>
+            <span id="engineNote">Checking browser audio support…</span>
+          </div>
+          <div class="tip-box">
+            <strong>Fast build</strong>
+            <span>Fast mode overlaps decoding of the next chapter with encoding of the current one, uses native browser resampling when memory allows, and feeds larger PCM blocks to AAC. Very large chapters automatically fall back to the lower-memory path.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card build-card">
+        <div class="build-head">
+          <div>
+            <h2>Build audiobook</h2>
+            <p id="buildStatus">Add at least one audio file to begin.</p>
+          </div>
+          <div class="build-buttons">
+            <button id="cancelBtn" class="secondary-btn hidden" type="button">Cancel</button>
+            <button id="buildBtn" class="primary-btn large" type="button" disabled>Build M4B</button>
+          </div>
+        </div>
+        <div id="progressWrap" class="progress-wrap hidden">
+          <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+          <div class="progress-meta"><span id="progressLabel">Preparing…</span><span id="progressPercent">0%</span></div>
+        </div>
+        <div id="resultPanel" class="result-panel hidden">
+          <div>
+            <strong id="resultName">audiobook.m4b</strong>
+            <span id="resultInfo"></span>
+          </div>
+          <button id="downloadBtn" class="success-btn" type="button">Download M4B</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="helpDialog">
+    <div class="dialog-head">
+      <div><h2>How Audiobook Builder works</h2><p>Your audio stays on this device.</p></div>
+      <button id="closeHelpBtn" class="icon-btn" type="button" aria-label="Close">×</button>
+    </div>
+    <div class="dialog-body">
+      <ol>
+        <li>Add all chapter files. They are naturally sorted by filename when added.</li>
+        <li>Rename or reorder chapters. Each source file becomes one chapter marker.</li>
+        <li>Add book metadata and optional JPG/PNG cover art.</li>
+        <li>Choose bitrate, mono/stereo, normalization, and the silence inserted between chapters.</li>
+        <li>Select <strong>Build M4B</strong>. Processing happens locally. Fast mode is recommended for most books.</li>
+      </ol>
+      <div class="help-note"><strong>Encoding note:</strong> On an HTTPS website, Audiobook Builder also has a low-level MP3 frame decoder for MP3s that <code>decodeAudioData()</code> rejects. For output it prefers AAC-LC for smaller files; if AAC is unavailable or fails, it automatically retries with its built-in Apple IMA4 encoder. No source audio is uploaded.</div>
+      <div class="help-note"><strong>Speed:</strong> Fast mode pre-decodes the next chapter while encoding the current chapter and uses native resampling where practical. Large chapters automatically switch back to the lower-memory path.</div>
+    </div>
+  </dialog>
+
+  <script src="m4b-muxer.js?v=20261005-web1"></script>
+  <script src="ima4-encoder.js?v=20261005-web1"></script>
+  <script src="app.js?v=20261005-web1"></script>
+</body>
+</html>
