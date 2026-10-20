@@ -10,6 +10,7 @@ What this version does differently:
 - Keeps an optional repository-folder view at the bottom for maintenance.
 - Excludes root-level files by default, matching the previous generator.
 - Always excludes source.html files from generated indexes.
+- Always excludes preview.htm and preview.html files, regardless of folder or case.
 - Labels index.html links with the page's HTML title instead of "Index".
 - Can hide filenames containing "nsfw" with --hide-nsfw.
 - Also writes an education-only indexEDU.html by default.
@@ -1084,6 +1085,10 @@ def title_for_path(path: Path) -> str:
     return "Home"
 
 
+# Preview pages must never appear in either generated index (case-insensitive).
+EXCLUDED_PREVIEW_FILENAMES = frozenset({"preview.htm", "preview.html"})
+
+
 def should_exclude_dir(dirname: str, exclude_dirs: Sequence[str]) -> bool:
     d = dirname.casefold()
     return any(d == x.casefold() for x in exclude_dirs)
@@ -1101,6 +1106,12 @@ def should_include_file(
     rel = path.relative_to(root).as_posix()
     lower_rel = rel.casefold()
     lower_fn = path.name.casefold()
+
+    # Filter before creating FileEntry records: excludes these pages from all
+    # categories, sidebar counts, recent changes, and the repository folder view
+    # in both the standard and education-only indexes.
+    if lower_fn in EXCLUDED_PREVIEW_FILENAMES:
+        return False
 
     if path.suffix.casefold() not in exts_norm:
         return False
