@@ -46,6 +46,24 @@ body[data-theme=classic]{--bg:#071410;--panel:#0d211b;--panel2:#122c23;--panel3:
 .selection-line.winner-showing #selectionInfo{color:#ffdda1;font-weight:750}
 .dialog-close{display:grid;place-items:center;align-self:center;flex:0 0 36px;padding:0;line-height:0;appearance:none;-webkit-appearance:none}
 .dialog-close svg{display:block;flex:none}
+
+/* End-of-game state: visible only after all playable funds have been exhausted. */
+.game-over-overlay{position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:20px;background:rgba(0,9,7,.86);backdrop-filter:blur(12px)}
+.game-over-overlay[hidden]{display:none!important}
+.game-over-card{position:relative;width:min(100%,480px);padding:clamp(26px,5vw,42px);border:1px solid rgba(228,197,129,.52);border-radius:20px;background:radial-gradient(ellipse at 50% 0%,rgba(204,159,69,.16),transparent 59%),linear-gradient(155deg,var(--panel2),var(--bg));box-shadow:0 24px 90px #000b,inset 0 1px #fff2;text-align:center;overflow:hidden}
+.game-over-card:before{content:'';position:absolute;inset:8px;border:1px solid rgba(228,197,129,.13);border-radius:13px;pointer-events:none}
+.game-over-icon{width:72px;height:72px;margin:0 auto 20px;border:2px solid var(--accent);border-radius:50%;display:grid;place-items:center;font:700 43px Georgia,serif;color:var(--accent-bright);box-shadow:0 0 30px #e4c58120,inset 0 0 20px #0007}
+.game-over-kicker{display:block;font-size:10px;letter-spacing:.23em;font-weight:850;color:var(--accent);margin:0 0 7px}
+.game-over-card h2{margin:0;color:var(--ink);font-size:clamp(35px,8vw,54px);line-height:1.12;letter-spacing:.035em;font-weight:850}
+.game-over-description{max-width:335px;margin:14px auto 23px;color:var(--muted);line-height:1.6;font-size:14px}
+.game-over-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 auto 25px;text-align:center}
+.game-over-stats div{border:1px solid var(--line);border-radius:10px;padding:13px 6px;background:rgba(0,0,0,.12)}
+.game-over-stats span{display:block;font-size:9px;color:var(--muted);font-weight:800;letter-spacing:.12em;margin-bottom:8px}
+.game-over-stats strong{display:block;font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.new-game-btn{width:100%;min-height:52px;padding:12px 18px;border-radius:9px;background:linear-gradient(135deg,#fce0a7,#d3ad69 57%,#edcd86);border:1px solid #ffe4a7;color:#322717;font-size:14px;font-weight:900;box-shadow:0 4px 0 #926e32,0 8px 17px #0006}
+.new-game-btn:hover{filter:brightness(1.1)}
+.game-over-footnote{display:block;margin-top:14px;font-size:11px;color:var(--muted)}
+@media(max-width:480px){.game-over-overlay{padding:13px}.game-over-card{padding:26px 22px}.game-over-icon{height:60px;width:60px;font-size:35px;margin-bottom:14px}}
 </style>
 </head>
 <body data-theme="classic">
@@ -82,6 +100,17 @@ body[data-theme=classic]{--bg:#071410;--panel:#0d211b;--panel2:#122c23;--panel3:
 <div id="tooltip" class="tooltip" role="status" hidden></div>
 <div id="dragGhost" class="drag-ghost" hidden></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
+<div id="gameOverOverlay" class="game-over-overlay" hidden>
+ <section class="game-over-card" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle" aria-describedby="gameOverDescription">
+  <div class="game-over-icon" aria-hidden="true">R</div>
+  <span class="game-over-kicker">THE TABLE IS CLOSED</span>
+  <h2 id="gameOverTitle">GAME OVER</h2>
+  <p id="gameOverDescription" class="game-over-description">You've run out of chips. No money or playable bets remain.</p>
+  <div class="game-over-stats"><div><span>SPINS PLAYED</span><strong id="gameOverSpins">0</strong></div><div><span>SESSION RESULT</span><strong id="gameOverResult">$0</strong></div></div>
+  <button class="new-game-btn" id="newGameBtn">↻ &nbsp;START NEW GAME · $5,000</button>
+  <span class="game-over-footnote">Your personal records and game settings will be kept.</span>
+ </section>
+</div>
 <div id="modalOverlay" class="modal-overlay" hidden><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle"><div class="dialog-head"><div><span class="eyebrow" id="dialogKicker">ROULETTE ROYALE</span><h2 id="dialogTitle">Game settings</h2></div><button class="dialog-close" id="closeModal" aria-label="Close dialog"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 5 L19 19 M19 5 L5 19" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2.4"/></svg></button></div><div id="dialogBody" class="dialog-body"></div></section></div>
 <script>(function(){
 'use strict';
@@ -417,11 +446,35 @@ function finishSpin(winner,wager){
  if(paid>0){beep('win');toast('Number '+winner+'! '+fmt(keptStake)+' in winning chips stays on the board · '+signed(net)+' net.');}
  else{beep('lose');toast('Number '+winner+'. No winning bets this round.');}
  refreshUI();save();
+ if(showGameOverIfNeeded())return;
  if(state.autoActive&&state.settings.pace==='auto'){
   if(state.settings.autoRebet){if(!rebet({quiet:true})){stopAuto();toast('Automatic play stopped — bankroll or table limit reached.');return;}}
   if(state.bets.length)setTimeout(()=>{if(state.autoActive&&!state.spinning)startCountdown();},850);
   else{stopAuto();toast('Automatic play stopped — no chips remaining on the table.');}
  }
+}
+// All cash and all active wagers must be gone. A player with $0 cash but
+// a chip still on the board can spin or return that chip, so is NOT out.
+function isGameOver(){return !state.spinning&&state.bank<1&&placedAmount()===0;}
+function showGameOverIfNeeded(){
+ if(!isGameOver())return false;
+ stopAuto();
+ const profit=state.history.reduce((sum,h)=>sum+h.net,0);
+ $('gameOverSpins').textContent=state.history.length.toLocaleString();
+ $('gameOverResult').textContent=signed(profit);
+ $('gameOverResult').className=profit>=0?'positive':'negative';
+ $('gameOverOverlay').hidden=false;
+ $('newGameBtn').focus();
+ return true;
+}
+function startNewGame(){
+ if(state.spinning)return;
+ // A new session resets the chips and round history, but not personal records
+ // or visual/audio preferences. Reuse the existing reset routine.
+ state.resetAction='session';
+ performReset();
+ $('gameOverOverlay').hidden=true;
+ $('spinBtn').focus();
 }
 function cancelCountdown(){clearInterval(state.countTimer);state.countTimer=null;state.countdown=0;}
 function startCountdown(){if(!state.autoActive||state.spinning||state.countTimer||!state.bets.length)return;
@@ -564,6 +617,7 @@ function setupChipInteractions(){document.querySelectorAll('[data-chip]').forEac
  button.addEventListener('click',()=>{if(suppressChipClick||wasDrag){wasDrag=false;return;}state.selected=Number(button.dataset.chip);refreshUI();beep('chip');save();});
  });}
 function setup(){makeBoard();drawWheel();refreshUI();setupChipInteractions();setupPlacedChipInteractions();
+ $('newGameBtn').addEventListener('click',startNewGame);
  $('spinBtn').addEventListener('click',()=>{if(state.spinning&&state.autoActive){stopAuto();return;}if(state.settings.pace==='auto')toggleAuto();else spin();});
  $('undoBtn').onclick=undoBet;$('clearBtn').onclick=()=>clearBets();$('rebetBtn').onclick=()=>rebet();$('doubleBtn').onclick=doubleBets;
  $('soundBtn').onclick=()=>{state.settings.sound=!state.settings.sound;refreshUI();beep('chip');save();};
@@ -581,6 +635,7 @@ function setup(){makeBoard();drawWheel();refreshUI();setupChipInteractions();set
  // Restore the last pocket position when a saved game is reopened.
  if(state.history.length){const last=state.history[state.history.length-1].n;state.wheelAngle=((-ORDER.indexOf(last)*2*Math.PI/38)%(2*Math.PI)+2*Math.PI)%(2*Math.PI);drawWheel(state.wheelAngle);}
  refreshUI();
+ showGameOverIfNeeded();
 }
 setup();
 })();
