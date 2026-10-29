@@ -30,8 +30,8 @@ function randGen(seed){let a=(seed>>>0)||1;return()=>{a+=0x6D2B79F5;let t=a;t=Ma
 function range(rand,a,b){return a+(b-a)*rand();}
 function persist(){try{localStorage.setItem('kiwi_down_under_save_v1',JSON.stringify(save));}catch{}updateRail();}
 function updateRail(){const safe=(id,val)=>{let el=$(id);if(el)el.textContent=val;};safe('railDepth',Math.floor(save.totals.depth/10)+' m');safe('railCoins',save.coins.toLocaleString());safe('railBest',Math.max(0,...save.scores.adventure.map(e=>e.score),...save.scores.endless.map(e=>e.score)).toLocaleString());safe('railFits',save.costumes.length+' / 8');}updateRail();
-function setScreen(name,html){screen=name;if(html!==undefined)modal.innerHTML=html;shade.classList.toggle('hidden',name==='playing'||name==='intro');pauseTop.classList.toggle('active',name==='playing'||name==='intro');mobile.style.display=(name==='playing'||name==='intro')?'':'none';stopKeys();}
-function stopKeys(){for(const k in keys)keys[k]=false;jumpBuffered=0;for(const b of document.querySelectorAll('.touch'))b.classList.remove('pressed');}
+function setScreen(name,html){screen=name;if(html!==undefined)modal.innerHTML=html;shade.classList.toggle('hidden',name==='playing'||name==='intro');shade.classList.toggle('powerChoice',name==='upgrade');pauseTop.classList.toggle('active',name==='playing'||name==='intro');mobile.style.display=(name==='playing'||name==='intro')?'':'none';stopKeys();}
+function stopKeys(){for(const k in keys)keys[k]=false;jumpBuffered=0;if(typeof activeTouches!=='undefined')for(const touches of activeTouches.values())touches.clear();for(const b of document.querySelectorAll('.touch')){b.classList.remove('pressed');b.setAttribute('aria-pressed','false');}}
 function notify(msg,time=1.75){toastEl.textContent=msg;toastEl.classList.add('show');toastTime=time;}
 function logo(){return '<div class="eyebrow">A VERY ROUND ADVENTURE</div><div class="logo">KIWI<br><span class="sub">DOWN UNDER</span></div><div class="miniKiwi"></div>';}
 function showMenu(){setScreen('menu',`${logo()}<div class="introText">32 stages • 8 worlds • 40 boss encounters.<br>Too round to fly. Too brave to stop.</div><div class="eyebrow">Choose your challenge</div><div class="pills">${['easy','medium','hard'].map(d=>`<button class="pill ${difficulty===d?'selected':''}" data-diff="${d}">${d.toUpperCase()}</button>`).join('')}</div><button class="btn" data-action="adventure">🌿 Adventure · 8 Worlds</button><button class="btn teal" data-action="endless">♾️ Endless Descent</button><div class="btnrow"><button class="btn ghost" data-action="shop">🛍️ Kiwi Shop</button><button class="btn ghost" data-action="how">❔ How to Play</button></div><div class="btnrow"><button class="btn ghost" data-action="scores">🏆 High Scores</button><button class="btn ghost" data-action="settings">⚙ Settings</button></div><div class="hintFooter">ORIGINAL PIXEL ART • OFFLINE • PROGRESS SAVED</div>`);}
@@ -46,7 +46,7 @@ function buyItem(type,id){if(type==='outfit'){const c=suits.find(x=>x.id===id);i
  if(type==='start'){const c=starts.find(x=>x.id===id);if(!c)return;if(save.starts.includes(id))save.start=id;else if(save.coins>=c.price){save.coins-=c.price;save.starts.push(id);save.start=id;sound('purchase');}}
  persist();showShop(shopBack);
 }
-function showHow(){setScreen('how',`<div class="heading">🥝 HOW TO PLAY</div><div class="infoPanel"><h3>32 levels. 8 worlds. 40 bosses.</h3>Descend through four procedurally generated levels per world. Every level has a miniboss. At the end of each world, defeat the great guardian too. World 8 ends in a final showdown!</div><div class="infoPanel"><h3>Controls</h3><b>A / D or ← / →:</b> Smooth horizontal movement.<br><b>W or ↑:</b> Jump, including a springy arena jump.<br><b>S / Space / ↓ / J:</b> Hold to fire mini-eggs downward.<br><b>Esc or P:</b> Pause.<br><b>Mobile:</b> Four touch controls.<br><br><b>Hover!</b> Shooting while airborne briefly slows your fall. The <b>blue hover bar</b> recharges when you land or stomp.<br><b>Stomp!</b> Land on enemies from above to bounce and deal damage.</div><div class="infoPanel"><h3>Fight or flee</h3>World-specific enemies actively chase, aim, dash, teleport, and fire at you. Dodge visible warning effects. Bosses become bullet hells in later worlds. Boss floors bounce you upward so you can fight from above.</div><div class="infoPanel"><h3>Three stage bonuses</h3>⏱️ <b>Speed:</b> Finish quickly.<br>💖 <b>Flawless:</b> Take no damage during the level.<br>🕊️ <b>Pacifist:</b> Don't defeat ordinary enemies. Required minibosses and guardians are exempt.<br>Bonuses award score and bankable coins.</div><div class="infoPanel"><h3>Get stronger</h3>Coins buy permanent health, egg damage, egg speed, costumes, and starting weapons. Glowing upgrade orbs give temporary abilities. Losing all hearts restarts from World 1, but your shop purchases stay.</div><button class="btn" data-action="menu">LET'S PLAY!</button>`);}
+function showHow(){setScreen('how',`<div class="heading">🥝 HOW TO PLAY</div><div class="infoPanel"><h3>32 levels. 8 worlds. 40 bosses.</h3>Descend through four procedurally generated levels per world. Every level has a miniboss. At the end of each world, defeat the great guardian too. World 8 ends in a final showdown!</div><div class="infoPanel"><h3>Controls</h3><b>A / D or ← / →:</b> Smooth horizontal movement.<br><b>W or ↑:</b> Jump, including a springy arena jump.<br><b>S / Space / ↓ / J:</b> Hold to fire mini-eggs downward.<br><b>Esc or P:</b> Pause.<br><b>Mobile:</b> Left/Right on the left; Jump and Shoot on the right. Press Jump + Shoot together with two fingers.<br><br><b>Hover!</b> Shooting while airborne briefly slows your fall. The <b>blue hover bar</b> recharges when you land or stomp.<br><b>Stomp!</b> Land on enemies from above to bounce and deal damage.</div><div class="infoPanel"><h3>Fight or flee</h3>World-specific enemies actively chase, aim, dash, teleport, and fire at you. Dodge visible warning effects. Bosses become bullet hells in later worlds. Boss floors bounce you upward so you can fight from above.</div><div class="infoPanel"><h3>Three stage bonuses</h3>⏱️ <b>Speed:</b> Finish quickly.<br>💖 <b>Flawless:</b> Take no damage during the level.<br>🕊️ <b>Pacifist:</b> Don't defeat ordinary enemies. Required minibosses and guardians are exempt.<br>Bonuses award score and bankable coins.</div><div class="infoPanel"><h3>Get stronger</h3>Coins buy permanent health, egg damage, egg speed, costumes, and starting weapons. Glowing blue diamond pickups PAUSE the game and offer three random temporary abilities: pick one. Red-tipped triangular spikes on platforms always hurt! All platforms stay firmly in place. Flat markings along cave walls are decorations, not pickups. Losing all hearts restarts from World 1, but your shop purchases stay.</div><button class="btn" data-action="menu">LET'S PLAY!</button>`);}
 function showSettings(){setScreen('settings',`<div class="heading">⚙ SETTINGS</div><div class="infoPanel"><h3>Music volume</h3><input id="musicVol" style="width:100%;accent-color:#ffe29a" aria-label="Music volume" type="range" min="0" max="100" value="${Math.round(save.settings.music*100)}"></div><div class="infoPanel"><h3>Sound effects</h3><input id="sfxVol" style="width:100%;accent-color:#ffe29a" aria-label="Effects volume" type="range" min="0" max="100" value="${Math.round(save.settings.sfx*100)}"></div><div class="infoPanel"><h3>Display & saves</h3>Fully offline. Game saves locally. Use portrait on phones; landscape also works. Progress from the previous Kiwi Down Under version carries over automatically.</div><button class="btn" data-action="menu">← DONE</button>`);}
 function showScores(){const scores=m=>save.scores[m].length?`<table class="scores"><thead><tr><th>#</th><th>Score</th><th>Stage</th><th>Mode</th></tr></thead><tbody>${save.scores[m].slice(0,5).map((s,i)=>`<tr><td>${i+1}</td><td>${Math.floor(s.score).toLocaleString()}</td><td>${s.stage||Math.ceil(s.depth/STAGE)||1}</td><td>${s.diff}</td></tr>`).join('')}</tbody></table>`:'<div class="note">No scores yet. Your legendary descent awaits.</div>';setScreen('scores',`<div class="heading">🏆 HIGH SCORES</div><div class="infoPanel"><h3>🌿 Adventure</h3>${scores('adventure')}</div><div class="infoPanel"><h3>♾️ Endless</h3>${scores('endless')}</div><div class="infoPanel"><h3>Career</h3>Runs: <b>${save.totals.runs}</b> • Enemies: <b>${save.totals.kills}</b><br>Coins collected: <b>${save.totals.coins}</b> • Deepest: <b>${Math.floor(save.totals.depth/10)} m</b></div><button class="btn" data-action="menu">← BACK</button>`);}
 function showPause(){if(!game||game.done)return;setScreen('pause',`<div class="heading">⏸ PAUSED</div><div class="miniKiwi"></div><div class="infoPanel">World: <b>${worlds[game.world%8].name}</b><br>Level: <b>${game.stage%4+1} / 4</b><br>Coins found: <b>${game.coins}</b><br>Score: <b>${Math.floor(game.score).toLocaleString()}</b><br>Bosses defeated: <b>${game.bosses}</b></div><button class="btn" data-action="resume">▶ KEEP FALLING</button><button class="btn ghost" data-action="restart">↻ RESTART RUN</button><button class="btn ghost" data-action="quit">⌂ BANK COINS & QUIT</button>`);}
@@ -62,15 +62,15 @@ setInterval(()=>{if(!audioCtx||blurMuted||!save.settings.music||!['menu','playin
 // Stages are assembled from a seed. Every world has four distinct layouts and
 // a miniboss per stage. Stage four also has a major boss with multiple phases.
 function makeGame(mode){enableAudio();const seed=Math.floor(Math.random()*2147483647)>>>0,base=(difficulty==='easy'?5:difficulty==='hard'?2:3)+save.upgrades.heart;
- game={mode,diff:difficulty,seed,rand:randGen(seed),p:{x:86,y:-58,w:36,h:43,vx:0,vy:0,hp:base,maxHp:base,face:1,grounded:true,coyote:0,inv:0,fireCd:0,hover:2.2,hoverMax:2.2,anim:0,squash:0,airtime:0,shield:save.upgrades.shield,stompCd:0},stage:0,world:0,generated:new Set(),platforms:[],entities:[],shots:[],enemyShots:[],particles:[],deco:[],bossesByStage:new Map(),lastBoss:null,score:0,coins:0,kills:0,bosses:0,majors:0,completed:0,maxDepth:0,elapsed:0,stageTime:0,stageDamage:0,stageKills:0,stageStart:0,stageBanner:0,notification:'',resultBanner:null,resultTime:0,combo:0,comboTimer:0,camera:-235,shake:0,flash:0,introTime:0,intro:true,finishedStages:new Set(),done:false,powers:{spread:0,rate:0,power:0,pierce:0,bounce:0,stomp:0,magnet:0,shield:0,blast:0},rewardCounter:0,worldMessage:2.6};
+ game={mode,diff:difficulty,seed,rand:randGen(seed),p:{x:86,y:-58,w:36,h:43,vx:0,vy:0,hp:base,maxHp:base,face:1,grounded:true,coyote:0,inv:0,fireCd:0,hover:2.2,hoverMax:2.2,anim:0,squash:0,airtime:0,shield:save.upgrades.shield,stompCd:0},stage:0,world:0,generated:new Set(),platforms:[],entities:[],shots:[],enemyShots:[],particles:[],deco:[],bossesByStage:new Map(),lastBoss:null,score:0,coins:0,kills:0,bosses:0,majors:0,completed:0,maxDepth:0,elapsed:0,stageTime:0,stageDamage:0,stageKills:0,stageStart:0,stageBanner:0,notification:'',resultBanner:null,resultTime:0,combo:0,comboTimer:0,camera:-235,shake:0,flash:0,introTime:0,intro:true,finishedStages:new Set(),done:false,powers:{spread:0,rate:0,power:0,pierce:0,bounce:0,stomp:0,magnet:0,shield:0,blast:0},rewardCounter:0,pendingPowerOptions:null,worldMessage:2.6};
  if(save.start!=='none')game.powers[save.start]=1;makeStage(0);makeStage(1);setScreen('intro','');songStep=0;notify('A perfectly ordinary stroll...',2);
 }
 function stageToWorld(n){return Math.floor(n/4)%8;}
 function stageName(n){return `${stageToWorld(n)+1}-${n%4+1}`;}
 function makeStage(n){const g=game;if(!g||g.generated.has(n))return;g.generated.add(n);
  const world=stageToWorld(n),r=randGen((g.seed^Math.imul(n+1,2654435761))>>>0),start=n*STAGE,end=start+STAGE,kind=n%4;
- // Solid ledges, staggered pairs, moving shelves, and hazards. Keep a safe
- // central descent route; pacifist progress is always possible.
+ // Solid, stationary ledges and clearly telegraphed spikes. No surprise
+ // crumbling or sliding floors: the terrain must match its appearance.
  for(let i=0;i<15;i++){
   const y=start+205+i*118+range(r,-24,26);if(y>end-810)break;
   const pat=(i+kind)%5;let ledges=[];
@@ -78,7 +78,7 @@ function makeStage(n){const g=game;if(!g||g.generated.has(n))return;g.generated.
   else if(pat===1||pat===3){const width=range(r,95,177);ledges.push([pat===1?24:408-width,width]);}
   else{const w=range(r,95,155);ledges.push([range(r,55,432-w-55),w]);}
   for(const [x,w] of ledges){if(w<26)continue;const hazard=(n>0||i>5)&&r()<Math.min(.15,.045+n*.004)*(difficulty==='hard'?1.3:1);
-   const b={x,y,w,h:17,kind:world,spike:hazard,move:pat===2&&i%3===0?range(r,12,34):0,origin:x,phase:r()*TAU,crumble:pat===4&&i%3===0,crumbleTime:0};g.platforms.push(b);
+   const b={x,y,w,h:17,kind:world,spike:hazard,move:0,origin:x,phase:0,crumble:false,crumbleTime:0};g.platforms.push(b);
    if(r()<.78)spawnItem('coin',clamp(x+range(r,12,w-12),37,396),y-29,r()>.98?2:1);
    if(r()<.16)spawnItem('fruit',x+w/2,y-35);
   }
@@ -133,10 +133,20 @@ function enterStage(stage){const g=game;g.stage=stage;g.world=stageToWorld(stage
  // Cull stale objects from stages fully above the camera to keep mobile fast.
  const min=(stage-2)*STAGE;g.platforms=g.platforms.filter(p=>p.y>min);g.entities=g.entities.filter(e=>e.y>min&&e.alive);g.deco=g.deco.filter(d=>d.y>min);g.enemyShots=g.enemyShots.filter(s=>s.y>min-100);for(const [k,b] of g.bossesByStage)if(b.stage<stage-2)g.bossesByStage.delete(k);
 }
-function choosePower(){const g=game;const pool=[...buffs].sort(()=>g.rand()-.5).slice(0,3);g.rewardCounter++;
- setScreen('upgrade',`<div class="heading">✨ KIWI POWER-UP</div><div class="miniKiwi"></div><p class="introText">A new world means a new trick!<br>Choose a temporary upgrade for this run.</p>${pool.map(b=>`<div class="upgradeCard" data-pick="${b.id}"><span class="upbadge">${b.icon}</span><b>${b.name}</b><span>${b.desc}</span></div>`).join('')}<div class="note">Powers stack. Permanent shop purchases are separate.</div>`);
+function choosePower(source='world'){
+ const g=game;if(!g||g.done||g.pendingPowerOptions)return;
+ const shuffled=[...buffs];
+ for(let i=shuffled.length-1;i>0;i--){const j=Math.floor(g.rand()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}
+ const pool=shuffled.slice(0,3);
+ g.pendingPowerOptions=pool.map(b=>b.id);
+ g.rewardCounter++;
+ const fromPickup=source==='pickup';
+ setScreen('upgrade',`<div class="heading">${fromPickup?'💎 MYSTERY PICKUP':'✨ KIWI POWER-UP'}</div><div class="miniKiwi"></div><p class="introText">${fromPickup?'You found a glowing power crystal!':'A new world means a new trick!'}<br><b>Choose ONE of these three random upgrades.</b></p><div role="group" aria-label="Choose one of three upgrades">${pool.map((b,i)=>`<button type="button" class="upgradeCard" data-pick="${b.id}" aria-label="Choose ${b.name}"><span class="upbadge">${b.icon}</span><b>${i+1}. ${b.name}</b><span>${b.desc}</span></button>`).join('')}</div><div class="note">The game is paused until you choose. Your power lasts for this run, and upgrades can stack.</div>`);
 }
-function applyPower(id){const g=game;if(!g)return;if(id==='health'){g.p.maxHp++;g.p.hp=Math.min(g.p.maxHp,g.p.hp+2);}else if(id==='shield'){g.p.shield+=2;}else g.powers[id]=(g.powers[id]||0)+1;
+function applyPower(id){const g=game;if(!g||screen!=='upgrade'||!g.pendingPowerOptions?.includes(id))return;
+ g.pendingPowerOptions=null;
+ if(id==='health'){g.p.maxHp++;g.p.hp=Math.min(g.p.maxHp,g.p.hp+2);}else if(id==='shield'){g.p.shield+=2;}else g.powers[id]=(g.powers[id]||0)+1;
+ g.score+=250;
  setScreen('playing');notify('✨ '+(buffs.find(x=>x.id===id)?.name||'POWER UP'),1.4);sound('power');}
 function particles(x,y,color,count=10,force=120){const g=game;if(!g)return;for(let i=0;i<count;i++){const a=Math.random()*TAU,s=range(Math.random,20,force);g.particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-20,t:0,life:range(Math.random,.35,.8),size:range(Math.random,2,5),color});}}
 function addEnemyBullet(x,y,vx,vy,r=6,color='#ff9db6',damage=1,life=3.7){const g=game;if(g.enemyShots.length>190)return;g.enemyShots.push({x,y,vx,vy,r,color,damage,life,phase:Math.random()*TAU});}
@@ -151,7 +161,7 @@ function collect(e){const g=game,p=g.p;e.alive=false;
  if(e.type==='coin'){g.coins+=e.value;g.score+=e.value*24;sound('coin');particles(e.x,e.y,'#ffe490',4,58);}
  else if(e.type==='heart'){p.hp=Math.min(p.maxHp,p.hp+1);g.score+=75;notify('❤️ HEART RESTORED',.8);sound('power');}
  else if(e.type==='fruit'){p.hp=Math.min(p.maxHp,p.hp+1);p.hover=p.hoverMax;g.score+=55;particles(e.x,e.y,'#b1ed9e',8,85);}
- else if(e.type==='orb'){const id=buffs[Math.floor(g.rand()*buffs.length)].id;if(id==='health'){p.hp=Math.min(p.maxHp,p.hp+1);}else if(id==='shield')p.shield++;else g.powers[id]=(g.powers[id]||0)+1;notify('💎 '+(buffs.find(x=>x.id===id)?.name||'POWER'),1.8);sound('power');g.score+=250;}
+ else if(e.type==='orb'){sound('power');choosePower('pickup');}
 }
 function killEnemy(e,byStomp=false,fromBoss=false){if(!e.alive)return;const g=game;e.alive=false;g.kills++;if(!fromBoss)g.stageKills++;g.score+=110+Math.min(12,g.combo)*40;g.combo=Math.min(12,g.combo+1);g.comboTimer=3.2;particles(e.x,e.y,worlds[e.world].accent,15,135);sound(byStomp?'stomp':'coin');
  if(g.rand()<.8)for(let i=0;i<1+Number(g.rand()>.6);i++)spawnItem('coin',e.x+range(g.rand,-21,21),e.y-range(g.rand,1,26),1);
@@ -202,7 +212,7 @@ function update(dt){const g=game;if(!g||g.done)return;const p=g.p;
  p.y+=p.vy*dt;
  // Platform interactions; boss floor always has a spring bounce while locked.
  for(const platform of g.platforms){if(platform.y>p.y+75||platform.y<p.y-95)continue;
-  const px=platform.x+(platform.move?Math.sin(clock*1.6+platform.phase)*platform.move:0);
+  const px=platform.x; // Stationary: never slip away as the kiwi lands.
   let left=px,right=px+platform.w;
   if(platform.floor&&floorOpen(platform.stage)&&p.x>155&&p.x<277)continue;
   if(p.vy>=0&&prevBottom<=platform.y+5&&p.y+p.h*.42>=platform.y&&p.x+p.w*.36>left&&p.x-p.w*.36<right){
@@ -213,8 +223,8 @@ function update(dt){const g=game;if(!g||g.done)return;const p=g.p;
    }else{
     if(!wasGround&&prevY<p.y-5){p.squash=.2;sound('land');}
     p.vy=0;p.grounded=true;p.coyote=.13;p.hover=p.hoverMax;
-    if(platform.spike)hitPlayer(1);
-    if(platform.crumble){platform.crumbleTime+=dt;if(platform.crumbleTime>.7)platform.y+=1500*dt;}
+    if(platform.spike)hitPlayer(1); // Spike tops damage on landing or while walking across.
+    // A landed platform stays where it is until the level is cleared.
    }
    break;
   }
@@ -228,6 +238,7 @@ function update(dt){const g=game;if(!g||g.done)return;const p=g.p;
    const was=g.stage;stageCleared(was);
    if(g.mode==='adventure'&&was===31){finish(true);return;}
    enterStage(was+1);
+   if(screen!=='playing')return;
   }else{p.y=stageEnd-60;p.vy=-850;}
  }
  g.maxDepth=Math.max(g.maxDepth,p.y);
@@ -241,7 +252,7 @@ function update(dt){const g=game;if(!g||g.done)return;const p=g.p;
   else if(w===6&&g.rand()<.6){addEnemyBullet(g.rand()<.5?40:392,p.y+range(g.rand,-90,120),p.x>216?235:-235,0,6,'#ffcf8c',1,3);}
   else if(w===7&&g.rand()<.7)aimShot(range(g.rand,40,392),p.y-300,p.x,p.y,175,6,'#e7a8ff');
  }
- updateEntities(dt,prevBottom);if(g.done)return;
+ updateEntities(dt,prevBottom);if(g.done||screen!=='playing')return;
  updateBosses(dt,prevBottom);if(g.done)return;
  updateShots(dt);if(g.done)return;
  updateEnemyShots(dt);if(g.done)return;
@@ -288,7 +299,7 @@ function updateEntities(dt,oldBottom){const g=game,p=g.p;
   }else{
    if(e.vy||e.vx){e.x+=e.vx*dt;e.y+=e.vy*dt;e.vy=Math.min(300,e.vy+260*dt);e.vx*=.988;}
    if(e.type==='coin'){const radius=62+save.upgrades.magnet*44+g.powers.magnet*65,dist=Math.hypot(p.x-e.x,p.y-e.y);if(dist<radius){e.x+=(p.x-e.x)*Math.min(1,dt*8*(1-dist/radius+.2));e.y+=(p.y-e.y)*Math.min(1,dt*8*(1-dist/radius+.2));}}
-   if(Math.abs(p.x-e.x)<24&&Math.abs(p.y-e.y)<31)collect(e);
+   if(Math.abs(p.x-e.x)<24&&Math.abs(p.y-e.y)<31){collect(e);if(screen!=='playing')return;}
   }
  }
 }
@@ -373,15 +384,15 @@ function background(world,camera){const bg=img['bg'+(world%8)],offset=((camera*.
 }
 function drawDeco(d,camera){const y=d.y-camera;if(y<-60||y>785)return;
  const c=worlds[d.world].accent,s=d.sz,x=d.x;
- ctx.save();ctx.globalAlpha=.62+.17*Math.sin(clock*2+d.phase);
+ ctx.save();ctx.globalAlpha=.42;
  if(d.type===0){line(x,y,x+s*.35,y-s*1.8,c,3);line(x,y-8,x-s*.5,y-s,c,2);circle(x+s*.35,y-s*1.8,4,c,.8);}
- else if(d.type===1){ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(x-s*.5,y+s*.3);ctx.lineTo(x+s*.5,y+s*.2);ctx.lineTo(x,y-s);ctx.closePath();ctx.fill();line(x,y,x+2,y-s*.6,'#fff7d0',1);}
- else if(d.type===2){ctx.strokeStyle=c;ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,y,s*.7,Math.PI*.45,Math.PI*1.8);ctx.stroke();circle(x,y,2,'#fff4db');}
+ else if(d.type===1){const rock='#82939d';rect(x-s*.36,y-s*.45,s*.68,3,rock);rect(x-s*.1,y-s*.23,s*.45,2,rock);rect(x-s*.46,y-s*.02,s*.5,2,rock);}
+ else if(d.type===2){ctx.strokeStyle=c;ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,y,s*.7,Math.PI*.45,Math.PI*1.8);ctx.stroke();circle(x,y,2,'#8096a2',.5);}
  else{circle(x,y,s*.35,c,.12);circle(x,y,2,c);}
  ctx.restore();
 }
 function drawPlatform(b,camera){const y=b.y-camera;if(y<-36||y>745)return;
- const world=b.kind%8,info=worlds[world],move=b.move?Math.sin(clock*1.6+b.phase)*b.move:0;let x=b.x+move;
+ const world=b.kind%8,info=worlds[world];let x=b.x;
  const open=b.floor&&floorOpen(b.stage),base=b.floor?25:b.h;
  const drawPart=(xx,ww)=>{if(ww<=0)return;
   ctx.save();ctx.beginPath();ctx.rect(xx,y,ww,base);ctx.clip();
@@ -389,8 +400,16 @@ function drawPlatform(b,camera){const y=b.y-camera;if(y<-36||y>745)return;
   if(img.tiles?.naturalWidth){for(let k=xx-((xx%64)+64)%64;k<xx+ww;k+=64)spr(img.tiles,0,strip*64,512,64,k,y,512,64);}
   else{rect(xx,y,ww,base,info.color);rect(xx,y,ww,5,info.accent);}
   ctx.restore();rect(xx,y+base-4,ww,4,'#16243db0');rect(xx,y,ww,3,info.accent+'99');
-  if(world>=4){for(let i=xx+7;i<xx+ww-5;i+=25){if(world===4)line(i,y+2,i+8,y-6,'#d5f8fa',2);else if(world===5)rect(i,y+4,5,3,'#ffe4a8');else if(world===6)circle(i,y+6,3,'#f7cf83');else line(i,y,i+7,y-6,'#c88bea',2);}}
-  if(b.spike){for(let a=xx+8;a<xx+ww-8;a+=16){ctx.fillStyle='#ffd1a0';ctx.beginPath();ctx.moveTo(a,y);ctx.lineTo(a+7,y-15);ctx.lineTo(a+14,y);ctx.fill();line(a,y,a+7,y-15,'#6b485a',2);}}
+  if(world>=4){for(let i=xx+7;i<xx+ww-5;i+=25){if(world===4)rect(i,y+5,9,2,'#d5f8fa');else if(world===5)rect(i,y+5,5,3,'#ffe4a8');else if(world===6)circle(i,y+7,3,'#f7cf83');else rect(i,y+5,8,2,'#c88bea');}}
+  if(b.spike){
+   // Distinct red/orange hazard rail under a row of triangular SHARP spikes.
+   rect(xx,y-3,ww,5,'#9f344d');rect(xx,y-1,ww,2,'#ffd8a2');
+   for(let a=xx+5;a<xx+ww-9;a+=14){
+    ctx.fillStyle='#f75e63';ctx.strokeStyle='#4d283b';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(a,y);ctx.lineTo(a+7,y-17);ctx.lineTo(a+14,y);ctx.closePath();ctx.fill();ctx.stroke();
+    line(a+7,y-13,a+7,y-5,'#ffceaa',1);
+   }
+  }
  };
  if(open){drawPart(x,Math.max(0,151-x));drawPart(278,x+b.w-278);circle(216,y+12,16,'#a1f5ce',.18);}
  else{drawPart(x,b.w);if(b.floor){for(let i=0;i<7;i++){const xx=x+38+i*50;line(xx,y+4+Math.sin(clock*10+i)*2,xx+12,y+4+Math.sin(clock*10+i)*2,'#d6fff1',2);}rect(169,y,94,8,'#f9d487');ctx.textAlign='center';ctx.font='bold 9px Trebuchet MS';ctx.fillStyle='#263748';ctx.fillText('BOUNCE!',216,y+7);ctx.textAlign='left';}}
@@ -405,7 +424,7 @@ function drawEntity(e,camera){const y=e.y-camera;if(y<-115||y>800||!e.alive)retu
   if(e.maxHp>2&&e.hp<e.maxHp){rect(x-15,y-30,30,4,'#33334c');rect(x-15,y-30,30*e.hp/e.maxHp,4,'#efbc92');}
   return;
  }
- if(e.type==='orb'){circle(x,y+oy,27,'#a2e5ea',.16+.08*Math.sin(clock*4));circle(x,y+oy,18,'#c5faff',.1);}
+ if(e.type==='orb'){circle(x,y+oy,29,'#a2e5ea',.22+.08*Math.sin(clock*4));circle(x,y+oy,20,'#c5faff',.12);ctx.textAlign='center';ctx.font='bold 11px Trebuchet MS';ctx.fillStyle='#fff9db';ctx.fillText('CHOOSE',x,y+oy-30);ctx.textAlign='left';}
  const idx=e.type==='coin'?0:e.type==='heart'?1:e.type==='fruit'?3:4;
  const sz=e.type==='coin'?23:e.type==='orb'?36:27;
  spr(img.items,idx*64,0,64,64,x-sz/2,y+oy-sz/2,sz,sz);
@@ -516,16 +535,26 @@ function handleKey(e,down){const c=e.code;
 }
 document.addEventListener('keydown',e=>handleKey(e,true));document.addEventListener('keyup',e=>handleKey(e,false));
 pauseTop.addEventListener('click',()=>{if(screen==='playing'||screen==='intro')showPause();});
+const activeTouches=new Map();
+// Each on-screen action tracks its own pointer IDs: jumping must not cancel a held shot.
+
 for(const button of document.querySelectorAll('[data-hold]')){
  const act=button.dataset.hold;
- const start=e=>{e.preventDefault();enableAudio();try{button.setPointerCapture(e.pointerId);}catch{}keys[act]=true;if(act==='jump')jumpBuffered=.16;button.classList.add('pressed');};
- const end=e=>{e.preventDefault();keys[act]=false;button.classList.remove('pressed');};
- button.addEventListener('pointerdown',start);button.addEventListener('pointerup',end);button.addEventListener('pointercancel',end);button.addEventListener('lostpointercapture',end);
+ const active=new Set();activeTouches.set(button,active);
+ const start=e=>{if(screen!=='playing'&&screen!=='intro')return;e.preventDefault();enableAudio();
+  if(active.has(e.pointerId))return;
+  active.add(e.pointerId);try{button.setPointerCapture(e.pointerId);}catch{}
+  keys[act]=true;if(act==='jump')jumpBuffered=.16;button.classList.add('pressed');button.setAttribute('aria-pressed','true');};
+ const end=e=>{e.preventDefault();if(!active.delete(e.pointerId))return;
+  keys[act]=active.size>0;button.classList.toggle('pressed',keys[act]);button.setAttribute('aria-pressed',String(keys[act]));};
+ button.addEventListener('pointerdown',start);button.addEventListener('pointerup',end);
+ button.addEventListener('pointercancel',end);button.addEventListener('lostpointercapture',end);
 }
+
 window.addEventListener('blur',()=>{blurMuted=true;stopKeys();if(screen==='playing')showPause();});window.addEventListener('focus',()=>blurMuted=false);
 document.addEventListener('visibilitychange',()=>{if(document.hidden){blurMuted=true;stopKeys();if(screen==='playing')showPause();}else blurMuted=false;});
 document.addEventListener('contextmenu',e=>{if(e.target.closest('#stage'))e.preventDefault();});
 // Exposes read-only run state to support automated gameplay smoke tests.
-window.KiwiDownUnderDebug=Object.freeze({getStatus:()=>game?{screen,stage:game.stage,world:game.world,health:game.p.hp,coins:game.coins,bosses:game.bosses,completed:game.completed,player:{x:game.p.x,y:game.p.y,vy:game.p.vy},boss:activeBoss(game.stage)?{hp:activeBoss(game.stage).hp,major:activeBoss(game.stage).major}:null}: {screen},getWorlds:()=>worlds.map(w=>w.name)});
+window.KiwiDownUnderDebug=Object.freeze({getStatus:()=>game?{screen,stage:game.stage,world:game.world,health:game.p.hp,coins:game.coins,bosses:game.bosses,completed:game.completed,player:{x:game.p.x,y:game.p.y,vy:game.p.vy},boss:activeBoss(game.stage)?{hp:activeBoss(game.stage).hp,major:activeBoss(game.stage).major}:null,powerChoices:game.pendingPowerOptions?game.pendingPowerOptions.slice():null,controls:{...keys}}: {screen},getWorlds:()=>worlds.map(w=>w.name)});
 showMenu();
 })();
