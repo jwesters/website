@@ -83,10 +83,16 @@ function makeStage(n){const g=game;if(!g||g.generated.has(n))return;g.generated.
    if(r()<.16)spawnItem('fruit',x+w/2,y-35);
   }
  }
- // Individual world creatures use different behaviours, including ranged
- // shots, dive attacks, charges and horizontal pursuit.
- for(let i=0;i<13+Math.min(10,Math.floor(n/4));i++){
-  const y=start+330+i*(STAGE-1180)/(13+Math.min(10,Math.floor(n/4)))+range(r,-44,44);
+ // Introduce the enemy types gradually during the first four levels,
+ // independent of Easy / Medium / Hard. By World 1 level 4 the original
+ // density is fully restored; World 2 onward keeps its previous spawn counts.
+ // Spread the smaller opening groups down the level instead of bunching them.
+ const usualEnemyCount=13+Math.min(10,Math.floor(n/4));
+ const enemyCount=n<4?[4,7,10,13][n]:usualEnemyCount;
+ const enemyStart=n<3?[530,460,390][n]:330;
+ const enemySpan=STAGE-1180-(enemyStart-330);
+ for(let i=0;i<enemyCount;i++){
+  const y=start+enemyStart+i*enemySpan/enemyCount+range(r,-44,44);
   if(y>end-820)break;
   const type=Math.floor(r()*4),x=range(r,68,360),ai=AI[world][type];
   spawnEnemy(world,type,x,y,ai,n,r);
