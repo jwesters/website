@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="theme-color" content="#092d24" />
+<title>Heads Up War — Card Strategy</title>
+<style>
+:root{font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#f9f5e8;background:#071a16;--gold:#e9c985;--muted:#aabdb1;--felt1:#145440;--felt2:#083e30;--felt3:#082c24;--accent:#f4d18b;--back1:#791e32;--back2:#4e1024;--anim:380ms;--shadow:0 20px 60px rgba(0,0,0,.32)}
+*{box-sizing:border-box}body{margin:0;min-width:320px;min-height:100dvh;background:radial-gradient(ellipse at 50% -20%,#164239,#071a16 65%);-webkit-tap-highlight-color:transparent}button,input,select{font:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.5}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #f4dc9b;outline-offset:3px}button,.playing-card{-webkit-user-select:none;user-select:none}button{touch-action:manipulation}button:not(:disabled):active{transform:translateY(1px)}
+button.primary{border:1px solid #fee5a4;background:linear-gradient(155deg,#fbe4a7,#d5a85f);color:#203226;font-weight:850;border-radius:12px;padding:12px 19px;box-shadow:0 5px 0 #a0773a,0 8px 24px #0005;transition:filter .15s,transform .15s}button.primary:hover:not(:disabled){filter:brightness(1.1)}button.primary:disabled{box-shadow:none}button.ghost{border:1px solid #e5d9b447;color:#f8eed5;border-radius:11px;padding:9px 12px;background:#ffffff0c;font-size:13px;font-weight:750}button.ghost:hover{background:#ffffff1c}button.ghost.active{border-color:var(--gold);background:#e7c47d27}button.small{padding:7px 10px;font-size:12px}.kicker{text-transform:uppercase;letter-spacing:.18em;font-size:10px;color:var(--gold);font-weight:850}
+.app{max-width:1640px;margin:auto;min-height:100dvh;display:flex;flex-direction:column;padding:0 18px 12px;gap:12px}.topbar{height:74px;min-height:74px;display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid #ffffff1c}.logo{display:flex;align-items:center;gap:12px;min-width:0}.logo-emblem{width:44px;height:44px;flex-shrink:0;border:1px solid #f1d38b7a;border-radius:12px;display:grid;place-items:center;background:#f1cf8d13;box-shadow:inset 0 0 25px #ffffff08}.logo-emblem b{font-family:Georgia,serif;font-size:26px;transform:rotate(-10deg);color:#f7d59a}.logo-name{font-family:Georgia,"Times New Roman",serif;font-size:clamp(19px,2.1vw,29px);font-weight:800;color:#ffeac2;letter-spacing:.007em;white-space:nowrap}.logo-sub{font-size:10px;letter-spacing:.21em;font-weight:800;color:#a8bcb1;text-transform:uppercase;margin-top:3px}.header-actions{display:flex;justify-content:flex-end;align-items:center;gap:7px;flex-wrap:wrap}.icon-text{display:inline-flex;align-items:center;gap:7px}.btn-icon{color:var(--gold);font-size:16px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:13px;flex:1;min-height:0}.felt{position:relative;border-radius:27px;overflow:hidden;border:8px solid #17332b;box-shadow:0 2px 0 #40654c,0 14px 34px #0009,inset 0 0 0 2px #be986349;min-height:590px;background:radial-gradient(ellipse 65% 55% at 50% 46%,var(--felt1) 0%,var(--felt2) 65%,var(--felt3) 100%);display:flex;flex-direction:column;justify-content:space-between;padding:17px 28px 14px;isolation:isolate}
+.felt:before{content:"";pointer-events:none;position:absolute;inset:0;opacity:.13;background-image:repeating-linear-gradient(38deg,transparent 0 2px,#fff 3px,transparent 4px 6px),repeating-linear-gradient(-40deg,#000 0 2px,transparent 3px 5px);background-size:14px 14px;mix-blend-mode:soft-light;z-index:-1}.felt:after{content:"";pointer-events:none;position:absolute;inset:16px;border:2px solid #dbbf8047;border-radius:47% / 39%;z-index:-1}.felt[data-theme="navy"]{--felt1:#214e68;--felt2:#143448;--felt3:#0d2235}.felt[data-theme="burgundy"]{--felt1:#683d4b;--felt2:#482434;--felt3:#2c1627}.felt[data-theme="emerald"]{--felt1:#1f7057;--felt2:#0d5344;--felt3:#063829}
+.score-top{position:relative;z-index:2;display:grid;grid-template-columns:1fr minmax(120px,1.2fr) 1fr;align-items:center;background:#08291fae;border:1px solid #ffffff25;border-radius:17px;padding:11px 15px;box-shadow:0 8px 20px #0002;gap:6px}.score-box{text-align:left}.score-box.cpu{text-align:right}.score-label{font-size:10px;color:#c4cabc;font-weight:850;letter-spacing:.15em;text-transform:uppercase}.score-value{font-variant-numeric:tabular-nums;font-size:clamp(30px,3vw,44px);font-weight:900;line-height:1.02;color:#f7f6ed;text-shadow:0 3px 10px #0006}.score-box.cpu .score-value{color:#f5d1c4}.score-mid{text-align:center}.target-tag{font-size:12px;font-weight:850;letter-spacing:.04em;color:#f9dc9a}.round-tag{color:#d0ded0;font-size:11px;margin-top:4px}.score-progress{height:5px;background:#0007;border-radius:20px;overflow:hidden;margin-top:7px;display:flex}.score-progress>div{background:#e4d18f;transition:width var(--anim)}.score-progress .p2{background:#d08b81}
+.zone{text-align:center;position:relative;z-index:1}.zone.cpu-zone{padding-top:7px}.zone.player-zone{padding-top:1px}.zone-title{display:flex;align-items:center;justify-content:center;gap:9px;font-size:11px;font-weight:900;color:#f0ead7;letter-spacing:.13em;text-transform:uppercase;margin-bottom:8px}.dot{width:7px;height:7px;border-radius:50%;background:#aaa;box-shadow:0 0 0 4px #ffffff14}.zone.current .dot{background:#ffd384;box-shadow:0 0 0 4px #f6c46230,0 0 13px #ffe4a4}.zone-meta{font-weight:600;color:#b8d2c3;letter-spacing:0;font-size:11px}.hand{display:flex;justify-content:center;align-items:flex-end;gap:4px;min-height:102px;perspective:750px}.cpu-hand{min-height:83px}.player-hand{min-height:118px}
+.playing-card{position:relative;display:block;flex-shrink:0;width:73px;height:103px;border-radius:8px;background:#fbfaf5;border:1px solid #b5b1a7;box-shadow:0 5px 9px #0007,0 1px 0 #fff inset;color:#1a2025;overflow:hidden;transition:transform .19s ease,filter .2s}.playing-card.red{color:#bc2836}.playing-card.black{color:#20242d}.playing-card .corner{position:absolute;top:5px;left:5px;display:flex;flex-direction:column;align-items:center;font-family:Georgia,serif;font-weight:850;line-height:.91;font-size:18px;letter-spacing:-.05em;z-index:2}.playing-card .corner span:last-child{font-size:15px;margin-top:3px}.playing-card .corner.bottom{inset:auto 5px 5px auto;transform:rotate(180deg)}.playing-card .big-suit{position:absolute;inset:0;display:grid;place-items:center;font-size:41px;filter:drop-shadow(0 2px 0 #00000016)}.playing-card .pip{position:absolute;transform:translate(-50%,-50%);font-size:17px;line-height:1}.playing-card.face{background:linear-gradient(155deg,#fff 0%,#f8f6ec 78%,#e9e7dc)}.court-art{position:absolute;top:19%;left:26%;right:26%;bottom:19%;border:1px solid #cfab64;border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(140deg,#efdbb2,#f8f1d8 48%,#c9ab7c);box-shadow:inset 0 0 0 2px #fff8;color:#785027}.court-art .crown{font-size:30px;line-height:1}.court-art .medallion{font-size:15px;line-height:1.2}.playing-card .court-art.jack{background:linear-gradient(140deg,#d5e6da,#f8f1dd,#a4bbab);color:#386451}.playing-card .court-art.queen{background:linear-gradient(140deg,#f5d5d4,#fff1e5,#e2bdc4);color:#8b4d53}.playing-card.back{border-color:#edddb5;background:linear-gradient(135deg,#fff8ea,#c9b48b);padding:4px}.back-design{height:100%;width:100%;border-radius:4px;background:repeating-linear-gradient(45deg,transparent 0 7px,#ffffff1d 7px 8px,transparent 8px 15px),radial-gradient(circle at center,transparent 0 23%,#e5d3ab70 24% 25%,transparent 26%),linear-gradient(130deg,var(--back1),var(--back2));border:2px solid #fff4d6;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 3px #ffffff50}.back-design:after{content:"✦";color:#f6e3b4;font-size:28px;border:1px solid #f6e3b4ae;width:36px;height:36px;display:grid;place-items:center;transform:rotate(45deg);font-family:Georgia,serif}.playing-card.back[data-back="navy"]{--back1:#284e78;--back2:#152746}.playing-card.back[data-back="royal"]{--back1:#5b3a89;--back2:#2c1e51}.playing-card.back[data-back="forest"]{--back1:#24644b;--back2:#0d342c}
+.hand-card{padding:0;border:0;background:none;flex-shrink:0;position:relative;border-radius:9px;transition:transform .15s;outline-offset:5px}.hand-card .playing-card{pointer-events:none}.hand-card:hover:not(:disabled){transform:translateY(-7px)}.hand-card.selected{transform:translateY(-14px)}.hand-card.selected:hover{transform:translateY(-14px)}.hand-card.selected .playing-card{box-shadow:0 0 0 3px #fbe19c,0 11px 19px #0008;filter:brightness(1.06)}.hand-card:disabled{opacity:1}.hand-card:disabled:hover{transform:none}.hand-card .number-key{position:absolute;z-index:5;bottom:-9px;left:50%;transform:translateX(-50%);background:#071c17;border:1px solid #bda56a;color:#ffebb8;font-size:9px;border-radius:20px;padding:2px 5px;min-width:17px;font-weight:800;pointer-events:none}.cpu-hand .playing-card{width:53px;height:74px;box-shadow:0 5px 7px #0007}.cpu-hand .back-design:after{width:23px;height:23px;font-size:18px}.cpu-hand .playing-card:nth-child(odd){transform:rotate(-2deg)}.cpu-hand .playing-card:nth-child(even){transform:rotate(2deg)}
+.battle{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:9px;min-height:187px}.battle-cards{display:grid;grid-template-columns:113px 57px 113px;align-items:center;justify-content:center;gap:13px}.slot{border:1px dashed #e6d4aa70;border-radius:13px;width:113px;height:150px;display:flex;align-items:center;justify-content:center;background:#0002;position:relative;box-shadow:inset 0 2px 20px #0002}.slot .playing-card{width:105px;height:146px;border-radius:10px}.slot .corner{font-size:25px;left:7px;top:7px}.slot .corner span:last-child{font-size:21px}.slot .corner.bottom{inset:auto 7px 7px auto}.slot .big-suit{font-size:63px}.slot .pip{font-size:29px}.slot .court-art .crown{font-size:48px}.slot .court-art .medallion{font-size:24px}.slot.empty:after{content:attr(data-placeholder);text-align:center;font-size:12px;letter-spacing:.13em;color:#e6e4c183;font-weight:850}.slot.highlight{border-color:#ffe6aa;box-shadow:0 0 0 3px #f2cb6247,0 0 22px #f4b9513b}.slot .playing-card.just-played{animation:flyin var(--anim) cubic-bezier(.18,.75,.2,1) both}.slot-label{position:absolute;bottom:-20px;left:0;right:0;text-align:center;color:#d2d8ca;letter-spacing:.13em;font-weight:850;font-size:10px;white-space:nowrap}.vs{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;border:1px solid #fff5cd5c;background:#061f1bc9;box-shadow:0 4px 19px #0009;color:#f4d693;font-family:Georgia,serif;font-style:italic;font-weight:900;font-size:20px}.result-banner{height:22px;text-align:center;font-weight:900;letter-spacing:.035em;color:#fae3a0;font-size:13px;display:flex;justify-content:center;align-items:center}.result-banner.bad{color:#ffc4b4}.result-banner.tie{color:#d8dfd4}.result-banner.win{color:#f9dda0}.result-banner .points{padding:4px 9px;background:#0003;border-radius:20px}
+.player-bar{margin-top:9px;min-height:51px;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}.turn-help{color:#f9e7ba;font-size:12px;font-weight:700;min-width:205px;text-align:right}.turn-help small{display:block;color:#c4dbcc;margin-top:3px;font-weight:500;font-size:11px}.player-bar .primary{min-width:152px}.felt-footer{position:absolute;bottom:10px;left:19px;color:#aac9b7a8;font-size:9px;letter-spacing:.04em;z-index:0;pointer-events:none}
+.sidebar{display:flex;flex-direction:column;gap:12px;min-width:0}.panel{background:#0c2a25a8;border:1px solid #e4d79a29;border-radius:17px;box-shadow:0 8px 24px #0003;padding:17px}.panel h2{margin:0 0 15px;font-family:Georgia,serif;font-size:19px;color:#fbe8be;font-weight:700}.panel .eyebrow{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#d4bc88;font-weight:900;margin-bottom:8px}.panel dl{margin:0;display:grid;gap:10px}.panel dl div{display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid #ffffff12;padding-bottom:9px}.panel dl div:last-child{border:0;padding-bottom:0}.panel dt{color:#b1c6b9;font-size:12px}.panel dd{margin:0;font-weight:850;font-size:12px;color:#fff1d4;text-align:right}.streak-row{display:flex;justify-content:space-between}.record-big{font-size:28px;line-height:1.1;font-weight:900;color:#f8dfaa}.record-big small{font-size:10px;color:#a6bbb0;font-weight:700;display:block;margin-top:6px;letter-spacing:.1em;text-transform:uppercase}.recent{display:grid;gap:8px}.recent-item{background:#ffffff09;padding:8px;border-radius:9px;display:flex;align-items:center;gap:7px;font-size:11px;color:#c8d7ce}.recent-item .round-mini{font-weight:850;color:#f2d18d;white-space:nowrap}.recent-item .hand-mini{flex:1;text-align:center;color:#e7eee7}.recent-item .pts-mini{font-weight:900;color:#e4dbb8;min-width:45px;text-align:right}.recent-item .pts-mini.cpu{color:#f5bdb1}.recent-empty{padding:16px 9px;color:#93aea0;font-size:12px;text-align:center}.sidebar button{width:100%;margin-top:13px}.app-foot{text-align:center;font-size:10px;color:#9bb4a8a8;letter-spacing:.07em;padding:0 0 4px}
+.overlay{position:fixed;inset:0;background:#00100ecb;backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);z-index:50;display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto}.overlay[hidden]{display:none}.modal{width:min(600px,100%);max-height:min(90dvh,920px);overflow:auto;background:linear-gradient(165deg,#16382f,#0d251f 72%);border:1px solid #f5d99c5c;color:#f9f2e2;border-radius:23px;padding:24px;box-shadow:0 28px 80px #000c,inset 0 1px 1px #ffffff13;scrollbar-color:#c7a562 #152d25}.modal.wide{width:min(800px,100%)}.modal-head{display:flex;gap:12px;justify-content:space-between;align-items:flex-start;margin-bottom:18px}.modal-head h2{margin:3px 0 0;font-family:Georgia,serif;font-size:clamp(25px,3.8vw,34px);font-weight:750;line-height:1.12;color:#ffe8b2}.modal-close{width:34px;height:34px;border-radius:10px;background:#ffffff12;border:1px solid #ffffff26;color:#fff;font-size:18px;flex-shrink:0}.modal p{color:#c3d3c8;font-size:13px;line-height:1.62;margin:8px 0 16px}.field{margin-top:17px}.field-label{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 9px;color:#f1e6c7;font-weight:850;font-size:12px;letter-spacing:.04em}.field-note{font-size:11px;color:#b0c6b8}.choice-row{display:flex;gap:8px;flex-wrap:wrap}.choice{border:1px solid #ffffff36;border-radius:11px;padding:10px 14px;color:#f2eadd;font-weight:800;background:#ffffff0e;flex:1;min-width:68px}.choice.chosen{border-color:#f0d38a;background:#b89d613e;box-shadow:inset 0 0 0 1px #e7c8836b;color:#ffe6b6}.modal input[type="number"],.modal select{display:block;width:100%;background:#081d18;color:#fff4df;border:1px solid #ead49d67;border-radius:11px;padding:12px 14px;font-size:16px;outline-offset:3px}.modal input[type="range"]{accent-color:#edc57d;width:100%}.modal small{color:#b5c9bb}.modal-footer{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap;margin-top:23px;padding-top:18px;border-top:1px solid #ffffff1c}.modal-footer .primary{min-width:170px}.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.stat-cell{background:#ffffff0e;border:1px solid #ffffff14;border-radius:12px;padding:14px;text-align:center}.stat-cell b{display:block;font-size:28px;color:#ffe2a7;font-weight:900;font-variant-numeric:tabular-nums}.stat-cell small{font-size:10px;text-transform:uppercase;letter-spacing:.08em}.how-item{display:flex;gap:12px;align-items:start;border-top:1px solid #ffffff1c;padding:14px 0}.how-num{display:grid;place-items:center;flex-shrink:0;width:28px;height:28px;border-radius:50%;background:#e9c885;color:#163329;font-size:12px;font-weight:900}.how-text{font-size:13px;line-height:1.5;color:#d5e2d7}.how-text strong{color:#f6dfac}.tip{padding:12px;background:#f9dc9214;border:1px solid #e9c7814f;border-radius:10px;color:#e8d6b0;font-size:12px;line-height:1.5;margin-top:13px}.table-scroll{max-height:52dvh;overflow:auto;border:1px solid #ffffff24;border-radius:12px;margin-top:11px}.history-table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}.history-table th{background:#234338;position:sticky;top:0;z-index:1;color:#f8dfaa;font-size:10px;letter-spacing:.08em;text-transform:uppercase}.history-table th,.history-table td{padding:10px 9px;text-align:left;border-bottom:1px solid #ffffff17}.history-table tr:nth-child(even){background:#ffffff07}.positive{color:#ffe19b;font-weight:800}.negative{color:#ffb9ac;font-weight:800}.neutral{color:#c3d8ca}.archive-card{padding:11px;margin-top:8px;border:1px solid #ffffff24;border-radius:11px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:#ffffff0b}.archive-card strong{display:block;color:#ffe1a8;font-size:14px}.archive-card small{font-size:11px}.archive-card button{flex-shrink:0}.archive-empty{padding:28px 10px;text-align:center;color:#b8cabc;font-size:13px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.tabs .ghost{flex:1}.swatch{width:17px;height:17px;border-radius:50%;display:inline-block;vertical-align:middle;border:2px solid #ffffff59;margin-right:7px}.check-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;color:#e3e5d9;font-size:13px;gap:12px}.check-row input{accent-color:#e5c17e;width:20px;height:20px}.settings-summary{margin:12px 0 0;color:#bad1bd;font-size:11px}.finished-hero{background:#ffffff0c;border:1px solid #ffffff23;border-radius:15px;padding:20px;text-align:center}.finished-hero .trophy{font-size:50px}.finished-hero h3{margin:6px 0;font-family:Georgia,serif;font-size:29px;color:#fce1a2}.finished-hero .final-score{font-size:27px;font-weight:900;margin-top:8px;font-variant-numeric:tabular-nums}.finished-hero p{margin-bottom:0}.status-pill{display:inline-block;padding:5px 8px;border-radius:16px;background:#ecd09626;color:#f6dfaa;font-size:11px;font-weight:800;border:1px solid #eecb803b}.tiny-hint{margin-top:12px;text-align:center;font-size:11px;color:#a7c5ad}
+@keyframes flyin{from{transform:translateY(-26px) rotate(-8deg) scale(.92);opacity:.15}to{transform:translateY(0) rotate(0) scale(1);opacity:1}}@keyframes fadePop{from{transform:translateY(5px);opacity:.2}to{transform:translateY(0);opacity:1}}.result-banner .points{animation:fadePop .25s ease}.play-note{font-size:11px;color:#d3e3d3}.nowrap{white-space:nowrap}
+@media(min-height:840px) and (min-width:981px){.felt{min-height:670px;padding-top:21px;padding-bottom:23px}.battle{min-height:242px}.cpu-hand{min-height:92px}.player-hand{min-height:126px}.slot{width:120px;height:160px}.slot .playing-card{width:112px;height:154px}.battle-cards{grid-template-columns:120px 57px 120px}.player-bar{margin-top:13px}}
+@media(max-width:1100px){.layout{grid-template-columns:minmax(0,1fr) 247px}.panel{padding:13px}.felt{padding-left:15px;padding-right:15px}.header-actions{gap:5px}.header-actions .ghost{padding:8px 9px}}
+@media(max-width:900px){.app{padding:0 9px 10px;gap:9px}.topbar{min-height:63px;height:auto;padding:8px 2px;gap:10px}.logo-emblem{width:39px;height:39px}.logo-name{font-size:22px}.logo-sub{font-size:9px}.header-actions .word{display:none}.header-actions .ghost{font-size:17px;padding:8px 11px}.layout{display:flex;flex-direction:column;gap:10px}.felt{min-height:570px;flex:1}.sidebar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.sidebar .panel{padding:13px}.sidebar .panel h2{font-size:16px}.sidebar .panel dl{gap:7px}.sidebar .recent-item:nth-child(n+4){display:none}}
+@media(max-width:600px){.app{padding:0 5px 9px;gap:7px}.topbar{padding:8px 5px;min-height:57px}.logo{gap:7px}.logo-emblem{width:31px;height:34px;border-radius:8px}.logo-emblem b{font-size:20px}.logo-name{font-size:19px}.logo-sub{display:none}.header-actions{gap:3px}.header-actions .ghost{padding:7px 8px;font-size:15px;border-radius:8px}.felt{padding:10px 6px 19px;min-height:542px;border-width:5px;border-radius:20px}.felt:after{inset:9px}.score-top{padding:9px 10px;border-radius:12px}.score-value{font-size:32px}.score-label{font-size:9px;letter-spacing:.06em}.target-tag{font-size:10px}.round-tag{font-size:10px}.zone-title{font-size:10px;margin-bottom:7px}.zone-meta{font-size:10px}.cpu-hand{min-height:72px}.cpu-hand .playing-card{width:39px;height:56px;border-radius:5px}.cpu-hand .playing-card.back{padding:3px}.cpu-hand .back-design{border-width:1px}.cpu-hand .back-design:after{width:18px;height:18px;font-size:13px}.player-hand{min-height:101px;gap:2px}.hand-card .playing-card{width:calc(min(12.3vw,54px));height:calc(min(17.5vw,78px))}.hand-card .corner{font-size:14px;top:4px;left:4px}.hand-card .corner span:last-child{font-size:12px}.hand-card .corner.bottom{inset:auto 4px 4px auto}.hand-card .pip{font-size:12px}.hand-card .big-suit{font-size:28px}.hand-card .court-art .crown{font-size:20px}.hand-card .court-art .medallion{font-size:10px}.hand-card .number-key{display:none}.battle{min-height:188px;gap:8px}.battle-cards{grid-template-columns:96px 44px 96px;gap:11px}.slot{width:96px;height:133px;border-radius:10px}.slot .playing-card{width:90px;height:125px}.slot .corner{font-size:21px}.slot .corner span:last-child{font-size:16px}.slot .big-suit{font-size:48px}.slot .pip{font-size:23px}.slot .court-art .crown{font-size:35px}.slot .court-art .medallion{font-size:19px}.slot.empty:after{font-size:10px}.vs{width:40px;height:40px;font-size:16px}.slot-label{bottom:-18px}.result-banner{font-size:11px}.player-bar{gap:8px;flex-wrap:nowrap;justify-content:center;min-height:54px;margin-top:5px}.turn-help{font-size:11px;min-width:0;flex:1;max-width:194px}.turn-help small{font-size:10px}.player-bar .primary{min-width:136px;padding:11px 8px;font-size:12px}.felt-footer{font-size:8px;bottom:5px}.sidebar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.sidebar .panel:last-child{grid-column:1/-1}.sidebar .panel:last-child .recent{grid-template-columns:repeat(2,minmax(0,1fr))}.sidebar .panel:last-child button{margin-top:7px}.panel{padding:11px}.panel h2{font-size:15px;margin-bottom:10px}.panel dt,.panel dd{font-size:11px}.record-big{font-size:24px}.modal{padding:18px;border-radius:18px;max-height:94dvh}.stat-grid{grid-template-columns:repeat(2,1fr)}.modal-footer{gap:7px}.modal-footer button{flex:1}.modal-footer .primary{min-width:0}}
+@media(max-width:370px){.logo-name{font-size:17px}.header-actions .ghost{padding:6px 6px}.felt{min-height:510px}.battle{min-height:165px}.slot{height:115px;width:85px}.slot .playing-card{width:80px;height:109px}.battle-cards{grid-template-columns:85px 39px 85px;gap:8px}.vs{height:35px;width:35px}.player-bar .primary{min-width:116px}.turn-help{font-size:10px}.score-value{font-size:28px}}
+@media(max-width:370px){.logo-emblem{display:none}.header-actions{flex-wrap:nowrap}.header-actions .ghost{padding:6px;font-size:13px}}
+@media(max-height:500px) and (orientation:landscape) and (max-width:950px){
+ .app{padding:0 5px 2px;gap:4px;min-height:100dvh}
+ .topbar{height:46px;min-height:46px;max-height:46px;padding:3px 6px}
+ .logo-emblem{width:30px;height:30px;display:grid}.logo-name{font-size:18px}.logo-sub{display:none}
+ .header-actions{flex-wrap:nowrap}.header-actions .ghost{padding:5px 9px;font-size:14px}
+ .layout{display:block;flex:1;min-height:0}
+ .felt{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(214px,.92fr) minmax(0,1.05fr);grid-template-rows:54px minmax(0,1fr);column-gap:4px;align-items:center;min-height:295px;height:calc(100dvh - 58px);padding:7px;border-width:4px;border-radius:14px}
+ .felt:after{inset:8px}
+ .score-top{grid-column:1/-1;grid-row:1;padding:5px 13px;border-radius:9px}
+ .score-value{font-size:25px}.score-label{font-size:9px}.target-tag,.round-tag{font-size:10px}.score-progress{height:3px;margin-top:4px}
+ .zone.cpu-zone{grid-column:1;grid-row:2;padding:0;align-self:center;min-width:0}
+ .zone.player-zone{grid-column:3;grid-row:2;padding:0;align-self:center;min-width:0}
+ .zone-title{margin-bottom:6px;font-size:9px;gap:5px}.zone-meta{font-size:9px}
+ .cpu-hand{min-height:63px;gap:2px}.cpu-hand .playing-card{width:35px;height:51px}
+ .player-hand{min-height:68px;gap:2px}.hand-card .playing-card{width:clamp(28px,4.3vw,40px);height:clamp(41px,6.1vw,57px)}
+ .hand-card .corner{font-size:12px}.hand-card .corner span:last-child{font-size:10px}.hand-card .pip{font-size:10px}.hand-card .big-suit{font-size:25px}.hand-card .court-art .crown{font-size:17px}.hand-card .number-key{display:none}
+ .battle{grid-column:2;grid-row:2;min-height:0;gap:9px}
+ .battle-cards{grid-template-columns:80px 29px 80px;gap:4px}.slot{width:80px;height:112px}.slot .playing-card{width:75px;height:105px}
+ .slot .corner{font-size:17px}.slot .corner span:last-child{font-size:14px}.slot .big-suit{font-size:40px}.slot .pip{font-size:18px}.slot .court-art .crown{font-size:29px}.slot .court-art .medallion{font-size:17px}
+ .vs{width:29px;height:29px;font-size:12px}.slot-label{font-size:9px;bottom:-16px}.result-banner{font-size:10px;min-height:26px;height:auto}
+ .player-bar{flex-direction:column;margin-top:5px;gap:5px;min-height:0}.turn-help{text-align:center;max-width:100%;font-size:10px}.turn-help small{font-size:9px}
+ .player-bar .primary{padding:7px 11px;min-width:123px;font-size:11px}
+ .felt-footer,.sidebar,.app-foot{display:none}
+}
+@media(prefers-reduced-motion:reduce){:root{--anim:0ms}*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* Stable header icon and text alignment, including the New Game button. */
+.header-actions .ghost{display:inline-flex;align-items:center;justify-content:center;gap:7px;line-height:1.15;white-space:nowrap}
+.header-actions .btn-icon{display:inline-flex;align-items:center;justify-content:center;flex:none;width:17px;height:18px;font-size:16px;line-height:1;vertical-align:middle}
+.header-actions .word{display:inline-block;line-height:1.15;white-space:nowrap}
+#btnNew .btn-icon{font:700 19px/1 Arial,sans-serif;transform:translateY(-1px)}
+/* Tens need their own compact indices and pip layout so both digits stay inside the card. */
+.playing-card.ten .corner{font-size:15px;letter-spacing:-.075em;min-width:21px;text-align:center;line-height:1}
+.playing-card.ten .corner span:last-child{font-size:13px;margin-top:2px}
+.playing-card.ten .pip{font-size:12px}
+.slot .playing-card.ten .corner{font-size:22px;min-width:30px}
+.slot .playing-card.ten .corner span:last-child{font-size:17px}
+.slot .playing-card.ten .pip{font-size:20px}
+.hand-card .playing-card.ten .corner{font-size:15px}
+.hand-card .playing-card.ten .corner span:last-child{font-size:12px}
+@media(max-width:900px){.header-actions .word{display:none}}
+/* A dragged card is a floating visual only; the original remains in its hand. */
+.hand-card{touch-action:none;-webkit-user-drag:none;cursor:grab}
+.hand-card:not(:disabled):active{cursor:grabbing}
+.hand-card.drag-origin{opacity:.4;transform:translateY(-5px)}
+.playing-card.drag-ghost{position:fixed!important;z-index:120;pointer-events:none!important;margin:0!important;transform:rotate(-4deg) scale(1.08);box-shadow:0 18px 32px #000a,0 0 0 2px #f6d38b;will-change:left,top;transition:none!important;opacity:.98}
+.battle.drop-over .slot#playerSlot{border:2px solid #ffe4a0;box-shadow:inset 0 0 18px #f4c55e22,0 0 0 5px #ffda7950,0 0 28px #e3c37c65}
+.slot.preview .playing-card{opacity:.68;filter:saturate(.78);box-shadow:0 0 0 2px #f9daa283,inset 0 0 8px #0004}
+.slot.preview .slot-label{color:#fff0c7}
+@media(max-width:600px){
+ .hand-card .playing-card.ten .corner{font-size:11px;min-width:15px;line-height:1}
+ .hand-card .playing-card.ten .corner span:last-child{font-size:10px;margin-top:1px}
+ .hand-card .playing-card.ten .pip{font-size:9px}
+ .slot .playing-card.ten .corner{font-size:18px;min-width:25px}
+ .slot .playing-card.ten .corner span:last-child{font-size:14px}
+ .slot .playing-card.ten .pip{font-size:15px}
+ .header-actions .ghost{gap:0}
+}
+@media(max-height:500px) and (orientation:landscape) and (max-width:950px){
+ .hand-card .playing-card.ten .corner{font-size:10px;min-width:14px}
+ .hand-card .playing-card.ten .corner span:last-child{font-size:9px}
+ .hand-card .playing-card.ten .pip{font-size:8px}
+ .slot .playing-card.ten .corner{font-size:15px;min-width:21px}
+ .slot .playing-card.ten .pip{font-size:13px}
+}
+
+/* A fresh, prominent callout for the randomly selected scoring rule. */
+.rule-banner{flex:none;display:flex;align-items:center;justify-content:center;gap:10px;min-width:218px;max-width:100%;padding:7px 20px;border-radius:14px;border:1px solid #ffffff50;background:#071e1acb;box-shadow:0 4px 16px #0004;min-height:44px;z-index:3;transition:background-color .16s,border-color .16s}
+.rule-banner .rule-symbol{font:900 26px/1 Georgia,serif;width:28px;text-align:center;flex:none}
+.rule-banner .rule-copy{display:flex;flex-direction:column;align-items:flex-start;gap:1px;line-height:1.13}
+.rule-banner .rule-copy strong{font-size:15px;letter-spacing:.1em;white-space:nowrap}
+.rule-banner .rule-copy small{font-size:10px;letter-spacing:.015em;color:#e9e7da;white-space:nowrap}
+.rule-banner.high{background:linear-gradient(120deg,#475020,#293b1a);border-color:#f2db8a;color:#fff0a9;box-shadow:0 4px 18px #0004,inset 0 0 15px #eac06d18}
+.rule-banner.low{background:linear-gradient(120deg,#1a4660,#153247);border-color:#9cdbff;color:#b5edff;box-shadow:0 4px 18px #0004,inset 0 0 15px #87dcff13}
+.rule-banner.idle{color:#ecdcae;opacity:.85}
+.rule-banner.announcing{animation:ruleAnnounce .45s cubic-bezier(.18,.78,.25,1.3) both}
+@keyframes ruleAnnounce{from{opacity:.3;transform:scale(.88) translateY(-7px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@media(max-width:600px){.rule-banner{min-height:38px;padding:5px 12px;gap:7px;border-radius:11px}.rule-banner .rule-symbol{font-size:22px;width:22px}.rule-banner .rule-copy strong{font-size:12px}.rule-banner .rule-copy small{font-size:9px}.battle{gap:5px}}
+@media(max-height:500px) and (orientation:landscape) and (max-width:950px){.rule-banner{min-height:30px;padding:3px 8px;gap:5px;border-radius:8px;min-width:150px}.rule-banner .rule-symbol{font-size:18px;width:18px}.rule-banner .rule-copy strong{font-size:11px}.rule-banner .rule-copy small{font-size:8px}.battle{gap:4px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="topbar">
+  <div class="logo"><div class="logo-emblem" aria-hidden="true"><b>♠</b></div><div><div class="logo-name">Heads Up War</div><div class="logo-sub">A game of cards &amp; cunning</div></div></div>
+  <nav class="header-actions" aria-label="Game navigation">
+    <button class="ghost" id="btnRules" aria-label="How to play"><span class="btn-icon" aria-hidden="true">?</span><span class="word">Rules</span></button>
+    <button class="ghost" id="btnHistory" aria-label="Match history"><span class="btn-icon" aria-hidden="true">≡</span><span class="word">History</span></button>
+    <button class="ghost" id="btnStats" aria-label="Statistics"><span class="btn-icon" aria-hidden="true">★</span><span class="word">Stats</span></button>
+    <button class="ghost" id="btnSettings" aria-label="Settings"><span class="btn-icon" aria-hidden="true">⚙</span><span class="word">Settings</span></button>
+    <button class="ghost" id="btnNew" aria-label="New game"><span class="btn-icon" aria-hidden="true">＋</span><span class="word">New game</span></button>
+  </nav>
+</header>
+<main class="layout">
+  <section class="felt" id="felt" aria-label="Heads Up War playing table">
+    <div class="score-top">
+      <div class="score-box"><div class="score-label">You</div><div class="score-value" id="playerScore">0</div><div class="score-progress"><div id="pProgress" style="width:0%"></div></div></div>
+      <div class="score-mid"><div class="target-tag" id="targetTag">FIRST TO 50</div><div class="round-tag" id="roundTag">Start a new match</div></div>
+      <div class="score-box cpu"><div class="score-label">Computer</div><div class="score-value" id="cpuScore">0</div><div class="score-progress" style="justify-content:flex-end"><div class="p2" id="cProgress" style="width:0%"></div></div></div>
+    </div>
+    <div class="zone cpu-zone" id="cpuZone"><div class="zone-title"><span class="dot"></span> COMPUTER <span class="zone-meta" id="cpuMeta">7 cards</span></div><div class="hand cpu-hand" id="cpuHand" aria-label="CPU cards hidden"></div></div>
+    <div class="battle" id="battleDrop" aria-label="Drop a card here to play it immediately">
+      <div class="rule-banner idle" id="ruleBanner" role="status" aria-live="polite"><span class="rule-symbol">↕</span><span class="rule-copy"><strong>HIGH OR LOW?</strong><small>A new rule every hand</small></span></div>
+      <div class="battle-cards">
+        <div class="slot empty" id="playerSlot" data-placeholder="YOUR CARD"><div class="slot-label">YOU</div></div>
+        <div class="vs" aria-hidden="true">VS</div>
+        <div class="slot empty" id="cpuSlot" data-placeholder="CPU CARD"><div class="slot-label">CPU</div></div>
+      </div>
+      <div class="result-banner" id="resultBanner" aria-live="polite"></div>
+    </div>
+    <div class="zone player-zone" id="playerZone"><div class="zone-title"><span class="dot"></span> YOUR HAND <span class="zone-meta" id="playerMeta">7 cards</span></div><div class="hand player-hand" id="playerHand" aria-label="Your playing cards"></div>
+      <div class="player-bar"><div class="turn-help" id="turnHelp">Ready to play?<small>Select your card to make a move.</small></div><button class="primary" id="btnPlay" disabled>Play selected card</button></div>
+    </div>
+    <div class="felt-footer">A=1 · 2–10=face value · J=11 · Q=12 · K=13</div>
+  </section>
+  <aside class="sidebar" aria-label="Match dashboard">
+    <div class="panel"><div class="eyebrow">Table status</div><h2>Live Match</h2><dl id="liveDetails"><div><dt>Mode</dt><dd>Not started</dd></div></dl></div>
+    <div class="panel"><div class="eyebrow">Your legacy</div><h2>Personal Records</h2><div class="streak-row"><div class="record-big" id="recordWins">0<small>Victories</small></div><div class="record-big" id="recordStreak">0<small>Best streak</small></div></div><button class="ghost small" id="btnAllStats">View all statistics</button></div>
+    <div class="panel"><div class="eyebrow">Last plays</div><h2>Hand Results</h2><div id="recentPlays" class="recent"><div class="recent-empty">The table is waiting for its first hand.</div></div><button class="ghost small" id="btnAllHistory">View full history</button></div>
+  </aside>
+</main>
+<footer class="app-foot">Seven cards. One decision at a time. Best score wins. &nbsp;·&nbsp; Offline-friendly · Saved on this device</footer>
+</div>
+<div class="overlay" id="overlay" hidden><div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"></div></div>
+<script>
+(()=>{
+'use strict';
+const SAVE_KEY='headsupwar.match.v2', PREF_KEY='headsupwar.preferences.v2', STAT_KEY='headsupwar.statistics.v2';
+const $=id=>document.getElementById(id);
+const SUITS=[{s:'♠',name:'Spades',key:'S',red:false},{s:'♥',name:'Hearts',key:'H',red:true},{s:'♦',name:'Diamonds',key:'D',red:true},{s:'♣',name:'Clubs',key:'C',red:false}];
+const RANKS=['','A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const SPEED={slow:{deal:620,announce:880,reveal:970,result:2000,round:1500,css:'590ms'},normal:{deal:330,announce:580,reveal:500,result:1150,round:850,css:'360ms'},fast:{deal:100,announce:280,reveal:180,result:460,round:260,css:'170ms'}};
+const DEFAULT_PREF={speed:'normal',felt:'green',back:'classic',volume:55,sound:true};
+const DEFAULT_STATS={wins:0,losses:0,played:0,streak:0,bestStreak:0,bestMargin:0,mostPoints:0,biggestHand:0,totalHands:0,perfectTies:0,difficulty:{easy:{wins:0,losses:0},medium:{wins:0,losses:0},hard:{wins:0,losses:0}},matches:[]};
+const isObj=o=>o!==null&&typeof o==='object'&&!Array.isArray(o);
+const safeRead=(key,fallback)=>{try{const v=JSON.parse(localStorage.getItem(key));return v??fallback;}catch(e){return fallback;}};
+const safeWrite=(key,v)=>{try{localStorage.setItem(key,JSON.stringify(v));return true;}catch(e){console.warn('Storage unavailable',e);return false;}};
+const clone=o=>JSON.parse(JSON.stringify(o));
+const getRandom=(limit)=>{if(window.crypto&&crypto.getRandomValues){const u=new Uint32Array(1);crypto.getRandomValues(u);return u[0]%limit;}return Math.floor(Math.random()*limit);};
+const choose=a=>a[getRandom(a.length)];
+const other=x=>x==='player'?'cpu':'player';
+const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
+const esc=str=>String(str).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+const formatDate=ts=>new Date(ts).toLocaleString(undefined,{year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+const labelCard=c=>c?`${RANKS[c.rank]}${SUITS.find(s=>s.key===c.suit).s}`:'—';
+const fullCard=c=>c?`${RANKS[c.rank]} of ${SUITS.find(s=>s.key===c.suit).name}`:'';
+const shuffle=arr=>{for(let i=arr.length-1;i>0;i--){const j=getRandom(i+1);[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;};
+const makeDeck=()=>SUITS.flatMap(s=>Array.from({length:13},(_,i)=>({rank:i+1,suit:s.key,id:`${s.key}${i+1}`})));
+let prefs={...DEFAULT_PREF,...safeRead(PREF_KEY,{})}; if(!SPEED[prefs.speed])prefs.speed='normal';
+let stats={...clone(DEFAULT_STATS),...safeRead(STAT_KEY,{})};if(!isObj(stats.difficulty))stats.difficulty=clone(DEFAULT_STATS.difficulty);for(const k of ['easy','medium','hard'])stats.difficulty[k]={...DEFAULT_STATS.difficulty[k],...(stats.difficulty[k]||{})};if(!Array.isArray(stats.matches))stats.matches=[];
+let game=null,selected=null,modalName=null,phaseGeneration=0,activeArchive=null,historyTab='current',pendingSetup={target:50,difficulty:'medium',lead:'random'},storageAlert=false,justPlayed=null;
+let dragState=null,ignoreDragClickUntil=0;
+let audioCtx=null;
+const sound=(type)=>{
+ if(!prefs.sound||prefs.volume<1)return;
+ try{
+  const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+  if(!audioCtx)audioCtx=new AC();if(audioCtx.state==='suspended')audioCtx.resume().catch(()=>{});
+  const start=audioCtx.currentTime, v=(prefs.volume/100)*.15;
+  const tone=(freq,dur,offset=0,wave='sine',gain=1)=>{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=wave;o.frequency.setValueAtTime(freq,start+offset);g.gain.setValueAtTime(.0001,start+offset);g.gain.exponentialRampToValueAtTime(Math.max(.0002,v*gain),start+offset+.014);g.gain.exponentialRampToValueAtTime(.0001,start+offset+dur);o.connect(g);g.connect(audioCtx.destination);o.start(start+offset);o.stop(start+offset+dur+.02);
+  };
+  if(type==='card'){tone(180,.09,0,'triangle',.24);tone(130,.085,.035,'triangle',.21)}
+  if(type==='select')tone(380,.09,0,'sine',.32);
+  if(type==='win'){tone(500,.13,0,'sine',.6);tone(660,.2,.13,'sine',.65)}
+  if(type==='loss'){tone(240,.2,0,'triangle',.4);tone(190,.28,.15,'triangle',.36)}
+  if(type==='tie')tone(340,.12,0,'sine',.28);
+  if(type==='victory'){[392,494,587,784].forEach((n,i)=>tone(n,.27,i*.11,'triangle',.55))}
+ }catch(e){console.warn('Audio not available',e)}
+};
+const speed=()=>SPEED[prefs.speed]||SPEED.normal;
+const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const validCard=c=>isObj(c)&&Number.isInteger(c.rank)&&c.rank>=1&&c.rank<=13&&SUITS.some(s=>s.key===c.suit)&&c.id===`${c.suit}${c.rank}`;
+const save=()=>{if(game&&game.phase!=='finished'){if(!safeWrite(SAVE_KEY,game))storageAlert=true;}else if(game?.phase==='finished'){try{localStorage.removeItem(SAVE_KEY)}catch(e){}}};
+const applyPrefs=()=>{document.documentElement.style.setProperty('--anim',speed().css);$('felt').dataset.theme=prefs.felt;safelyUpdateSound();};
+const safelyUpdateSound=()=>{};
+
+// The CPU observes only its own seven cards and cards already played face-up.
+// It never looks at the human's remaining cards when choosing a move.
+const cpuMemory=()=>{
+ const visible=(game?.history||[]).filter(h=>h.round===game.round).flatMap(h=>[h.pCard,h.cCard]).filter(Boolean);
+ if(game?.trick?.playerCard)visible.push(game.trick.playerCard);
+ const mine=game?.cpuHand||[];
+ const seen=new Set([...visible,...mine].map(c=>c.id));
+ return makeDeck().filter(c=>!seen.has(c.id)).map(c=>c.rank);
+};
+const ruleSign=rule=>rule==='low'?-1:1;
+const scorePair=(cpuRank,playerRank)=>(cpuRank-playerRank)*ruleSign(game?.trick?.rule); // positive = CPU points, negative = human points
+function chooseCpuFirst(){
+ const hand=game.cpuHand;if(hand.length===1)return hand[0];
+ if(game.difficulty==='easy')return choose(hand);
+ const unseen=cpuMemory();
+ if(!unseen.length)return choose(hand);
+ const target=game.target;
+ // Expected raw score vs cards of the as-yet-unseen player hand.
+ const expected=card=>unseen.reduce((sum,r)=>sum+scorePair(card.rank,r),0)/unseen.length;
+ // Preserve cards that are strong for the current rule when their immediate gain is small.
+ // CPU still cannot see the human's unplayed hand.
+ const humanThreat=game.playerScore>=target-9;
+ const desperation=game.cpuScore<game.playerScore-10;
+ const cards=hand.map(c=>{
+  const ev=expected(c), reserve=(c.rank-7)*ruleSign(game.trick.rule)*.2;
+  let value=ev-(game.difficulty==='medium'?.35:.8)*reserve;
+  if(humanThreat)value+=ev*.19;
+  if(desperation)value+=ev*.2;
+  if(game.difficulty==='medium')value+=((Math.random()-.5)*5.4);
+  else value+=((Math.random()-.5)*1.4);
+  return {c,value};
+ });
+ cards.sort((a,b)=>b.value-a.value);return cards[0].c;
+}
+function chooseCpuResponse(playerCard){
+ const hand=game.cpuHand;if(hand.length===1)return hand[0];
+ if(game.difficulty==='easy')return choose(hand);
+ const remain=Math.max(0,hand.length-1),need=game.target-game.cpuScore;
+ const model=hand.map(c=>{
+  const diff=(c.rank-playerCard.rank)*ruleSign(game.trick.rule);
+  const immediate=diff;
+  // Retain strong cards when a very close alternative wins too; give less weight
+  // to future cards when victory can be secured with the current play.
+  const reserve=.11*(c.rank-7)*ruleSign(game.trick.rule)*remain/6;
+  let value=immediate-reserve;
+  if(diff>0&&diff>=need)value+=1000; // winning move
+  if(game.difficulty==='medium')value+=((Math.random()-.5)*4.5);
+  else value+=((Math.random()-.5)*.9);
+  if(game.playerScore>=game.target-8&&diff<0)value-=Math.abs(diff)*.6;
+  return {c,value};
+ });
+ model.sort((a,b)=>b.value-a.value);return model[0].c;
+}
+function takeCard(who,c){const hand=who==='cpu'?game.cpuHand:game.playerHand;const i=hand.findIndex(x=>x.id===c.id);if(i<0)throw Error('Card not in hand');hand.splice(i,1);}
+function newRound(){
+ clearDrag();
+ if(!game)return;
+ const deck=shuffle(makeDeck());game.playerHand=deck.slice(0,7);game.cpuHand=deck.slice(7,14);
+ game.handIndex=0;game.roundStarter=game.round===1?game.initialStarter:other(game.roundStarter);
+ game.trick=null;game.phase='dealing';selected=null;save();render();
+ const gen=phaseGeneration;runDeal(gen);
+}
+async function runDeal(gen){await wait(speed().deal);if(gen!==phaseGeneration||!game||game.phase!=='dealing')return;beginHand()}
+function beginHand(){
+ if(!game||game.phase==='finished')return;
+ selected=null;justPlayed=null;
+ game.currentLead=game.handIndex%2===0?game.roundStarter:other(game.roundStarter);
+ // Reveal the fresh 50/50 rule BEFORE the first player chooses a card.
+ // Once selected, the rule is fixed for this hand and saved for resume.
+ game.trick={lead:game.currentLead,rule:getRandom(2)===0?'high':'low',playerCard:null,cpuCard:null};
+ game.phase='rule-reveal';save();render();runRuleAnnouncement(phaseGeneration);
+}
+async function runRuleAnnouncement(gen){
+ await wait(speed().announce);
+ if(gen!==phaseGeneration||!game||game.phase!=='rule-reveal')return;
+ if(game.currentLead==='cpu'){
+  const card=chooseCpuFirst();takeCard('cpu',card);game.trick.cpuCard=card;justPlayed='cpu';game.phase='cpu-leading';sound('card');save();render();
+  runCpuLead(gen);
+ }else{game.phase='player-lead';save();render();}
+}
+async function runCpuLead(gen){await wait(speed().deal);if(gen!==phaseGeneration||!game||game.phase!=='cpu-leading')return;game.phase='player-reply';save();render()}
+function playSelected(){
+ if(!game||!['player-lead','player-reply'].includes(game.phase)||!selected||modalName)return;
+ const card=game.playerHand.find(c=>c.id===selected);if(!card)return;
+ takeCard('player',card);game.trick.playerCard=card;selected=null;justPlayed='player';sound('card');
+ if(game.trick.lead==='player'){
+  game.phase='cpu-respond';save();render();runCpuResponse(phaseGeneration);
+ }else{game.phase='resolving';save();render();runResolve(phaseGeneration);}
+}
+async function runCpuResponse(gen){
+ await wait(speed().reveal);
+ if(gen!==phaseGeneration||!game||game.phase!=='cpu-respond')return;
+ const card=chooseCpuResponse(game.trick.playerCard);takeCard('cpu',card);game.trick.cpuCard=card;justPlayed='cpu';game.phase='resolving';sound('card');save();render();runResolve(gen);
+}
+async function runResolve(gen){
+ await wait(speed().reveal);
+ if(gen!==phaseGeneration||!game||game.phase!=='resolving')return;
+ const t=game.trick,p=t.playerCard.rank,c=t.cpuCard.rank;
+ const diff=(p-c)*ruleSign(t.rule),earned=Math.abs(diff),winner=diff>0?'player':diff<0?'cpu':'tie';
+ if(winner==='player')game.playerScore+=earned;
+ if(winner==='cpu')game.cpuScore+=earned;
+  game.handIndex++;
+ const row={round:game.round,hand:game.handIndex,lead:t.lead,rule:t.rule,pCard:t.playerCard,cCard:t.cpuCard,winner,points:earned,pTotal:game.playerScore,cTotal:game.cpuScore};
+ game.history.push(row);game.trick.result=row;
+ game.phase='result';justPlayed=null;
+ sound(winner==='player'?'win':winner==='cpu'?'loss':'tie');save();render();
+ runResult(gen);
+}
+async function runResult(gen){
+ await wait(speed().result);
+ if(gen!==phaseGeneration||!game||game.phase!=='result')return;
+ if(game.playerScore>=game.target||game.cpuScore>=game.target){finishMatch();return;}
+ if(game.handIndex>=7){
+  game.phase='round-ended';save();render();await wait(speed().round);
+  if(gen!==phaseGeneration||!game||game.phase!=='round-ended')return;
+  game.round++;newRound();
+ }else beginHand();
+}
+function finishMatch(){
+ if(!game||game.phase==='finished')return;
+ game.phase='finished';game.winner=game.playerScore>game.cpuScore?'player':'cpu';game.endedAt=Date.now();
+ if(!stats.matches.some(m=>m.id===game.id)){
+  stats.played++;stats.totalHands+=game.history.length;
+  stats.biggestHand=Math.max(stats.biggestHand,...game.history.map(h=>h.points));
+  stats.perfectTies+=game.history.filter(h=>h.winner==='tie').length;
+  if(game.winner==='player'){
+   stats.wins++;stats.streak++;stats.bestStreak=Math.max(stats.bestStreak,stats.streak);
+   stats.bestMargin=Math.max(stats.bestMargin,game.playerScore-game.cpuScore);
+   stats.mostPoints=Math.max(stats.mostPoints,game.playerScore);
+   stats.difficulty[game.difficulty].wins++;
+  }else{stats.losses++;stats.streak=0;stats.difficulty[game.difficulty].losses++;}
+  stats.matches.unshift({id:game.id,startedAt:game.startedAt,endedAt:game.endedAt,difficulty:game.difficulty,target:game.target,playerScore:game.playerScore,cpuScore:game.cpuScore,winner:game.winner,rounds:game.round,hands:clone(game.history)});
+  if(!safeWrite(STAT_KEY,stats))storageAlert=true;
+ }
+ save();sound(game.winner==='player'?'victory':'loss');render();showModal('finished');
+}
+function startMatch(config){
+ clearDrag();
+ const target=Number(config.target);
+ if(!Number.isSafeInteger(target)||target<1||target>10000)return false;
+ if(!['easy','medium','hard'].includes(config.difficulty))return false;
+ phaseGeneration++;
+ game={id:`m${Date.now()}-${getRandom(100000000)}`,startedAt:Date.now(),target,difficulty:config.difficulty,initialStarter:config.lead==='random'?choose(['player','cpu']):config.lead,roundStarter:null,currentLead:null,round:1,handIndex:0,playerScore:0,cpuScore:0,playerHand:[],cpuHand:[],history:[],trick:null,phase:'dealing',winner:null};
+ if(!['player','cpu'].includes(game.initialStarter))game.initialStarter='player';
+ closeModal();newRound();return true;
+}
+function resumeGame(){phaseGeneration++;closeModal();render();const gen=phaseGeneration;if(!game)return;
+ if(game.phase==='dealing')runDeal(gen);
+ else if(game.phase==='rule-reveal')runRuleAnnouncement(gen);
+ else if(game.phase==='cpu-leading')runCpuLead(gen);
+ else if(game.phase==='cpu-respond')runCpuResponse(gen);
+ else if(game.phase==='resolving')runResolve(gen);
+ else if(game.phase==='result')runResult(gen);
+ else if(game.phase==='round-ended')nextRoundOnResume(gen);
+ else if(game.phase==='finished')showModal('finished');
+}
+async function nextRoundOnResume(gen){await wait(speed().round);if(gen!==phaseGeneration||!game||game.phase!=='round-ended')return;game.round++;newRound()}
+function loadGame(){const saved=safeRead(SAVE_KEY,null);if(!isObj(saved))return false;
+ if(!Number.isSafeInteger(saved.target)||saved.target<1||!Array.isArray(saved.history)||!Array.isArray(saved.playerHand)||!Array.isArray(saved.cpuHand)||!['dealing','rule-reveal','cpu-leading','player-reply','player-lead','cpu-respond','resolving','result','round-ended'].includes(saved.phase))return false;
+ if(!saved.playerHand.every(validCard)||!saved.cpuHand.every(validCard))return false;
+ if(!['player','cpu'].includes(saved.roundStarter))return false;
+ // Legacy saves from the original always-high edition continue in HIGH mode
+ // for their already-started hand; all subsequent hands randomize normally.
+ if(saved.trick&&!['high','low'].includes(saved.trick.rule))saved.trick.rule='high';
+ if(saved.phase==='rule-reveal'&&!saved.trick)return false;
+ game=saved;return true;
+}
+const PIP_LAYOUT={2:[[50,25],[50,75]],3:[[50,20],[50,50],[50,80]],4:[[30,25],[70,25],[30,75],[70,75]],5:[[30,25],[70,25],[50,50],[30,75],[70,75]],6:[[29,22],[71,22],[29,50],[71,50],[29,78],[71,78]],7:[[29,20],[71,20],[50,35],[29,50],[71,50],[29,80],[71,80]],8:[[29,20],[71,20],[50,35],[29,50],[71,50],[50,65],[29,80],[71,80]],9:[[29,20],[50,20],[71,20],[29,50],[50,50],[71,50],[29,80],[50,80],[71,80]],10:[[34,30],[66,30],[34,40],[66,40],[34,50],[66,50],[34,60],[66,60],[34,70],[66,70]]};
+function faceHTML(card,extra=''){
+ if(!card)return '';
+ const suit=SUITS.find(s=>s.key===card.suit),red=suit.red?'red':'black',r=RANKS[card.rank];
+ let middle='';
+ if(card.rank===1)middle=`<div class="big-suit">${suit.s}</div>`;
+ else if(card.rank<=10)middle=PIP_LAYOUT[card.rank].map(([x,y])=>`<span class="pip" style="left:${x}%;top:${y}%">${suit.s}</span>`).join('');
+ else middle=`<div class="court-art ${card.rank===11?'jack':card.rank===12?'queen':'king'}"><span class="crown">${card.rank===13?'♛':card.rank===12?'♕':'♜'}</span><span class="medallion">${suit.s}</span></div>`;
+ return `<div class="playing-card face ${red} ${card.rank===10?'ten':''} ${extra}" aria-label="${esc(fullCard(card))}"><span class="corner">${r}<span>${suit.s}</span></span>${middle}<span class="corner bottom">${r}<span>${suit.s}</span></span></div>`;
+}
+const backHTML=(extra='')=>`<div class="playing-card back ${extra}" data-back="${prefs.back}"><div class="back-design"></div></div>`;
+const pct=(value,max)=>Math.min(100,100*value/Math.max(1,max));
+function render(){
+ applyPrefs();
+ const alive=!!game;
+ $('playerScore').textContent=game?.playerScore??0;$('cpuScore').textContent=game?.cpuScore??0;
+ $('targetTag').textContent=`FIRST TO ${game?.target??50}`;
+ const shownHand=game&&['result','round-ended','finished'].includes(game.phase)?Math.max(1,game.handIndex):Math.min((game?.handIndex??0)+1,7);
+ $('roundTag').textContent=!alive?'Start a new match':`ROUND ${game.round}  ·  HAND ${shownHand} / 7`;
+ $('pProgress').style.width=`${pct(game?.playerScore||0,game?.target||50)}%`;
+ $('cProgress').style.width=`${pct(game?.cpuScore||0,game?.target||50)}%`;
+ const playerHand=game?.playerHand||[],cpuHand=game?.cpuHand||[];
+ $('playerMeta').textContent=`${playerHand.length} card${playerHand.length!==1?'s':''}`;
+ $('cpuMeta').textContent=`${cpuHand.length} card${cpuHand.length!==1?'s':''}`;
+ // Do not destroy/recreate cards when selection or other UI changes.
+ // Recreating animated cards was resetting CSS keyframes and causing flashing.
+ const cpuSignature=`${cpuHand.length}:${prefs.back}`;
+ if($('cpuHand').dataset.signature!==cpuSignature){
+  $('cpuHand').innerHTML=cpuHand.map(()=>backHTML()).join('');
+  $('cpuHand').dataset.signature=cpuSignature;
+ }
+ const interactive=!!game&&['player-lead','player-reply'].includes(game.phase);
+ const handSignature=playerHand.map(c=>c.id).join('|');
+ if($('playerHand').dataset.signature!==handSignature){
+  $('playerHand').innerHTML=playerHand.map((c,i)=>`<button class="hand-card" type="button" data-id="${c.id}" aria-label="Select ${esc(fullCard(c))}" aria-pressed="false">${faceHTML(c)}<span class="number-key">${i+1}</span></button>`).join('');
+  $('playerHand').dataset.signature=handSignature;
+ }
+ for(const b of $('playerHand').querySelectorAll('.hand-card')){
+  const isSelected=selected===b.dataset.id;
+  b.classList.toggle('selected',isSelected);
+  b.setAttribute('aria-pressed',String(isSelected));
+  b.disabled=!interactive;
+ }
+ const t=game?.trick||null;
+ const currentRule=t?.rule||null;
+ const ruleBanner=$('ruleBanner');
+ const ruleKey=currentRule?`${game.round}:${game.handIndex}:${currentRule}`:'none';
+ // Do not rebuild the announcement on every render: it should animate only once per hand.
+ if(ruleBanner.dataset.ruleKey!==ruleKey){
+  const low=currentRule==='low';
+  ruleBanner.innerHTML=currentRule?`<span class="rule-symbol" aria-hidden="true">${low?'↓':'↑'}</span><span class="rule-copy"><strong>${low?'LOW WINS':'HIGH WINS'}</strong><small>${low?'Lower':'Higher'} card scores the difference</small></span>`:'<span class="rule-symbol" aria-hidden="true">↕</span><span class="rule-copy"><strong>HIGH OR LOW?</strong><small>A new rule every hand</small></span>';
+  ruleBanner.dataset.ruleKey=ruleKey;
+ }
+ ruleBanner.className=`rule-banner ${currentRule||'idle'} ${game?.phase==='rule-reveal'?'announcing':''}`;
+ for(const who of ['player','cpu']){
+  const slot=$(who==='player'?'playerSlot':'cpuSlot');
+  const actual=t?.[who==='player'?'playerCard':'cpuCard'];
+  const preview=who==='player'&&!actual&&interactive&&selected?playerHand.find(c=>c.id===selected):null;
+  const card=actual||preview;
+  const slotSignature=card?`${card.id}:${preview?'preview':'played'}`:'empty';
+  slot.className=`slot ${card?'':'empty'} ${preview?'preview':''} ${game?.phase==='result'&&t?.result?.winner===who?'highlight':''}`;
+  if(slot.dataset.signature!==slotSignature){
+   // Animate only once when the card actually changes on this table slot.
+   slot.innerHTML=(card?faceHTML(card,actual?'just-played':''):'')+`<div class="slot-label">${who==='player'?(preview?'YOU · PREVIEW':'YOU'):'CPU'}</div>`;
+   slot.dataset.signature=slotSignature;
+  }
+ }
+ let title='',subtitle='',result='',tone='';
+ if(!game){title='Ready for your first match?';subtitle='Choose a target score and start playing.';}
+ else if(game.phase==='dealing'){title=`Dealing round ${game.round}…`;subtitle='Fresh shuffled deck · seven cards each';}
+ else if(game.phase==='rule-reveal'){title=`${currentRule==='low'?'LOW':'HIGH'} WINS this hand!`;subtitle='Rule revealed — choose your card after the announcement.';}
+ else if(game.phase==='cpu-leading'){title='CPU plays first…';subtitle='See its card before choosing yours.';}
+ else if(game.phase==='player-lead'){title='You lead this hand';subtitle=selected?`${fullCard(playerHand.find(c=>c.id===selected))} selected`:'Choose a card to play face up.';}
+ else if(game.phase==='player-reply'){title='You play second';subtitle=selected?`${fullCard(playerHand.find(c=>c.id===selected))} selected`:'You can see the CPU card. Choose wisely!';}
+ else if(game.phase==='cpu-respond'){title='CPU is considering its hand…';subtitle='Your card is now face up.';}
+ else if(game.phase==='resolving'){title='Comparing the cards…';subtitle=`${currentRule==='low'?'Lower':'Higher'} value takes the difference.`;}
+ else if(game.phase==='result'){
+   const row=t.result,won=row.winner==='player',lost=row.winner==='cpu';
+   title=won?'You won this hand!':lost?'CPU wins this hand':'A perfect tie!';
+   subtitle=won?`+${row.points} points added to your score`:lost?`CPU gains ${row.points} points`:'No points awarded';
+   result=`${esc(labelCard(row.pCard))} vs ${esc(labelCard(row.cCard))} &nbsp; <span class="points">${won?`YOU +${row.points}`:lost?`CPU +${row.points}`:'TIE · 0'}</span>`;
+   tone=won?'win':lost?'bad':'tie';
+ }else if(game.phase==='round-ended'){title=`Round ${game.round} complete`;subtitle='Shuffling and dealing another seven cards…';result='NEW ROUND';tone='tie';}
+ else if(game.phase==='finished'){title=game.winner==='player'?'You are the champion!':'The CPU wins this match';subtitle='Match complete · Start again to play another.';result=`FINAL SCORE ${game.playerScore} — ${game.cpuScore}`;tone=game.winner==='player'?'win':'bad';}
+ $('turnHelp').innerHTML=`${esc(title)}<small>${esc(subtitle)}</small>`;
+ $('resultBanner').className=`result-banner ${tone}`;
+ $('resultBanner').innerHTML=result;
+ $('btnPlay').disabled=!interactive||!selected;
+ $('btnPlay').textContent=selected?'Confirm & play card':'Select a card';
+ $('cpuZone').classList.toggle('current',!!game&&['cpu-leading','cpu-respond'].includes(game.phase));
+ $('playerZone').classList.toggle('current',interactive);
+ const lines=[['Difficulty',game?game.difficulty.toUpperCase():'—'],['Winning rule',currentRule?`${currentRule.toUpperCase()} WINS`:'—'],['Cards this hand',game?`${shownHand} of 7`:'—'],['Starting player',game?(game.roundStarter==='player'?'You':'CPU'):'—'],['Current lead',game?(game.currentLead==='player'?'You':'CPU'):'—'],['Card speed',prefs.speed[0].toUpperCase()+prefs.speed.slice(1)]];
+ $('liveDetails').innerHTML=lines.map(([key,val])=>`<div><dt>${esc(key)}</dt><dd>${esc(val)}</dd></div>`).join('');
+ $('recordWins').innerHTML=`${stats.wins}<small>Victories</small>`;
+ $('recordStreak').innerHTML=`${stats.bestStreak}<small>Best streak</small>`;
+ const recent=(game?.history||[]).slice(-5).reverse();
+ $('recentPlays').innerHTML=recent.length?recent.map(row=>`<div class="recent-item"><span class="round-mini">R${row.round}.${row.hand} ${row.rule==='low'?'↓':'↑'}</span><span class="hand-mini">${labelCard(row.pCard)} · ${labelCard(row.cCard)}</span><span class="pts-mini ${row.winner==='cpu'?'cpu':''}">${row.winner==='player'?'YOU':row.winner==='cpu'?'CPU':'TIE'} ${row.points||'—'}</span></div>`).join(''):'<div class="recent-empty">Play a hand to see your history.</div>';
+}
+function selectCard(id){if(!game||!['player-lead','player-reply'].includes(game.phase)||modalName)return;const card=game.playerHand.find(c=>c.id===id);if(!card||selected===id)return;selected=id;sound('select');render();}
+
+function modalFrame(name,title,body,footer='',wide=false,closable=true){
+ return `<div class="modal-head"><div><div class="kicker">Heads Up War</div><h2 id="modalTitle">${esc(title)}</h2></div>${closable?'<button class="modal-close" data-action="close" aria-label="Close dialog">×</button>':''}</div>${body}${footer?`<div class="modal-footer">${footer}</div>`:''}`;
+}
+const btn=(action,label,primary=false)=>`<button class="${primary?'primary':'ghost'}" data-action="${action}">${label}</button>`;
+function showModal(name,extra){
+ modalName=name;activeArchive=extra??null;$('overlay').hidden=false;
+ $('modal').className='modal'+(['history','stats','help'].includes(name)?' wide':'');
+ let html='';
+ if(name==='welcome'){
+  const saved=!!game&&game.phase!=='finished';
+  const body=saved?`<p>An unfinished game was found on this device. Pick up exactly where you left off or begin a fresh match.</p><div class="finished-hero"><div class="kicker">Saved table</div><div class="final-score">${game.playerScore} — ${game.cpuScore}</div><p>Round ${game.round} · ${game.difficulty.toUpperCase()} CPU · First to ${game.target}</p><span class="status-pill">Last saved match ready</span></div>`:`<p>Seven cards per player. Choose yours to outscore the CPU. Each hand randomly selects HIGH WINS or LOW WINS. The winning card scores the difference in points—and the lead alternates after every hand.</p><div class="tip">A = 1 &nbsp; · &nbsp; 2–10 = face value &nbsp; · &nbsp; J = 11 &nbsp; · &nbsp; Q = 12 &nbsp; · &nbsp; K = 13</div>`;
+  const foot=saved?btn('fresh','New match')+btn('resume','Resume match',true):btn('setup','Set up your game',true);
+  html=modalFrame(name,saved?'Welcome back':'The table is yours',body,foot,false,false);
+ }
+ if(name==='setup'){
+  const targets=[25,50,100,200];
+  const body=`<p>Choose how you'd like to play. Your opponent receives its own seven cards from a fresh 52-card deck each round.</p>
+  <div class="field"><div class="field-label">Winning target <span class="field-note">First to this score wins</span></div><div class="choice-row" id="targetChoices">${targets.map(n=>`<button class="choice ${pendingSetup.target===n?'chosen':''}" data-target="${n}">${n}</button>`).join('')}</div><div style="margin-top:9px"><input id="customTarget" type="number" min="1" max="10000" step="1" inputmode="numeric" value="${pendingSetup.target}" aria-label="Custom winning score" /></div><small>Enter any whole number from 1 to 10,000.</small></div>
+  <div class="field"><div class="field-label">CPU difficulty</div><div class="choice-row" id="difficultyChoices">${['easy','medium','hard'].map(x=>`<button class="choice ${pendingSetup.difficulty===x?'chosen':''}" data-difficulty="${x}">${x[0].toUpperCase()+x.slice(1)}</button>`).join('')}</div><p style="font-size:11px;margin:9px 0 0">Easy plays randomly. Medium makes smarter choices with some variation. Hard considers card strength, point swings and the score—without seeing your hidden hand.</p></div>
+  <div class="field"><div class="field-label">Who plays the first card?</div><div class="choice-row">${[['random','Coin flip'],['player','You'],['cpu','CPU']].map(([value,text])=>`<button class="choice ${pendingSetup.lead===value?'chosen':''}" data-lead="${value}">${text}</button>`).join('')}</div><small>The first player switches every hand and also switches at the start of each seven-hand round.</small></div>`;
+  html=modalFrame(name,'Set up your match',body,btn('setupback','Back')+btn('start','Deal the cards',true),false,false);
+ }
+ if(name==='help'){
+  const steps=[['Deal','Every round, one fresh shuffled 52-card deck gives you and the CPU seven cards each. Your cards are visible; the CPU hand is hidden.'],['Play','The first player chooses a card and places it face up. The second player sees that card before choosing their own. Click a card to preview it, then tap Confirm & play card. Or drag and drop a card onto the table to play it immediately.'],['Score','Ace = 1, cards 2–10 = face value, Jack = 11, Queen = 12 and King = 13. Before either player plays, HIGH WINS or LOW WINS is randomly announced (50/50 independently each hand). HIGH: 7 beats 4 for 3 points. LOW: 4 beats 7 for 3 points.'],['Ties','Equal ranks give neither player any points, whether HIGH or LOW was called. Both cards are discarded, even when the suits differ.'],['Alternating leads','Whoever played second now leads the next hand. Since there are seven hands, the player who led the previous round will play second at the start of the next round.'],['Victory','The game ends as soon as someone reaches the chosen target score, even in the middle of a seven-hand round.']];
+  const body=steps.map(([h,d],i)=>`<div class="how-item"><div class="how-num">${i+1}</div><div class="how-text"><strong>${h}</strong><div>${d}</div></div></div>`).join('')+`<div class="tip">CONTROLS: Drag a card onto the table with a mouse or finger to play it immediately, or tap a card to select and confirm it. KEYBOARD: Press 1–7 to select a card from your current hand, Enter to confirm, or Esc to close a dialog. You can change sound, card backs, table colours and animation speed under Settings.</div>`;
+  html=modalFrame(name,'How to play',body,btn('close','Back to the table'));
+ }
+ if(name==='settings'){
+  const body=`<p>Adjust the feel of the table. Your choices save automatically on this device.</p>
+  <div class="field"><div class="field-label">Game speed</div><div class="choice-row">${['slow','normal','fast'].map(x=>`<button class="choice ${prefs.speed===x?'chosen':''}" data-pref="speed" data-value="${x}">${x[0].toUpperCase()+x.slice(1)}</button>`).join('')}</div></div>
+  <div class="field"><div class="field-label">Table colour</div><div class="choice-row">${[['green','#145440'],['emerald','#207258'],['navy','#295775'],['burgundy','#794458']].map(([x,color])=>`<button class="choice ${prefs.felt===x?'chosen':''}" data-pref="felt" data-value="${x}"><i class="swatch" style="background:${color}"></i>${x[0].toUpperCase()+x.slice(1)}</button>`).join('')}</div></div>
+  <div class="field"><div class="field-label">Card-back design</div><div class="choice-row">${[['classic','Crimson'],['navy','Midnight'],['royal','Royal'],['forest','Forest']].map(([x,label])=>`<button class="choice ${prefs.back===x?'chosen':''}" data-pref="back" data-value="${x}">${label}</button>`).join('')}</div></div>
+  <div class="field"><label class="check-row" for="soundToggle"><span>Sound effects</span><input id="soundToggle" type="checkbox" ${prefs.sound?'checked':''} /></label><div class="field-label">Volume <span id="volDisplay">${prefs.volume}%</span></div><input id="volumeSlider" type="range" min="0" max="100" step="5" value="${prefs.volume}" /></div><div class="settings-summary">No downloads, account or internet connection needed. The game saves your match progress automatically in your browser.</div>`;
+  html=modalFrame(name,'Personalize the table',body,btn('close','Done',true));
+ }
+ if(name==='stats'){
+  const total=stats.played||0,rate=total?Math.round(stats.wins/total*100):0;
+  const cards=[['Wins',stats.wins],['Losses',stats.losses],['Win rate',rate+'%'],['Current streak',stats.streak],['Best streak',stats.bestStreak],['Best margin',stats.bestMargin],['Highest winning score',stats.mostPoints],['Largest point swing',stats.biggestHand],['Completed hands',stats.totalHands]];
+  const perf=['easy','medium','hard'].map(k=>`<tr><td>${k[0].toUpperCase()+k.slice(1)}</td><td>${stats.difficulty[k].wins}</td><td>${stats.difficulty[k].losses}</td></tr>`).join('');
+  const body=`<div class="stat-grid">${cards.map(([label,value])=>`<div class="stat-cell"><b>${value}</b><small>${label}</small></div>`).join('')}</div><h3 style="color:#fce2ad;margin:22px 0 9px">Results by difficulty</h3><div class="table-scroll"><table class="history-table"><thead><tr><th>Level</th><th>Wins</th><th>Losses</th></tr></thead><tbody>${perf}</tbody></table></div><div class="tip">Records and match history are saved on this browser. Clearing your browser storage will remove them.</div>`;
+  html=modalFrame(name,'Your statistics',body,btn('close','Back to the table'));
+ }
+ if(name==='history'){
+  const body=`<div class="tabs"><button class="ghost ${historyTab==='current'?'active':''}" data-tab="current">Current match</button><button class="ghost ${historyTab==='archive'?'active':''}" data-tab="archive">Completed matches (${stats.matches.length})</button></div><div id="historyContents">${historyContent()}</div>`;
+  html=modalFrame(name,'Match history',body,btn('export','Export visible hands (CSV)')+btn('close','Done'));
+ }
+ if(name==='confirmnew'){
+  html=modalFrame(name,'Start a new match?',`<p>Your current unfinished match will be replaced. Results and records from previously <strong>completed</strong> matches will remain saved.</p><div class="tip">This cannot be undone. Do you want to start fresh?</div>`,btn('close','Keep playing')+btn('freshconfirmed','Start new match',true));
+ }
+ if(name==='finished'){
+  const won=game?.winner==='player';
+  const body=`<div class="finished-hero"><div class="trophy">${won?'🏆':'♠'}</div><div class="kicker">${won?'Victory':'Match complete'}</div><h3>${won?'You won Heads Up War!':'The computer wins'}</h3><div class="final-score">${game?.playerScore??0} — ${game?.cpuScore??0}</div><p>${won?'Excellent card play. Your win is in the books!':'The CPU got there first. Ready for a rematch?'}</p><span class="status-pill">${game?.history?.length??0} hands · ${game?.round??0} rounds · ${esc(game?.difficulty??'')} difficulty</span></div><div class="tiny-hint">Match saved to your history and personal records.</div>`;
+  html=modalFrame(name,won?'What a finish!':'Game over',body,btn('history','View hands')+btn('setup','Play again',true),false,false);
+ }
+ $('modal').innerHTML=html;
+ const autofocus=$('modal').querySelector('[autofocus]');if(autofocus)autofocus.focus();else $('modal').querySelector('button')?.focus({preventScroll:true});
+}
+function historyContent(){
+ if(historyTab==='archive'&&activeArchive===null){
+  if(!stats.matches.length)return '<div class="archive-empty">No completed matches yet. Finish a game to build your archive.</div>';
+  return stats.matches.map((m,i)=>`<div class="archive-card"><div><strong>${m.winner==='player'?'★ Victory':'CPU Victory'} · ${m.playerScore}–${m.cpuScore}</strong><small>${formatDate(m.endedAt)} · ${esc(m.difficulty)} · target ${m.target} · ${m.hands.length} hands</small></div><button class="ghost small" data-archive="${i}">See hands</button></div>`).join('');
+ }
+ let rows=historyTab==='archive'?stats.matches[activeArchive]?.hands:game?.history;
+ if(!rows||!rows.length)return '<div class="archive-empty">No hands played yet. After each hand, its cards, winner, and running totals will appear here.</div>';
+ const title=historyTab==='archive'?`<button class="ghost small" data-backarchive="1">← All matches</button><p style="margin-bottom:8px">${formatDate(stats.matches[activeArchive].endedAt)} · ${stats.matches[activeArchive].playerScore}–${stats.matches[activeArchive].cpuScore}</p>`:`<p style="margin-bottom:8px">${rows.length} hands played so far. All hands and round results are included, even ties.</p>`;
+ return title+`<div class="table-scroll"><table class="history-table"><thead><tr><th>Round</th><th>Hand</th><th>Rule</th><th>Lead</th><th>Your card</th><th>CPU card</th><th>Points</th><th>Total (You / CPU)</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.round}</td><td>${r.hand}</td><td>${r.rule==='low'?'↓ LOW':'↑ HIGH'}</td><td>${r.lead==='player'?'You':'CPU'}</td><td>${labelCard(r.pCard)}</td><td>${labelCard(r.cCard)}</td><td class="${r.winner==='player'?'positive':r.winner==='cpu'?'negative':'neutral'}">${r.winner==='player'?'You +':r.winner==='cpu'?'CPU +':'Tie '}${r.points}</td><td>${r.pTotal} / ${r.cTotal}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function exportCSV(){
+ const data=historyTab==='archive'&&activeArchive!==null?stats.matches[activeArchive]?.hands:game?.history;
+ if(!data||!data.length){alert('There are no hands to export yet.');return;}
+ const header=['Round','Hand','Rule','Lead','Player card','CPU card','Winner','Points','Player total','CPU total'];
+ const csv=[header,...data.map(r=>[r.round,r.hand,r.rule||'high',r.lead,fullCard(r.pCard),fullCard(r.cCard),r.winner,r.points,r.pTotal,r.cTotal])].map(line=>line.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+ const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='Heads_Up_War_History.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+function closeModal(){modalName=null;$('overlay').hidden=true;}
+function showSetup(){pendingSetup={...pendingSetup};showModal('setup')}
+function getSetupTarget(){const input=$('customTarget');const n=Number(input?.value);if(!Number.isSafeInteger(n)||n<1||n>10000){input?.focus();alert('Please choose a whole-number target between 1 and 10,000.');return null;}return n;}
+function newGameRequest(){if(!game||game.phase==='finished')showSetup();else showModal('confirmnew');}
+
+// Pointer Events provide matching mouse, pen and touchscreen drag/drop behavior.
+// A successful drop commits the card immediately. A regular click continues
+// to select and preview a card until the player confirms it.
+const dragThreshold=9;
+const playingNow=()=>!!game&&['player-lead','player-reply'].includes(game.phase)&&!modalName;
+const withinDropZone=(x,y)=>{
+ const r=$('battleDrop').getBoundingClientRect();
+ return x>=r.left-20&&x<=r.right+20&&y>=r.top-15&&y<=r.bottom+22;
+};
+const moveGhost=(x,y)=>{
+ if(!dragState?.ghost)return;
+ dragState.ghost.style.left=`${x-dragState.grabX}px`;
+ dragState.ghost.style.top=`${y-dragState.grabY}px`;
+ $('battleDrop').classList.toggle('drop-over',withinDropZone(x,y));
+};
+function clearDrag(){
+ if(!dragState)return;
+ dragState.origin?.classList.remove('drag-origin');
+ dragState.ghost?.remove();
+ $('battleDrop').classList.remove('drop-over');
+ dragState=null;
+}
+$('playerHand').addEventListener('pointerdown',e=>{
+ const card=e.target.closest('.hand-card[data-id]');
+ if(!card||!playingNow()||dragState||(e.pointerType==='mouse'&&e.button!==0))return;
+ const r=card.querySelector('.playing-card').getBoundingClientRect();
+ dragState={pointerId:e.pointerId,id:card.dataset.id,origin:card,x:e.clientX,y:e.clientY,grabX:e.clientX-r.left,grabY:e.clientY-r.top,rect:r,ghost:null,moved:false};
+ try{card.setPointerCapture(e.pointerId)}catch(_){}
+});
+$('playerHand').addEventListener('pointermove',e=>{
+ const d=dragState;
+ if(!d||e.pointerId!==d.pointerId)return;
+ if(!playingNow()){clearDrag();return;}
+ if(!d.moved&&Math.hypot(e.clientX-d.x,e.clientY-d.y)>dragThreshold){
+  d.moved=true;
+  d.origin.classList.add('drag-origin');
+  d.ghost=d.origin.querySelector('.playing-card').cloneNode(true);
+  d.ghost.classList.add('drag-ghost');
+  d.ghost.style.width=`${d.rect.width}px`;
+  d.ghost.style.height=`${d.rect.height}px`;
+  document.body.appendChild(d.ghost);
+ }
+ if(d.moved){e.preventDefault();moveGhost(e.clientX,e.clientY);}
+});
+$('playerHand').addEventListener('pointerup',e=>{
+ const d=dragState;
+ if(!d||e.pointerId!==d.pointerId)return;
+ const dragged=d.moved,accepted=dragged&&playingNow()&&withinDropZone(e.clientX,e.clientY),cardId=d.id;
+ clearDrag();
+ if(dragged){
+  // Suppress the synthetic click dispatched after a touch or drag.
+  ignoreDragClickUntil=Date.now()+450;
+  if(accepted){selected=cardId;playSelected();}
+ }
+});
+$('playerHand').addEventListener('pointercancel',clearDrag);
+window.addEventListener('blur',clearDrag);
+
+// Single delegated click handler ensures the table remains responsive after renders.
+document.addEventListener('click',e=>{
+ const card=e.target.closest('.hand-card[data-id]');if(card){if(Date.now()<ignoreDragClickUntil){e.preventDefault();return;}selectCard(card.dataset.id);return;}
+ if(e.target.closest('#btnPlay')){playSelected();return;}
+ const action=e.target.closest('[data-action]');if(action){const a=action.dataset.action;
+  if(a==='close'){if(modalName==='welcome'||modalName==='setup'||modalName==='finished')return;closeModal();}
+  else if(a==='setup'||a==='fresh'){if(a==='fresh'&&game&&game.phase!=='finished'){showModal('confirmnew')}else showSetup();}
+  else if(a==='setupback'){if(game&&game.phase!=='finished')showModal('welcome');else showModal('welcome');}
+  else if(a==='start'){const target=getSetupTarget();if(target!==null){pendingSetup.target=target;if(startMatch(pendingSetup))sound('card');}}
+  else if(a==='resume')resumeGame();
+  else if(a==='freshconfirmed'){game=null;selected=null;phaseGeneration++;try{localStorage.removeItem(SAVE_KEY)}catch(x){}render();showSetup();}
+  else if(a==='history'){historyTab='current';showModal('history')}
+  else if(a==='export')exportCSV();
+  return;
+ }
+ const targetButton=e.target.closest('[data-target]');if(targetButton){pendingSetup.target=Number(targetButton.dataset.target);$('customTarget').value=pendingSetup.target;showModal('setup');return;}
+ const diffButton=e.target.closest('[data-difficulty]');if(diffButton){pendingSetup.difficulty=diffButton.dataset.difficulty;const current=Number($('customTarget')?.value);if(Number.isSafeInteger(current)&&current>0)pendingSetup.target=current;showModal('setup');return;}
+ const leadButton=e.target.closest('[data-lead]');if(leadButton){pendingSetup.lead=leadButton.dataset.lead;const current=Number($('customTarget')?.value);if(Number.isSafeInteger(current)&&current>0)pendingSetup.target=current;showModal('setup');return;}
+ const prefButton=e.target.closest('[data-pref]');if(prefButton){prefs[prefButton.dataset.pref]=prefButton.dataset.value;safeWrite(PREF_KEY,prefs);render();showModal('settings');sound('select');return;}
+ const tab=e.target.closest('[data-tab]');if(tab){historyTab=tab.dataset.tab;activeArchive=null;showModal('history');return;}
+ const archive=e.target.closest('[data-archive]');if(archive){activeArchive=Number(archive.dataset.archive);$('historyContents').innerHTML=historyContent();return;}
+ const back=e.target.closest('[data-backarchive]');if(back){activeArchive=null;$('historyContents').innerHTML=historyContent();return;}
+});
+$('btnRules').addEventListener('click',()=>showModal('help'));
+$('btnHistory').addEventListener('click',()=>{historyTab='current';showModal('history')});
+$('btnAllHistory').addEventListener('click',()=>{historyTab='current';showModal('history')});
+$('btnStats').addEventListener('click',()=>showModal('stats'));
+$('btnAllStats').addEventListener('click',()=>showModal('stats'));
+$('btnSettings').addEventListener('click',()=>showModal('settings'));
+$('btnNew').addEventListener('click',()=>newGameRequest());
+$('modal').addEventListener('change',e=>{
+ if(e.target.id==='soundToggle'){prefs.sound=!!e.target.checked;safeWrite(PREF_KEY,prefs);if(prefs.sound)sound('select');}
+ if(e.target.id==='customTarget'){const v=Number(e.target.value);if(Number.isInteger(v)&&v>=1&&v<=10000){pendingSetup.target=v;for(const b of $('targetChoices').querySelectorAll('[data-target]'))b.classList.toggle('chosen',Number(b.dataset.target)===v);}}
+});
+$('modal').addEventListener('input',e=>{
+ if(e.target.id==='volumeSlider'){prefs.volume=Number(e.target.value);$('volDisplay').textContent=prefs.volume+'%';safeWrite(PREF_KEY,prefs);}
+ if(e.target.id==='customTarget'){const v=Number(e.target.value);for(const b of $('targetChoices').querySelectorAll('[data-target]'))b.classList.toggle('chosen',Number(b.dataset.target)===v);}
+});
+document.addEventListener('keydown',e=>{
+ if(e.key==='Escape'&&modalName&&!['welcome','setup','finished'].includes(modalName)){closeModal();return;}
+ if(modalName)return;
+ if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName))return;
+ if(/^[1-7]$/.test(e.key)){const index=Number(e.key)-1,card=game?.playerHand?.[index];if(card){e.preventDefault();selectCard(card.id)} }
+ if(e.key==='Enter'&&selected&&game&&['player-lead','player-reply'].includes(game.phase)){e.preventDefault();playSelected();}
+});
+$('overlay').addEventListener('click',e=>{if(e.target===$('overlay')&&modalName&&!['welcome','setup','finished'].includes(modalName))closeModal();});
+// Returning to an interrupted game cannot duplicate a card or score: the phase is persisted.
+const found=loadGame();render();showModal(found?'welcome':'setup');
+})();
+</script>
+</body>
+</html>
