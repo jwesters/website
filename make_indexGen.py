@@ -10,7 +10,6 @@ What this version does differently:
 - Keeps an optional repository-folder view at the bottom for maintenance.
 - Excludes root-level files by default, matching the previous generator.
 - Always excludes source.html files from generated indexes.
-- Always excludes preview.htm and preview.html files, regardless of folder or case.
 - Labels index.html links with the page's HTML title instead of "Index".
 - Can hide filenames containing "nsfw" with --hide-nsfw.
 - Also writes an education-only indexEDU.html by default.
@@ -33,6 +32,7 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import time
 from functools import lru_cache
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -1085,10 +1085,6 @@ def title_for_path(path: Path) -> str:
     return "Home"
 
 
-# Preview pages must never appear in either generated index (case-insensitive).
-EXCLUDED_PREVIEW_FILENAMES = frozenset({"preview.htm", "preview.html"})
-
-
 def should_exclude_dir(dirname: str, exclude_dirs: Sequence[str]) -> bool:
     d = dirname.casefold()
     return any(d == x.casefold() for x in exclude_dirs)
@@ -1107,15 +1103,9 @@ def should_include_file(
     lower_rel = rel.casefold()
     lower_fn = path.name.casefold()
 
-    # Filter before creating FileEntry records: excludes these pages from all
-    # categories, sidebar counts, recent changes, and the repository folder view
-    # in both the standard and education-only indexes.
-    if lower_fn in EXCLUDED_PREVIEW_FILENAMES:
-        return False
-
     if path.suffix.casefold() not in exts_norm:
         return False
-    if lower_fn == "sources.html":
+    if lower_fn in {"sources.html", "preview.html", "preview.htm"}:
         return False
     if not include_root_files and "/" not in rel:
         return False
@@ -1293,7 +1283,9 @@ def scan_files(
     ):
         rel = path.relative_to(root).as_posix()
         try:
-            mtime = path.stat().st_mtime
+            # Some extracted archives carry ZIP times ahead of the computer clock.
+            # Cap those invalid future timestamps without changing the file itself.
+            mtime = min(path.stat().st_mtime, time.time())
         except OSError:
             mtime = None
 
@@ -1375,10 +1367,6 @@ def absolute_day_label(mtime: float) -> str:
     return datetime.fromtimestamp(mtime).strftime("%B %d, %Y")
 
 
-def changed_date_iso(mtime: float) -> str:
-    return datetime.fromtimestamp(mtime).date().isoformat()
-
-
 def recent_entries(entries: Sequence[FileEntry], days: int) -> List[FileEntry]:
     cutoff = datetime.now().timestamp() - (days * 24 * 60 * 60)
     recent = [entry for entry in entries if entry.mtime is not None and entry.mtime >= cutoff]
@@ -1392,7 +1380,7 @@ def recent_entries(entries: Sequence[FileEntry], days: int) -> List[FileEntry]:
 
 INDEX_CSS = '  :root {\n    color-scheme: light;\n    --bg:#f4f6f8;\n    --panel:#ffffff;\n    --panel-soft:#fafbfc;\n    --border:#e4e8ee;\n    --text:#1f2937;\n    --muted:#667085;\n    --link:#0b66d0;\n    --accent:#2563eb;\n    --accent-soft:#eef5ff;\n    --shadow:0 8px 28px rgba(15, 23, 42, .08);\n    --radius:18px;\n  }\n  * { box-sizing:border-box; }\n  html { scroll-behavior:smooth; }\n  body { margin:0; font-family:Arial, sans-serif; color:var(--text); background:var(--bg); }\n  a { color:var(--link); text-decoration:none; }\n  a:hover { text-decoration:underline; }\n  .page { max-width:1500px; margin:0 auto; padding:24px; }\n  .hero {\n    background:linear-gradient(135deg, #ffffff, #f8fbff);\n    border:1px solid var(--border);\n    border-radius:24px;\n    box-shadow:var(--shadow);\n    padding:24px;\n    margin-bottom:20px;\n  }\n  .hero h1 { margin:0 0 8px; font-size:clamp(26px, 3vw, 38px); letter-spacing:-.03em; }\n  .hero p { margin:0; color:var(--muted); line-height:1.5; }\n  .hero .index-summary { line-height:1.25; }\n  .hero .ai-note { margin-top:0; }\n  .hero .ai-note a { font-weight:800; }\n  .pill-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }\n  .pill {\n    display:inline-flex; align-items:center; gap:6px;\n    padding:6px 10px; border:1px solid var(--border); border-radius:999px;\n    background:#fff; color:var(--muted); font-size:.92rem;\n  }\n  .layout {\n    display:grid;\n    grid-template-columns:300px minmax(0, 1fr);\n    grid-template-areas:"sidebar search" "sidebar content";\n    gap:20px;\n    align-items:start;\n  }\n  .layout-search { grid-area:search; }\n  .sidebar {\n    grid-area:sidebar;\n    position:sticky;\n    top:18px;\n    background:var(--panel);\n    border:1px solid var(--border);\n    border-radius:var(--radius);\n    box-shadow:var(--shadow);\n    padding:18px;\n  }\n  .sidebar h2 { margin:0 0 14px; font-size:18px; }\n  .sidebar-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:5px; }\n  .sidebar-list a { display:block; padding:8px 10px; border-radius:12px; color:var(--text); }\n  .sidebar-list a:hover { background:var(--accent-soft); color:var(--link); text-decoration:none; }\n  .content { grid-area:content; display:flex; flex-direction:column; gap:18px; }\n  .category-block {\n    background:var(--panel);\n    border:1px solid var(--border);\n    border-radius:var(--radius);\n    box-shadow:var(--shadow);\n    padding:18px;\n  }\n  .category-heading {\n    display:flex;\n    align-items:center;\n    gap:10px;\n    font-size:21px;\n    font-weight:800;\n    margin-bottom:14px;\n    letter-spacing:-.02em;\n  }\n  .subcategory-block {\n    border:1px solid var(--border);\n    border-radius:16px;\n    background:var(--panel-soft);\n    padding:14px;\n  }\n  .subcategory-block + .subcategory-block { margin-top:14px; }\n  .subcategory-block h3 { margin:0 0 10px; font-size:16px; }\n  .app-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; }\n  .app-item {\n    min-width:0;\n    padding:10px 12px;\n    border-radius:12px;\n    background:#fff;\n    border:1px solid rgba(228,232,238,.75);\n  }\n  .app-item:hover { border-color:#cbd8e8; box-shadow:0 4px 16px rgba(15,23,42,.06); }\n  .app-item a { display:inline-flex; align-items:center; gap:4px; font-weight:700; color:var(--text); }\n  .app-item a:hover { color:var(--link); text-decoration:none; }\n  .app-title { overflow-wrap:anywhere; }\n  .path-note { display:block; margin-top:4px; color:var(--muted); font-size:.82rem; overflow-wrap:anywhere; }\n  .changed-note { display:inline-block; margin-left:8px; color:var(--muted); font-size:.88rem; }\n  .muted { color:var(--muted); font-weight:400; margin-left:4px; font-size:.92em; }\n  .icon { display:inline-block; width:24px; text-align:center; margin-right:2px; flex:0 0 auto; }\n  .new-badge {\n    display:inline-block;\n    margin-left:8px;\n    padding:2px 8px;\n    border-radius:999px;\n    background:#ffe7a8;\n    color:#7a5300;\n    font-size:.75rem;\n    font-weight:800;\n    vertical-align:middle;\n  }\n  .recent-empty, .section-note { margin:0 0 12px; color:var(--muted); line-height:1.45; }\n  .search-panel {\n    background:var(--panel);\n    border:1px solid var(--border);\n    border-radius:var(--radius);\n    box-shadow:var(--shadow);\n    padding:16px 18px;\n  }\n  .search-label { display:block; font-size:14px; font-weight:800; margin-bottom:8px; color:var(--muted); }\n  .search-input {\n    width:100%;\n    padding:12px 14px;\n    border:1px solid var(--border);\n    border-radius:12px;\n    font-size:16px;\n    background:#fff;\n    color:var(--text);\n  }\n  .search-input:focus {\n    outline:none;\n    border-color:#b9d4f5;\n    box-shadow:0 0 0 4px rgba(11, 102, 208, .10);\n  }\n  .search-help { margin-top:8px; color:var(--muted); font-size:.92em; }\n  .search-empty {\n    display:none;\n    background:var(--panel);\n    border:1px solid var(--border);\n    border-radius:var(--radius);\n    box-shadow:var(--shadow);\n    padding:18px;\n    color:var(--muted);\n  }\n  details {\n    margin:10px 0;\n    border:1px solid var(--border);\n    border-radius:14px;\n    background:var(--panel-soft);\n    overflow:hidden;\n  }\n  summary {\n    cursor:pointer;\n    padding:12px 14px;\n    font-weight:800;\n    user-select:none;\n    list-style:none;\n  }\n  summary::-webkit-details-marker { display:none; }\n  summary::before { content:"▸"; display:inline-block; width:18px; color:#666; }\n  details[open] summary::before { content:"▾"; }\n  .nested { padding:0 12px 12px 18px; }\n  .folder-list { padding:10px 0; }\n  .footer { margin-top:18px; color:var(--muted); font-size:.95em; }\n  .last-updated { margin-bottom:0; }\n  .footer a { font-weight:800; }\n  @media (max-width: 980px) {\n    .page { padding:14px; }\n    .layout {\n      grid-template-columns:1fr;\n      grid-template-areas:"search" "sidebar" "content";\n    }\n    .sidebar { position:static; }\n  }'
 
-INDEX_JS = '(function () {\n  const input = document.getElementById(\'site-search\');\n  const empty = document.getElementById(\'search-empty\');\n  if (!input) return;\n\n  function norm(s) {\n    return (s || \'\').toLowerCase().trim();\n  }\n\n  function isVisible(el) {\n    return !!el && el.style.display !== \'none\';\n  }\n\n  function formatLongDate(date) {\n    return date.toLocaleDateString(undefined, { year: \'numeric\', month: \'long\', day: \'numeric\' });\n  }\n\n  function updateChangedNotes() {\n    // Always compare file dates with the viewer\'s actual local calendar date.\n    // The index generation date is intentionally not used here; otherwise a\n    // page generated yesterday could keep showing an item as \'Today\'.\n    const viewed = new Date();\n    const baseDayUtc = Date.UTC(viewed.getFullYear(), viewed.getMonth(), viewed.getDate());\n    const oneDay = 24 * 60 * 60 * 1000;\n\n    Array.from(document.querySelectorAll(\'.changed-note[data-changed-date]\')).forEach((note) => {\n      const iso = note.dataset.changedDate || \'\';\n      const parts = iso.split(\'-\').map(Number);\n      if (parts.length !== 3 || parts.some(Number.isNaN)) return;\n\n      const changed = new Date(parts[0], parts[1] - 1, parts[2]);\n      const changedDayUtc = Date.UTC(parts[0], parts[1] - 1, parts[2]);\n      const diffDays = Math.round((baseDayUtc - changedDayUtc) / oneDay);\n      let label = formatLongDate(changed);\n      if (diffDays === 0) label = \'Today\';\n      else if (diffDays === 1) label = \'Yesterday\';\n      else if (diffDays > 1) label = `${diffDays} days ago`;\n\n      note.textContent = label;\n      note.title = `Changed ${formatLongDate(changed)}`;\n    });\n  }\n\n  function applySearch() {\n    const q = norm(input.value);\n    const appItems = Array.from(document.querySelectorAll(\'.app-item\'));\n    const visiblePaths = new Set();\n\n    appItems.forEach((item) => {\n      const haystack = item.dataset.search || norm(item.textContent);\n      const match = !q || haystack.includes(q);\n      item.style.display = match ? \'\' : \'none\';\n      if (match && item.dataset.path) visiblePaths.add(item.dataset.path);\n    });\n\n    Array.from(document.querySelectorAll(\'.subcategory-block\')).forEach((block) => {\n      const show = !!block.querySelector(\'.app-item:not([style*="display: none"])\');\n      block.style.display = show ? \'\' : \'none\';\n    });\n\n    Array.from(document.querySelectorAll(\'.searchable-category\')).forEach((section) => {\n      const show = !!section.querySelector(\'.app-item:not([style*="display: none"]), .subcategory-block:not([style*="display: none"])\');\n      section.style.display = show ? \'\' : \'none\';\n    });\n\n    Array.from(document.querySelectorAll(\'details.dir-block\')).reverse().forEach((details) => {\n      const show = !q ||\n        !!details.querySelector(\'.app-item:not([style*="display: none"])\') ||\n        Array.from(details.querySelectorAll(\':scope > .nested > details.dir-block\')).some(isVisible);\n      details.style.display = show ? \'\' : \'none\';\n      if (q && show) details.open = true;\n    });\n\n    const folderView = document.querySelector(\'.folder-view-section\');\n    if (folderView) {\n      const show = !q || !!folderView.querySelector(\'.app-item:not([style*="display: none"]), details.dir-block:not([style*="display: none"])\');\n      folderView.style.display = show ? \'\' : \'none\';\n    }\n\n    Array.from(document.querySelectorAll(\'.sidebar-list li\')).forEach((li) => {\n      const href = li.querySelector(\'a\')?.getAttribute(\'href\');\n      if (!href || !href.startsWith(\'#\')) {\n        li.style.display = \'\';\n        return;\n      }\n      const target = document.querySelector(href);\n      li.style.display = (!q || isVisible(target)) ? \'\' : \'none\';\n    });\n\n    empty.style.display = q && visiblePaths.size === 0 ? \'block\' : \'none\';\n  }\n\n  updateChangedNotes();\n  input.addEventListener(\'input\', applySearch);\n})();'
+INDEX_JS = '(function () {\n  const input = document.getElementById(\'site-search\');\n  const empty = document.getElementById(\'search-empty\');\n  if (!input) return;\n\n  function norm(s) {\n    return (s || \'\').toLowerCase().trim();\n  }\n\n  function isVisible(el) {\n    return !!el && el.style.display !== \'none\';\n  }\n\n  function formatLongDate(date) {\n    return date.toLocaleDateString(undefined, { year: \'numeric\', month: \'long\', day: \'numeric\' });\n  }\n\n  function updateChangedNotes() {\n    // The generator provides real timestamps, not date-only strings.\n    // Convert the exact same instants used for sorting into each viewer\'s local time.\n    const now = new Date();\n    const todayDay = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());\n    const millisPerDay = 86400000;\n\n    document.querySelectorAll(\'.changed-note[data-changed-epoch]\').forEach((note) => {\n      const seconds = Number(note.dataset.changedEpoch);\n      if (!Number.isFinite(seconds) || seconds <= 0) return;\n\n      const parsed = new Date(seconds * 1000);\n      if (Number.isNaN(parsed.getTime())) return;\n      // Future timestamps can occur in archives; never show "tomorrow".\n      const changed = parsed > now ? now : parsed;\n      const changedDay = Date.UTC(changed.getFullYear(), changed.getMonth(), changed.getDate());\n      const diffDays = Math.round((todayDay - changedDay) / millisPerDay);\n\n      let label = formatLongDate(changed);\n      if (diffDays === 0) label = \'Today\';\n      else if (diffDays === 1) label = \'Yesterday\';\n      else if (diffDays > 1) label = `${diffDays} days ago`;\n\n      note.textContent = label;\n      note.title = `Changed ${formatLongDate(changed)} at ${changed.toLocaleTimeString(undefined, { hour: \'numeric\', minute: \'2-digit\' })}`;\n    });\n  }\n\n  function applySearch() {\n    const q = norm(input.value);\n    const appItems = Array.from(document.querySelectorAll(\'.app-item\'));\n    const visiblePaths = new Set();\n\n    appItems.forEach((item) => {\n      const haystack = item.dataset.search || norm(item.textContent);\n      const match = !q || haystack.includes(q);\n      item.style.display = match ? \'\' : \'none\';\n      if (match && item.dataset.path) visiblePaths.add(item.dataset.path);\n    });\n\n    Array.from(document.querySelectorAll(\'.subcategory-block\')).forEach((block) => {\n      const show = !!block.querySelector(\'.app-item:not([style*="display: none"])\');\n      block.style.display = show ? \'\' : \'none\';\n    });\n\n    Array.from(document.querySelectorAll(\'.searchable-category\')).forEach((section) => {\n      const show = !!section.querySelector(\'.app-item:not([style*="display: none"]), .subcategory-block:not([style*="display: none"])\');\n      section.style.display = show ? \'\' : \'none\';\n    });\n\n    Array.from(document.querySelectorAll(\'details.dir-block\')).reverse().forEach((details) => {\n      const show = !q ||\n        !!details.querySelector(\'.app-item:not([style*="display: none"])\') ||\n        Array.from(details.querySelectorAll(\':scope > .nested > details.dir-block\')).some(isVisible);\n      details.style.display = show ? \'\' : \'none\';\n      if (q && show) details.open = true;\n    });\n\n    const folderView = document.querySelector(\'.folder-view-section\');\n    if (folderView) {\n      const show = !q || !!folderView.querySelector(\'.app-item:not([style*="display: none"]), details.dir-block:not([style*="display: none"])\');\n      folderView.style.display = show ? \'\' : \'none\';\n    }\n\n    Array.from(document.querySelectorAll(\'.sidebar-list li\')).forEach((li) => {\n      const href = li.querySelector(\'a\')?.getAttribute(\'href\');\n      if (!href || !href.startsWith(\'#\')) {\n        li.style.display = \'\';\n        return;\n      }\n      const target = document.querySelector(href);\n      li.style.display = (!q || isVisible(target)) ? \'\' : \'none\';\n    });\n\n    empty.style.display = q && visiblePaths.size === 0 ? \'block\' : \'none\';\n  }\n\n  updateChangedNotes();\n  input.addEventListener(\'input\', applySearch);\n})();'
 
 
 # ---------------------------------------------------------------------------
@@ -1427,14 +1415,14 @@ def render_recent_section(recent: Sequence[FileEntry], recent_days: int) -> str:
     items = []
     for entry in recent:
         changed_abs = absolute_day_label(entry.mtime or 0)
-        changed_iso = changed_date_iso(entry.mtime or 0)
+        changed_epoch = entry.mtime or 0
         title = entry.title
         search_text = f"{title} {entry.name} {entry.rel_path} {entry.category} {entry.subcategory}"
         items.append(
             f'<li class="app-item recent-item" data-path="{esc(entry.rel_path)}" data-search="{esc(search_text.casefold())}">'
             f'<a href="{esc(href_for(entry.rel_path))}" target="_blank" rel="noopener noreferrer">'
             f'<span class="icon">{esc(entry.icon)}</span><span class="app-title">{esc(title)}</span></a>'
-            f'<span class="changed-note" data-changed-date="{esc(changed_iso)}" title="Changed {esc(changed_abs)}">{esc(changed_abs)}</span>'
+            f'<span class="changed-note" data-changed-epoch="{changed_epoch:.3f}" title="Changed {esc(changed_abs)}">{esc(changed_abs)}</span>'
             '</li>'
         )
 
