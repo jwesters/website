@@ -15,8 +15,8 @@ What this version does differently:
 - Also writes an education-only indexEDU.html by default.
 - Always keeps NSFW filenames/paths out of indexEDU.html.
 - Uses only the Python standard library (Git is optional for --recent-source git).
-- Supports index_catalog.json for exact app overrides and searchable secondary tags.
-- Writes index_audit.json with duplicate-title, classification, and folder checks.
+- Keeps exact app overrides and secondary search tags in this Python file; no external catalog required.
+- Writes index_audit.json only when a problem needs review and removes stale clean reports.
 - Classification works with the folder reorganization completed in November 2026.
 - Can build audit-only: python make_indexGen.py --audit-only
 - Can use committed timestamps: python make_indexGen.py --recent-source git
@@ -1436,20 +1436,116 @@ def icon_for_file(rel_path: str, category: str, subcategory: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Optional hand-curated catalog (index_catalog.json)
+# Embedded category and app metadata: edit this single Python file.
 # ---------------------------------------------------------------------------
-# Add exceptions and searchable tags here without modifying Python category rules.
-# Priority: JSON exact path > built-in exact path > JSON filename > built-in
-# exact filename > JSON folder prefix > built-in folder prefix > legacy keywords.
-# Metadata (title, tags, educational flag, canonical) is merged independently:
-# folder < filename < full path. A category override requires both fields.
+# No index_catalog.json file is required or read. The metadata below replaces
+# the former external catalog. Category precedence:
+# exact app > built-in exact path > filename > built-in filename > folder
+# > built-in folder > legacy keyword fallbacks.
+# Title/tags/educational/canonical overrides merge folder < filename < app.
+
+EMBEDDED_CATALOG_DATA: Dict[str, Any] = {'version': 1,
+ 'apps': {'Learning_Reference/Game_Rules_Tutorials/Poker_Basics.html': {'title': 'Poker Basics',
+                                                                        'tags': ['hand rankings',
+                                                                                 'playing cards',
+                                                                                 'beginner rules'],
+                                                                        'educational': True},
+          'Subject_Specific/ELA/Writing/Consider_This_Writing_Prompts.html': {'title': 'Consider This '
+                                                                                       'Writing Prompts',
+                                                                              'tags': ['writing '
+                                                                                       'exercises',
+                                                                                       'writing '
+                                                                                       'instruction',
+                                                                                       'creative '
+                                                                                       'nonfiction']},
+          'Subject_Specific/Math/Concept_Explorers/BEDMAS_and_Powers_Explorer.html': {'title': 'BEDMAS & '
+                                                                                               'Powers '
+                                                                                               'Explorer',
+                                                                                      'tags': ['PEMDAS',
+                                                                                               'order of '
+                                                                                               'operations',
+                                                                                               'exponents',
+                                                                                               'powers']},
+          'Math_Games/MathPursuit/MathPursuit_Grade7_5Ins.html': {'title': 'Math Pursuit — Grade 7',
+                                                                  'tags': ['math review',
+                                                                           'multiplayer',
+                                                                           'grade 7']},
+          'Math_Games/MathPursuit/MathPursuit_Grade8_5Ins.html': {'title': 'Math Pursuit — Grade 8',
+                                                                  'tags': ['math review',
+                                                                           'multiplayer',
+                                                                           'grade 8']},
+          'Math_Games/MathPursuit/MathPursuit_Grade9_5Ins.html': {'title': 'Math Pursuit — Grade 9',
+                                                                  'tags': ['math review',
+                                                                           'multiplayer',
+                                                                           'grade 9']},
+          'Subject_Specific/Math/Test_Preparation/Grade_9_Math_PAT_Practice_Part_A_No_Calculator.html': {'title': 'Grade '
+                                                                                                                  '9 '
+                                                                                                                  'Math '
+                                                                                                                  'PAT '
+                                                                                                                  'Practice '
+                                                                                                                  '— '
+                                                                                                                  'Part '
+                                                                                                                  'A',
+                                                                                                         'tags': ['provincial '
+                                                                                                                  'achievement '
+                                                                                                                  'test',
+                                                                                                                  'no '
+                                                                                                                  'calculator',
+                                                                                                                  'grade '
+                                                                                                                  '9']},
+          'Subject_Specific/Math/Test_Preparation/Grade_9_Math_PAT_Practice_Part_B_Calculator_Allowed.html': {'title': 'Grade '
+                                                                                                                       '9 '
+                                                                                                                       'Math '
+                                                                                                                       'PAT '
+                                                                                                                       'Practice '
+                                                                                                                       '— '
+                                                                                                                       'Part '
+                                                                                                                       'B',
+                                                                                                              'tags': ['provincial '
+                                                                                                                       'achievement '
+                                                                                                                       'test',
+                                                                                                                       'calculator '
+                                                                                                                       'allowed',
+                                                                                                                       'grade '
+                                                                                                                       '9']},
+          'Misc_Games/CasinoGames/Roulette_Casino.html': {'educational': False,
+                                                          'tags': ['roulette', 'casino', 'table game']},
+          'Misc_Games/CasinoGames/Royal_Felt_Baccarat.html': {'educational': False,
+                                                              'tags': ['baccarat',
+                                                                       'casino',
+                                                                       'table game']},
+          'Misc_Games/CasinoGames/Royal_Felt_Blackjack.html': {'educational': False,
+                                                               'tags': ['blackjack',
+                                                                        'casino',
+                                                                        'table game']},
+          'Misc_Games/CasinoGames/Texas_Holdem.html': {'educational': False,
+                                                       'tags': ['poker', "Texas Hold'em", 'casino']}},
+ 'filenames': {'WordSearchGenerator.html': {'tags': ['word search', 'puzzle worksheet', 'PDF']},
+               'Circle_Graph_Generator.html': {'tags': ['pie chart',
+                                                        'circle graph',
+                                                        'printable',
+                                                        'math']},
+               'Graph_Paper_Generator.html': {'tags': ['coordinate plane',
+                                                       'graphing',
+                                                       'printable',
+                                                       'math']}},
+ 'folders': [{'prefix': 'Misc_Games/GeographyGames/',
+              'category': 'Word, Trivia & Quiz Games',
+              'subcategory': 'Geography Games',
+              'tags': ['countries', 'maps', 'geography']},
+             {'prefix': 'Teacher_Tools/Printable_Generators/',
+              'category': 'Teacher Tools',
+              'subcategory': 'Printable Generators',
+              'tags': ['teacher printable', 'printable PDF']}]}
+
+
 
 @dataclass
 class Catalog:
     apps: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     filenames: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     folders: List[Tuple[str, Dict[str, Any]]] = field(default_factory=list)
-    source: str = ""
+    source: str = "built-in"
 
 
 def catalog_path_key(raw: str, *, folder: bool = False) -> str:
@@ -1465,7 +1561,7 @@ def catalog_path_key(raw: str, *, folder: bool = False) -> str:
 
 def validate_metadata(value: object, label: str, *, require_category: bool = False) -> Dict[str, Any]:
     if not isinstance(value, dict):
-        raise ValueError(f"{label}: expected a JSON object")
+        raise ValueError(f"{label}: expected a dict")
     allowed = {"category", "subcategory", "title", "tags", "icon", "educational", "canonical", "exclude"}
     unknown = set(value) - allowed
     if unknown:
@@ -1487,42 +1583,35 @@ def validate_metadata(value: object, label: str, *, require_category: bool = Fal
     return dict(value)
 
 
-def load_catalog(path: Path | None) -> Catalog:
-    if path is None or not path.is_file():
-        return Catalog()
-    try:
-        data = json.loads(path.read_text(encoding="utf-8-sig"))
-    except (OSError, ValueError) as exc:
-        raise ValueError(f"Could not read catalog {path}: {exc}") from exc
-    if not isinstance(data, dict) or set(data) - {"version", "apps", "filenames", "folders"}:
-        raise ValueError("Catalog must be a JSON object with only version/apps/filenames/folders fields")
-    if data.get("version", 1) != 1:
-        raise ValueError("Unsupported catalog version; expected 1")
-    result = Catalog(source=str(path))
+@lru_cache(maxsize=1)
+def builtin_catalog() -> Catalog:
+    """Validate and prepare the metadata embedded in this Python script."""
+    data = EMBEDDED_CATALOG_DATA
+    if data.get("version") != 1:
+        raise ValueError("Unsupported embedded catalog version")
+    result = Catalog()
     for group_name, dest in (("apps", result.apps), ("filenames", result.filenames)):
         group = data.get(group_name, {})
         if not isinstance(group, dict):
-            raise ValueError(f"Catalog {group_name} must be a JSON object")
+            raise ValueError(f"Embedded {group_name} must be a dict")
         for raw_key, raw_meta in group.items():
             key = catalog_path_key(raw_key)
             if group_name == "filenames" and "/" in key:
-                raise ValueError(f"Catalog filename rule must not contain a folder: {raw_key}")
+                raise ValueError(f"Filename rule must not contain a folder: {raw_key}")
             if key in dest:
-                raise ValueError(f"Duplicate case-insensitive catalog key: {raw_key}")
+                raise ValueError(f"Duplicate case-insensitive key: {raw_key}")
             dest[key] = validate_metadata(raw_meta, f"{group_name}.{raw_key}")
-    folders = data.get("folders", [])
-    if not isinstance(folders, list):
-        raise ValueError("Catalog folders must be a list")
     seen = set()
-    for i, rule in enumerate(folders):
+    for i, rule in enumerate(data.get("folders", [])):
         if not isinstance(rule, dict) or "prefix" not in rule:
-            raise ValueError(f"Catalog folders[{i}] needs a prefix")
-        key = catalog_path_key(rule["prefix"], folder=True)
-        if key in seen:
-            raise ValueError(f"Duplicate folder prefix in catalog: {key}")
-        seen.add(key)
-        meta = validate_metadata({k: v for k, v in rule.items() if k != "prefix"}, f"folders[{i}]", require_category=True)
-        result.folders.append((key, meta))
+            raise ValueError(f"Embedded folders[{i}] needs a prefix")
+        prefix = catalog_path_key(rule["prefix"], folder=True)
+        if prefix in seen:
+            raise ValueError(f"Duplicate folder prefix: {prefix}")
+        seen.add(prefix)
+        meta = validate_metadata({k: v for k, v in rule.items() if k != "prefix"},
+                                 f"folders[{i}]", require_category=True)
+        result.folders.append((prefix, meta))
     result.folders.sort(key=lambda pair: -len(pair[0]))
     return result
 
@@ -1601,8 +1690,8 @@ def classify_with_source(rel_path: str, catalog: Catalog) -> Tuple[str, str, str
 
 @lru_cache(maxsize=None)
 def categorize_file(rel_path: str) -> Tuple[str, str]:
-    """Backward-compatible built-in classification (no external catalog)."""
-    category, subcategory, _ = classify_with_source(rel_path, Catalog())
+    """Classification using the Python-embedded rules and metadata."""
+    category, subcategory, _ = classify_with_source(rel_path, builtin_catalog())
     return category, subcategory
 
 
@@ -1680,7 +1769,7 @@ def scan_files(
     prefer_page_titles: bool = False,
 ) -> List[FileEntry]:
     entries: List[FileEntry] = []
-    catalog = catalog or Catalog()
+    catalog = catalog or builtin_catalog()
     git_timestamps = git_last_changed(root) if recent_source == "git" else {}
     if recent_source == "git" and not git_timestamps:
         print("Note: Git dates unavailable; falling back to filesystem dates.")
@@ -2107,9 +2196,39 @@ def normalized_duplicate_title(title: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip()
 
 
+def find_identical_files(root: Path, entries: Sequence[FileEntry]) -> List[List[str]]:
+    """Detect byte-for-byte duplicates even when their filenames or titles differ.
+
+    Size checking avoids hashing every large application on each index build.
+    """
+    same_size: Dict[int, List[FileEntry]] = collections.defaultdict(list)
+    for entry in entries:
+        try:
+            same_size[(root / entry.rel_path).stat().st_size].append(entry)
+        except OSError:
+            pass
+    identical: List[List[str]] = []
+    for group in same_size.values():
+        if len(group) < 2:
+            continue
+        hashes: Dict[str, List[str]] = collections.defaultdict(list)
+        for entry in group:
+            path = root / entry.rel_path
+            try:
+                hasher = hashlib.sha256()
+                with path.open("rb") as stream:
+                    for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                        hasher.update(chunk)
+                hashes[hasher.hexdigest()].append(entry.rel_path)
+            except OSError:
+                continue
+        identical.extend(sorted(paths) for paths in hashes.values() if len(paths) > 1)
+    return sorted(identical)
+
+
 def audit_entries(root: Path, raw: Sequence[FileEntry], indexed: Sequence[FileEntry],
                   catalog: Catalog, recent_source: str) -> Dict[str, Any]:
-    """Report questionable classifications; never auto-delete or move a file."""
+    """Find actionable issues without altering or deleting any application."""
     by_title: Dict[str, List[FileEntry]] = collections.defaultdict(list)
     counts: Dict[str, int] = collections.Counter()
     categories: Dict[str, Dict[str, int]] = collections.defaultdict(lambda: collections.Counter())
@@ -2120,27 +2239,21 @@ def audit_entries(root: Path, raw: Sequence[FileEntry], indexed: Sequence[FileEn
         categories[entry.category][entry.subcategory] += 1
 
     duplicate_groups = []
-    identical_groups = []
     for title, group in sorted(by_title.items()):
         if not title or len(group) <= 1:
             continue
-        paths = sorted(e.rel_path for e in group)
-        automatically_suppressed = title in DEDUPLICATE_DISPLAY_TITLES or any(e.canonical for e in group)
-        duplicate_groups.append({"title": title, "paths": paths, "automatically_suppressed": automatically_suppressed})
-        hashes: Dict[str, List[str]] = collections.defaultdict(list)
-        for e in group:
-            try:
-                digest = hashlib.sha256((root / e.rel_path).read_bytes()).hexdigest()
-                hashes[digest].append(e.rel_path)
-            except OSError:
-                continue
-        for duplicate_paths in hashes.values():
-            if len(duplicate_paths) > 1:
-                identical_groups.append(sorted(duplicate_paths))
+        duplicate_groups.append({
+            "title": title,
+            "paths": sorted(e.rel_path for e in group),
+            "automatically_suppressed": (title in DEDUPLICATE_DISPLAY_TITLES or
+                                         any(e.canonical for e in group)),
+        })
 
+    identical_groups = find_identical_files(root, raw)
     indexed_paths = {e.rel_path.casefold() for e in indexed}
-    unclassified = sorted(e.rel_path for e in indexed if e.category == "Other / Unsorted")
-    fallback = sorted(e.rel_path for e in indexed if e.classification_source in ("legacy-keyword", "unclassified", "legacy-subject-test"))
+    unclassified = sorted(e.rel_path for e in raw if e.category == "Other / Unsorted")
+    fallback = sorted(e.rel_path for e in indexed if e.classification_source in
+                      ("legacy-keyword", "unclassified", "legacy-subject-test"))
     missing = sorted(e.rel_path for e in indexed if not (root / e.rel_path).is_file())
     all_scanned_paths = {e.rel_path.casefold() for e in raw}
     stale_metadata = sorted(path for path in catalog.apps if path not in all_scanned_paths)
@@ -2148,15 +2261,16 @@ def audit_entries(root: Path, raw: Sequence[FileEntry], indexed: Sequence[FileEn
     warnings = []
     if unclassified:
         warnings.append(f"{len(unclassified)} unclassified app(s) need review")
-    unexpected_duplicates = [g for g in duplicate_groups if not g["automatically_suppressed"]]
-    if unexpected_duplicates:
-        warnings.append(f"{len(unexpected_duplicates)} unresolved display-title group(s) need review")
+    if duplicate_groups:
+        warnings.append(f"{len(duplicate_groups)} duplicate display-title group(s) found (including automatically hidden copies)")
+    if identical_groups:
+        warnings.append(f"{len(identical_groups)} byte-identical file group(s) found")
     if missing:
         warnings.append(f"{len(missing)} indexed path(s) do not exist")
     if stale_metadata:
-        warnings.append(f"{len(stale_metadata)} catalog app path(s) no longer exist")
+        warnings.append(f"{len(stale_metadata)} embedded app override(s) refer to missing paths")
     if fallback:
-        warnings.append(f"{len(fallback)} app(s) use legacy classification rules (informational)")
+        warnings.append(f"{len(fallback)} app(s) rely on legacy keyword classification and need review")
 
     return {
         "generated": datetime.now().astimezone().isoformat(timespec="seconds"),
@@ -2166,7 +2280,7 @@ def audit_entries(root: Path, raw: Sequence[FileEntry], indexed: Sequence[FileEn
             "scanned": len(raw), "indexed": len(indexed), "suppressed_known_duplicates": len(suppressed),
             "educational": sum(is_educational(e) for e in indexed),
             "unclassified": len(unclassified), "duplicate_title_groups": len(duplicate_groups),
-            "unresolved_duplicate_title_groups": len(unexpected_duplicates),
+            "unresolved_duplicate_title_groups": sum(not g["automatically_suppressed"] for g in duplicate_groups),
             "identical_content_groups": len(identical_groups),
             "legacy_rules_used": len(fallback), "stale_catalog_paths": len(stale_metadata),
         },
@@ -2183,19 +2297,56 @@ def audit_entries(root: Path, raw: Sequence[FileEntry], indexed: Sequence[FileEn
     }
 
 
+def audit_has_problems(report: Dict[str, Any]) -> bool:
+    """Only actionable issues warrant an on-disk audit file.
+
+    Intentionally suppressed duplicates still count: a second physical copy
+    remains on disk even if only one link is shown in the HTML index.
+    """
+    summary = report["summary"]
+    return any((
+        summary["unclassified"], summary["duplicate_title_groups"],
+        summary["identical_content_groups"], summary["legacy_rules_used"],
+        summary["stale_catalog_paths"], report["missing_index_targets"],
+    ))
+
+
 def write_audit(path: Path, report: Dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def remove_stale_audit(path: Path) -> bool:
+    """Remove an earlier report only when it is recognizable as our audit JSON."""
+    if not path.is_file():
+        return False
+    try:
+        old = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError):
+        print(f"Note: {path} is not a readable audit report; preserving it.")
+        return False
+    if not (isinstance(old, dict) and isinstance(old.get("summary"), dict) and
+            "generated" in old and "duplicate_titles" in old and "unclassified_paths" in old):
+        print(f"Note: {path} does not look like an index audit; preserving it.")
+        return False
+    try:
+        path.unlink()
+    except OSError as exc:
+        print(f"Warning: Could not remove clean audit report {path}: {exc}")
+        return False
+    return True
 
 
 def print_audit(report: Dict[str, Any]) -> None:
     summary = report["summary"]
     print("\nINDEX AUDIT")
     print(f"  Apps indexed: {summary['indexed']} | Education: {summary['educational']}")
-    print(f"  Unclassified: {summary['unclassified']} | Unresolved duplicate titles: {summary['unresolved_duplicate_title_groups']}")
-    print(f"  Known duplicates hidden: {summary['suppressed_known_duplicates']} | Legacy fallback: {summary['legacy_rules_used']}")
+    print(f"  Unclassified: {summary['unclassified']} | Duplicate titles: {summary['duplicate_title_groups']} | Byte duplicates: {summary['identical_content_groups']}")
+    print(f"  Known duplicates hidden in index: {summary['suppressed_known_duplicates']} | Legacy fallback: {summary['legacy_rules_used']}")
     for warning in report["warnings"]:
         print(f"  Review: {warning}")
+    if not report["warnings"]:
+        print("  No problems detected.")
 
 
 # ---------------------------------------------------------------------------
@@ -2216,12 +2367,13 @@ def main() -> int:
     parser.add_argument("--no-folder-view", action="store_true", help="Hide the original repository folder view at the bottom.")
     parser.add_argument("--edu-out", default="indexEDU.html", help="Education-only output HTML filename. Default: indexEDU.html.")
     parser.add_argument("--no-edu-index", action="store_true", help="Do not write the education-only indexEDU.html file.")
-    parser.add_argument("--catalog", default="index_catalog.json", help="Optional per-app JSON metadata file, relative to --root.")
-    parser.add_argument("--no-catalog", action="store_true", help="Ignore the optional catalog file.")
-    parser.add_argument("--audit-out", default="index_audit.json", help="JSON organization audit report, relative to --root.")
-    parser.add_argument("--no-audit", action="store_true", help="Do not write the JSON audit report.")
+    # Backward-compatible obsolete switches: accepted but no longer read a JSON file.
+    parser.add_argument("--catalog", default=None, help=argparse.SUPPRESS)
+    parser.add_argument("--no-catalog", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--audit-out", default="index_audit.json", help="Issue-only audit JSON filename, relative to --root.")
+    parser.add_argument("--no-audit", action="store_true", help="Do not create or remove an audit report.")
     parser.add_argument("--audit-only", action="store_true", help="Generate the audit without writing either HTML index.")
-    parser.add_argument("--strict-audit", action="store_true", help="Exit with status 2 for unclassified, missing, or duplicate-title apps.")
+    parser.add_argument("--strict-audit", action="store_true", help="Exit with status 2 if the organization audit finds any problems.")
     parser.add_argument("--recent-source", choices=("filesystem", "git"), default="filesystem",
                         help="Recent Changes timestamps: filesystem (default) or last Git commit per path.")
     parser.add_argument("--prefer-page-titles", action="store_true", help="Use short HTML <title> text for non-index pages where available.")
@@ -2232,13 +2384,12 @@ def main() -> int:
     if not root.exists() or not root.is_dir():
         raise SystemExit(f"Root folder does not exist or is not a directory: {root}")
 
-    catalog_path = None if args.no_catalog else (root / args.catalog)
     try:
-        catalog = load_catalog(catalog_path)
+        catalog = builtin_catalog()
     except ValueError as error:
         parser.error(str(error))
-    if catalog.source:
-        print(f"Using catalog: {catalog.source}")
+    if args.catalog or args.no_catalog:
+        print("Note: external catalog switches are obsolete; all metadata is embedded in make_indexGen.py.")
 
     raw_entries = scan_files(
         root=root,
@@ -2260,13 +2411,18 @@ def main() -> int:
                                 e.title.casefold(), e.rel_path.casefold()))
     audit = audit_entries(root, raw_entries, entries, catalog, args.recent_source)
     print_audit(audit)
+    issues_found = audit_has_problems(audit)
     if not args.no_audit:
-        write_audit(root / args.audit_out, audit)
-        print(f"Wrote audit: {root / args.audit_out}")
+        audit_path = root / args.audit_out
+        if issues_found:
+            write_audit(audit_path, audit)
+            print(f"Issues found. Wrote audit: {audit_path}")
+        elif remove_stale_audit(audit_path):
+            print(f"Clean scan. Removed previous audit: {audit_path}")
+        else:
+            print("Clean scan. No audit JSON needed.")
     if args.audit_only:
-        return 2 if args.strict_audit and (audit["summary"]["unclassified"] or
-                  audit["summary"]["unresolved_duplicate_title_groups"] or audit["summary"]["stale_catalog_paths"] or
-                  audit["missing_index_targets"]) else 0
+        return 2 if args.strict_audit and issues_found else 0
 
     recent_days = max(1, args.recent_days)
     include_folder_view = not args.no_folder_view
@@ -2297,10 +2453,7 @@ def main() -> int:
         print(f"Wrote: {edu_out_path}")
         print(f"Indexed EDU: {len(edu_entries)} files")
 
-    if args.strict_audit and (audit["summary"]["unclassified"] or
-                              audit["summary"]["unresolved_duplicate_title_groups"] or
-                              audit["summary"]["stale_catalog_paths"] or
-                              audit["missing_index_targets"]):
+    if args.strict_audit and issues_found:
         return 2
     return 0
 
