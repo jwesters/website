@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f7f8fa">
+  <meta name="description" content="Create printable circle templates, divided into equal sections. Export directly to PDF, JPG, or BMP.">
+  <title>Circle Graph Generator</title>
+  <style>
+    :root{--ink:#18273b;--ink-2:#334154;--muted:#68758a;--line:#dce3eb;--soft:#edf2f5;--paper:#fff;--bg:#f5f7f9;--accent:#0f776e;--accent-2:#075d56;--accent-wash:#e8f5f2;--radius:16px;--shadow:0 9px 34px rgba(21,40,59,.065)}
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased}
+    button,input,select{font:inherit}
+    button{cursor:pointer}
+    button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid rgba(15,119,110,.25);outline-offset:2px}
+    button:disabled{cursor:wait;opacity:.65}
+    .topbar{background:rgba(255,255,255,.96);border-bottom:1px solid var(--line)}
+    .top-inner{max-width:1510px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px clamp(18px,3.2vw,42px)}
+    .brand{display:flex;align-items:center;gap:13px;min-width:0}
+    .brand-mark{width:42px;height:42px;border-radius:13px;background:#0c6d65;display:grid;place-items:center;color:white;flex:0 0 auto}
+    .brand h1{margin:0;font-size:19px;letter-spacing:-.55px;line-height:1.2;font-weight:760}
+    .brand p{margin:4px 0 0;font-size:12px;color:var(--muted)}
+    .top-tag{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;background:white;padding:8px 12px;color:#536577;font-size:12px;white-space:nowrap}
+    .top-tag svg{color:var(--accent)}
+    .app{max-width:1510px;margin:0 auto;display:grid;grid-template-columns:minmax(320px,390px) minmax(0,1fr);gap:24px;padding:24px clamp(18px,3.2vw,42px) 36px;align-items:start}
+    .sidebar{display:flex;flex-direction:column;gap:14px}
+    .panel,.preview-panel{border:1px solid var(--line);border-radius:var(--radius);background:var(--paper);box-shadow:var(--shadow)}
+    .panel{padding:20px}
+    .panel-head{display:flex;gap:10px;align-items:center;margin-bottom:17px}
+    .panel-icon{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--accent-wash);color:var(--accent)}
+    .panel-title{font-size:14px;font-weight:760;letter-spacing:-.1px}
+    .panel-subtitle{font-size:12px;color:var(--muted);margin-top:3px}
+    .control-block+.control-block{margin-top:17px}
+    .field-title{display:block;font-size:12px;font-weight:730;margin-bottom:8px;color:#38485b}
+    .field-title .hint{font-weight:500;color:var(--muted)}
+    .segmented{display:flex;gap:3px;border-radius:11px;padding:4px;background:#f0f3f7;border:1px solid #e7ecf2}
+    .segmented button{background:transparent;border:0;border-radius:8px;flex:1;min-height:37px;color:#647287;font-weight:650;font-size:12px;padding:7px 10px;white-space:nowrap}
+    .segmented button[aria-pressed="true"]{background:white;color:var(--accent-2);box-shadow:0 1px 4px #20354b1b}
+    .value-row{display:flex;align-items:center;gap:10px;justify-content:space-between}
+    .stepper{display:inline-flex;align-items:center;border:1px solid #d3dce6;border-radius:11px;overflow:hidden;background:#fff;height:43px}
+    .stepper button{border:0;background:white;width:40px;height:100%;font-size:22px;line-height:1;color:#486075}
+    .stepper button:hover{background:#eff6f4;color:var(--accent)}
+    .stepper input{border:0;outline:none;width:60px;text-align:center;font-size:17px;font-weight:750;color:var(--ink);appearance:textfield;-moz-appearance:textfield}
+    .stepper input::-webkit-inner-spin-button,.stepper input::-webkit-outer-spin-button{appearance:none;margin:0}
+    .pills{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
+    .pill{background:#f6f8fa;border:1px solid #e0e6ed;border-radius:8px;min-height:29px;padding:5px 11px;font-size:12px;font-weight:680;color:#566479}
+    .pill:hover{border-color:#7bb2a9}
+    .pill[aria-pressed="true"]{background:var(--accent-wash);border-color:#a9d9d0;color:var(--accent-2)}
+    .select-wrap{position:relative}
+    select{appearance:none;-webkit-appearance:none;width:100%;padding:10px 32px 10px 11px;height:41px;border-radius:9px;border:1px solid #d4dde6;background:white;font-weight:620;color:var(--ink)}
+    .select-wrap::after{content:"";position:absolute;width:7px;height:7px;border-right:2px solid #657489;border-bottom:2px solid #657489;transform:rotate(45deg);right:14px;top:14px;pointer-events:none}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .rule{height:1px;background:var(--line);margin:18px 0}
+    .toggle-row{display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer;user-select:none}
+    .toggle-name{font-size:13px;font-weight:680;color:#334558;display:block}
+    .toggle-note{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.35}
+    .switch{flex:none;position:relative;width:40px;height:24px;border-radius:99px;background:#becbd5;transition:background .18s}
+    .switch::before{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:white;left:3px;top:3px;box-shadow:0 1px 3px #0002;transition:transform .18s}
+    .switch input{position:absolute;inset:0;opacity:0;cursor:pointer;margin:0}
+    .switch:has(input:checked){background:var(--accent)}
+    .switch:has(input:checked)::before{transform:translateX(16px)}
+    .range-row{display:flex;align-items:center;gap:12px}
+    .range-row input{width:100%;min-width:0;accent-color:var(--accent);height:19px;cursor:pointer}
+    .range-value{width:61px;flex:0 0 61px;text-align:right;color:var(--accent-2);font-weight:770;font-variant-numeric:tabular-nums}
+    .range-minmax{display:flex;justify-content:space-between;color:#8996a5;font-size:10px;padding:2px 1px 0}
+    .disabled-content{opacity:.48;pointer-events:none}
+    .sidebar-footer{display:flex;justify-content:space-between;align-items:center;padding:0 3px}
+    .reset{border:0;background:none;padding:9px 4px;color:#6b7b8d;font-size:12px;font-weight:650;display:flex;align-items:center;gap:6px}
+    .reset:hover{color:#b33333}
+    .saved{font-size:11px;color:#8191a1}
+    .preview-panel{padding:22px;position:sticky;top:18px;min-width:0}
+    .preview-header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+    .preview-header h2{margin:0;font-size:16px;font-weight:760;letter-spacing:-.3px}
+    .preview-header p{margin:5px 0 0;font-size:12px;color:var(--muted)}
+    .preview-badge{color:var(--accent-2);background:var(--accent-wash);border:1px solid #ccece6;border-radius:20px;padding:7px 10px;font-size:11px;font-weight:740;white-space:nowrap}
+    .preview-stage{border:1px solid #e2e7ee;background:repeating-linear-gradient(45deg,#f1f4f7,#f1f4f7 10px,#f5f7fa 10px,#f5f7fa 20px);border-radius:12px;padding:22px;min-height:300px;display:flex;justify-content:center;align-items:center;overflow:hidden}
+    .paper{width:min(100%,560px);display:block;background:#fff;box-shadow:0 4px 9px #26334016,0 13px 34px #2633401b;flex:0 1 auto}
+    .paper svg{display:block;width:100%;height:auto}
+    .preview-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:14px 0 20px;color:#6f7e90;font-size:11px;flex-wrap:wrap}
+    .export-panel{border-top:1px solid var(--line);padding-top:19px}
+    .export-title{font-size:14px;font-weight:750;margin-bottom:5px}
+    .export-subtitle{font-size:12px;color:var(--muted);margin-bottom:14px}
+    .downloads{display:grid;grid-template-columns:1.42fr 1fr 1fr;gap:9px}
+    .download{display:flex;justify-content:center;align-items:center;gap:8px;min-height:47px;border-radius:10px;font-size:13px;font-weight:750;border:1px solid #cdd8e2;background:#fff;color:#2f485b;transition:background .12s,border-color .12s,transform .12s}
+    .download:hover{background:#f1f7f6;border-color:#9bbdb8;transform:translateY(-1px)}
+    .download.primary{background:var(--accent);color:white;border-color:var(--accent)}
+    .download.primary:hover{background:var(--accent-2)}
+    .download svg{flex:none}
+    .export-bottom{display:flex;gap:11px;align-items:center;justify-content:space-between;margin-top:14px;flex-wrap:wrap}
+    .pdf-note{font-size:11px;color:#66778a;display:flex;align-items:center;gap:5px}
+    .pdf-note svg{color:var(--accent)}
+    .raster-setting{display:flex;gap:8px;align-items:center;font-size:11px;color:#68788b}
+    .raster-setting select{font-size:11px;width:auto;height:31px;padding:4px 28px 4px 10px}
+    .raster-setting .select-wrap::after{top:9px;right:11px;width:6px;height:6px}
+    .toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,20px);color:#fff;background:#1b3540;border-radius:10px;padding:12px 17px;box-shadow:0 12px 36px #0003;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;font-size:13px;z-index:10;max-width:min(calc(100vw - 35px),520px);text-align:center}
+    .toast.show{opacity:1;transform:translate(-50%,0)}
+    .footer{display:flex;justify-content:center;padding:0 18px 24px;color:#8993a1;font-size:11px;text-align:center}
+    svg{stroke-linecap:round;stroke-linejoin:round}
+    @media(max-width:950px){.app{grid-template-columns:minmax(300px,345px) minmax(0,1fr);gap:16px;padding:18px}.panel{padding:17px}.preview-panel{padding:17px}.preview-stage{padding:14px}.downloads{gap:7px}.download{font-size:12px}}
+    @media(max-width:740px){.app{grid-template-columns:minmax(0,1fr);gap:16px;padding:17px 16px 28px}.sidebar{display:grid;grid-template-columns:1fr 1fr;align-items:stretch}.sidebar-footer{grid-column:1/-1}.preview-panel{position:static}.top-inner{padding:14px 17px}.brand h1{font-size:17px}.top-tag{display:none}}
+    @media(max-width:570px){.sidebar{display:flex}.panel{padding:17px}.preview-panel{padding:15px}.preview-stage{padding:12px}.preview-header{margin-bottom:12px}.preview-footer{font-size:10px;margin:12px 0 17px}.download{min-height:46px}.downloads{grid-template-columns:1.18fr 1fr 1fr;gap:7px}.download svg{width:15px;height:15px}.export-bottom{align-items:flex-start}.brand-mark{width:39px;height:39px}}
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important}}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="top-inner">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg width="27" height="27" viewBox="0 0 27 27" fill="none"><circle cx="13.5" cy="13.5" r="10.3" stroke="currentColor" stroke-width="1.8"/><path d="M13.5 13.5V3.2M13.5 13.5l8.9-5.15M13.5 13.5l8.9 5.15M13.5 13.5v10.3M13.5 13.5l-8.9 5.15M13.5 13.5 4.6 8.35" stroke="currentColor" stroke-width="1.2"/></svg>
+        </div>
+        <div><h1>Circle Graph Generator</h1><p>Create custom, printable circle worksheets</p></div>
+      </div>
+      <div class="top-tag">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg>
+        Works offline · No sign-in
+      </div>
+    </div>
+  </header>
+  <div class="app">
+    <aside class="sidebar" aria-label="Worksheet options">
+      <section class="panel">
+        <div class="panel-head">
+          <div class="panel-icon" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6"/></svg></div>
+          <div><div class="panel-title">Page setup</div><div class="panel-subtitle">Choose your worksheet format</div></div>
+        </div>
+        <div class="control-block">
+          <label class="field-title">Paper size</label>
+          <div class="segmented" id="paperButtons" role="group" aria-label="Paper size">
+            <button type="button" data-paper="letter" aria-pressed="true">US Letter</button>
+            <button type="button" data-paper="a4" aria-pressed="false">A4</button>
+          </div>
+        </div>
+        <div class="control-block">
+          <label class="field-title">Orientation</label>
+          <div class="segmented" id="orientationButtons" role="group" aria-label="Page orientation">
+            <button type="button" data-orientation="portrait" aria-pressed="true">Portrait</button>
+            <button type="button" data-orientation="landscape" aria-pressed="false">Landscape</button>
+          </div>
+        </div>
+        <div class="rule"></div>
+        <label class="toggle-row" for="nameDate">
+          <div><span class="toggle-name">Name &amp; date lines</span><span class="toggle-note">Blank lines students can write on</span></div>
+          <span class="switch"><input id="nameDate" type="checkbox" checked aria-label="Include blank name and date lines"></span>
+        </label>
+      </section>
+      <section class="panel">
+        <div class="panel-head">
+          <div class="panel-icon" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2"/></svg></div>
+          <div><div class="panel-title">Circles</div><div class="panel-subtitle">Evenly spaced, same size on the page</div></div>
+        </div>
+        <div class="value-row">
+          <label class="field-title" for="circleCount" style="margin:0">How many circles?</label>
+          <div class="stepper"><button id="circleMinus" type="button" aria-label="Fewer circles">−</button><input id="circleCount" type="number" min="1" max="16" step="1" value="6" inputmode="numeric" aria-label="Number of circles"><button id="circlePlus" type="button" aria-label="More circles">+</button></div>
+        </div>
+        <div class="pills" id="circlePresets" role="group" aria-label="Common circle counts">
+          <button class="pill" type="button" data-count="1">1</button><button class="pill" type="button" data-count="2">2</button><button class="pill" type="button" data-count="4">4</button><button class="pill" type="button" data-count="6">6</button><button class="pill" type="button" data-count="8">8</button><button class="pill" type="button" data-count="12">12</button><button class="pill" type="button" data-count="16">16</button>
+        </div>
+        <div class="control-block">
+          <div class="value-row" style="margin-bottom:8px"><label class="field-title" for="circleScale" style="margin:0">Circle size</label><output class="range-value" id="circleScaleOutput" for="circleScale">100%</output></div>
+          <div class="range-row"><input type="range" id="circleScale" min="50" max="100" step="5" value="100" aria-label="Circle size"></div>
+          <div class="range-minmax"><span>Smaller</span><span>Largest fit</span></div>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="panel-head">
+          <div class="panel-icon" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="8"/><path d="M12 4v8l7 4M12 12l-7 6"/></svg></div>
+          <div><div class="panel-title">Divisions &amp; lines</div><div class="panel-subtitle">Split each circle into equal sectors</div></div>
+        </div>
+        <label class="toggle-row" for="divisionsOn">
+          <div><span class="toggle-name">Show dividing lines</span><span class="toggle-note">Turn off for plain, empty circles</span></div>
+          <span class="switch"><input id="divisionsOn" type="checkbox" checked aria-label="Draw equal dividing lines"></span>
+        </label>
+        <div class="control-block" id="divisionSettings">
+          <div class="value-row">
+            <label class="field-title" for="sectionCount" style="margin:0">Sections per circle</label>
+            <div class="stepper"><button id="sectionMinus" type="button" aria-label="Fewer sections">−</button><input id="sectionCount" type="number" min="1" max="24" step="1" value="8" inputmode="numeric" aria-label="Sections per circle"><button id="sectionPlus" type="button" aria-label="More sections">+</button></div>
+          </div>
+          <div class="pills" id="sectionPresets" role="group" aria-label="Common equal divisions">
+            <button class="pill" type="button" data-sections="2">2</button><button class="pill" type="button" data-sections="3">3</button><button class="pill" type="button" data-sections="4">4</button><button class="pill" type="button" data-sections="6">6</button><button class="pill" type="button" data-sections="8">8</button><button class="pill" type="button" data-sections="10">10</button><button class="pill" type="button" data-sections="12">12</button>
+          </div>
+        </div>
+        <div class="rule"></div>
+        <div class="value-row" style="margin-bottom:8px"><label class="field-title" for="lineWidth" style="margin:0">Line thickness</label><output class="range-value" id="lineWidthOutput" for="lineWidth">1.2 pt</output></div>
+        <div class="range-row"><input type="range" id="lineWidth" min="0.5" max="3" step="0.1" value="1.2" aria-label="Line thickness"></div>
+        <div class="range-minmax"><span>Fine</span><span>Bold</span></div>
+      </section>
+      <div class="sidebar-footer"><button type="button" class="reset" id="resetButton"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 2.5-6.2M3 3v6h6"/></svg> Reset settings</button><span class="saved" id="savedStatus">Settings saved locally</span></div>
+    </aside>
+    <main class="preview-panel">
+      <div class="preview-header">
+        <div><h2>Page preview</h2><p id="previewDescription">6 circles · 8 equal sections each</p></div>
+        <span class="preview-badge">READY TO EXPORT</span>
+      </div>
+      <div class="preview-stage"><div class="paper"><svg id="pageSvg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Worksheet preview" viewBox="0 0 612 792"><rect width="612" height="792" fill="white"/></svg></div></div>
+      <div class="preview-footer"><span id="sizeDescription">US Letter · Portrait · 8.5 × 11 in</span><span id="layoutDescription">Automatically spaced on the page</span></div>
+      <div class="export-panel">
+        <div class="export-title">Download worksheet</div>
+        <div class="export-subtitle">Export exactly what you see, with a white background and no extra decorations.</div>
+        <div class="downloads">
+          <button class="download primary" id="pdfButton" type="button"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m-4-4 4 4 4-4M5 17v3h14v-3"/></svg>Download PDF</button>
+          <button class="download" id="jpgButton" type="button"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4zM4 16l5-5 4 4 3-3 4 4"/></svg>JPG</button>
+          <button class="download" id="bmpButton" type="button"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4zM4 16l5-5 4 4 3-3 4 4"/></svg>BMP</button>
+        </div>
+        <div class="export-bottom">
+          <div class="pdf-note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="m5 12 4 4L19 6"/></svg>PDF is a direct download, not Print to PDF</div>
+          <label class="raster-setting">JPG / BMP quality <span class="select-wrap"><select id="rasterDpi" aria-label="Image export resolution"><option value="150">150 dpi</option><option value="200" selected>200 dpi</option><option value="300">300 dpi</option></select></span></label>
+        </div>
+      </div>
+    </main>
+  </div>
+  <footer class="footer">Designed for clear, classroom-ready worksheets · Your settings stay on this device</footer>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script>
+  (() => {
+    'use strict';
+    const DEFAULTS = Object.freeze({paper:'letter', orientation:'portrait', nameDate:true, count:6, sections:8, dividers:true, circleScale:100, lineWidth:1.2, dpi:200});
+    const STORAGE_KEY = 'circle-graph-generator-settings-v1';
+    const $ = id => document.getElementById(id);
+    const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
+    const num = (v,fallback) => Number.isFinite(Number(v)) && String(v).trim() !== '' ? Number(v) : fallback;
+    const safeState = s => ({
+      paper:s.paper==='a4'?'a4':'letter', orientation:s.orientation==='landscape'?'landscape':'portrait',
+      nameDate:!!s.nameDate, count:clamp(Math.round(num(s.count,6)),1,16),
+      sections:clamp(Math.round(num(s.sections,8)),1,24),dividers:!!s.dividers,
+      circleScale:clamp(Math.round(num(s.circleScale,100)/5)*5,50,100),
+      lineWidth:clamp(Math.round(num(s.lineWidth,1.2)*10)/10,.5,3),
+      dpi:[150,200,300].includes(Number(s.dpi))?Number(s.dpi):200
+    });
+    let state = {...DEFAULTS};
+    try {const saved = localStorage.getItem(STORAGE_KEY);if(saved)state=safeState({...DEFAULTS,...JSON.parse(saved)});}catch(e){}
+    let toastTimer = null, busy = false;
+    const PAGE_SIZES = {letter:[612,792],a4:[595.276,841.89]};
+
+    function geometry(s=state){
+      let [width,height] = PAGE_SIZES[s.paper];
+      if(s.orientation==='landscape')[width,height]=[height,width];
+      const marginX=40, marginBottom=41, contentTop=s.nameDate?91:41;
+      const usableW=width-marginX*2, usableH=height-contentTop-marginBottom;
+      let optimum=null;
+      // Test regular grids, balancing circle size with rows that fill the page evenly.
+      for(let cols=1;cols<=s.count;cols++){
+        const rows=Math.ceil(s.count/cols);
+        const cellW=usableW/cols, cellH=usableH/rows;
+        // Leave at least 11% of each cell as visual breathing room.
+        const diameter=Math.min(cellW*.87,cellH*.87);
+        const candidate={cols,rows,cellW,cellH,diameter};
+        // Prefer fewer empty cells on close matches; prefer near-square grid when tied.
+        const score=diameter-(cols*rows-s.count)*12;
+        if(!optimum||score>optimum.score+.001){optimum={...candidate,score};}
+      }
+      const radius=optimum.diameter*s.circleScale/200;
+      const circles=[];
+      for(let row=0;row<optimum.rows;row++){
+        const remaining=s.count-row*optimum.cols;
+        const inThisRow=Math.min(optimum.cols,remaining);
+        const horizontalShift=(optimum.cols-inThisRow)*optimum.cellW/2;
+        for(let col=0;col<inThisRow;col++){
+          circles.push({x:marginX+horizontalShift+(col+.5)*optimum.cellW, y:contentTop+(row+.5)*optimum.cellH, r:radius});
+        }
+      }
+      const header=s.nameDate?{
+        nameX:marginX, nameBaseY:56, nameLineX:marginX+44, nameLineEnd:width*.595,
+        dateX:width*.673, dateBaseY:56, dateLineX:width*.673+37, dateLineEnd:width-marginX, lineY:59
+      }:null;
+      return {width,height,circles,header,cols:optimum.cols,rows:optimum.rows,lineWidth:s.lineWidth,sections:s.dividers?s.sections:1};
+    }
+    const fmt=v=>Math.round(v*1000)/1000;
+    function addSvg(parent,tag,attr={}){
+      const el=document.createElementNS('http://www.w3.org/2000/svg',tag);
+      for(const [k,v] of Object.entries(attr))el.setAttribute(k,String(v));
+      parent.appendChild(el);return el;
+    }
+    function renderPreview(){
+      const g=geometry(),svg=$('pageSvg');
+      svg.replaceChildren();svg.setAttribute('viewBox',`0 0 ${g.width} ${g.height}`);
+      const desc=addSvg(svg,'title');desc.textContent=`${state.count} circles, ${g.sections===1?'no internal dividing lines':g.sections+' equal sections each'}`;
+      addSvg(svg,'rect',{x:0,y:0,width:g.width,height:g.height,fill:'#fff'});
+      if(g.header){
+        const h=g.header;
+        const group=addSvg(svg,'g',{fill:'#252525','stroke-width':'.8','font-family':'Arial, Helvetica, sans-serif','font-size':'10.5'});
+        const name=addSvg(group,'text',{x:h.nameX,y:h.nameBaseY});name.textContent='Name:';
+        const date=addSvg(group,'text',{x:h.dateX,y:h.dateBaseY});date.textContent='Date:';
+        addSvg(group,'line',{x1:h.nameLineX,y1:h.lineY,x2:h.nameLineEnd,y2:h.lineY,stroke:'#333'});
+        addSvg(group,'line',{x1:h.dateLineX,y1:h.lineY,x2:h.dateLineEnd,y2:h.lineY,stroke:'#333'});
+      }
+      const layer=addSvg(svg,'g',{fill:'none',stroke:'#141414','stroke-width':g.lineWidth,'stroke-linejoin':'round','stroke-linecap':'round'});
+      for(const c of g.circles){
+        addSvg(layer,'circle',{cx:fmt(c.x),cy:fmt(c.y),r:fmt(c.r)});
+        if(g.sections>=2){
+          for(let k=0;k<g.sections;k++){
+            const angle=-Math.PI/2+2*Math.PI*k/g.sections;
+            addSvg(layer,'line',{x1:fmt(c.x),y1:fmt(c.y),x2:fmt(c.x+Math.cos(angle)*c.r),y2:fmt(c.y+Math.sin(angle)*c.r)});
+          }
+        }
+      }
+      const pageName=state.paper==='letter'?'US Letter':'A4';
+      const sizeLabel=state.paper==='letter'?'8.5 × 11 in':'210 × 297 mm';
+      $('sizeDescription').textContent=`${pageName} · ${state.orientation==='portrait'?'Portrait':'Landscape'} · ${sizeLabel}`;
+      $('previewDescription').textContent=`${state.count} ${state.count===1?'circle':'circles'} · ${g.sections===1?'no internal lines':g.sections+' equal sections each'}`;
+      $('layoutDescription').textContent=`${g.cols} ${g.cols===1?'column':'columns'} × ${g.rows} ${g.rows===1?'row':'rows'} · Even spacing`;
+    }
+    function sync(){
+      for(const el of document.querySelectorAll('[data-paper]'))el.setAttribute('aria-pressed',String(el.dataset.paper===state.paper));
+      for(const el of document.querySelectorAll('[data-orientation]'))el.setAttribute('aria-pressed',String(el.dataset.orientation===state.orientation));
+      for(const el of document.querySelectorAll('[data-count]'))el.setAttribute('aria-pressed',String(Number(el.dataset.count)===state.count));
+      for(const el of document.querySelectorAll('[data-sections]'))el.setAttribute('aria-pressed',String(Number(el.dataset.sections)===state.sections && state.dividers));
+      $('nameDate').checked=state.nameDate;
+      $('divisionsOn').checked=state.dividers;
+      $('divisionSettings').classList.toggle('disabled-content',!state.dividers);
+      $('divisionSettings').setAttribute('aria-disabled',String(!state.dividers));
+      $('sectionCount').disabled=!state.dividers;$('sectionMinus').disabled=!state.dividers;$('sectionPlus').disabled=!state.dividers;
+      for(const button of $('sectionPresets').querySelectorAll('button'))button.disabled=!state.dividers;
+      $('circleCount').value=state.count;$('sectionCount').value=state.sections;
+      $('circleScale').value=state.circleScale;$('circleScaleOutput').textContent=state.circleScale+'%';
+      $('lineWidth').value=state.lineWidth;$('lineWidthOutput').textContent=state.lineWidth.toFixed(1)+' pt';
+      $('rasterDpi').value=state.dpi;
+      renderPreview();
+    }
+    function update(patch){
+      state=safeState({...state,...patch});
+      try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){$('savedStatus').textContent='Settings on this page only';}
+      sync();
+    }
+    function showToast(message){
+      const toast=$('toast');toast.textContent=message;toast.classList.add('show');
+      clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),3200);
+    }
+    for(const el of document.querySelectorAll('[data-paper]'))el.addEventListener('click',()=>update({paper:el.dataset.paper}));
+    for(const el of document.querySelectorAll('[data-orientation]'))el.addEventListener('click',()=>update({orientation:el.dataset.orientation}));
+    for(const el of document.querySelectorAll('[data-count]'))el.addEventListener('click',()=>update({count:Number(el.dataset.count)}));
+    for(const el of document.querySelectorAll('[data-sections]'))el.addEventListener('click',()=>update({sections:Number(el.dataset.sections)}));
+    $('circleMinus').addEventListener('click',()=>update({count:state.count-1}));
+    $('circlePlus').addEventListener('click',()=>update({count:state.count+1}));
+    $('sectionMinus').addEventListener('click',()=>update({sections:state.sections-1}));
+    $('sectionPlus').addEventListener('click',()=>update({sections:state.sections+1}));
+    $('circleCount').addEventListener('change',e=>update({count:e.target.value}));
+    $('circleCount').addEventListener('keydown',e=>{if(e.key==='Enter')e.target.blur();});
+    $('sectionCount').addEventListener('change',e=>update({sections:e.target.value}));
+    $('sectionCount').addEventListener('keydown',e=>{if(e.key==='Enter')e.target.blur();});
+    $('circleScale').addEventListener('input',e=>update({circleScale:Number(e.target.value)}));
+    $('lineWidth').addEventListener('input',e=>update({lineWidth:Number(e.target.value)}));
+    $('nameDate').addEventListener('change',e=>update({nameDate:e.target.checked}));
+    $('divisionsOn').addEventListener('change',e=>update({dividers:e.target.checked}));
+    $('rasterDpi').addEventListener('change',e=>update({dpi:Number(e.target.value)}));
+    $('resetButton').addEventListener('click',()=>{if(confirm('Reset all worksheet settings to their defaults?'))update(DEFAULTS);});
+
+    function baseFilename(){
+      const part=state.dividers&&state.sections>=2?`${state.sections}-sections`:'undivided';
+      return `Circle_Graphs_${state.count}-circles_${part}_${state.paper}_${state.orientation}`;
+    }
+    function downloadBlob(blob,filename){
+      const url=URL.createObjectURL(blob),anchor=document.createElement('a');
+      anchor.href=url;anchor.download=filename;anchor.style.display='none';
+      document.body.appendChild(anchor);anchor.click();anchor.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),60000);
+    }
+    // PDF 1.4 written directly using vector path commands: this does not use window.print().
+    function makePDF(g){
+      const commands=[];
+      const y=top=>fmt(g.height-top);
+      const n=fmt;
+      commands.push('1 J 1 j 0 G 0 g');
+      if(g.header){
+        const h=g.header;
+        commands.push('BT /F1 10.5 Tf');
+        commands.push(`1 0 0 1 ${n(h.nameX)} ${y(h.nameBaseY)} Tm (Name:) Tj`);
+        commands.push(`1 0 0 1 ${n(h.dateX)} ${y(h.dateBaseY)} Tm (Date:) Tj`);
+        commands.push('ET');
+        commands.push('.8 w');
+        commands.push(`${n(h.nameLineX)} ${y(h.lineY)} m ${n(h.nameLineEnd)} ${y(h.lineY)} l S`);
+        commands.push(`${n(h.dateLineX)} ${y(h.lineY)} m ${n(h.dateLineEnd)} ${y(h.lineY)} l S`);
+      }
+      commands.push(`${n(g.lineWidth)} w`);
+      const k=.5522847498307936;
+      for(const c of g.circles){
+        const x=c.x,cy=y(c.y),r=c.r,a=k*r;
+        // Four cubic Beziers form a crisp vector circle.
+        commands.push(`${n(x+r)} ${n(cy)} m`);
+        commands.push(`${n(x+r)} ${n(cy+a)} ${n(x+a)} ${n(cy+r)} ${n(x)} ${n(cy+r)} c`);
+        commands.push(`${n(x-a)} ${n(cy+r)} ${n(x-r)} ${n(cy+a)} ${n(x-r)} ${n(cy)} c`);
+        commands.push(`${n(x-r)} ${n(cy-a)} ${n(x-a)} ${n(cy-r)} ${n(x)} ${n(cy-r)} c`);
+        commands.push(`${n(x+a)} ${n(cy-r)} ${n(x+r)} ${n(cy-a)} ${n(x+r)} ${n(cy)} c S`);
+        for(let i=0;i<(g.sections>=2?g.sections:0);i++){
+          const angle=-Math.PI/2+2*Math.PI*i/g.sections;
+          commands.push(`${n(x)} ${n(cy)} m ${n(x+Math.cos(angle)*r)} ${n(cy-Math.sin(angle)*r)} l S`);
+        }
+      }
+      const stream=commands.join('\n')+'\n';
+      const body=[
+        '<< /Type /Catalog /Pages 2 0 R >>',
+        '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${n(g.width)} ${n(g.height)}] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>`,
+        `<< /Length ${stream.length} >>\nstream\n${stream}endstream`,
+        '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+        '<< /Title (Circle Graph Worksheet) /Creator (Circle Graph Generator) >>'
+      ];
+      // Only ASCII is written; offsets are byte offsets, suitable for PDF cross-reference table.
+      let pdf='%PDF-1.4\n', offsets=[0];
+      for(let i=0;i<body.length;i++){
+        offsets.push(pdf.length);
+        pdf+=`${i+1} 0 obj\n${body[i]}\nendobj\n`;
+      }
+      const xrefStart=pdf.length;
+      pdf+=`xref\n0 ${body.length+1}\n0000000000 65535 f \n`;
+      for(let i=1;i<offsets.length;i++)pdf+=`${String(offsets[i]).padStart(10,'0')} 00000 n \n`;
+      pdf+=`trailer\n<< /Size ${body.length+1} /Root 1 0 R /Info 6 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`;
+      return new Blob([pdf],{type:'application/pdf'});
+    }
+    function drawCanvas(g,dpi){
+      const canvas=document.createElement('canvas'),s=dpi/72;
+      canvas.width=Math.round(g.width*s);canvas.height=Math.round(g.height*s);
+      const ctx=canvas.getContext('2d',{alpha:false,willReadFrequently:true});
+      if(!ctx)throw new Error('This device could not create an image canvas.');
+      ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+      // Avoid a tiny crop caused by rounding the pixel dimensions.
+      ctx.scale(canvas.width/g.width,canvas.height/g.height);
+      ctx.strokeStyle='#141414';ctx.fillStyle='#252525';
+      ctx.lineCap='round';ctx.lineJoin='round';
+      if(g.header){
+        const h=g.header;
+        ctx.font='10.5px Arial, Helvetica, sans-serif';ctx.textBaseline='alphabetic';
+        ctx.fillText('Name:',h.nameX,h.nameBaseY);ctx.fillText('Date:',h.dateX,h.dateBaseY);
+        ctx.lineWidth=.8;ctx.beginPath();ctx.moveTo(h.nameLineX,h.lineY);ctx.lineTo(h.nameLineEnd,h.lineY);
+        ctx.moveTo(h.dateLineX,h.lineY);ctx.lineTo(h.dateLineEnd,h.lineY);ctx.stroke();
+      }
+      ctx.strokeStyle='#141414';ctx.lineWidth=g.lineWidth;
+      for(const c of g.circles){
+        ctx.beginPath();ctx.arc(c.x,c.y,c.r,0,Math.PI*2);ctx.stroke();
+        if(g.sections>=2){
+          ctx.beginPath();
+          for(let i=0;i<g.sections;i++){
+            const angle=-Math.PI/2+Math.PI*2*i/g.sections;
+            ctx.moveTo(c.x,c.y);ctx.lineTo(c.x+Math.cos(angle)*c.r,c.y+Math.sin(angle)*c.r);
+          }
+          ctx.stroke();
+        }
+      }
+      return canvas;
+    }
+    function canvasBlob(canvas,type,quality){
+      return new Promise((resolve,reject)=>{
+        if(canvas.toBlob){
+          canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Image encoding failed.')),type,quality);
+        }else{
+          try{
+            const raw=atob(canvas.toDataURL(type,quality).split(',')[1]);
+            const arr=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)arr[i]=raw.charCodeAt(i);
+            resolve(new Blob([arr],{type}));
+          }catch(error){reject(error);}
+        }
+      });
+    }
+    // Standard 24-bit, uncompressed Windows BMP. Pixels stored bottom-up in BGR order.
+    function makeBMP(canvas,dpi){
+      const w=canvas.width,h=canvas.height,rowBytes=(w*3+3)&~3,bytes=54+rowBytes*h;
+      const buffer=new ArrayBuffer(bytes),data=new DataView(buffer),out=new Uint8Array(buffer);
+      data.setUint8(0,0x42);data.setUint8(1,0x4d);
+      data.setUint32(2,bytes,true);data.setUint32(10,54,true);
+      data.setUint32(14,40,true);data.setInt32(18,w,true);data.setInt32(22,h,true);
+      data.setUint16(26,1,true);data.setUint16(28,24,true);
+      data.setUint32(34,rowBytes*h,true);
+      data.setInt32(38,Math.round(dpi/0.0254),true);data.setInt32(42,Math.round(dpi/0.0254),true);
+      const ctx=canvas.getContext('2d',{willReadFrequently:true});
+      const rgba=ctx.getImageData(0,0,w,h).data;
+      for(let row=0;row<h;row++){
+        let source=((h-1-row)*w)*4,target=54+row*rowBytes;
+        for(let x=0;x<w;x++){
+          out[target++]=rgba[source+2];out[target++]=rgba[source+1];out[target++]=rgba[source];source+=4;
+        }
+      }
+      return new Blob([buffer],{type:'image/bmp'});
+    }
+    async function exportFile(type){
+      if(busy)return;
+      busy=true;
+      const buttons=[$('pdfButton'),$('jpgButton'),$('bmpButton')];
+      buttons.forEach(button=>button.disabled=true);
+      try{
+        const g=geometry(),filename=baseFilename();
+        if(type==='pdf'){
+          downloadBlob(makePDF(g),filename+'.pdf');
+          showToast('PDF file created and sent to your downloads.');
+        }else{
+          // Yield to the browser so the busy state paints before large BMP encoding.
+          await new Promise(resolve=>setTimeout(resolve,30));
+          const canvas=drawCanvas(g,state.dpi);
+          if(type==='jpg'){
+            const blob=await canvasBlob(canvas,'image/jpeg',.95);
+            downloadBlob(blob,filename+'.jpg');
+            showToast('High-resolution JPG created.');
+          }else{
+            const blob=makeBMP(canvas,state.dpi);
+            downloadBlob(blob,filename+'.bmp');
+            showToast('24-bit BMP file created.');
+          }
+          canvas.width=0;canvas.height=0;
+        }
+      }catch(e){console.error('Export failed:',e);showToast('Unable to export: '+(e.message||'unknown error'));}
+      finally{busy=false;buttons.forEach(button=>button.disabled=false);}
+    }
+    $('pdfButton').addEventListener('click',()=>exportFile('pdf'));
+    $('jpgButton').addEventListener('click',()=>exportFile('jpg'));
+    $('bmpButton').addEventListener('click',()=>exportFile('bmp'));
+    sync();
+  })();
+  </script>
+</body>
+</html>
