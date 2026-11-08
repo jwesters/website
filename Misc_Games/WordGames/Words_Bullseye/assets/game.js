@@ -102,14 +102,24 @@
   }
   function readGame(mode) {
     const item = safeRead(keys[mode]);
-    return isPlayableGame(item,mode) ? item : null;
+    if (!isPlayableGame(item,mode)) return null;
+    // Preserve clues bought in the older game, instead of silently charging twice.
+    if (!Array.isArray(item.hints)) {
+      item.hints = [];
+      if(item.hintsUsed>=1) item.hints.push({type:'length',value:item.secret.length});
+      if(item.hintsUsed>=2) item.hints.push({type:'letter',index:0,char:item.secret[0]});
+      if(item.hintsUsed>=3) item.hints.push({type:'letter',index:item.secret.length-1,char:item.secret.at(-1)});
+    }
+    if(item.hints.length!==item.hintsUsed || item.hints.some(h=>!h || !['letter','length'].includes(h.type) ||
+      (h.type==='letter' && (!Number.isInteger(h.index) || h.index<0 || h.index>=item.secret.length || item.secret[h.index]!==h.char)))) return null;
+    return item;
   }
   function saveGame(){if(game) safeWrite(keys[activeMode],game);}
   function newGame(mode){
     const secret = TARGETS[mode==='random'?randomIndex():dailyIndex(dateToday())];
     stats[mode].played++;
     writeStats();
-    return {version:1,mode,date:mode==='daily'?dateToday():null,secret,guesses:[],hintsUsed:0,finished:false,startedAt:Date.now(),finishedAt:null};
+    return {version:2,mode,date:mode==='daily'?dateToday():null,secret,guesses:[],hints:[],hintsUsed:0,finished:false,startedAt:Date.now(),finishedAt:null};
   }
   function startMode(mode, fresh=false) {
     if (!['random','daily'].includes(mode)) return;
@@ -146,7 +156,7 @@
       $('resume-button').dataset.mode=found.mode;
     }
   }
-  function score() { return game.guesses.length + game.hintsUsed*2; }
+  function score() { return game.guesses.length + game.hintsUsed*3; }
   function bounds() {
     let after=null,before=null;
     for(const item of game.guesses) {
@@ -155,6 +165,32 @@
     }
     return {after,before};
   }
+  function commonPrefix(left,right) {
+    if (!left || !right) return '';
+    let i=0;
+    while(i<left.length && i<right.length && left[i]===right[i]) i++;
+    return left.slice(0,i);
+  }
+  function knownPrefix() {
+    const {after,before}=bounds();
+    let known=commonPrefix(after,before);
+    // Extend with already purchased letter clues, but never re-purchase a known letter.
+    while(known.length<game.secret.length) {
+      const clue=game.hints.find(h=>h.type==='letter' && h.index===known.length);
+      if (!clue) break;
+      known+=clue.char;
+    }
+    return known;
+  }
+  function nextUnknownLetter() {
+    const index=knownPrefix().length;
+    return index<game.secret.length ? index : -1;
+  }
+  function ordinal(n) {
+    const rest=n%100;
+    return n+(rest>=11 && rest<=13?'th':n%10===1?'st':n%10===2?'nd':n%10===3?'rd':'th');
+  }
+  function lengthHintUsed() { return game.hints.some(h=>h.type==='length'); }
   function candidates(lower,upper) {
     const lo=Math.max(1,lower?upperBound(TARGETS,lower):1);
     const hi=Math.min(TARGETS.length-2,upper?lowerBound(TARGETS,upper)-1:TARGETS.length-2);
@@ -178,8 +214,9 @@
     $('status-label').textContent=game.finished?'FOUND IT':'HUNTING';
     $('guess-input').disabled=game.finished;
     $('check-button').disabled=game.finished;
-    $('hint-button').disabled=game.finished || game.hintsUsed>=3;
-    $('hint-button').innerHTML=game.hintsUsed>=3?'All hints used':'Get a hint <span aria-hidden="true">+2</span>';
+    const canOfferLetter=nextUnknownLetter()>=0;
+    $('hint-button').disabled=game.finished || game.hintsUsed>=3 || (!canOfferLetter && lengthHintUsed());
+    $('hint-button').innerHTML=game.hintsUsed>=3?'All hints used':(!canOfferLetter && lengthHintUsed()?'No new hints':'Get a hint <span aria-hidden="true">+3</span>');
     $('input-panel').classList.toggle('hidden',game.finished);
     $('victory-panel').classList.toggle('hidden',!game.finished);
     renderHints();
@@ -212,20 +249,19 @@
     list.appendChild(frag);
     list.scrollTop=0;
   }
-  function hintText(index) {
-    if(index===0) return 'The word is '+game.secret.length+' characters long';
-    if(index===1) return 'First letter: '+game.secret[0].toUpperCase();
-    if(index===2) return 'Last letter: '+game.secret[game.secret.length-1].toUpperCase();
-    return '';
+  function hintText(clue) {
+    if(clue.type==='length') return 'Word length: '+clue.value+' letters';
+    return 'Letter '+(clue.index+1)+' ('+ordinal(clue.index+1)+'): '+clue.char.toUpperCase();
   }
   function renderHints(){
     const container=$('hint-list');
     container.replaceChildren();
     container.classList.toggle('hidden',game.hintsUsed===0);
-    for(let i=0;i<game.hintsUsed;i++) {
-      const span=document.createElement('span');span.className='hint-pill';span.textContent='Hint '+(i+1)+': '+hintText(i);
+    game.hints.forEach((clue,i)=>{
+      const span=document.createElement('span');span.className='hint-pill';
+      span.textContent='Hint '+(i+1)+': '+hintText(clue);
       container.appendChild(span);
-    }
+    });
   }
   function setFeedback(message,kind='') {
     const el=$('feedback');el.textContent=message;el.className='feedback'+(kind?' '+kind:'');
@@ -286,13 +322,34 @@
     $('victory-score').textContent=score();
     $('again-button').textContent=activeMode==='daily'?'Play free mode ↗':'Next word ↗';
   }
+  function buyHint(clue) {
+    if(game.finished || game.hintsUsed>=3) return;
+    game.hints.push(clue);
+    game.hintsUsed=game.hints.length;
+    saveGame(); render(); closeDialog();
+    toast(hintText(clue)+' · +3 points');
+  }
   function useHint(){
     if(!game || game.finished || game.hintsUsed>=3) return;
-    const label=['word length','first letter','last letter'][game.hintsUsed];
-    openDialog('Reveal a hint?',`<p>Reveal the <strong>${label}</strong> of the hidden word?</p><p>This will add <strong>2 points</strong> to your final score. You can use up to three hints.</p>`,[
-      {label:'Not yet',style:'secondary',onClick:()=>closeDialog()},
-      {label:'Reveal hint (+2)',style:'primary',onClick:()=>{game.hintsUsed++;saveGame();render();closeDialog();toast('Hint revealed · +2 to your score');}}
-    ],'A LITTLE HELP');
+    const prefix=knownPrefix();
+    const idx=nextUnknownLetter();
+    const choices=[{label:'Not yet',style:'secondary',onClick:closeDialog}];
+    if(!lengthHintUsed()) {
+      choices.push({label:'Word length (+3)',style:'secondary',onClick:()=>buyHint({type:'length',value:game.secret.length})});
+    }
+    if(idx>=0) {
+      choices.push({label:'Next letter (+3)',style:'primary',onClick:()=>{
+        // Re-check in case clues changed after the dialog opened.
+        const current=nextUnknownLetter();
+        if(current>=0) buyHint({type:'letter',index:current,char:game.secret[current]});
+        else closeDialog();
+      }});
+    }
+    if(choices.length===1) return;
+    const message=prefix?
+      `<p>Your closest guesses (and any previous letter hints) already establish <strong>${prefix.toUpperCase()}</strong>. Your next letter hint reveals the <strong>${ordinal(idx+1)} letter</strong>, not a letter you already know.</p>` :
+      '<p>Your next letter hint reveals the first unknown letter of the secret word.</p>';
+    openDialog('Choose a helpful hint',`${message}<p>Each hint adds <strong>3 points</strong> to your final score. You have <strong>${3-game.hintsUsed}</strong> hint${3-game.hintsUsed===1?'':'s'} left.</p>`,choices,'A LITTLE HELP');
   }
   function newRound() {
     if(activeMode!=='random') { toast('One daily puzzle is available each day.');return; }
@@ -329,7 +386,7 @@
       <div class="example"><strong>Example: secret word = ORANGE</strong><br>APPLE → <span style="color:var(--teal)">Before the secret word</span><br>PEAR → <span style="color:var(--pink)">After the secret word</span><br>ORANGE → <strong style="color:var(--accent)">Bullseye!</strong></div>
       <div class="rule"><strong>03 · Watch your boundaries.</strong><br>The two clue cards show your nearest guesses on either side. A shrinking bar shows how many mystery words remain possible.</div>
       <div class="rule"><strong>04 · Take as many guesses as you need.</strong><br>Only accepted, unique words count. Invalid and repeated entries are free.</div>
-      <div class="rule"><strong>05 · Hints are optional.</strong><br>Reveal the length, first letter, and last letter, in that order. Each hint adds +2 to your final score. Lower scores are better.</div>
+      <div class="rule"><strong>05 · Hints are optional.</strong><br>Choose a word-length hint or reveal the next unknown letter. Letter hints skip letters already certain from your closest guesses or previous hints (for example, if you know PRO, you get the fourth letter). Each hint adds +3 to your final score. You can buy up to three hints. Lower scores are better.</div>
       <p style="margin-top:16px"><strong>Free play</strong> offers unlimited random words. <strong>Daily</strong> gives you one fixed word per calendar day. Your progress and statistics save in this browser, even offline.</p>`;
     openDialog('How to play',html,[{label:'Got it — let’s play!',style:'primary',onClick:closeDialog}],'THE RULEBOOK');
   }
@@ -342,7 +399,7 @@
       <div class="stats-grid"><div class="stat-cell"><span>Games started</span><strong>${val(s.played)}</strong></div><div class="stat-cell"><span>Wins</span><strong>${val(s.wins)}</strong></div><div class="stat-cell"><span>Win rate</span><strong>${winRate}</strong></div><div class="stat-cell"><span>Average guesses / win</span><strong>${avg}</strong></div><div class="stat-cell"><span>Best score</span><strong>${val(s.bestScore)}</strong></div><div class="stat-cell"><span>Best streak</span><strong>${val(s.bestStreak)}</strong></div></div>`;
   }
   function showStats(){
-    openDialog('Your statistics',renderStatsCells('random')+renderStatsCells('daily')+'<p>Best score counts valid guesses plus two points per hint. Statistics are stored only in this browser.</p>',[
+    openDialog('Your statistics',renderStatsCells('random')+renderStatsCells('daily')+'<p>Best score counts valid guesses plus three points per hint. Statistics are stored only in this browser.</p>',[
       {label:'Reset statistics',style:'secondary',onClick:()=>{openDialog('Reset your statistics?','<p>This clears your recorded statistics. Your current game and saved guesses will not be affected.</p>',[
         {label:'Cancel',style:'secondary',onClick:closeDialog},
         {label:'Reset stats',style:'primary',onClick:()=>{stats={random:emptyModeStats(),daily:emptyModeStats()};writeStats();closeDialog();toast('Statistics reset');}}
@@ -364,10 +421,12 @@
       toast('Result copied — without spoiling the answer!');
     } catch(_) {openDialog('Share your result','<p>Copy your spoiler-free result below:</p><div class="example" style="white-space:pre-wrap;overflow-wrap:anywhere" id="share-text"></div>',[{label:'Close',style:'primary',onClick:closeDialog}],'SHARE');$('share-text').textContent=text;}
   }
-  function toggleTheme(){
-    const root=document.documentElement;
-    const next=root.getAttribute('data-theme')==='dark'?'light':'dark';
-    root.setAttribute('data-theme',next);
+  function setTheme(next){
+    if(next!=='light' && next!=='dark') return;
+    document.documentElement.setAttribute('data-theme',next);
+    $('theme-light').setAttribute('aria-pressed',String(next==='light'));
+    $('theme-dark').setAttribute('aria-pressed',String(next==='dark'));
+    document.querySelector('meta[name="theme-color"]').setAttribute('content',next==='light'?'#f5f3ed':'#0b1627');
     try{localStorage.setItem(keys.theme,next)}catch(_){}
   }
   function bindActions(){
@@ -378,9 +437,9 @@
     $('mode-random').addEventListener('click',()=>{if(currentScreen!=='game' || activeMode!=='random')startMode('random')});
     $('mode-daily').addEventListener('click',()=>{if(currentScreen!=='game' || activeMode!=='daily')startMode('daily')});
     $('help-button').addEventListener('click',showHelp);
-    $('footer-how').addEventListener('click',showHelp);
     $('stats-button').addEventListener('click',showStats);
-    $('theme-button').addEventListener('click',toggleTheme);
+    $('theme-light').addEventListener('click',()=>setTheme('light'));
+    $('theme-dark').addEventListener('click',()=>setTheme('dark'));
     $('new-button').addEventListener('click',newRound);
     $('guess-form').addEventListener('submit',e=>{e.preventDefault();submitGuess();});
     $('hint-button').addEventListener('click',useHint);
@@ -391,6 +450,7 @@
   }
   function boot(){
     bindActions();
+    setTheme(document.documentElement.getAttribute('data-theme')==='light'?'light':'dark');
     updateResume();
     if(TARGETS.length!==5000 || VALID.length!==92295 || TARGETS.some((s,i)=>i>0 && TARGETS[i-1]>=s) || VALID.some((s,i)=>i>0 && VALID[i-1]>=s)) {
       $('welcome-description').textContent='The offline vocabulary could not be loaded correctly. Please extract the entire ZIP (including the assets folder) before opening Word_Bullseye.html.';
