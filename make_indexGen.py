@@ -14,7 +14,12 @@ What this version does differently:
 - Can hide filenames containing "nsfw" with --hide-nsfw.
 - Also writes an education-only indexEDU.html by default.
 - Always keeps NSFW filenames/paths out of indexEDU.html.
-- Uses only the Python standard library.
+- Uses only the Python standard library (Git is optional for --recent-source git).
+- Supports index_catalog.json for exact app overrides and searchable secondary tags.
+- Writes index_audit.json with duplicate-title, classification, and folder checks.
+- Classification works with the folder reorganization completed in November 2026.
+- Can build audit-only: python make_indexGen.py --audit-only
+- Can use committed timestamps: python make_indexGen.py --recent-source git
 
 Examples:
   python make_indexGen.py
@@ -30,11 +35,16 @@ Examples:
 from __future__ import annotations
 
 import argparse
+import collections
+import hashlib
+import json
+import subprocess
 import os
 import re
 import time
 from functools import lru_cache
 from dataclasses import dataclass, field
+from typing import Any
 from datetime import datetime
 from html.parser import HTMLParser
 from pathlib import Path
@@ -291,6 +301,8 @@ CUSTOM_ICONS = {'BillboardNumberOne.html': '🎵',
  'Link_Card.html': '🔗',
  'Bingo_Caller.html': '🎟️'}
 
+CUSTOM_ICONS_CASEFOLD = {name.casefold(): symbol for name, symbol in CUSTOM_ICONS.items()}
+
 # Keyword rules. Longest keyword match wins.
 ICON_RULES = [('canadian', '🇨🇦'),
  ('canada', '🇨🇦'),
@@ -476,6 +488,7 @@ CATEGORY_ORDER = [
     "Music & Ear Training",
     "Arcade & Action Games",
     "Strategy, Board & Logic Games",
+    "Card & Table Games",
     "Word, Trivia & Quiz Games",
     "Other / Unsorted",
 ]
@@ -492,6 +505,7 @@ CATEGORY_ICONS = {
     "Music & Ear Training": "🎵",
     "Arcade & Action Games": "🕹",
     "Strategy, Board & Logic Games": "♟",
+    "Card & Table Games": "🃏",
     "Word, Trivia & Quiz Games": "🔤",
     "Other / Unsorted": "📁",
 }
@@ -544,7 +558,254 @@ SUBCATEGORY_ICONS = {
     "Geography Games": "🌍",
     "Party & Word Games": "🎡",
     "Other Games": "🎮",
+    # Purpose-first subcategories. Physical repository folders are unchanged.
+    "Curriculum & Grade-Level Practice": "📘",
+    "Concept Explorers & Lessons": "🧭",
+    "Skill Practice": "✏️",
+    "Test Preparation": "📝",
+    "Math Generators": "📐",
+    "Creative Writing & Prompts": "✍️",
+    "Vocabulary & Spelling": "🔤",
+    "ELA Practice": "📚",
+    "Science Lessons": "🔬",
+    "Classroom Management": "🍎",
+    "Printable Generators": "🖨️",
+    "Instructional Resources": "📋",
+    "Game Rules & Tutorials": "📖",
+    "General Reference": "📘",
+    "Simulation & Sandbox Games": "🐠",
+    "Sports Instruction": "🏀",
+    "Game Creation": "🕹️",
+    "Music Theory & Instruments": "🎹",
+    "MIDI & Music Creation": "🎼",
+    "Sound Generation": "🎧",
+    "Classic Arcade": "🕹️",
+    "Platform & Runner Games": "🏃",
+    "Physics & Skill Games": "🎯",
+    "Sports Games": "🏌️",
+    "Abstract Strategy Games": "♟️",
+    "Classic Board & Dice Games": "🎲",
+    "Logic & Number Puzzles": "🧩",
+    "Tic-Tac-Toe & Connect Four": "❌",
+    "Casino Games": "🎰",
 }
+
+# ---------------------------------------------------------------------------
+# Purpose-first classification overrides
+# ---------------------------------------------------------------------------
+# A file's purpose wins over incidental words in its parent folder or name.
+# Use exact filenames only for distinct apps; use directory prefixes for groups.
+# The old keyword rules below remain as a fallback for unrecognized paths.
+# All matching is case-insensitive. Neither URLs nor physical files are moved.
+
+EXACT_APP_CATEGORIES: Dict[str, Tuple[str, str]] = {
+    # Writing, word work, and literacy.
+    "consider_this_writing_prompts.html": ("Literacy & ELA", "Creative Writing & Prompts"),
+    "acrostic-poem-builder.html": ("Literacy & ELA", "Creative Writing & Prompts"),
+    "haiku-checker.html": ("Literacy & ELA", "Creative Writing & Prompts"),
+    "raft_randomizer.html": ("Literacy & ELA", "Creative Writing & Prompts"),
+    "madlib_story_maker.html": ("Literacy & ELA", "Creative Writing & Prompts"),
+    "create_a_wordle.html": ("Literacy & ELA", "Word Work Generators"),
+    "word_scrambler_maker.html": ("Literacy & ELA", "Word Work Generators"),
+    "pwim_shareable_link_annotator.html": ("Literacy & ELA", "Word Work Generators"),
+    "fry-speak-check-300.html": ("Literacy & ELA", "Vocabulary & Spelling"),
+    "spelling-test-audio.html": ("Literacy & ELA", "Vocabulary & Spelling"),
+    "wtw_analyzer.html": ("Literacy & ELA", "Vocabulary & Spelling"),
+    "typing_test.html": ("Literacy & ELA", "Typing & Keyboarding"),
+    "typing-test.html": ("Literacy & ELA", "Typing & Keyboarding"),
+
+    # Curriculum, math games, exam preparation, and teaching materials.
+    "grade_9_math_pat_practice_part_a_no_calculator.html": ("Math & Numeracy", "Test Preparation"),
+    "grade_9_math_pat_practice_part_b_calculator_allowed.html": ("Math & Numeracy", "Test Preparation"),
+    "gr8_sps-eics_questions.html": ("Math & Numeracy", "Test Preparation"),
+    "gr9_sps-eics_questions.html": ("Math & Numeracy", "Test Preparation"),
+    "mathpursuit_grade7_5ins.html": ("Math & Numeracy", "Math Games"),
+    "mathpursuit_grade8_5ins.html": ("Math & Numeracy", "Math Games"),
+    "mathpursuit_grade9_5ins.html": ("Math & Numeracy", "Math Games"),
+    "alberta_math_review.html": ("Math & Numeracy", "Math Generators"),
+    "math_questions_generator.html": ("Math & Numeracy", "Math Generators"),
+    "magic-square-generator.html": ("Math & Numeracy", "Math Generators"),
+    "exponent_explorer.html": ("Math & Numeracy", "Concept Explorers & Lessons"),
+    "fraction_explorer.html": ("Math & Numeracy", "Concept Explorers & Lessons"),
+    "ratio_explorer.html": ("Math & Numeracy", "Concept Explorers & Lessons"),
+    "probability_explorer.html": ("Math & Numeracy", "Concept Explorers & Lessons"),
+    "mental_math_academy.html": ("Math & Numeracy", "Concept Explorers & Lessons"),
+    "prime_numbers.html": ("Math & Numeracy", "Concept Explorers & Lessons"),
+    "rational_numbers_explorer.html": ("Math & Numeracy", "Concept Explorers & Lessons"),
+    "pedmas_explorer.html": ("Math & Numeracy", "Concept Explorers & Lessons"),
+    "bedmas_explorer.html": ("Math & Numeracy", "Concept Explorers & Lessons"),
+    "bedmas_and_powers_explorer.html": ("Math & Numeracy", "Concept Explorers & Lessons"),
+    "equivalent_fractions_practice.html": ("Math & Numeracy", "Skill Practice"),
+    "fraction_conversion_practice.html": ("Math & Numeracy", "Skill Practice"),
+    "integer_practice.html": ("Math & Numeracy", "Skill Practice"),
+    "long_division_practice.html": ("Math & Numeracy", "Skill Practice"),
+    "order_of_operations.html": ("Math & Numeracy", "Skill Practice"),
+    "input_output_machine_numbers.html": ("Math & Numeracy", "Skill Practice"),
+    "telling_time.html": ("Math & Numeracy", "Skill Practice"),
+    "divisibility-rules-2-10.html": ("Math & Numeracy", "Skill Practice"),
+    "15-tictactoe.html": ("Math & Numeracy", "Math Games"),
+    "7dice.html": ("Math & Numeracy", "Math Games"),
+    "algebra_equation_game.html": ("Math & Numeracy", "Math Games"),
+    "cartesiantictactoe.html": ("Math & Numeracy", "Math Games"),
+    "decimal_guess_number.html": ("Math & Numeracy", "Math Games"),
+    "dice_grid_game.html": ("Math & Numeracy", "Math Games"),
+    "fraction_archery.html": ("Math & Numeracy", "Math Games"),
+    "pedmasgame.html": ("Math & Numeracy", "Math Games"),
+    "target_number_golf.html": ("Math & Numeracy", "Math Games"),
+    "input_output_machine.html": ("Math & Numeracy", "Number Sense & Problem Solving"),
+    "10frames.html": ("Math & Numeracy", "Skill Practice"),
+
+    # The source files stay in their existing folders for now.
+    "bingocardgenerator.html": ("Teacher Tools", "Printable Generators"),
+    "wordsearchgenerator.html": ("Teacher Tools", "Printable Generators"),
+    "maze_creator.html": ("Teacher Tools", "Printable Generators"),
+    "graph_paper_generator.html": ("Teacher Tools", "Printable Generators"),
+    "circle_graph_generator.html": ("Teacher Tools", "Printable Generators"),
+    "attendance_maker.html": ("Teacher Tools", "Classroom Management"),
+    "random_group_maker_offline.html": ("Teacher Tools", "Classroom Management"),
+    "instructional_intelligence.html": ("Teacher Tools", "Instructional Resources"),
+    "mnemonic_maker.html": ("Teacher Tools", "Instructional Resources"),
+    "poker_basics.html": ("Learning & Reference", "Game Rules & Tutorials"),
+
+    # Music creation is different from musical ear training.
+    "music_trivia_board.html": ("Word, Trivia & Quiz Games", "Trivia & Guessing Games"),
+    "piano melody maker.html": ("Music & Ear Training", "MIDI & Music Creation"),
+    "pitch_in_the_middle.html": ("Music & Ear Training", "Ear Training"),
+    "midi_drum_pattern_maker.html": ("Music & Ear Training", "MIDI & Music Creation"),
+    "scale_midi_maker.html": ("Music & Ear Training", "MIDI & Music Creation"),
+    "binaural_beat_maker.html": ("Music & Ear Training", "Sound Generation"),
+    "binaural_beat_journey_maker.html": ("Music & Ear Training", "Sound Generation"),
+
+    # Board, table, memory, and recreational sports games.
+    "draw_from_memory.html": ("Word, Trivia & Quiz Games", "Memory Games"),
+    "word_memory_challenge.html": ("Word, Trivia & Quiz Games", "Memory Games"),
+    "number_memory_challenge.html": ("Word, Trivia & Quiz Games", "Memory Games"),
+    "major-system-quiz.html": ("Word, Trivia & Quiz Games", "Memory Games"),
+    "roulette_casino.html": ("Card & Table Games", "Casino Games"),
+    "royal_felt_baccarat.html": ("Card & Table Games", "Casino Games"),
+    "royal_felt_blackjack.html": ("Card & Table Games", "Casino Games"),
+    "texas_holdem.html": ("Card & Table Games", "Casino Games"),
+    "snakes_and_ladders.html": ("Strategy, Board & Logic Games", "Classic Board & Dice Games"),
+    "snakesandladders.html": ("Strategy, Board & Logic Games", "Classic Board & Dice Games"),
+    "yahtzee.html": ("Strategy, Board & Logic Games", "Classic Board & Dice Games"),
+    "checkers_game.html": ("Strategy, Board & Logic Games", "Classic Board & Dice Games"),
+    "retro_mahjongg.html": ("Strategy, Board & Logic Games", "Logic & Number Puzzles"),
+    "jigsaw_puzzle.html": ("Strategy, Board & Logic Games", "Logic & Number Puzzles"),
+    "tangram_puzzles.html": ("Strategy, Board & Logic Games", "Logic & Number Puzzles"),
+    "sliding_number_puzzle.html": ("Strategy, Board & Logic Games", "Logic & Number Puzzles"),
+    "slidingnumberpuzzle.html": ("Strategy, Board & Logic Games", "Logic & Number Puzzles"),
+    "meowdoku.html": ("Strategy, Board & Logic Games", "Logic & Number Puzzles"),
+    "hexa_sudoku.html": ("Strategy, Board & Logic Games", "Logic & Number Puzzles"),
+    "hexasudoku.html": ("Strategy, Board & Logic Games", "Logic & Number Puzzles"),
+    "shikaku.html": ("Strategy, Board & Logic Games", "Logic & Number Puzzles"),
+    "shikakublanks.html": ("Strategy, Board & Logic Games", "Logic & Number Puzzles"),
+    "shikaku_level_progression.html": ("Strategy, Board & Logic Games", "Logic & Number Puzzles"),
+    "hex_merge.html": ("Strategy, Board & Logic Games", "Logic & Number Puzzles"),
+    "number_match_and_10.html": ("Strategy, Board & Logic Games", "Logic & Number Puzzles"),
+    "croquet_club.html": ("Arcade & Action Games", "Sports Games"),
+    "neon_eight_pool.html": ("Arcade & Action Games", "Sports Games"),
+    "mini_golf.html": ("Arcade & Action Games", "Sports Games"),
+    "janky_mini_golf.html": ("Arcade & Action Games", "Sports Games"),
+    "cliff_dive.html": ("Arcade & Action Games", "Sports Games"),
+    "wordnomino.html": ("Word, Trivia & Quiz Games", "Word Games"),
+    "blank_comic_strip_generator.html": ("Art, Media & Creation", "Comic & Annotation Tools"),
+    "comic_text_remover.html": ("Art, Media & Creation", "Comic & Annotation Tools"),
+    "scattergories.html": ("Word, Trivia & Quiz Games", "Party & Word Games"),
+    "wheel_of_fortune.html": ("Word, Trivia & Quiz Games", "Party & Word Games"),
+}
+
+# Separate prefix rules from filename keyword rules: an explicit folder match
+# must be a real path prefix, never a substring found in a filename.
+FOLDER_CATEGORY_PREFIXES: List[Tuple[str, str, str]] = [
+    ("learning_reference/game_rules_tutorials/", "Learning & Reference", "Game Rules & Tutorials"),
+    ("learning_reference/driver_education/", "Learning & Reference", "Driver Education"),
+    ("learning_reference/study_skills/", "Learning & Reference", "Study & Memory Skills"),
+    ("learning_reference/", "Learning & Reference", "General Reference"),
+    ("creative_tools/writing/", "Literacy & ELA", "Creative Writing & Prompts"),
+    ("teacher_tools/printable_generators/", "Teacher Tools", "Printable Generators"),
+    ("teacher_tools/accessibility_communication/", "Teacher Tools", "Accessibility & Communication"),
+    ("teacher_tools/classroom_utilities/", "Teacher Tools", "Classroom Utilities"),
+    ("teacher_tools/instructional_resources/", "Teacher Tools", "Instructional Resources"),
+    ("teacher_tools/", "Teacher Tools", "Classroom Utilities"),
+    ("subject_specific/math/test_preparation/", "Math & Numeracy", "Test Preparation"),
+    ("subject_specific/math/generators/", "Math & Numeracy", "Math Generators"),
+    ("subject_specific/math/concept_explorers/", "Math & Numeracy", "Concept Explorers & Lessons"),
+    ("subject_specific/math/skill_practice/", "Math & Numeracy", "Skill Practice"),
+    ("subject_specific/math/curriculum_practice/", "Math & Numeracy", "Curriculum & Grade-Level Practice"),
+    ("subject_specific/math/", "Math & Numeracy", "Curriculum & Grade-Level Practice"),
+    ("subject_specific/ela/writing/", "Literacy & ELA", "Creative Writing & Prompts"),
+    ("subject_specific/ela/curriculum_practice/", "Literacy & ELA", "ELA Practice"),
+    ("subject_specific/ela/spelling_word_work/", "Literacy & ELA", "Vocabulary & Spelling"),
+    ("subject_specific/ela/", "Literacy & ELA", "ELA Practice"),
+    ("subject_specific/science/simulations/", "Science & Social Studies", "Science Simulations & Labs"),
+    ("subject_specific/science/curriculum_practice/", "Science & Social Studies", "Science Lessons"),
+    ("subject_specific/science/", "Science & Social Studies", "Science Lessons"),
+    ("subject_specific/social_studies/curriculum_practice/", "Science & Social Studies", "Social Studies"),
+    ("subject_specific/social_studies/", "Science & Social Studies", "Social Studies"),
+    ("sports_fitness/basketball/", "Sports & Fitness", "Sports Instruction"),
+    ("sports_fitness/fitness_tools/", "Sports & Fitness", "Fitness Tools"),
+    ("utilities/audio/", "Utilities & Tools", "Audio Tools"),
+    ("utilities/documents_files/", "Utilities & Tools", "Document & File Tools"),
+    ("utilities/general/", "Utilities & Tools", "General Utilities"),
+    ("utilities/reading/", "Utilities & Tools", "Reading Utilities"),
+    ("utilities/web_sharing/", "Utilities & Tools", "Web & Sharing Tools"),
+    ("utilities/wellness/", "Utilities & Tools", "Wellness Tools"),
+    ("creative_tools/art/", "Art, Media & Creation", "Art & Image Tools"),
+    ("creative_tools/generators/", "Art, Media & Creation", "Creative Generators"),
+    ("creative_tools/music/ear_training/", "Music & Ear Training", "Ear Training"),
+    ("creative_tools/music/music_creation/", "Music & Ear Training", "MIDI & Music Creation"),
+    ("creative_tools/music/music_theory/", "Music & Ear Training", "Music Theory & Instruments"),
+    ("creative_tools/music/sound_generation/", "Music & Ear Training", "Sound Generation"),
+    ("creative_tools/music/", "Music & Ear Training", "Music Theory & Instruments"),
+    ("misc_games/casinogames/", "Card & Table Games", "Casino Games"),
+    ("misc_games/cardgames/", "Card & Table Games", "Card & Solitaire Games"),
+    ("misc_games/card_games/", "Card & Table Games", "Card & Solitaire Games"),
+    ("misc_games/sportsgames/", "Arcade & Action Games", "Sports Games"),
+    ("misc_games/memorygames/", "Word, Trivia & Quiz Games", "Memory Games"),
+    ("misc_games/geographygames/", "Word, Trivia & Quiz Games", "Geography Games"),
+    ("misc_games/hangman/", "Word, Trivia & Quiz Games", "Word Games"),
+    ("misc_games/kolumns/", "Arcade & Action Games", "Tetris & Falling Blocks"),
+    ("misc_games/aquariumsandbox/", "Arcade & Action Games", "Simulation & Sandbox Games"),
+    ("misc_games/trivia/", "Word, Trivia & Quiz Games", "Trivia & Guessing Games"),
+    ("misc_games/dle_and_thisorthat_games/", "Word, Trivia & Quiz Games", "Trivia & Guessing Games"),
+    ("misc_games/wordgames/", "Word, Trivia & Quiz Games", "Word Games"),
+    ("misc_games/chessgames/", "Strategy, Board & Logic Games", "Chess & Knight Games"),
+    ("misc_games/connectfour/", "Strategy, Board & Logic Games", "Tic-Tac-Toe & Connect Four"),
+    ("misc_games/tictactoegames/", "Strategy, Board & Logic Games", "Tic-Tac-Toe & Connect Four"),
+    ("misc_games/boardgames/", "Strategy, Board & Logic Games", "Classic Board & Dice Games"),
+    ("misc_games/logicpuzzles/", "Strategy, Board & Logic Games", "Logic & Number Puzzles"),
+    ("misc_games/strategy_games/", "Strategy, Board & Logic Games", "Abstract Strategy Games"),
+    ("misc_games/mazes/", "Strategy, Board & Logic Games", "Mazes & Logic Puzzles"),
+    ("misc_games/tetris_games/", "Arcade & Action Games", "Tetris & Falling Blocks"),
+    ("misc_games/arcadegames/", "Arcade & Action Games", "Classic Arcade"),
+    ("math_games/mathpursuit/", "Math & Numeracy", "Math Games"),
+    ("math_games/mathbingo/", "Math & Numeracy", "Math Games"),
+    ("math_games/mathfacts/", "Math & Numeracy", "Math Facts & Operations"),
+    ("math_games/", "Math & Numeracy", "Math Games"),
+]
+
+# File-specific overrides that must include their parent folder, e.g. an
+# index.html file with an otherwise meaningless basename.
+EXACT_PATH_CATEGORIES: Dict[str, Tuple[str, str]] = {
+    "creative_tools/generators/arcadeweaver_studio/index.html": ("Art, Media & Creation", "Game Creation"),
+    "creative_tools/generators/arcade_weaver_studio/index.html": ("Art, Media & Creation", "Game Creation"),
+    "misc_games/strategy_games/meowdoku/index.html": ("Strategy, Board & Logic Games", "Logic & Number Puzzles"),
+}
+
+
+def classify_subject_test(filename: str) -> Tuple[str, str]:
+    """Infer subject for files still sharing the legacy SubjectTests folder."""
+    n = normalize_for_keyword_match(filename)
+    if any(word in n for word in ("math", "algebra", "numeracy")):
+        return "Math & Numeracy", "Test Preparation"
+    if any(word in n for word in ("ela", "english", "literacy", "spelling")):
+        return "Literacy & ELA", "ELA Practice"
+    if "science" in n:
+        return "Science & Social Studies", "Science Lessons"
+    if "social" in n or "history" in n:
+        return "Science & Social Studies", "Social Studies"
+    return "Teacher Tools", "Instructional Resources"
+
 
 # Some apps may temporarily exist in more than one repository location while
 # folders are being reorganized. These titles should appear only once in the
@@ -559,22 +820,23 @@ def deduplicate_entries(entries: List["FileEntry"]) -> List["FileEntry"]:
     if not entries:
         return entries
 
-    def preference(entry: "FileEntry") -> tuple[int, int, str]:
+    def preference(entry: "FileEntry") -> tuple[int, int, int, str]:
         rel = normalize_path(entry.rel_path).casefold()
 
         # Canonical home for Airplane Race Game.
         if entry.title.casefold() == "airplane race game":
             canonical = 0 if "misc_games/arcadegames/" in rel else 1
-            return (canonical, len(rel), rel)
+            return (0 if entry.canonical else 1, canonical, len(rel), rel)
 
-        return (0, len(rel), rel)
+        return (0 if entry.canonical else 1, 0, len(rel), rel)
 
     grouped: Dict[str, List["FileEntry"]] = {}
     passthrough: List["FileEntry"] = []
 
+    canonical_titles = {e.title.casefold() for e in entries if e.canonical}
     for entry in entries:
         title_key = entry.title.casefold()
-        if title_key in DEDUPLICATE_DISPLAY_TITLES:
+        if title_key in DEDUPLICATE_DISPLAY_TITLES or title_key in canonical_titles:
             grouped.setdefault(title_key, []).append(entry)
         else:
             passthrough.append(entry)
@@ -586,6 +848,8 @@ def deduplicate_entries(entries: List["FileEntry"]) -> List["FileEntry"]:
     return passthrough
 
 
+# Classroom relevance is a separate decision from display category. Broad game
+# categories and all casino games are NOT automatically educational.
 EDUCATIONAL_CATEGORIES = {
     "Math & Numeracy",
     "Literacy & ELA",
@@ -595,69 +859,55 @@ EDUCATIONAL_CATEGORIES = {
     "Sports & Fitness",
     "Art, Media & Creation",
     "Music & Ear Training",
-    "Strategy, Board & Logic Games",
-    "Word, Trivia & Quiz Games",
 }
 
-
-# Exact filenames that should never appear in indexEDU.html. Exact excludes win
-# over category rules and keyword rules. Keep these case-insensitive.
+# Hard blocks run before every other education rule, including explicit allows.
+# The path check also protects against new casino games added in the future.
+EDUCATIONAL_BLOCKED_PATH_TOKENS = (
+    "casino", "roulette", "baccarat", "blackjack", "holdem", "slot_machine",
+    "slots_game", "poker_solitaire", "real_money", "betting",
+)
 EDUCATIONAL_EXCLUDE_FILENAMES = {
     "alive_for.html",
     "billboardnumberone.html",
     "drop67.html",
     "hockeystats.html",
     "linedraw.html",
-    "maze_creator.html",
     "snakes_and_ladders.html",
     "snakesandladders.html",
     "soccerstats.html",
     "weightgame.html",
 }
-
-# Specific arcade/action files that are still useful enough for the education
-# index. Exact excludes above still win.
-EDUCATIONAL_INCLUDE_FILENAMES = {
-    "antisimon.html",
+# Educational games are opted in by individual purpose/name, not by the broad
+# category they happen to appear in. Other strategy/word/card games remain on
+# the public index and can be added here after an intentional review.
+EDUCATIONAL_GAME_INCLUDE_FILENAMES = {
+    "antisimon.html", "music_trivia_board.html", "chess_add_ranks_files.html", "chess_blocked_squares.html",
+    "chess_point_removal.html", "chess_remove_files.html",
+    "chess_remove_ranks.html", "chess_same_piece_army.html",
+    "local_chess_with_cpu.html", "knights_tour.html",
+    "knights-tour-blocked.html", "knight-tour-multiplayer.html",
+    "boggle_game.html", "cryptoquip.html", "scraggle.html",
+    "scattergories.html", "scrabble100.html", "word-ladder.html",
+    "word_maker_game.html", "unusual_words_game.html", "hangman.html",
+    "word_memory_challenge.html", "number_memory_challenge.html",
+    "draw_from_memory.html", "major-system-quiz.html",
+    "numdle.html", "binarydle.html", "shikaku.html",
+    "shikaku_blanks.html", "shikaku_level_progression.html",
+    "hexa_sudoku.html", "meowdoku.html", "sliding_number_puzzle.html",
+    "tangram_puzzles.html", "jigsaw_puzzle.html", "wordnomino.html",
+    "word_vault.html", "canada_click_challenge.html",
+    "world_click_challenge.html", "geography_trivia_game.html",
+    "canadian_trivia_game.html", "history_date_challenge.html",
+    "kids_teens_trivia.html", "polygon_guess.html", "realcityornot.html",
+    "word_definition_quiz.html", "word_scrambler_maker.html",
 }
-
-# Fallback keyword checks are intentionally conservative. They help catch new
-# classroom files that have not yet been added to CATEGORY_RULES.
+# New classroom-focused game titles can still be detected conservatively, but
+# a blanket "word" or "quiz" filename match is too permissive.
 EDUCATIONAL_INCLUDE_KEYWORDS = (
-    "algebra",
-    "assessment",
-    "boggle",
-    "cartesian",
-    "chess",
-    "classroom",
-    "decimal",
-    "division",
-    "ela",
-    "english",
-    "fraction",
-    "grade",
-    "grammar",
-    "haiku",
-    "logic",
-    "math",
-    "memory",
-    "moon",
-    "multiplication",
-    "pedmas",
-    "phonics",
-    "poem",
-    "quiz",
-    "reading",
-    "science",
-    "scrabble",
-    "shikaku",
-    "social",
-    "spelling",
-    "teacher",
-    "typing",
-    "vocab",
-    "word",
-    "writing",
+    "algebra", "cartesian", "decimal", "divisibility", "fraction",
+    "geography", "grammar", "math", "multiplication", "numeracy",
+    "science", "spelling", "vocabulary", "chess", "sudoku",
 )
 
 # Each rule is:
@@ -734,7 +984,8 @@ CATEGORY_RULES: List[Tuple[Tuple[str, ...], str, str]] = [
     (("subject_specific/math/", "grade3_math", "grade5_math", "grade6_math", "math_questions_generator"), "Math & Numeracy", "Math Practice & Assessments"),
     (("grade5_science", "grade6_science", "moon_phases", "subject_specific/science/"), "Science & Social Studies", "Science"),
     (("grade5_social", "grade6_social", "social"), "Science & Social Studies", "Social Studies"),
-    (("subjecttests",), "Science & Social Studies", "Subject Practice & Tests"),
+    # SubjectTests files are routed by their actual subject before this table.
+    (("subjecttests",), "Teacher Tools", "Instructional Resources"),
 
     # -----------------------------------------------------------------------
     # Explicit cross-folder exceptions
@@ -796,11 +1047,11 @@ CATEGORY_RULES: List[Tuple[Tuple[str, ...], str, str]] = [
     # -----------------------------------------------------------------------
     # Strategy/board/logic
     # -----------------------------------------------------------------------
-    (("cardgames/", "card_games/", "card-games/", "cardgames", "card_games", "card-games", "solitaire"), "Strategy, Board & Logic Games", "Card & Solitaire Games"),
+    (("cardgames/", "card_games/", "card-games/", "cardgames", "card_games", "card-games", "solitaire"), "Card & Table Games", "Card & Solitaire Games"),
     (("chessgames/", "chess", "knight-tour", "knights-tour"), "Strategy, Board & Logic Games", "Chess & Knight Games"),
-    (("connectfour/", "connect4", "connect_4"), "Strategy, Board & Logic Games", "Connect Four Variants"),
+    (("connectfour/", "connect4", "connect_4"), "Strategy, Board & Logic Games", "Tic-Tac-Toe & Connect Four"),
     (("sliding number puzzle", "sliding_number_puzzle", "strategy_games/", "shikaku", "go_local", "go.html", "hex", "nim", "ataxx", "minesweeper", "dots-and-boxes", "bridgit", "obstruction", "battleship", "checkers", "snakes_and_ladders", "snakes-and-ladders", "sim.html", "hold-the-line", "black-hole", "rabbit_hunt"), "Strategy, Board & Logic Games", "Strategy & Logic Games"),
-    (("tictactoegames/", "tic_tac_toe", "tictactoe", "ultimate_tic", "order-and-chaos", "exact-four", "row_call"), "Strategy, Board & Logic Games", "Tic-Tac-Toe Variants"),
+    (("tictactoegames/", "tic_tac_toe", "tictactoe", "ultimate_tic", "order-and-chaos", "exact-four", "row_call"), "Strategy, Board & Logic Games", "Tic-Tac-Toe & Connect Four"),
     (("maze", "hexa", "sudoku"), "Strategy, Board & Logic Games", "Mazes & Logic Puzzles"),
 
     # -----------------------------------------------------------------------
@@ -833,6 +1084,10 @@ class FileEntry:
     subcategory: str
     icon: str
     mtime: float | None = None
+    tags: Tuple[str, ...] = ()
+    classification_source: str = "legacy-keyword"
+    educational_override: bool | None = None
+    canonical: bool = False
 
 
 @dataclass
@@ -1105,7 +1360,7 @@ def should_include_file(
 
     if path.suffix.casefold() not in exts_norm:
         return False
-    if lower_fn in {"sources.html", "preview.html", "preview.htm"}:
+    if lower_fn in {"source.html", "sources.html", "preview.html", "preview.htm"}:
         return False
     if not include_root_files and "/" not in rel:
         return False
@@ -1113,7 +1368,7 @@ def should_include_file(
         return False
     if hide_root_index_html and lower_rel == "index.html":
         return False
-    if hide_nsfw_anywhere and "nsfw" in lower_fn:
+    if hide_nsfw_anywhere and "nsfw" in lower_rel:
         return False
     return True
 
@@ -1131,8 +1386,8 @@ def icon_for(name: str, is_dir: bool) -> str:
     if has_yahtzee_term(name):
         return safe_icon("🎲")
 
-    if base in CUSTOM_ICONS:
-        return safe_icon(CUSTOM_ICONS[base])
+    if base.casefold() in CUSTOM_ICONS_CASEFOLD:
+        return safe_icon(CUSTOM_ICONS_CASEFOLD[base.casefold()])
 
     low = name.casefold()
     matches = [(key, icon) for key, icon in ICON_RULES if keyword_matches(low, key, broad_keywords=BROAD_ICON_KEYWORDS)]
@@ -1159,10 +1414,12 @@ def icon_for_file(rel_path: str, category: str, subcategory: str) -> str:
     if has_yahtzee_term(rel_path):
         return safe_icon("🎲")
 
-    if base in CUSTOM_ICONS:
-        return safe_icon(CUSTOM_ICONS[base])
+    if base.casefold() in CUSTOM_ICONS_CASEFOLD:
+        return safe_icon(CUSTOM_ICONS_CASEFOLD[base.casefold()])
 
     full_low = normalize_path(rel_path).casefold()
+    if category == "Card & Table Games":
+        return safe_icon("🎰" if subcategory == "Casino Games" else "🃏")
     if any(token in full_low for token in ("cardgames", "card_games", "card-games", "solitaire")):
         return safe_icon("🃏")
 
@@ -1178,52 +1435,200 @@ def icon_for_file(rel_path: str, category: str, subcategory: str) -> str:
     return safe_icon(CATEGORY_ICONS.get(category, DEFAULT_FILE_ICON))
 
 
+# ---------------------------------------------------------------------------
+# Optional hand-curated catalog (index_catalog.json)
+# ---------------------------------------------------------------------------
+# Add exceptions and searchable tags here without modifying Python category rules.
+# Priority: JSON exact path > built-in exact path > JSON filename > built-in
+# exact filename > JSON folder prefix > built-in folder prefix > legacy keywords.
+# Metadata (title, tags, educational flag, canonical) is merged independently:
+# folder < filename < full path. A category override requires both fields.
+
+@dataclass
+class Catalog:
+    apps: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    filenames: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    folders: List[Tuple[str, Dict[str, Any]]] = field(default_factory=list)
+    source: str = ""
+
+
+def catalog_path_key(raw: str, *, folder: bool = False) -> str:
+    if not isinstance(raw, str) or not raw.strip():
+        raise ValueError("Catalog keys must be nonempty paths/filenames")
+    key = raw.strip().replace("\\", "/")
+    if key.startswith("/") or ":" in key or any(part in ("", ".", "..") for part in key.strip("/").split("/")):
+        raise ValueError(f"Unsafe catalog path: {raw!r}")
+    if folder:
+        return key.strip("/").casefold() + "/"
+    return key.casefold()
+
+
+def validate_metadata(value: object, label: str, *, require_category: bool = False) -> Dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{label}: expected a JSON object")
+    allowed = {"category", "subcategory", "title", "tags", "icon", "educational", "canonical", "exclude"}
+    unknown = set(value) - allowed
+    if unknown:
+        raise ValueError(f"{label}: unknown fields {sorted(unknown)}")
+    if ("category" in value) != ("subcategory" in value) or (require_category and "category" not in value):
+        raise ValueError(f"{label}: category and subcategory must be supplied together")
+    for field_name in ("category", "subcategory", "title", "icon"):
+        if field_name in value and (not isinstance(value[field_name], str) or not value[field_name].strip()):
+            raise ValueError(f"{label}: {field_name} must be nonempty text")
+    if "category" in value and value["category"] not in CATEGORY_ORDER:
+        raise ValueError(f"{label}: unknown main category {value['category']!r}")
+    for field_name in ("educational", "canonical", "exclude"):
+        if field_name in value and not isinstance(value[field_name], bool):
+            raise ValueError(f"{label}: {field_name} must be true or false")
+    if "tags" in value:
+        tags = value["tags"]
+        if not isinstance(tags, list) or any(not isinstance(x, str) or not x.strip() for x in tags):
+            raise ValueError(f"{label}: tags must be a list of nonempty strings")
+    return dict(value)
+
+
+def load_catalog(path: Path | None) -> Catalog:
+    if path is None or not path.is_file():
+        return Catalog()
+    try:
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError) as exc:
+        raise ValueError(f"Could not read catalog {path}: {exc}") from exc
+    if not isinstance(data, dict) or set(data) - {"version", "apps", "filenames", "folders"}:
+        raise ValueError("Catalog must be a JSON object with only version/apps/filenames/folders fields")
+    if data.get("version", 1) != 1:
+        raise ValueError("Unsupported catalog version; expected 1")
+    result = Catalog(source=str(path))
+    for group_name, dest in (("apps", result.apps), ("filenames", result.filenames)):
+        group = data.get(group_name, {})
+        if not isinstance(group, dict):
+            raise ValueError(f"Catalog {group_name} must be a JSON object")
+        for raw_key, raw_meta in group.items():
+            key = catalog_path_key(raw_key)
+            if group_name == "filenames" and "/" in key:
+                raise ValueError(f"Catalog filename rule must not contain a folder: {raw_key}")
+            if key in dest:
+                raise ValueError(f"Duplicate case-insensitive catalog key: {raw_key}")
+            dest[key] = validate_metadata(raw_meta, f"{group_name}.{raw_key}")
+    folders = data.get("folders", [])
+    if not isinstance(folders, list):
+        raise ValueError("Catalog folders must be a list")
+    seen = set()
+    for i, rule in enumerate(folders):
+        if not isinstance(rule, dict) or "prefix" not in rule:
+            raise ValueError(f"Catalog folders[{i}] needs a prefix")
+        key = catalog_path_key(rule["prefix"], folder=True)
+        if key in seen:
+            raise ValueError(f"Duplicate folder prefix in catalog: {key}")
+        seen.add(key)
+        meta = validate_metadata({k: v for k, v in rule.items() if k != "prefix"}, f"folders[{i}]", require_category=True)
+        result.folders.append((key, meta))
+    result.folders.sort(key=lambda pair: -len(pair[0]))
+    return result
+
+
+def catalog_parts(rel_path: str, catalog: Catalog) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
+    rel = normalize_path(rel_path).casefold()
+    prefix_meta = next((meta for prefix, meta in catalog.folders if rel.startswith(prefix)), {})
+    return prefix_meta, catalog.filenames.get(Path(rel).name, {}), catalog.apps.get(rel, {})
+
+
+def effective_metadata(rel_path: str, catalog: Catalog) -> Dict[str, Any]:
+    folder_meta, filename_meta, path_meta = catalog_parts(rel_path, catalog)
+    metadata: Dict[str, Any] = {}
+    tag_sets: List[str] = []
+    for layer in (folder_meta, filename_meta, path_meta):
+        tag_sets.extend(layer.get("tags", []))
+        metadata.update({key: value for key, value in layer.items() if key != "tags"})
+    metadata["tags"] = list(dict.fromkeys(tag_sets))
+    return metadata
+
+
+# Searchable secondary tags, on top of user-written catalog tags.
+SUBCATEGORY_SEARCH_TAGS = {
+    "Concept Explorers & Lessons": ("tutorial", "lessons", "learn"),
+    "Test Preparation": ("exam", "assessment", "practice test"),
+    "Math Generators": ("worksheet", "generate"),
+    "Printable Generators": ("printable", "worksheet", "PDF"),
+    "Creative Writing & Prompts": ("writing", "creative writing", "prompts"),
+    "Vocabulary & Spelling": ("spelling", "vocabulary"),
+    "Casino Games": ("casino", "table game"),
+    "Sports Games": ("sports", "game"),
+    "Memory Games": ("memory", "training"),
+    "Game Rules & Tutorials": ("rules", "tutorial", "how to play"),
+    "MIDI & Music Creation": ("music", "MIDI", "composition"),
+    "Sound Generation": ("sound", "audio"),
+}
+
+
+def tags_for(rel_path: str, subcategory: str, meta: Dict[str, Any]) -> Tuple[str, ...]:
+    derived = SUBCATEGORY_SEARCH_TAGS.get(subcategory, ())
+    all_tags = list(meta.get("tags", [])) + list(derived)
+    return tuple(dict((tag.casefold(), tag) for tag in all_tags).values())
+
+
+def classify_with_source(rel_path: str, catalog: Catalog) -> Tuple[str, str, str]:
+    rel = normalize_path(rel_path).casefold()
+    filename = Path(rel).name
+    folder_meta, file_meta, path_meta = catalog_parts(rel, catalog)
+    if "category" in path_meta:
+        return path_meta["category"], path_meta["subcategory"], "catalog-path"
+    if rel in EXACT_PATH_CATEGORIES:
+        return (*EXACT_PATH_CATEGORIES[rel], "built-in-path")
+    if "category" in file_meta:
+        return file_meta["category"], file_meta["subcategory"], "catalog-filename"
+    if filename in EXACT_APP_CATEGORIES:
+        return (*EXACT_APP_CATEGORIES[filename], "built-in-filename")
+    if "category" in folder_meta:
+        return folder_meta["category"], folder_meta["subcategory"], "catalog-folder"
+    if rel.startswith("subject_specific/subjecttests/"):
+        return (*classify_subject_test(filename), "legacy-subject-test")
+    if rel.startswith("creative_tools/generators/") and any(
+        piece in rel for piece in ("arcadeweaver", "arcade_weaver")
+    ):
+        return "Art, Media & Creation", "Game Creation", "special-case"
+    # Longest matching prefix wins; a parent folder cannot override its child.
+    for prefix, category, subcategory in sorted(FOLDER_CATEGORY_PREFIXES, key=lambda rule: -len(rule[0])):
+        if rel.startswith(prefix):
+            return category, subcategory, "built-in-folder"
+    for tokens, category, subcategory in CATEGORY_RULES:
+        if any(keyword_matches(rel, token, broad_keywords=BROAD_CATEGORY_TOKENS)
+               or keyword_matches(filename, token, broad_keywords=BROAD_CATEGORY_TOKENS)
+               for token in tokens):
+            return category, subcategory, "legacy-keyword"
+    return "Other / Unsorted", "Other", "unclassified"
+
+
 @lru_cache(maxsize=None)
 def categorize_file(rel_path: str) -> Tuple[str, str]:
-    low = normalize_path(rel_path).casefold()
-    filename = Path(low).name
+    """Backward-compatible built-in classification (no external catalog)."""
+    category, subcategory, _ = classify_with_source(rel_path, Catalog())
+    return category, subcategory
 
-    for tokens, category, subcategory in CATEGORY_RULES:
-        if any(
-            keyword_matches(low, token, broad_keywords=BROAD_CATEGORY_TOKENS)
-            or keyword_matches(filename, token, broad_keywords=BROAD_CATEGORY_TOKENS)
-            for token in tokens
-        ):
-            return category, subcategory
-
-    return "Other / Unsorted", "Other"
 
 
 def is_educational(entry: FileEntry) -> bool:
-    """Decide whether a file belongs in the education-only index.
-
-    The filter is intentionally transparent:
-    1. exact filename exclusions always win;
-    2. any Tetris variant is excluded;
-    3. exact filename inclusions can rescue useful arcade/action tools;
-    4. known educational categories are included;
-    5. conservative filename keywords catch obvious future classroom files.
-    """
+    """Include classroom-relevant apps, excluding gambling and NSFW content."""
     filename = entry.name.casefold()
     rel_path = normalize_path(entry.rel_path).casefold()
 
-    # The education-only index is always school-safe: anything marked NSFW is
-    # excluded even when the regular index is generated without --hide-nsfw.
-    if "nsfw" in filename or "nsfw" in rel_path:
+    if "nsfw" in rel_path:
         return False
-
+    if any(token in rel_path for token in EDUCATIONAL_BLOCKED_PATH_TOKENS):
+        return False
     if filename in EDUCATIONAL_EXCLUDE_FILENAMES:
         return False
-
     if "tetris" in filename or "tetris_games/" in rel_path:
         return False
-
-    if filename in EDUCATIONAL_INCLUDE_FILENAMES:
-        return True
+    if entry.educational_override is not None:
+        return entry.educational_override
 
     if entry.category in EDUCATIONAL_CATEGORIES:
         return True
-
+    if filename in EDUCATIONAL_GAME_INCLUDE_FILENAMES:
+        return True
+    # Allow recognizable educational game topics, but only when there is no
+    # excluded casino or adult content in the path (checked above).
     return any(keyword in filename for keyword in EDUCATIONAL_INCLUDE_KEYWORDS)
 
 
@@ -1269,8 +1674,16 @@ def scan_files(
     hide_root_index_html: bool,
     hide_all_index_html: bool,
     hide_nsfw_anywhere: bool,
+    catalog: Catalog | None = None,
+    recent_source: str = "filesystem",
+    return_raw: bool = False,
+    prefer_page_titles: bool = False,
 ) -> List[FileEntry]:
     entries: List[FileEntry] = []
+    catalog = catalog or Catalog()
+    git_timestamps = git_last_changed(root) if recent_source == "git" else {}
+    if recent_source == "git" and not git_timestamps:
+        print("Note: Git dates unavailable; falling back to filesystem dates.")
 
     for path in iter_matching_files(
         root=root,
@@ -1289,20 +1702,35 @@ def scan_files(
         except OSError:
             mtime = None
 
-        category, subcategory = categorize_file(rel)
+        meta = effective_metadata(rel, catalog)
+        if meta.get("exclude", False):
+            continue
+        category, subcategory, method = classify_with_source(rel, catalog)
+        page_title = html_page_title(path) if prefer_page_titles and path.suffix.casefold() == ".html" else ""
+        suggested_title = title_for_path(path)
+        # A short HTML title is preferable to the filename only when explicitly requested.
+        if page_title and len(page_title) <= 75 and "\n" not in page_title:
+            suggested_title = page_title
+        title = meta.get("title", suggested_title)
+        stamp = git_timestamps.get(rel.casefold(), mtime)
         entries.append(
             FileEntry(
                 name=Path(rel).name,
                 rel_path=rel,
-                title=title_for_path(path),
+                title=title,
                 category=category,
                 subcategory=subcategory,
-                icon=icon_for_file(rel, category, subcategory),
-                mtime=mtime,
+                icon=meta.get("icon", icon_for_file(rel, category, subcategory)),
+                mtime=stamp,
+                tags=tags_for(rel, subcategory, meta),
+                classification_source=method,
+                educational_override=meta.get("educational"),
+                canonical=meta.get("canonical", False),
             )
         )
 
-    entries = deduplicate_entries(entries)
+    if not return_raw:
+        entries = deduplicate_entries(entries)
 
     category_rank = {category: index for index, category in enumerate(CATEGORY_ORDER)}
     entries.sort(
@@ -1310,6 +1738,7 @@ def scan_files(
             category_rank.get(item.category, 999),
             item.subcategory.casefold(),
             item.title.casefold(),
+            item.rel_path.casefold(),
         )
     )
     return entries
@@ -1388,10 +1817,10 @@ INDEX_JS = '(function () {\n  const input = document.getElementById(\'site-searc
 # ---------------------------------------------------------------------------
 
 def render_app_item(entry: FileEntry, recent_paths: set[str], show_path: bool = False) -> str:
-    badge = '<span class="new-badge">NEW</span>' if entry.rel_path in recent_paths else ""
+    badge = '<span class="new-badge">RECENT</span>' if entry.rel_path in recent_paths else ""
     path_note = f'<span class="path-note">{esc(entry.rel_path)}</span>' if show_path else ""
     title = entry.title
-    search_text = f"{title} {entry.name} {entry.rel_path} {entry.category} {entry.subcategory}"
+    search_text = f"{title} {entry.name} {entry.rel_path} {entry.category} {entry.subcategory} {' '.join(entry.tags)}"
     return (
         f'<li class="app-item" data-path="{esc(entry.rel_path)}" data-search="{esc(search_text.casefold())}">'
         f'<a href="{esc(href_for(entry.rel_path))}" target="_blank" rel="noopener noreferrer">'
@@ -1417,7 +1846,7 @@ def render_recent_section(recent: Sequence[FileEntry], recent_days: int) -> str:
         changed_abs = absolute_day_label(entry.mtime or 0)
         changed_epoch = entry.mtime or 0
         title = entry.title
-        search_text = f"{title} {entry.name} {entry.rel_path} {entry.category} {entry.subcategory}"
+        search_text = f"{title} {entry.name} {entry.rel_path} {entry.category} {entry.subcategory} {' '.join(entry.tags)}"
         items.append(
             f'<li class="app-item recent-item" data-path="{esc(entry.rel_path)}" data-search="{esc(search_text.casefold())}">'
             f'<a href="{esc(href_for(entry.rel_path))}" target="_blank" rel="noopener noreferrer">'
@@ -1639,6 +2068,137 @@ def render_page(
 
 
 # ---------------------------------------------------------------------------
+# Git dates, audit, and self-checks
+# ---------------------------------------------------------------------------
+
+def git_last_changed(root: Path) -> Dict[str, float]:
+    """One Git invocation for last-committed dates; untracked files use mtime.
+
+    Unlike filesystem timestamps, committed Git dates are not changed merely
+    by extracting an archive or copying a directory. A newly renamed path
+    gets its rename commit date after that commit is made.
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "log", "--no-renames", "--format=__INDEX_COMMIT__%ct", "--name-only", "--", "."],
+            cwd=root, capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=45, check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return {}
+    if proc.returncode:
+        return {}
+    times: Dict[str, float] = {}
+    stamp: float | None = None
+    now = time.time()
+    for raw in proc.stdout.splitlines():
+        line = raw.strip()
+        if line.startswith("__INDEX_COMMIT__"):
+            try:
+                stamp = min(float(line.split("__INDEX_COMMIT__", 1)[1]), now)
+            except ValueError:
+                stamp = None
+        elif stamp is not None and line and not line.startswith("__INDEX_"):
+            times.setdefault(normalize_path(line).casefold(), stamp)
+    return times
+
+
+def normalized_duplicate_title(title: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip()
+
+
+def audit_entries(root: Path, raw: Sequence[FileEntry], indexed: Sequence[FileEntry],
+                  catalog: Catalog, recent_source: str) -> Dict[str, Any]:
+    """Report questionable classifications; never auto-delete or move a file."""
+    by_title: Dict[str, List[FileEntry]] = collections.defaultdict(list)
+    counts: Dict[str, int] = collections.Counter()
+    categories: Dict[str, Dict[str, int]] = collections.defaultdict(lambda: collections.Counter())
+    for entry in raw:
+        by_title[normalized_duplicate_title(entry.title)].append(entry)
+        counts[entry.classification_source] += 1
+    for entry in indexed:
+        categories[entry.category][entry.subcategory] += 1
+
+    duplicate_groups = []
+    identical_groups = []
+    for title, group in sorted(by_title.items()):
+        if not title or len(group) <= 1:
+            continue
+        paths = sorted(e.rel_path for e in group)
+        automatically_suppressed = title in DEDUPLICATE_DISPLAY_TITLES or any(e.canonical for e in group)
+        duplicate_groups.append({"title": title, "paths": paths, "automatically_suppressed": automatically_suppressed})
+        hashes: Dict[str, List[str]] = collections.defaultdict(list)
+        for e in group:
+            try:
+                digest = hashlib.sha256((root / e.rel_path).read_bytes()).hexdigest()
+                hashes[digest].append(e.rel_path)
+            except OSError:
+                continue
+        for duplicate_paths in hashes.values():
+            if len(duplicate_paths) > 1:
+                identical_groups.append(sorted(duplicate_paths))
+
+    indexed_paths = {e.rel_path.casefold() for e in indexed}
+    unclassified = sorted(e.rel_path for e in indexed if e.category == "Other / Unsorted")
+    fallback = sorted(e.rel_path for e in indexed if e.classification_source in ("legacy-keyword", "unclassified", "legacy-subject-test"))
+    missing = sorted(e.rel_path for e in indexed if not (root / e.rel_path).is_file())
+    all_scanned_paths = {e.rel_path.casefold() for e in raw}
+    stale_metadata = sorted(path for path in catalog.apps if path not in all_scanned_paths)
+    suppressed = sorted(e.rel_path for e in raw if e.rel_path.casefold() not in indexed_paths)
+    warnings = []
+    if unclassified:
+        warnings.append(f"{len(unclassified)} unclassified app(s) need review")
+    unexpected_duplicates = [g for g in duplicate_groups if not g["automatically_suppressed"]]
+    if unexpected_duplicates:
+        warnings.append(f"{len(unexpected_duplicates)} unresolved display-title group(s) need review")
+    if missing:
+        warnings.append(f"{len(missing)} indexed path(s) do not exist")
+    if stale_metadata:
+        warnings.append(f"{len(stale_metadata)} catalog app path(s) no longer exist")
+    if fallback:
+        warnings.append(f"{len(fallback)} app(s) use legacy classification rules (informational)")
+
+    return {
+        "generated": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "root": str(root),
+        "recent_source": recent_source,
+        "summary": {
+            "scanned": len(raw), "indexed": len(indexed), "suppressed_known_duplicates": len(suppressed),
+            "educational": sum(is_educational(e) for e in indexed),
+            "unclassified": len(unclassified), "duplicate_title_groups": len(duplicate_groups),
+            "unresolved_duplicate_title_groups": len(unexpected_duplicates),
+            "identical_content_groups": len(identical_groups),
+            "legacy_rules_used": len(fallback), "stale_catalog_paths": len(stale_metadata),
+        },
+        "category_counts": {cat: dict(sorted(subgroups.items())) for cat, subgroups in sorted(categories.items())},
+        "classification_sources": dict(sorted(counts.items())),
+        "warnings": warnings,
+        "unclassified_paths": unclassified,
+        "legacy_classified_paths": fallback,
+        "duplicate_titles": duplicate_groups,
+        "identical_content": identical_groups,
+        "suppressed_duplicate_paths": suppressed,
+        "missing_index_targets": missing,
+        "stale_catalog_paths": stale_metadata,
+    }
+
+
+def write_audit(path: Path, report: Dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def print_audit(report: Dict[str, Any]) -> None:
+    summary = report["summary"]
+    print("\nINDEX AUDIT")
+    print(f"  Apps indexed: {summary['indexed']} | Education: {summary['educational']}")
+    print(f"  Unclassified: {summary['unclassified']} | Unresolved duplicate titles: {summary['unresolved_duplicate_title_groups']}")
+    print(f"  Known duplicates hidden: {summary['suppressed_known_duplicates']} | Legacy fallback: {summary['legacy_rules_used']}")
+    for warning in report["warnings"]:
+        print(f"  Review: {warning}")
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -1656,6 +2216,15 @@ def main() -> int:
     parser.add_argument("--no-folder-view", action="store_true", help="Hide the original repository folder view at the bottom.")
     parser.add_argument("--edu-out", default="indexEDU.html", help="Education-only output HTML filename. Default: indexEDU.html.")
     parser.add_argument("--no-edu-index", action="store_true", help="Do not write the education-only indexEDU.html file.")
+    parser.add_argument("--catalog", default="index_catalog.json", help="Optional per-app JSON metadata file, relative to --root.")
+    parser.add_argument("--no-catalog", action="store_true", help="Ignore the optional catalog file.")
+    parser.add_argument("--audit-out", default="index_audit.json", help="JSON organization audit report, relative to --root.")
+    parser.add_argument("--no-audit", action="store_true", help="Do not write the JSON audit report.")
+    parser.add_argument("--audit-only", action="store_true", help="Generate the audit without writing either HTML index.")
+    parser.add_argument("--strict-audit", action="store_true", help="Exit with status 2 for unclassified, missing, or duplicate-title apps.")
+    parser.add_argument("--recent-source", choices=("filesystem", "git"), default="filesystem",
+                        help="Recent Changes timestamps: filesystem (default) or last Git commit per path.")
+    parser.add_argument("--prefer-page-titles", action="store_true", help="Use short HTML <title> text for non-index pages where available.")
 
     args = parser.parse_args()
 
@@ -1663,7 +2232,15 @@ def main() -> int:
     if not root.exists() or not root.is_dir():
         raise SystemExit(f"Root folder does not exist or is not a directory: {root}")
 
-    entries = scan_files(
+    catalog_path = None if args.no_catalog else (root / args.catalog)
+    try:
+        catalog = load_catalog(catalog_path)
+    except ValueError as error:
+        parser.error(str(error))
+    if catalog.source:
+        print(f"Using catalog: {catalog.source}")
+
+    raw_entries = scan_files(
         root=root,
         exts=args.ext,
         exclude_dirs=args.exclude_dir,
@@ -1671,7 +2248,25 @@ def main() -> int:
         hide_root_index_html=args.hide_root_index_html,
         hide_all_index_html=args.hide_all_index_html,
         hide_nsfw_anywhere=args.hide_nsfw,
+        catalog=catalog,
+        recent_source=args.recent_source,
+        return_raw=True,
+        prefer_page_titles=args.prefer_page_titles,
     )
+    entries = deduplicate_entries(raw_entries)
+    # Preserve stable category > subcategory > title ordering after deduplication.
+    category_rank = {category: n for n, category in enumerate(CATEGORY_ORDER)}
+    entries.sort(key=lambda e: (category_rank.get(e.category, 999), e.subcategory.casefold(),
+                                e.title.casefold(), e.rel_path.casefold()))
+    audit = audit_entries(root, raw_entries, entries, catalog, args.recent_source)
+    print_audit(audit)
+    if not args.no_audit:
+        write_audit(root / args.audit_out, audit)
+        print(f"Wrote audit: {root / args.audit_out}")
+    if args.audit_only:
+        return 2 if args.strict_audit and (audit["summary"]["unclassified"] or
+                  audit["summary"]["unresolved_duplicate_title_groups"] or audit["summary"]["stale_catalog_paths"] or
+                  audit["missing_index_targets"]) else 0
 
     recent_days = max(1, args.recent_days)
     include_folder_view = not args.no_folder_view
@@ -1702,6 +2297,11 @@ def main() -> int:
         print(f"Wrote: {edu_out_path}")
         print(f"Indexed EDU: {len(edu_entries)} files")
 
+    if args.strict_audit and (audit["summary"]["unclassified"] or
+                              audit["summary"]["unresolved_duplicate_title_groups"] or
+                              audit["summary"]["stale_catalog_paths"] or
+                              audit["missing_index_targets"]):
+        return 2
     return 0
 
 
