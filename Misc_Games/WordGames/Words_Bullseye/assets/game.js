@@ -3,15 +3,14 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const keys = {
-    random: 'wordbullseye-game-random-v1',
-    daily: 'wordbullseye-game-daily-v1',
+    random: 'wordbullseye-game-random-unified-v3',
+    daily: 'wordbullseye-game-daily-unified-v3',
     stats: 'wordbullseye-stats-v1',
     theme: 'wb-theme-v1'
   };
-  const TARGETS = typeof window.WB_MYSTERY_RAW === 'string' ? window.WB_MYSTERY_RAW.split('\n') : [];
-  const VALID = typeof window.WB_VALID_RAW === 'string' ? window.WB_VALID_RAW.split('\n') : [];
-  window.WB_MYSTERY_RAW = null;
-  window.WB_VALID_RAW = null;
+  const TARGETS = typeof window.WB_WORDS_RAW === 'string' ? window.WB_WORDS_RAW.split('\n') : [];
+  window.WB_WORDS_RAW = null;
+  const EXPECTED_WORDS = 8919;
   const TOTAL_TARGETS = Math.max(0, TARGETS.length - 2);
   let activeMode = 'random';
   let game = null;
@@ -19,7 +18,7 @@
   let currentScreen = 'welcome';
   let stats = readStats();
 
-  // The two lists have deliberately different purposes. Never sample from VALID.
+  // All guesses and all mystery words must come from this ONE alphabetized vocabulary.
   function lowerBound(arr, needle) {
     let lo = 0, hi = arr.length;
     while (lo < hi) {
@@ -48,7 +47,7 @@
   }
   function dailyIndex(date) {
     // FNV-1a: the same calendar date always gives the same puzzle on any device.
-    const seed = 'WORD-BULLSEYE-DAILY-V1:' + date;
+    const seed = 'WORD-BULLSEYE-DAILY-UNIFIED-V3:' + date;
     let hash = 2166136261;
     for (let i=0;i<seed.length;i++) {
       hash ^= seed.charCodeAt(i);
@@ -95,7 +94,7 @@
       typeof s.secret==='string' && includes(TARGETS,s.secret) &&
       s.secret!==TARGETS[0] && s.secret!==TARGETS[TARGETS.length-1] &&
       Array.isArray(s.guesses) && s.guesses.length<3000 &&
-      s.guesses.every(x=>x && typeof x.word==='string' && includes(VALID,x.word) && ['before','after','hit'].includes(x.relation)) &&
+      s.guesses.every(x=>x && typeof x.word==='string' && includes(TARGETS,x.word) && ['before','after','hit'].includes(x.relation)) &&
       Number.isInteger(s.hintsUsed) && s.hintsUsed>=0 && s.hintsUsed<=3 &&
       typeof s.finished==='boolean' &&
       (mode!=='daily' || s.date===dateToday()));
@@ -119,11 +118,11 @@
     const secret = TARGETS[mode==='random'?randomIndex():dailyIndex(dateToday())];
     stats[mode].played++;
     writeStats();
-    return {version:2,mode,date:mode==='daily'?dateToday():null,secret,guesses:[],hints:[],hintsUsed:0,finished:false,startedAt:Date.now(),finishedAt:null};
+    return {version:3,mode,date:mode==='daily'?dateToday():null,secret,guesses:[],hints:[],hintsUsed:0,finished:false,startedAt:Date.now(),finishedAt:null};
   }
   function startMode(mode, fresh=false) {
     if (!['random','daily'].includes(mode)) return;
-    if (TOTAL_TARGETS!==4998 || VALID.length<5000) { toast('The vocabulary files could not be loaded.'); return; }
+    if (TARGETS.length!==EXPECTED_WORDS || TOTAL_TARGETS<1) { toast('The vocabulary files could not be loaded.'); return; }
     activeMode = mode;
     game = (!fresh && readGame(mode)) || newGame(mode);
     saveGame();
@@ -274,14 +273,14 @@
     if(!game || game.finished) return;
     const word=normalizeWord($('guess-input').value);
     if(!word) {setFeedback('Enter a word to get started.','warn');return;}
-    if(word.length<3 || !/^[a-z]+(?:'[a-z]+)*$/.test(word)) {
-      setFeedback('Use an English word with at least 3 characters (letters or an apostrophe).','warn');return;
+    if(!/^[a-z]{3,}$/.test(word)) {
+      setFeedback('Not a valid word or not in the list. No guess counted.','warn');return;
     }
     if(game.guesses.some(x=>x.word===word)) {
       setFeedback('Already guessed! Try a different word. This one does not count.','warn');return;
     }
-    if(!includes(VALID,word) && !includes(TARGETS,word)) {
-      setFeedback('That word is not in the accepted English-word list. No guess counted.','warn');return;
+    if(!includes(TARGETS,word)) {
+      setFeedback('Not a valid word or not in the list. No guess counted.','warn');return;
     }
     const relation=word<game.secret?'before':word>game.secret?'after':'hit';
     game.guesses.push({word,relation,time:Date.now()});
@@ -381,8 +380,8 @@
     dialog.showModal();
   }
   function showHelp(){
-    const html=`<div class="rule"><strong>01 · Find the secret word.</strong><br>Only one of the 5,000 mystery words is the answer. The first and last words of that list are excluded.</div>
-      <div class="rule"><strong>02 · Enter an English word.</strong><br>A valid word gets a clue. Your guess can come from a much larger approved dictionary of 92,295 words.</div>
+    const html=`<div class="rule"><strong>01 · Find the secret word.</strong><br>Every answer is selected from the same ${TARGETS.length.toLocaleString()}-word list used to check guesses. The first and last words are excluded as mystery words.</div>
+      <div class="rule"><strong>02 · Enter a word from the list.</strong><br>A word counts only if it appears in the same ${TARGETS.length.toLocaleString()}-word vocabulary as the secret word. Words not on this list are rejected without penalty.</div>
       <div class="example"><strong>Example: secret word = ORANGE</strong><br>APPLE → <span style="color:var(--teal)">Before the secret word</span><br>PEAR → <span style="color:var(--pink)">After the secret word</span><br>ORANGE → <strong style="color:var(--accent)">Bullseye!</strong></div>
       <div class="rule"><strong>03 · Watch your boundaries.</strong><br>The two clue cards show your nearest guesses on either side. A shrinking bar shows how many mystery words remain possible.</div>
       <div class="rule"><strong>04 · Take as many guesses as you need.</strong><br>Only accepted, unique words count. Invalid and repeated entries are free.</div>
@@ -452,7 +451,7 @@
     bindActions();
     setTheme(document.documentElement.getAttribute('data-theme')==='light'?'light':'dark');
     updateResume();
-    if(TARGETS.length!==5000 || VALID.length!==92295 || TARGETS.some((s,i)=>i>0 && TARGETS[i-1]>=s) || VALID.some((s,i)=>i>0 && VALID[i-1]>=s)) {
+    if(TARGETS.length!==EXPECTED_WORDS || TARGETS.some((s,i)=> !/^[a-z]{3,}$/.test(s) || (i>0 && TARGETS[i-1]>=s))) {
       $('welcome-description').textContent='The offline vocabulary could not be loaded correctly. Please extract the entire ZIP (including the assets folder) before opening Word_Bullseye.html.';
       $('start-random').disabled=true;
       $('start-daily').disabled=true;
