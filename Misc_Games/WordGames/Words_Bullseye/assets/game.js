@@ -446,6 +446,14 @@
     $('share-button').addEventListener('click',copyResult);
     $('close-dialog').addEventListener('click',closeDialog);
     $('guess-input').addEventListener('input',()=>{if($('feedback').classList.contains('warn')) clearFeedback();});
+    const mobileHistory=$('mobile-history-toggle');
+    if(mobileHistory) mobileHistory.addEventListener('click',()=>{
+      const panel=$('history-panel');
+      const opened=panel.classList.toggle('mobile-open');
+      mobileHistory.setAttribute('aria-expanded',String(opened));
+      mobileHistory.firstChild.textContent=opened?'Hide guess history ':'Show guess history ';
+      $('mobile-history-label').textContent=opened?'▴':'▾';
+    });
   }
   function boot(){
     bindActions();
