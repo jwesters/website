@@ -3,14 +3,14 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const keys = {
-    random: 'wordbullseye-game-random-unified-v3',
-    daily: 'wordbullseye-game-daily-unified-v3',
-    stats: 'wordbullseye-stats-v1',
+    random: 'wordbullseye-game-random-25k-v4',
+    daily: 'wordbullseye-game-daily-25k-v4',
+    stats: 'wordbullseye-stats-25k-v4',
     theme: 'wb-theme-v1'
   };
   const TARGETS = typeof window.WB_WORDS_RAW === 'string' ? window.WB_WORDS_RAW.split('\n') : [];
   window.WB_WORDS_RAW = null;
-  const EXPECTED_WORDS = 8919;
+  const EXPECTED_WORDS = 25000;
   const TOTAL_TARGETS = Math.max(0, TARGETS.length - 2);
   let activeMode = 'random';
   let game = null;
@@ -47,7 +47,7 @@
   }
   function dailyIndex(date) {
     // FNV-1a: the same calendar date always gives the same puzzle on any device.
-    const seed = 'WORD-BULLSEYE-DAILY-UNIFIED-V3:' + date;
+    const seed = 'WORD-BULLSEYE-DAILY-25K-V4:' + date;
     let hash = 2166136261;
     for (let i=0;i<seed.length;i++) {
       hash ^= seed.charCodeAt(i);
@@ -118,7 +118,7 @@
     const secret = TARGETS[mode==='random'?randomIndex():dailyIndex(dateToday())];
     stats[mode].played++;
     writeStats();
-    return {version:3,mode,date:mode==='daily'?dateToday():null,secret,guesses:[],hints:[],hintsUsed:0,finished:false,startedAt:Date.now(),finishedAt:null};
+    return {version:4,mode,date:mode==='daily'?dateToday():null,secret,guesses:[],hints:[],hintsUsed:0,finished:false,startedAt:Date.now(),finishedAt:null};
   }
   function startMode(mode, fresh=false) {
     if (!['random','daily'].includes(mode)) return;
@@ -172,8 +172,10 @@
   }
   function knownPrefix() {
     const {after,before}=bounds();
-    let known=commonPrefix(after,before);
-    // Extend with already purchased letter clues, but never re-purchase a known letter.
+    const possible=candidates(after,before);
+    // All words in a sorted interval share the prefix of its extremes.
+    // This works even when only one boundary has been guessed.
+    let known=possible.count ? commonPrefix(TARGETS[possible.lo],TARGETS[possible.hi]) : '';
     while(known.length<game.secret.length) {
       const clue=game.hints.find(h=>h.type==='letter' && h.index===known.length);
       if (!clue) break;
@@ -465,5 +467,6 @@
       $('start-daily').disabled=true;
     }
   }
-  boot();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
+  else boot();
 })();
