@@ -6,16 +6,9 @@
 <title>Fraction Archery</title>
 <style>
   :root{
-    --bg:#f4f7fb;
-    --card:#ffffff;
-    --ink:#172033;
-    --muted:#6b7280;
-    --accent:#4169e1;
-    --accent2:#14b8a6;
-    --danger:#dc2626;
-    --good:#16803a;
-    --line:#d9e0ea;
-    --shadow:0 16px 40px rgba(28,39,68,.12);
+    --bg:#f4f7fb; --card:#ffffff; --ink:#172033; --muted:#6b7280;
+    --accent:#4169e1; --accent2:#14b8a6; --danger:#dc2626;
+    --good:#16803a; --line:#d9e0ea; --shadow:0 16px 40px rgba(28,39,68,.12);
   }
   *{box-sizing:border-box}
   html,body{margin:0;min-height:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);background:linear-gradient(180deg,#eef4ff 0%,var(--bg) 45%,#eef7f5 100%)}
@@ -80,27 +73,24 @@
   .help{margin-top:14px;border-top:1px solid #edf0f5;padding-top:14px}
   .help summary{cursor:pointer;font-weight:900}
   .help p{color:var(--muted);line-height:1.55}
-
   .hero{min-height:100vh;align-items:center;justify-content:center;padding:24px 0}
   .hero.active{display:flex}
   .menu-actions{flex-direction:column;align-items:center}
   .menu-actions .btn{min-width:180px}
   .always-open{margin-top:18px}
   .help-title{font-weight:900;margin-bottom:10px}
-  .modal-backdrop{
-    position:fixed;inset:0;background:rgba(17,24,39,.42);display:none;
-    align-items:center;justify-content:center;padding:20px;z-index:1000
-  }
+  .modal-backdrop{position:fixed;inset:0;background:rgba(17,24,39,.42);display:none;align-items:center;justify-content:center;padding:20px;z-index:1000}
   .modal-backdrop.open{display:flex}
-  .seed-modal{
-    width:min(460px,94vw);background:#fff;border-radius:22px;padding:24px;
-    box-shadow:0 24px 70px rgba(15,23,42,.28);text-align:center
-  }
+  .seed-modal{width:min(460px,94vw);background:#fff;border-radius:22px;padding:24px;box-shadow:0 24px 70px rgba(15,23,42,.28);text-align:center}
   .seed-modal h2{margin:0 0 8px;font-size:1.8rem}
   .seed-modal p{margin:0 0 16px;color:var(--muted)}
   .seed-modal input{width:100%;padding:14px 16px;border:2px solid var(--line);border-radius:14px;background:#fff}
   .modal-actions{display:flex;justify-content:center;gap:10px;margin-top:16px;flex-wrap:wrap}
-
+  /* Keep the seeded challenge comparison clearly visible without revealing a solution. */
+  .gap-summary{margin-top:18px;border-top:1px solid #edf0f5;padding-top:16px;font-size:1rem;line-height:1.5}
+  .gap-summary strong{color:#173e96;font-variant-numeric:tabular-nums}
+  .hidden-solution{margin-top:16px;padding:17px 18px;border:1px solid #d9e0ea;border-radius:14px;background:#f7f9fd;color:#344054;line-height:1.5}
+  .hidden-solution strong{display:block;color:#172033;margin-bottom:3px}
   @media(max-width:800px){
     .app{width:min(96vw,760px);padding:14px 0 26px}
     .panel{padding:18px;border-radius:20px}
@@ -119,6 +109,8 @@
     .fraction{grid-template-rows:62px 3px 62px}
     .frac-line{width:92px}
     .game-header{flex-direction:column}
+    .result-row{grid-template-columns:1fr auto;gap:4px 10px}
+    .result-row .diff{grid-column:2}
   }
 </style>
 </head>
@@ -138,12 +130,9 @@
       </div>
     </div>
   </section>
-
   <section id="gameScreen" class="screen">
     <div class="rules-strip">Use each number 1–10 only once. Complete all three fractions. Lowest score wins.</div>
-
     <div class="targets" id="targets"></div>
-
     <div class="bank-wrap panel">
       <div class="bank-title">
         <strong>Number Bank</strong>
@@ -154,34 +143,31 @@
         <button class="btn ghost" id="clearBtn">Clear Fractions</button>
         <button class="btn primary" id="submitBtn">Submit Round</button>
       </div>
-      <div id="message" class="message"></div>
+      <div id="message" class="message" aria-live="polite"></div>
     </div>
   </section>
-
   <section id="resultsScreen" class="screen">
-<div class="results-grid">
+    <div class="results-grid">
       <div class="score-card">
         <div class="target-label">Your Total Score</div>
         <div class="score-big" id="totalScore"></div>
         <div class="tiny">Lower is better. Score = total absolute error × 1000.</div>
         <div id="playerResults" style="margin-top:14px"></div>
       </div>
-
       <div class="best-card">
         <div class="target-label">Best Possible Score</div>
         <div class="score-big" id="bestTotal"></div>
         <div class="tiny">Lowest possible score for this seed. Score = total absolute error × 1000.</div>
+        <div id="scoreGap" class="gap-summary" aria-live="polite"></div>
         <div id="bestResults" style="margin-top:14px"></div>
       </div>
     </div>
-
     <div class="result-actions">
       <button class="btn teal" id="replayBtn">Replay This Seed</button>
       <button class="btn new-game" id="newSeedBtn">Play New Seed</button>
       <button class="btn menu-color" id="menuBtn">Main Menu</button>
     </div>
   </section>
-
   <div id="seedModal" class="modal-backdrop" aria-hidden="true">
     <div class="seed-modal" role="dialog" aria-modal="true" aria-labelledby="seedModalTitle">
       <h2 id="seedModalTitle">Enter Seed</h2>
@@ -194,36 +180,30 @@
     </div>
   </div>
 </div>
-
 <script>
 (() => {
   const $ = s => document.querySelector(s);
-  const screens = {
-    start: $('#startScreen'),
-    game: $('#gameScreen'),
-    results: $('#resultsScreen')
-  };
-
+  const screens = {start:$('#startScreen'),game:$('#gameScreen'),results:$('#resultsScreen')};
   let seed = '';
   let targets = [];
   let slots = Array(6).fill(null);
   let activeSlot = 0;
+  // Set only by the Enter Seed flow. Do not reset when replaying the same round.
+  let isEnteredSeedChallenge = false;
 
   function show(name){
     Object.values(screens).forEach(s => s.classList.remove('active'));
     screens[name].classList.add('active');
     window.scrollTo({top:0, behavior:'smooth'});
   }
-
   function hashSeed(str){
     let h = 2166136261 >>> 0;
     for(let i=0;i<str.length;i++){
       h ^= str.charCodeAt(i);
-      h = Math.imul(h, 16777619);
+      h = Math.imul(h,16777619);
     }
     return h >>> 0;
   }
-
   function mulberry32(a){
     return function(){
       let t = a += 0x6D2B79F5;
@@ -232,7 +212,6 @@
       return ((t ^ t >>> 14) >>> 0) / 4294967296;
     }
   }
-
   function randomSeed(){
     const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let s='';
@@ -244,21 +223,17 @@
     }
     return s;
   }
-
   function generateTargets(s){
     const rng=mulberry32(hashSeed(s));
     const vals=[];
     while(vals.length<3){
-      const n=10 + Math.floor(rng()*81); // 10..90 inclusive
+      const n=10 + Math.floor(rng()*81);
       if(!vals.includes(n)) vals.push(n);
     }
     return vals.map(n=>n/100);
   }
-
-  function fmtTarget(v){ return v.toFixed(2); }
-  function fmtNum(v){ return Number(v.toFixed(6)).toString(); }
-  function slotLabel(i){ return i%2===0 ? 'numerator' : 'denominator'; }
-
+  function fmtTarget(v){return v.toFixed(2)}
+  function fmtNum(v){return Number(v.toFixed(6)).toString()}
   function renderTargets(){
     const wrap=$('#targets');
     wrap.innerHTML='';
@@ -278,14 +253,13 @@
         </div>`;
       wrap.appendChild(card);
     });
-
     document.querySelectorAll('.frac-slot').forEach(el=>{
       el.addEventListener('click',()=>setActiveSlot(+el.dataset.slot));
-      el.addEventListener('dragover',e=>{e.preventDefault(); el.classList.add('active')});
+      el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('active')});
       el.addEventListener('dragleave',()=>refreshSlots());
       el.addEventListener('dragstart',e=>{
         const i=+el.dataset.slot;
-        if(slots[i]==null){ e.preventDefault(); return; }
+        if(slots[i]==null){e.preventDefault();return}
         e.dataTransfer.setData('text/plain',String(slots[i]));
         e.dataTransfer.setData('application/x-fraction-slot',String(i));
       });
@@ -300,7 +274,6 @@
     });
     refreshSlots();
   }
-
   function renderBank(){
     const bank=$('#numberBank');
     bank.innerHTML='';
@@ -334,12 +307,7 @@
     });
     refreshBank();
   }
-
-  function setActiveSlot(i){
-    activeSlot=i;
-    refreshSlots();
-  }
-
+  function setActiveSlot(i){activeSlot=i;refreshSlots()}
   function placeNumber(slotIndex,n){
     if(!Number.isInteger(n) || n<1 || n>10) return;
     const existingIndex=slots.indexOf(n);
@@ -350,7 +318,6 @@
     refreshBank();
     setMessage('');
   }
-
   function refreshSlots(){
     document.querySelectorAll('.frac-slot').forEach(el=>{
       const i=+el.dataset.slot;
@@ -360,14 +327,12 @@
       el.classList.remove('invalid');
     });
   }
-
   function refreshBank(){
     document.querySelectorAll('.number-tile').forEach(el=>{
       const n=+el.dataset.number;
       el.classList.toggle('used',slots.includes(n));
     });
   }
-
   function clearFractions(){
     slots=Array(6).fill(null);
     activeSlot=0;
@@ -375,13 +340,11 @@
     refreshBank();
     setMessage('');
   }
-
   function setMessage(msg,error=false){
     const m=$('#message');
     m.textContent=msg;
     m.className='message'+(error?' error':'');
   }
-
   function validate(){
     let ok=true;
     document.querySelectorAll('.frac-slot').forEach((el,i)=>{
@@ -395,7 +358,6 @@
     if(new Set(slots).size!==slots.length){setMessage('Each number can only be used once.',true);return false}
     return true;
   }
-
   function scoreSolution(fracs){
     const details=fracs.map((f,i)=>{
       const value=f[0]/f[1];
@@ -404,22 +366,20 @@
     });
     return {details,total:details.reduce((a,d)=>a+d.points,0)};
   }
-
-  // Exact exhaustive search over assignments of six distinct values from 1..10.
-  // 10P6 = 151,200 candidates, fast enough in-browser.
+  // Exact exhaustive search over 10P6 = 151,200 assignments of distinct numbers.
   function bestPossible(){
     const nums=[1,2,3,4,5,6,7,8,9,10];
     let bestTotal=Infinity, best=null;
     for(let a=0;a<10;a++)
-    for(let b=0;b<10;b++){ if(b===a) continue;
+    for(let b=0;b<10;b++){if(b===a) continue;
       const d1=Math.abs(nums[a]/nums[b]-targets[0])*1000;
       if(d1>=bestTotal) continue;
-      for(let c=0;c<10;c++){ if(c===a||c===b) continue;
-      for(let d=0;d<10;d++){ if(d===a||d===b||d===c) continue;
+      for(let c=0;c<10;c++){if(c===a||c===b) continue;
+      for(let d=0;d<10;d++){if(d===a||d===b||d===c) continue;
         const d12=d1+Math.abs(nums[c]/nums[d]-targets[1])*1000;
         if(d12>=bestTotal) continue;
-        for(let e=0;e<10;e++){ if(e===a||e===b||e===c||e===d) continue;
-        for(let f=0;f<10;f++){ if(f===a||f===b||f===c||f===d||f===e) continue;
+        for(let e=0;e<10;e++){if(e===a||e===b||e===c||e===d) continue;
+        for(let f=0;f<10;f++){if(f===a||f===b||f===c||f===d||f===e) continue;
           const total=d12+Math.abs(nums[e]/nums[f]-targets[2])*1000;
           if(total<bestTotal-1e-12){
             bestTotal=total;
@@ -430,33 +390,37 @@
     }
     return scoreSolution(best);
   }
-
   function submit(){
     if(!validate()) return;
     const player=scoreSolution([[slots[0],slots[1]],[slots[2],slots[3]],[slots[4],slots[5]]]);
     const best=bestPossible();
     $('#totalScore').textContent=player.total.toFixed(2);
-
     $('#playerResults').innerHTML=player.details.map((d,i)=>`
       <div class="result-row">
         <span>Target ${i+1}: <strong>${fmtTarget(targets[i])}</strong></span>
         <span class="frac">${d.num}/${d.den} = ${fmtNum(d.value)}</span>
         <span class="diff">+${d.points.toFixed(2)}</span>
       </div>`).join('');
-
-    $('#bestResults').innerHTML=best.details.map((d,i)=>`
-      <div class="result-row">
-        <span>Target ${i+1}: <strong>${fmtTarget(targets[i])}</strong></span>
-        <span class="frac">${d.num}/${d.den} = ${fmtNum(d.value)}</span>
-        <span class="diff">+${d.points.toFixed(2)}</span>
-      </div>`).join('');
-
     $('#bestTotal').textContent=best.total.toFixed(2);
+    const gap=Math.max(0,player.total-best.total);
+    $('#scoreGap').innerHTML=`Points above best: <strong>+${gap.toFixed(2)}</strong>`;
+    if(isEnteredSeedChallenge){
+      // Deliberately do not insert optimal numerator/denominator values into the results DOM.
+      $('#bestResults').innerHTML=`<div class="hidden-solution"><strong>🔒 Optimal fractions hidden</strong>
+        This is a seeded challenge. You can compare scores or replay the seed without seeing the solution.</div>`;
+    } else {
+      $('#bestResults').innerHTML=best.details.map((d,i)=>`
+        <div class="result-row">
+          <span>Target ${i+1}: <strong>${fmtTarget(targets[i])}</strong></span>
+          <span class="frac">${d.num}/${d.den} = ${fmtNum(d.value)}</span>
+          <span class="diff">+${d.points.toFixed(2)}</span>
+        </div>`).join('');
+    }
     show('results');
   }
-
-  function startGame(useSeed){
-    seed=(useSeed || $('#seedInput').value.trim() || randomSeed()).toUpperCase();
+  function startGame(useSeed, enteredSeedChallenge=false){
+    seed=(useSeed || randomSeed()).toUpperCase();
+    isEnteredSeedChallenge=enteredSeedChallenge;
     $('#seedInput').value=seed;
     targets=generateTargets(seed);
     slots=Array(6).fill(null);
@@ -466,23 +430,18 @@
     setMessage('');
     show('game');
   }
-
   async function copySeed(){
-    try{
-      await navigator.clipboard.writeText(seed);
-    }catch{
+    try{await navigator.clipboard.writeText(seed)}catch{
       const ta=document.createElement('textarea');
       ta.value=seed;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();
     }
   }
-
-  $('#startBtn').addEventListener('click',()=>startGame(randomSeed()));
+  $('#startBtn').addEventListener('click',()=>startGame(randomSeed(),false));
   $('#clearBtn').addEventListener('click',clearFractions);
   $('#submitBtn').addEventListener('click',submit);
-  $('#replayBtn').addEventListener('click',()=>startGame(seed));
-  $('#newSeedBtn').addEventListener('click',()=>startGame(randomSeed()));
+  $('#replayBtn').addEventListener('click',()=>startGame(seed,isEnteredSeedChallenge));
+  $('#newSeedBtn').addEventListener('click',()=>startGame(randomSeed(),false));
   $('#menuBtn').addEventListener('click',()=>show('start'));
-
 
   function openSeedModal(){
     const modal=$('#seedModal');
@@ -491,40 +450,30 @@
     modal.setAttribute('aria-hidden','false');
     setTimeout(()=>$('#seedInput').focus(),0);
   }
-
   function closeSeedModal(){
     const modal=$('#seedModal');
     modal.classList.remove('open');
     modal.setAttribute('aria-hidden','true');
   }
-
-  $('#enterSeedBtn').addEventListener('click',openSeedModal);
-  $('#cancelSeedBtn').addEventListener('click',closeSeedModal);
-  $('#startSeedBtn').addEventListener('click',()=>{
+  function startEnteredSeed(){
     const entered=$('#seedInput').value.trim();
     if(!entered) return;
     closeSeedModal();
-    startGame(entered);
-  });
+    startGame(entered,true);
+  }
+  $('#enterSeedBtn').addEventListener('click',openSeedModal);
+  $('#cancelSeedBtn').addEventListener('click',closeSeedModal);
+  $('#startSeedBtn').addEventListener('click',startEnteredSeed);
   $('#seedInput').addEventListener('keydown',e=>{
-    if(e.key==='Enter'){
-      const entered=$('#seedInput').value.trim();
-      if(entered){
-        closeSeedModal();
-        startGame(entered);
-      }
-    } else if(e.key==='Escape'){
-      closeSeedModal();
-    }
+    if(e.key==='Enter') startEnteredSeed();
+    else if(e.key==='Escape') closeSeedModal();
   });
   $('#seedModal').addEventListener('click',e=>{
     if(e.target.id==='seedModal') closeSeedModal();
   });
-
-  // Helpful keyboard entry on desktop: number keys fill the selected slot.
+  // Keyboard entry for desktop: number keys fill the selected slot.
   let keyboardBuffer='';
   let keyboardTimer=null;
-
   function commitKeyboardNumber(){
     if(!keyboardBuffer) return;
     const n=Number(keyboardBuffer);
@@ -535,10 +484,8 @@
       placeNumber(activeSlot,n);
     }
   }
-
   document.addEventListener('keydown',e=>{
     if(!screens.game.classList.contains('active')) return;
-
     if(e.key==='Backspace' || e.key==='Delete'){
       e.preventDefault();
       keyboardBuffer='';
@@ -552,16 +499,13 @@
       }
       return;
     }
-
     if(e.key==='Escape'){
       keyboardBuffer='';
       clearTimeout(keyboardTimer);
       return;
     }
-
     if(/^[0-9]$/.test(e.key)){
       e.preventDefault();
-
       if(e.key==='0'){
         if(keyboardBuffer==='1'){
           keyboardBuffer='10';
@@ -569,16 +513,10 @@
         }
         return;
       }
-
-      if(keyboardBuffer){
-        commitKeyboardNumber();
-      }
-
+      if(keyboardBuffer) commitKeyboardNumber();
       keyboardBuffer=e.key;
-
-      if(e.key!=='1'){
-        commitKeyboardNumber();
-      } else {
+      if(e.key!=='1') commitKeyboardNumber();
+      else{
         clearTimeout(keyboardTimer);
         keyboardTimer=setTimeout(commitKeyboardNumber,350);
       }
