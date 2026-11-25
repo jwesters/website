@@ -1,0 +1,1 @@
+registerDiagrams("Indigenous traditional games",{});

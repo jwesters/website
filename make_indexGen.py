@@ -13,6 +13,7 @@ What this version does differently:
 - Labels index.html links with the page's HTML title instead of "Index".
 - Can hide filenames containing "nsfw" with --hide-nsfw.
 - Also writes an education-only indexEDU.html by default.
+- Detects Physical Education (PE) resources from folders, filenames and HTML titles.
 - Always keeps NSFW filenames/paths out of indexEDU.html.
 - Uses only the Python standard library (Git is optional for --recent-source git).
 - Keeps exact app overrides and secondary search tags in this Python file; no external catalog required.
@@ -480,6 +481,7 @@ CATEGORY_ORDER = [
     "Math & Numeracy",
     "Literacy & ELA",
     "Science & Social Studies",
+    "Physical Education (PE)",
     "Teacher Tools",
     "Learning & Reference",
     "Sports & Fitness",
@@ -497,6 +499,7 @@ CATEGORY_ICONS = {
     "Math & Numeracy": "➗",
     "Literacy & ELA": "📚",
     "Science & Social Studies": "🌎",
+    "Physical Education (PE)": "🏅",
     "Teacher Tools": "🍎",
     "Learning & Reference": "📘",
     "Sports & Fitness": "🏃",
@@ -575,6 +578,11 @@ SUBCATEGORY_ICONS = {
     "General Reference": "📘",
     "Simulation & Sandbox Games": "🐠",
     "Sports Instruction": "🏀",
+    "PE Lessons & Resources": "🏅",
+    "PE Assessments & Worksheets": "📝",
+    "Sports Skills & Rules": "🏀",
+    "Fitness & Conditioning": "🏃",
+    "Gym Games & Activities": "🤸",
     "Game Creation": "🕹️",
     "Music Theory & Instruments": "🎹",
     "MIDI & Music Creation": "🎼",
@@ -854,6 +862,7 @@ EDUCATIONAL_CATEGORIES = {
     "Math & Numeracy",
     "Literacy & ELA",
     "Science & Social Studies",
+    "Physical Education (PE)",
     "Teacher Tools",
     "Learning & Reference",
     "Sports & Fitness",
@@ -1417,6 +1426,14 @@ def icon_for_file(rel_path: str, category: str, subcategory: str) -> str:
     if base.casefold() in CUSTOM_ICONS_CASEFOLD:
         return safe_icon(CUSTOM_ICONS_CASEFOLD[base.casefold()])
 
+    if category == "Physical Education (PE)":
+        for pattern, icon in ((r"\bbasketball\b", "🏀"), (r"\bvolleyball\b", "🏐"),
+                              (r"\bbadminton\b", "🏸"), (r"\b(?:soccer|football)\b", "⚽"),
+                              (r"\b(?:track and field|track field|athletics)\b", "🏃")):
+            if re.search(pattern, pe_normalize(base)):
+                return safe_icon(icon)
+        return safe_icon(SUBCATEGORY_ICONS.get(subcategory, CATEGORY_ICONS[category]))
+
     full_low = normalize_path(rel_path).casefold()
     if category == "Card & Table Games":
         return safe_icon("🎰" if subcategory == "Casino Games" else "🃏")
@@ -1643,6 +1660,11 @@ SUBCATEGORY_SEARCH_TAGS = {
     "Vocabulary & Spelling": ("spelling", "vocabulary"),
     "Casino Games": ("casino", "table game"),
     "Sports Games": ("sports", "game"),
+    "PE Lessons & Resources": ("PE", "physical education", "phys ed", "gym", "lesson plans"),
+    "PE Assessments & Worksheets": ("PE", "physical education", "gym", "assessment", "worksheet", "rubric"),
+    "Sports Skills & Rules": ("PE", "physical education", "gym", "sports", "skills", "rules", "drills"),
+    "Fitness & Conditioning": ("PE", "physical education", "gym", "fitness", "exercise", "workout"),
+    "Gym Games & Activities": ("PE", "physical education", "gym", "activities", "movement", "games"),
     "Memory Games": ("memory", "training"),
     "Game Rules & Tutorials": ("rules", "tutorial", "how to play"),
     "MIDI & Music Creation": ("music", "MIDI", "composition"),
@@ -1656,7 +1678,85 @@ def tags_for(rel_path: str, subcategory: str, meta: Dict[str, Any]) -> Tuple[str
     return tuple(dict((tag.casefold(), tag) for tag in all_tags).values())
 
 
-def classify_with_source(rel_path: str, catalog: Catalog) -> Tuple[str, str, str]:
+# PE-specific matching deliberately does not use the existing compact-substring
+# matcher: "PE" must not match PEDMAS, speed, paper, or similar words.
+PE_CATEGORY = "Physical Education (PE)"
+
+
+def pe_normalize(text: str) -> str:
+    # Split camel case and digits without expanding embedded acronyms.
+    text = re.sub(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", " ", text)
+    text = re.sub(r"(?<=[a-zA-Z])(?=[0-9])|(?<=[0-9])(?=[a-zA-Z])", " ", text)
+    text = re.sub(r"\bp\s*\.\s*e\b\.?", " PE ", text, flags=re.I)
+    return re.sub(r"[^a-z0-9]+", " ", text.casefold()).strip()
+
+
+PE_EXPLICIT = re.compile(
+    r"\b(?:pe|peplaybook|phys ed|physed|physical ed(?:ucation)?|physicaleducation|"
+    r"physical literacy|gym(?:nasium)?|gym class|gymclass|adaptive physical education)\b"
+)
+PE_FITNESS = re.compile(
+    r"\b(?:fitness|conditioning|workouts?|tabata|hiit|aerobics|calisthenics|"
+    r"stretching|warm ups?|warmups?|cool downs?|cooldowns?|exercise routines?|"
+    r"strength training|circuit training|heart rate training|active living|"
+    r"health related fitness|physical activity)\b"
+)
+PE_SPORT = re.compile(
+    r"\b(?:sports?|athletics|basketball|volleyball|badminton|soccer|football|"
+    r"flag football|rugby|hockey|floor hockey|baseball|softball|handball|"
+    r"dodgeball|kickball|pickleball|tennis|table tennis|track and field|track field|"
+    r"trackandfield|cross country|gymnastics|swimming|curling|lacrosse|"
+    r"cricket|ultimate frisbee|frisbee|archery|golf|bowling|wrestling|"
+    r"skipping|jump rope|high jump|long jump|triple jump|shot put|discus|"
+    r"javelin|hurdles|relay races?|sprints?|orienteering|dance|yoga)\b"
+)
+PE_ASSESSMENT = re.compile(r"\b(?:assessments?|worksheets?|assignments?|quizz?es?|quiz|tests?|rubrics?|exit tickets?|checklists?|question banks?|report cards?)\b")
+PE_TEACHING = re.compile(r"\b(?:lessons?|lesson plans?|curriculum|instruction|instructional|teaching|teacher|coaching|coach|drills?|skills?|rules?|tutorials?|practice|playbook|sportsmanship|strategies|techniques|fundamentals|stations?|activities|activity|tactics)\b")
+PE_ACTIVITY = re.compile(r"\b(?:gym games?|movement(?: skills)?|brain breaks?|active games?|team building|teamwork|cooperative games?|obstacle courses?|tag games?|parachute games?|recreation activities|outdoor activities)\b")
+PE_NONCLASSROOM = re.compile(r"\b(?:stats|statistics|scores|scoreboard|standings|fantasy|trivia|simulator|simulation|arcade|video game|esports|manager|predictions?|betting)\b")
+PE_OTHER_SUBJECT = re.compile(r"\b(?:math|numeracy|algebra|fraction[s]?|geometry|science|physics|chemistry|literacy|ela|spelling|grammar|history|geography|social studies)\b")
+
+
+def classify_pe(rel_path: str, page_title: str = "") -> Tuple[str, str] | None:
+    """Recognize PE purpose, not merely a sports theme in an unrelated app."""
+    original = normalize_path(rel_path)
+    parts = original.split("/")
+    folders = [pe_normalize(part) for part in parts[:-1]]
+    name = pe_normalize(Path(parts[-1]).stem)
+    title = pe_normalize(page_title)
+    local = f"{name} {title}"
+    folder_pe = any(PE_EXPLICIT.search(part) for part in folders)
+    explicit = bool(PE_EXPLICIT.search(local))
+    # Keep non-PE sports statistics and recreational games in their existing areas.
+    if not (explicit or folder_pe):
+        if PE_OTHER_SUBJECT.search(local) or PE_NONCLASSROOM.search(local):
+            return None
+        if any(part in {"misc games", "math games", "arcade games", "sports games", "strategy games"} for part in folders):
+            return None
+        sports_instruction_folder = any(part == "sports fitness" for part in folders) and any(
+            PE_SPORT.search(part) for part in folders if part != "sports fitness"
+        )
+        fitness_folder = any(part in {"fitness tools", "fitness conditioning", "workouts"} for part in folders)
+        classroom_folder = any(part in {"teacher tools", "subject specific", "subject tests", "subjecttests"} for part in folders)
+        if not (PE_FITNESS.search(local) or PE_ACTIVITY.search(local) or
+                (PE_SPORT.search(local) and (PE_TEACHING.search(local) or PE_ASSESSMENT.search(local) or classroom_folder)) or
+                sports_instruction_folder or fitness_folder):
+            return None
+    context = " ".join([part for part in folders if part != "sports fitness"] + [local])
+    if PE_ASSESSMENT.search(local):
+        subcategory = "PE Assessments & Worksheets"
+    elif PE_ACTIVITY.search(local) or re.search(r"\b(?:games?|activities|stations?)\b", local) and not PE_SPORT.search(local):
+        subcategory = "Gym Games & Activities"
+    elif PE_FITNESS.search(context):
+        subcategory = "Fitness & Conditioning"
+    elif PE_SPORT.search(context):
+        subcategory = "Sports Skills & Rules"
+    else:
+        subcategory = "PE Lessons & Resources"
+    return PE_CATEGORY, subcategory
+
+
+def classify_with_source(rel_path: str, catalog: Catalog, page_title: str = "") -> Tuple[str, str, str]:
     rel = normalize_path(rel_path).casefold()
     filename = Path(rel).name
     folder_meta, file_meta, path_meta = catalog_parts(rel, catalog)
@@ -1668,6 +1768,11 @@ def classify_with_source(rel_path: str, catalog: Catalog) -> Tuple[str, str, str
         return file_meta["category"], file_meta["subcategory"], "catalog-filename"
     if filename in EXACT_APP_CATEGORIES:
         return (*EXACT_APP_CATEGORIES[filename], "built-in-filename")
+    # Explicit file overrides retain priority, but PE resources can live in
+    # broad teacher, subject, generator or miscellaneous folders.
+    pe = classify_pe(rel_path, page_title)
+    if pe:
+        return (*pe, "physical-education")
     if "category" in folder_meta:
         return folder_meta["category"], folder_meta["subcategory"], "catalog-folder"
     if rel.startswith("subject_specific/subjecttests/"):
@@ -1794,11 +1899,13 @@ def scan_files(
         meta = effective_metadata(rel, catalog)
         if meta.get("exclude", False):
             continue
-        category, subcategory, method = classify_with_source(rel, catalog)
-        page_title = html_page_title(path) if prefer_page_titles and path.suffix.casefold() == ".html" else ""
-        suggested_title = title_for_path(path)
+        # Inspect HTML titles even when filename-based display titles are used.
+        # The title reader is bounded to 512 KiB; PDFs and other formats use paths.
+        page_title = html_page_title(path) if path.suffix.casefold() in {".html", ".htm"} else ""
+        category, subcategory, method = classify_with_source(rel, catalog, " ".join(filter(None, (meta.get("title", ""), page_title))))
+        suggested_title = (page_title or display_name(path.parent.name)) if path.name.casefold() == "index.html" else title_for_path(path)
         # A short HTML title is preferable to the filename only when explicitly requested.
-        if page_title and len(page_title) <= 75 and "\n" not in page_title:
+        if prefer_page_titles and page_title and len(page_title) <= 75 and "\n" not in page_title:
             suggested_title = page_title
         title = meta.get("title", suggested_title)
         stamp = git_timestamps.get(rel.casefold(), mtime)
